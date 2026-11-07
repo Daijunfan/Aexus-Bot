@@ -5,6 +5,10 @@ import {fixtureCore} from './fixtures/headless-core.mjs'
 const f=await fixtureCore()
 const rpc=async(token,cmd,args={})=>{const r=await f.request(token,cmd,args);assert.ok(r.ok,r.error);return r.data}
 const deny=async(token,cmd,args)=>assert.equal((await f.request(token,cmd,args)).ok,false,cmd+' must reject')
+const directItems=async id=>(await rpc(null,'direct.history',{employee:id,limit:500})).items
+const inbox=async id=>(await f.cli('session','inbox')).find(item=>item.employeeId===id)
+const teamItems=async id=>(await f.cli('session','transcript',id)).items
+const contexts=(items,phase,messageId)=>items.filter(item=>item.role==='user'&&item.context?.phase===phase&&item.context.origin?.messageId===messageId)
 try{
  await f.cli('group','add','Studio');await f.cli('group','add','Engineering')
  const a=await f.create('Aster','Studio'),b=await f.create('Byte','Studio'),c=await f.create('Cross Team','Engineering'),m=await f.create('Manager','Studio','manager'),g=await f.create('Governor','Engineering','governor')
@@ -29,11 +33,20 @@ try{
  assert.equal((await f.cli('chat','history',group.id)).messages.length,0)
  const post=await f.call(at,'chat','post',group.id,'--kind','blocker','--text','Need a decision on the launch date.','--client-message-id','first-update')
  assert.deepEqual(post.author,{kind:'agent',employeeId:a.id});assert.equal(post.kind,'blocker');assert.deepEqual(post.deliveries.map(item=>item.employeeId),group.memberIds.filter(id=>id!==a.id));assert.ok(post.deliveries.every(item=>item.mode==='awareness'))
- await f.until(async()=>(await f.cli('chat','history',group.id)).messages.find(item=>item.id===post.id).deliveries.every(item=>item.status==='completed'),'published context reaches every peer');for(const card of [a,b,c,m,g])assert.deepEqual((await f.cli('session','transcript',card.id)).items,[],'shared awareness does not fabricate private work')
+ await f.until(async()=>(await f.cli('chat','history',group.id)).messages.find(item=>item.id===post.id).deliveries.every(item=>item.status==='completed'),'published context reaches every peer')
+ // Awareness lands only in Team: one read context plus native output, never a Direct message.
+ for(const card of [b,c,m,g]){
+  const items=await teamItems(card.id),reads=contexts(items,'read',post.id)
+  assert.equal(reads.length,1,'shared awareness records exactly one read context in Team');assert.ok(reads[0].text.includes(post.text))
+  assert.equal(contexts(items,'work',post.id).length,0,'awareness never becomes formal work')
+  assert.deepEqual(await directItems(card.id),[],'shared awareness never writes a Direct message');assert.equal((await inbox(card.id)).hasMessages,false)
+ }
+ assert.equal(contexts(await teamItems(a.id),'read',post.id).length,0,'the author gets no automatic loop')
+ assert.deepEqual(await directItems(a.id),[],'publishing to the group creates no Direct row for the author')
  assert.equal((await f.cli('chat','get',group.id)).unread,true)
  const duplicate=await f.call(at,'chat','post',group.id,'--kind','blocker','--text',post.text,'--client-message-id','first-update');assert.equal(duplicate.id,post.id)
  await deny(at,'chat.post',{id:group.id,text:'Changed payload',clientMessageId:'first-update'})
- const context=await f.call(at,'chat','context',group.id,'--message',post.id);assert.equal(context.policy.maxCharacters,2000);assert.match(context.policy.guidance,/ordinary assistant output remains private/)
+ const context=await f.call(at,'chat','context',group.id,'--message',post.id);assert.equal(context.policy.maxCharacters,2000);assert.match(context.policy.guidance,/ordinary assistant output stays only in Company/)
  await f.cli('chat','acknowledge',group.id,'--message',post.id);assert.equal((await f.cli('chat','get',group.id)).unread,false)
  const send=await f.cli('chat','send',group.id,'--text','Investigate the launch issue.','--mentions',JSON.stringify([a.id,a.id]),'--client-message-id','launch-task','--view','all')
  assert.deepEqual(send.mentions,[a.id]);await f.until(async()=>!(await f.status(a.id)).busy,'single mention finished')
@@ -42,10 +55,10 @@ try{
  assert.ok((await f.cli('session','transcript',a.id)).text.includes('Investigate the launch issue.'))
  assert.equal(history.messages.length,2,'default silent acknowledgments do not add public messages');assert.equal(task.deliveries.find(item=>item.employeeId===a.id).mode,'work');assert.ok(task.deliveries.filter(item=>item.employeeId!==a.id).every(item=>item.mode==='awareness'));assert.equal(task.deliveries[0].ackMessageId,undefined);assert.ok(task.deliveries[0].readAt)
  const sentAgain=await f.cli('chat','send',group.id,'--text','Investigate the launch issue.','--mentions',JSON.stringify([a.id]),'--client-message-id','launch-task','--view','all');assert.equal(sentAgain.id,send.id)
- const texts=(await f.cli('session','transcript',a.id)).items.filter(item=>item.role==='user'&&item.text==='Investigate the launch issue.');assert.equal(texts.length,1)
+ const workItems=await teamItems(a.id);assert.equal(contexts(workItems,'work',send.id).length,1,'formal group work records one work context');assert.equal(contexts(workItems,'read',send.id).length,1,'the same input records one separate read context')
  await f.cli('session','close',(await f.status(a.id)).sessionId);history=await f.cli('chat','history',group.id);assert.equal(history.messages.find(item=>item.id===send.id).deliveries[0].status,'completed','closing an idle engine cannot undo completion')
- assert.ok((await f.status(a.id)).lastReply,'ordinary native output from group work creates a private reply receipt')
- assert.equal((await f.cli('session','inbox')).find(item=>item.employeeId===a.id).unread,true)
+ assert.ok((await f.status(a.id)).lastReply,'ordinary native output from group work updates the Team activity receipt')
+ assert.equal((await inbox(a.id)).hasMessages,false,'native group output is not a Direct message');assert.deepEqual(await directItems(a.id),[])
  const hold=path.join(f.control,b.id+'.hold-user');fs.writeFileSync(hold,'')
  await f.cli('session','send','--employee',b.id,'--text','Existing private work');await f.until(async()=>(await f.status(b.id)).busy,'private work held')
  const queued=await rpc(null,'chat.send',{id:group.id,text:'Queued group work',mentions:[b.id],clientMessageId:'queued-task'})
@@ -69,7 +82,7 @@ try{
  const concurrentArgs={id:group.id,text:'Concurrent retry is delivered once.',mentions:[c.id],clientMessageId:'concurrent-unique'}
  const duplicates=await Promise.all([rpc(null,'chat.send',concurrentArgs),rpc(null,'chat.send',concurrentArgs)])
  assert.equal(duplicates[0].id,duplicates[1].id);await f.until(async()=>!(await f.status(c.id)).busy,'concurrent delivery')
- assert.equal((await f.cli('session','transcript',c.id)).items.filter(item=>item.role==='user'&&item.text===concurrentArgs.text).length,1)
+ const concurrentItems=await teamItems(c.id);assert.equal(contexts(concurrentItems,'work',duplicates[0].id).length,1,'concurrent retry records exactly one work context');assert.equal(contexts(concurrentItems,'read',duplicates[0].id).length,1,'concurrent retry records exactly one read context')
  await deny(null,'chat.update',{id:group.id,name:'Stale edit',expectedRevision:0})
  for(const cmd of ['chat.list','chat.history','chat.context','chat.post'])assert.ok((await f.call(at,'api','list')).some(item=>item.name===cmd))
  assert.ok((await f.call(at,'api','describe','chat.post')).inputSchema.properties.replyTo)
@@ -78,7 +91,7 @@ try{
  assert.equal((await f.cli('chat','get',group.id)).unread,true);await f.cli('chat','acknowledge',group.id,'--message',summary.id)
  const after=(await f.cli('session','list')).sessions.map(card=>({id:card.id,group:card.group,cwd:card.cwd,role:card.managementRole,createdBy:card.createdBy}));assert.deepEqual(after,original)
  // Simulate a stopped-Core interruption and a stale summary projection, using disposable files only.
- const privateCount=(await f.cli('session','transcript',c.id)).items.length
+ const transcriptCount=(await f.cli('session','transcript',c.id)).items.length
  await f.stop()
  const chatRoot=path.join(f.env.AGENTS_COMPANY_HOME,'chats'),groupFile=path.join(chatRoot,group.id+'.json'),indexFile=path.join(chatRoot,'groups.json')
  const interrupted=JSON.parse(fs.readFileSync(groupFile));interrupted.find(item=>item.id===duplicates[0].id).deliveries[0].status='running';fs.writeFileSync(groupFile,JSON.stringify(interrupted))
@@ -87,7 +100,7 @@ try{
  await f.start();assert.equal((await f.cli('status')).running,true)
  assert.equal((await f.cli('chat','history',group.id)).messages.find(item=>item.id===duplicates[0].id).deliveries[0].status,'interrupted')
  assert.equal((await f.cli('chat','get',group.id)).lastMessage.id,preRestart.messages.at(-1).id,'recovery projects the latest public message without replaying deliveries')
- assert.equal((await f.cli('session','transcript',c.id)).items.length,privateCount,'restart must not replay uncertain group work')
+ assert.equal((await f.cli('session','transcript',c.id)).items.length,transcriptCount,'restart must not replay uncertain group work')
  await deny(null,'chat.history',{id:separate.id});assert.equal(fs.readFileSync(corrupt,'utf8'),'{broken group history','corrupt group data is never overwritten')
  await f.cli('chat','delete',separate.id);assert.equal((await f.cli('session','list')).sessions.length,5)
  console.log('PASS groups Core/CLI: shared views and receipts; Team + cross-Team membership; mention/all routing; original identity and authority; concise opt-in posts; durable idempotency; queue cancellation and membership recheck; history, restart and safe removal')

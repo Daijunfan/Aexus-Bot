@@ -5,6 +5,7 @@ import net from 'node:net'
 import {randomUUID,createHash} from 'node:crypto'
 import {WebSocket} from 'ws'
 import {fixtureCore} from './fixtures/headless-core.mjs'
+import {writeNativeProfiles,FIXTURE_SECRET} from './fixtures/native-profiles.mjs'
 const listener=net.createServer();await new Promise(r=>listener.listen(0,'127.0.0.1',r));const port=listener.address().port;await new Promise(r=>listener.close(r))
 const url='http://127.0.0.1:'+port
 const f=await fixtureCore({AGENTS_COMPANY_WEB:'1',AGENTS_COMPANY_WEB_HOST:'127.0.0.1',AGENTS_COMPANY_WEB_PORT:String(port)})
@@ -79,10 +80,17 @@ try{
   assert.equal((await request(a,'transfer.upload-begin',{to:destination,name:'browser.txt',bytes:0})).body.ok,false);pass('bounded uploads preserve bytes, client ownership, traversal and overwrite protections')
   const download=new URL('/api/download',url);download.searchParams.set('client',a.client);download.searchParams.set('from',JSON.stringify({employee:employee.id,path:'browser.txt'}))
   const response=await fetch(download,{headers:{Cookie:a.cookie}});assert.equal(response.status,200);assert.deepEqual(Buffer.from(await response.arrayBuffer()),content);pass('streamed browser download preserves content')
-  await call(a,'engine.configure',{engine:'claude',patch:{apiKey:'fixture-secret-not-a-real-key'}})
-  const settings=fs.readFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'engines/settings.json'),'utf8')
-  assert.ok(!settings.includes('fixture-secret-not-a-real-key'));assert.ok(!JSON.stringify(await call(a,'engine.list')).includes('fixture-secret-not-a-real-key'));pass('provider secrets stay out of browser projections and plaintext settings')
-  await call(a,'engine.configure',{engine:'claude',patch:{apiKey:''}})
+  const rejected=await request(a,'engine.configure',{engine:'claude',patch:{apiKey:FIXTURE_SECRET}})
+  assert.equal(rejected.body.ok,false);assert.match(rejected.body.error,/native CLI configuration/i)
+  writeNativeProfiles(f.env,{engines:['claude']})
+  const settingsFile=path.join(f.env.AGENTS_COMPANY_HOME,'engines/settings.json')
+  assert.ok(!fs.existsSync(settingsFile)||!fs.readFileSync(settingsFile,'utf8').includes(FIXTURE_SECRET),'native credentials never reach plaintext application settings')
+  const engines=await call(a,'engine.list'),native=engines.find(engine=>engine.engine==='claude').configuration
+  assert.equal(native.inheritNative,true);assert.equal(native.hasApiKey,true,'credential metadata is read from the isolated CLAUDE_CONFIG_DIR/settings.json')
+  const catalog=await call(a,'engine.providers',{engine:'claude'})
+  assert.equal(catalog.source,'native');assert.equal(catalog.activeModel,'deepseek-flash[1m]')
+  assert.ok(!JSON.stringify({engines,catalog}).includes(FIXTURE_SECRET),'provider secrets stay out of browser projections')
+  pass('app-private credentials are rejected; secret-free native metadata is read from the isolated CLAUDE_CONFIG_DIR/settings.json')
   const view=await call(a,'plugin.open',{id:'cloud-hosts'})
   assert.ok(view.url.startsWith(url+'/'))
   const plugin=await fetch(new URL('rpc',view.url),{method:'POST',headers:{Origin:'null','content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'hosts.list',params:{}})})

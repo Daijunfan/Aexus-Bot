@@ -3,17 +3,18 @@ import os from 'node:os'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import {fixtureCore} from './fixtures/headless-core.mjs'
+import {writeNativeProfiles} from './fixtures/native-profiles.mjs'
 const bin=fs.mkdtempSync(path.join(os.tmpdir(),'ac-process-cloud-')),fixture=path.resolve('test/fixtures/process-adapter.cjs')
 fs.writeFileSync(path.join(bin,'ssh'),`#!${process.execPath}
 const args=process.argv.slice(2);if(args.includes('-R')){console.error('Allocated port '+args[args.indexOf('-R')+1].split(':').at(-1));setInterval(()=>{},1000)}else{const child=require('node:child_process').spawn('/bin/sh',['-c',args.at(-1)],{stdio:'inherit'});child.on('exit',code=>process.exit(code??1));process.on('SIGTERM',()=>child.kill('SIGTERM'))}
 `,{mode:0o755})
 const f=await fixtureCore({CLINE_BIN:fixture,PI_BIN:fixture,PATH:bin+path.delimiter+process.env.PATH})
+writeNativeProfiles(f.env,{engines:['cline','pi']})
 const rpc=async(cmd,args={})=>{const value=await f.request(null,cmd,args);assert.ok(value.ok,value.error);return value.data}
 const send=async(card,text)=>{await rpc('session.send',{employee:card.id,text});await f.until(async()=>!(await f.status(card.id)).busy,'turn done');return JSON.stringify(await f.cli('session','transcript','--employee',card.id))}
 try{
  const remote=path.join(f.temp,'cloud');fs.mkdirSync(remote);const h=await f.cli('host','create','--data',JSON.stringify({name:'Fixture',host:'fixture',os:'linux',defaultDirectory:remote}));await f.cli('group','add','Cloud','--mode','cloud','--host-id',h.id,'--remote-dir',remote)
  for(const engine of ['cline','pi']){
-  await rpc('engine.configure',{engine,patch:{apiKey:'fixture-key-not-real'}})
   const manager=await f.cli('card','create','--title',engine+' Manager','--group','Cloud','--engine',engine,'--management-role','manager','--work-environment','local');await f.ready(manager.id)
   const governor=await f.cli('card','create','--title',engine+' Governor','--group','Cloud','--engine',engine,'--management-role','governor','--work-environment','local');await f.ready(governor.id)
   const token=await f.token(manager.id),capability=await f.call(token,'engine','capabilities','--engine',engine)

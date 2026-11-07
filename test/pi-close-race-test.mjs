@@ -5,6 +5,7 @@ import path from 'node:path'
 import assert from 'node:assert/strict'
 import {build} from 'esbuild'
 import {fixtureCore} from './fixtures/headless-core.mjs'
+import {writeNativeProfiles} from './fixtures/native-profiles.mjs'
 
 const root=path.resolve(import.meta.dirname,'..'),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-pi-close-')))
 const markers=path.join(temp,'markers'),bin=path.join(temp,'bin'),entry=path.join(temp,'daemon.cjs')
@@ -42,7 +43,7 @@ const timer=setInterval(()=>{if(!fs.existsSync(path.join(dir,name+'.stdin-ended'
 `,{mode:0o755})
  f=await fixtureCore({PI_BIN:pi,PI_RACE_DIR:markers,PATH:bin+path.delimiter+process.env.PATH,AGENTS_COMPANY_SHARED_DIR:path.join(temp,'shared'),AGENTS_COMPANY_WEB:'0',DEEPSEEK_API_KEY:'fixture-only-not-real',NODE_OPTIONS:'--unhandled-rejections=strict'},entry)
  const rpc=async(cmd,args={})=>{const result=await f.request(null,cmd,args);assert.ok(result.ok,result.error);return result.data}
- await rpc('engine.configure',{engine:'pi',patch:{apiKey:'fixture-only-not-real'}})
+ writeNativeProfiles(f.env,{engines:['pi']})
  await rpc('group.add',{name:'Pi close regression'})
  const employee=await rpc('card.create',{title:'Pi Secretary',group:'Pi close regression',engine:'pi',managementRole:'secretary',permissionMode:'bypassPermissions'})
  await f.ready(employee.id)

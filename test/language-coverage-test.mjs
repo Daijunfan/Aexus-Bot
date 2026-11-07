@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import ts from 'typescript'
-const root=path.resolve(import.meta.dirname,'..'),catalogFile=path.join(root,'src/renderer/src/i18n/zh-CN.ts'),raw=fs.readFileSync(catalogFile,'utf8'),catalog=JSON.parse(raw.slice(raw.indexOf('= ')+2)),aliases=new Set(Object.values(catalog).map(value=>value.replace(/\s+/g,' ').trim()))
+import {zhCN as catalog} from '../src/renderer/src/i18n/zh-CN.ts'
+const root=path.resolve(import.meta.dirname,'..'),aliases=new Set(Object.values(catalog).map(value=>value.replace(/\s+/g,' ').trim()))
 for(const [key,value] of Object.entries(catalog)){assert.ok(value.trim(),key+' has no Chinese copy');assert.deepEqual((value.match(/\{\d+\}/g)??[]).sort(),(key.match(/\{\d+\}/g)??[]).sort(),key+' loses an interpolation value')}
 const files=[];function walk(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){if(entry.isDirectory()&&!['assets','i18n'].includes(entry.name))walk(path.join(dir,entry.name));else if(entry.isFile()&&/\.tsx?$/.test(entry.name))files.push(path.join(dir,entry.name))}}walk(path.join(root,'src/renderer/src'))
 let calls=0,localizedOptions=0

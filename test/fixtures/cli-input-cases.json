@@ -6100,5 +6100,261 @@
         "overwrite": true
       }
     }
+  },
+  {
+    "args": [
+      "bot",
+      "appearance",
+      "fixture-bot",
+      "--avatar",
+      "fate-saber-chibi",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "bot.appearance",
+      "args": {
+        "id": "fixture-bot",
+        "avatar": "fate-saber-chibi",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "list",
+      "--include-removed"
+    ],
+    "expected": {
+      "cmd": "bot.list",
+      "args": {
+        "includeRemoved": true
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "update",
+      "fixture-bot",
+      "--name",
+      "Renamed bot",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "bot.update",
+      "args": {
+        "id": "fixture-bot",
+        "name": "Renamed bot",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "delete",
+      "fixture-bot"
+    ],
+    "expected": {
+      "cmd": "bot.delete",
+      "args": {
+        "id": "fixture-bot"
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "restore",
+      "fixture-bot"
+    ],
+    "expected": {
+      "cmd": "bot.restore",
+      "args": {
+        "id": "fixture-bot"
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "sync"
+    ],
+    "expected": {
+      "cmd": "bot.sync",
+      "args": {}
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "create",
+      "--name",
+      "Research worker",
+      "--client-request-id",
+      "00000000-0000-4000-8000-000000000001"
+    ],
+    "expected": {
+      "cmd": "bot.create",
+      "args": {
+        "name": "Research worker",
+        "clientRequestId": "00000000-0000-4000-8000-000000000001"
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "group-create",
+      "--name",
+      "Research group",
+      "--members",
+      "[\"a\",\"b\"]",
+      "--client-request-id",
+      "00000000-0000-4000-8000-000000000002"
+    ],
+    "expected": {
+      "cmd": "bot.group-create",
+      "args": {
+        "name": "Research group",
+        "members": [
+          "a",
+          "b"
+        ],
+        "clientRequestId": "00000000-0000-4000-8000-000000000002"
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "access",
+      "--id",
+      "fixture-bot",
+      "--employee-ids",
+      "[\"worker\"]",
+      "--expected-revision",
+      "3"
+    ],
+    "expected": {
+      "cmd": "bot.access",
+      "args": {
+        "id": "fixture-bot",
+        "employeeIds": [
+          "worker"
+        ],
+        "expectedRevision": 3
+      }
+    }
+  },
+  {
+    "args": [
+      "monitor",
+      "list",
+      "--employee",
+      "worker"
+    ],
+    "expected": {
+      "cmd": "monitor.list",
+      "args": {
+        "employee": "worker"
+      }
+    }
+  },
+  {
+    "args": [
+      "monitor",
+      "create",
+      "--name",
+      "Watch build",
+      "--program",
+      "[\"node\",\"watch.mjs\"]",
+      "--employee",
+      "worker",
+      "--restart-on-launch"
+    ],
+    "expected": {
+      "cmd": "monitor.create",
+      "args": {
+        "name": "Watch build",
+        "program": [
+          "node",
+          "watch.mjs"
+        ],
+        "employee": "worker",
+        "restartOnLaunch": true
+      }
+    }
+  },
+  {
+    "args": [
+      "monitor",
+      "start",
+      "watch-1"
+    ],
+    "expected": {
+      "cmd": "monitor.start",
+      "args": {
+        "id": "watch-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "monitor",
+      "read",
+      "watch-1",
+      "--cursor",
+      "8"
+    ],
+    "expected": {
+      "cmd": "monitor.read",
+      "args": {
+        "id": "watch-1",
+        "cursor": 8
+      }
+    }
+  },
+  {
+    "args": [
+      "monitor",
+      "stop",
+      "watch-1"
+    ],
+    "expected": {
+      "cmd": "monitor.stop",
+      "args": {
+        "id": "watch-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "monitor",
+      "remove",
+      "watch-1"
+    ],
+    "expected": {
+      "cmd": "monitor.remove",
+      "args": {
+        "id": "watch-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "avatar",
+      "get",
+      "fate-saber-chibi"
+    ],
+    "expected": {
+      "cmd": "avatar.get",
+      "args": {
+        "id": "fate-saber-chibi"
+      }
+    }
   }
 ]

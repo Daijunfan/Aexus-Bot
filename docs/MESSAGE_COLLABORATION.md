@@ -39,6 +39,16 @@ below describe retained compatibility records, not supported channel workflows.
 Employees use [channel fetch/search](CHANNELS.md#read-only-employee-channel-api)
 without joining or saving.
 
+`conversation.entry` and `conversation.download` also honor the current
+`channel.access` reading grant for news articles and attachments; Secretary is
+automatically authorized. Revocation applies again while an asynchronous download
+is running. The default destination is the employee's personal Company workspace,
+including its actual cloud execution host. Reading a channel does not create a
+channel member folder or grant access to user-downloaded files in its workspace.
+The user's explicit document downloads retain their files and completion status
+across restarts, independently of the news held in memory. Image-only and file-only
+`direct.post` entries remain visible, searchable and downloadable without text.
+
 ## Published direct-message API
 
 ### User and Secretary input: `direct.send`

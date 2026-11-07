@@ -5,6 +5,7 @@ import {spawn,execFile} from 'node:child_process'
 import {promisify} from 'node:util'
 import {build} from 'esbuild'
 import assert from 'node:assert/strict'
+import {seedLegacyWorkTeams} from './fixtures/legacy-plugin-team.mjs'
 const root=path.resolve(import.meta.dirname,'..'),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-access-state-'))),run=promisify(execFile),home=path.join(temp,'state'),managerRoot=path.join(temp,'Agents-Managers'),legacyCwd=path.join(managerRoot,'Legacy')
 fs.mkdirSync(home);fs.mkdirSync(legacyCwd,{recursive:true});fs.writeFileSync(path.join(managerRoot,'.agents-company-manager'),'agents-company-manager/v1\n')
 const file=path.join(home,'sessions.json');fs.writeFileSync(file,JSON.stringify({access:{version:1,revision:0,globalManagerIds:['legacy_manager'],relations:[]},groups:['Managers'],sessions:[{id:'legacy_manager',title:'Legacy',group:'Managers',cwd:legacyCwd,engine:'codex',createdAt:1}],rooms:{},teamRoots:{Managers:managerRoot},teamSettings:{Managers:{mode:'build',directoryMode:'bind'}}}))
@@ -21,16 +22,17 @@ try{
  const later=await cli('card','create','--title','Later','--group','Managers'),laterToken=(await cli('auth','agent-token',later.id)).token
  await ready(later.id)
  assert.equal((await cliAs(laterToken,'auth','whoami')).globalManager,false)
- await stop();await start();assert.equal((await cliAs(laterToken,'auth','whoami')).globalManager,false)
- await cli('group','add','Hosts','--mode','work','--plugin','cloud-hosts');const hostWorker=await cli('card','create','--title','Operator','--group','Hosts'),credential=await cli('auth','agent-token',hostWorker.id)
+ await stop();await seedLegacyWorkTeams({env,temp,start,stop},[{name:'Hosts',pluginId:'cloud-hosts'},{name:'Notes',pluginId:'mininotion'}]);assert.equal((await cliAs(laterToken,'auth','whoami')).globalManager,false)
+ const hostWorker=await cli('card','create','--title','Operator','--group','Hosts'),credential=await cli('auth','agent-token',hostWorker.id)
  await ready(hostWorker.id);await cli('session','open',hostWorker.id)
- await assert.rejects(()=>cliAs(credential.token,'plugin','call','cloud-hosts','hosts.list','--employee',hostWorker.id))
+ assert.deepEqual(await cliAs(credential.token,'plugin','call','cloud-hosts','hosts.list','--employee',hostWorker.id),[])
  await cli('management','global',hostWorker.id,'on');assert.ok(Array.isArray(await cliAs(credential.token,'plugin','call','cloud-hosts','hosts.list','--employee',hostWorker.id)))
- await cli('management','global',hostWorker.id,'off');await assert.rejects(()=>cliAs(credential.token,'plugin','call','cloud-hosts','hosts.list','--employee',hostWorker.id))
+ await cli('management','global',hostWorker.id,'off');assert.deepEqual(await cliAs(credential.token,'plugin','call','cloud-hosts','hosts.list','--employee',hostWorker.id),[])
+ await cli('auth','revoke',hostWorker.id)
  const mailbox=path.join(home,'agent-access',hostWorker.id,'ipc','cloud-hosts'),id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';fs.writeFileSync(path.join(mailbox,id+'.request.json'),JSON.stringify({jsonrpc:'2.0',id,method:'hosts.list',params:{}}))
  for(let i=0;i<100&&!fs.existsSync(path.join(mailbox,id+'.response.json'));i++)await new Promise(resolve=>setTimeout(resolve,20))
  assert.match(JSON.parse(fs.readFileSync(path.join(mailbox,id+'.response.json'))).error.message,/Authentication/)
- await cli('group','add','Notes','--mode','work','--plugin','mininotion');const writer=await cli('card','create','--title','Writer','--group','Notes'),writerToken=(await cli('auth','agent-token',writer.id)).token
+ const writer=await cli('card','create','--title','Writer','--group','Notes'),writerToken=(await cli('auth','agent-token',writer.id)).token
  await ready(writer.id);assert.ok(await cliAs(writerToken,'plugin','call','mininotion','status','--employee',writer.id))
  await assert.rejects(()=>cliAs(writerToken,'workspace','list','.','--employee',hostWorker.id))
  await assert.rejects(()=>cliAs(writerToken,'plugin','call','mininotion','status','--workspace',managerRoot))

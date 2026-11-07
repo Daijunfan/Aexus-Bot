@@ -1,4 +1,4 @@
-import {canReadEmployee,isAppAdministrator} from '../authorization'
+import {canReadEmployee} from '../employee-authority'
 import {requireConversation} from '../conversation-policy'
 import {catalog} from '../chat-group-store'
 import {readStore} from '../store'

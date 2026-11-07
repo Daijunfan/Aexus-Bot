@@ -22,6 +22,9 @@ try{
  const file=(p,suffix)=>path.join(f.control,p.id+suffix),answer=(p,text)=>{fs.rmSync(file(p,'.ack-tool.json'),{force:true});fs.rmSync(file(p,'.ack-fail'),{force:true});fs.writeFileSync(file(p,'.ack-output.txt'),String(text??'null'))},hold=p=>fs.writeFileSync(file(p,'.hold-ack'),''),release=p=>fs.rmSync(file(p,'.hold-ack'),{force:true})
  const phases=p=>fs.existsSync(file(p,'-phases.jsonl'))?fs.readFileSync(file(p,'-phases.jsonl'),'utf8').trim().split('\n').filter(Boolean).map(line=>JSON.parse(line)):[]
  const work=p=>phases(p).filter(value=>value.phase==='work'),status=p=>f.status(p.id),transcript=p=>rpc('session.transcript',{employee:p.id}),history=()=>rpc('chat.history',{id:group.id,limit:100}),message=async id=>(await history()).messages.find(value=>value.id===id)
+ const directItems=async p=>(await rpc('direct.history',{employee:p.id,limit:500})).items
+ const readContexts=async(p,id)=>(await transcript(p)).items.filter(item=>item.role==='user'&&item.context?.phase==='read'&&item.context.origin?.kind==='group'&&item.context.origin.messageId===id)
+ const workContexts=async p=>(await transcript(p)).items.filter(item=>item.role==='user'&&item.context?.phase==='work')
  const delivery=async(id,p)=>(await message(id)).deliveries.find(value=>value.employeeId===p.id)
  const waitDone=id=>f.until(async()=>{const item=await message(id);const failed=item.deliveries.find(value=>value.status==='failed'||value.status==='interrupted');if(failed)throw Error(JSON.stringify(failed));return item.deliveries.length&&item.deliveries.every(value=>value.status==='completed')&&item},'all group deliveries complete')
  const waitIdle=()=>f.until(async()=>(await Promise.all(people.map(status))).every(value=>!value.busy),'all native ACK queues idle')
@@ -32,7 +35,8 @@ try{
   baseline.set(p.id,{items:(await transcript(p)).items,lastReply:(await status(p)).lastReply,thread:work(p).at(-1).thread,works:work(p).length})
   answer(p,null)
  }
- const unchanged=async p=>{const previous=baseline.get(p.id);assert.deepEqual((await transcript(p)).items,previous.items);assert.deepEqual((await status(p)).lastReply,previous.lastReply);assert.equal(work(p).length,previous.works)}
+ // Awareness may append read context and native output to Team, but it never changes the activity receipt, formal work or Direct ledger.
+ const unchanged=async p=>{const previous=baseline.get(p.id);assert.deepEqual((await status(p)).lastReply,previous.lastReply,'shared awareness leaves the Team activity receipt unchanged');assert.equal(work(p).length,previous.works,'shared awareness performs no formal work');assert.deepEqual(await directItems(p),[],'shared awareness never writes a Direct message')}
  hold(b)
  const targeted=await rpc('chat.send',{id:group.id,text:'A primary task with shared context',mentions:[a.id],clientMessageId:'targeted'})
  assert.deepEqual(targeted.deliveries.map(d=>[d.employeeId,d.mode]).sort(),[[a.id,'work'],[b.id,'awareness'],[c.id,'awareness']].sort())
@@ -42,29 +46,36 @@ try{
  assert.equal((await delivery(targeted.id,b)).readAt,undefined);await unchanged(b)
  release(b);await waitDone(targeted.id);await waitIdle()
  await unchanged(b);await unchanged(c);assert.equal(work(a).length,baseline.get(a.id).works+1)
+ for(const p of [b,c])assert.equal((await readContexts(p,targeted.id)).length,1,'awareness records exactly one read context in Team')
+ const primaryTarget=(await transcript(a)).items.filter(item=>item.role==='user'&&item.context?.origin?.messageId===targeted.id)
+ assert.equal(primaryTarget.filter(item=>item.context.phase==='work').length,1,'the formal target records one work context');assert.equal(primaryTarget.filter(item=>item.context.phase==='read').length,1,'the same target input records one read context')
  assert.equal((await status(b)).currentTask,undefined);assert.equal((await status(c)).currentTask,undefined)
  for(const p of [b,c]){const ack=phases(p).find(value=>value.phase==='ack'&&value.text.includes(targeted.id));assert.equal(ack.thread,baseline.get(p.id).thread);assert.deepEqual(ack.environments,[]);assert.ok(ack.text.includes(targeted.text),'unmentioned members receive the complete message');const context=JSON.parse(ack.text.split('[Group request]\n')[1].split('\n')[0]);assert.deepEqual(context.author,targeted.author);assert.deepEqual(context.addressedTo,[a.id]);assert.equal(context.directlyAddressed,false);assert.equal(context.acknowledgment.mode,'awareness')}
  assert.equal((await history()).messages.length,1,'silent ACKs add no public messages')
- console.log('PASS one primary work delivery and real all-member awareness, without private history/old reply pollution')
+ console.log('PASS one primary work delivery and real all-member awareness: read context and native output stay in Team, with no Direct rows, formal work or activity-receipt change')
 
  const report=await post(a,'A real employee outcome for shared context.','employee-outcome')
  await waitDone(report.id);await waitIdle();assert.ok(report.deliveries.every(value=>value.mode==='awareness'&&value.employeeId!==a.id))
  await unchanged(b);await unchanged(c)
+ for(const p of [b,c])assert.equal((await readContexts(p,report.id)).length,1,'employee publication adds one read context per observer')
  const reply=await rpc('chat.send',{id:group.id,text:'Please expand your outcome.',replyTo:report.id,clientMessageId:'reply-to-author'})
  await waitDone(reply.id);await waitIdle()
  assert.equal((await delivery(reply.id,a)).mode,'work');assert.equal((await delivery(reply.id,b)).mode,'awareness')
  const replyAck=phases(b).find(value=>value.phase==='ack'&&JSON.parse(value.text.split('\n')[1]).messageId===reply.id)
  assert.ok(replyAck.text.includes(report.id)&&replyAck.text.includes(report.text),'awareness gets full original reply context')
  await unchanged(b);await unchanged(c)
+ for(const p of [b,c])assert.equal((await readContexts(p,reply.id)).length,1,'reply awareness records one read context in Team')
  const slash=await post(a,'/compact is quoted group content, not an engine command.','slash-content')
  await waitDone(slash.id);await waitIdle();await unchanged(b);await unchanged(c)
+ for(const p of [b,c])assert.equal((await readContexts(p,slash.id)).length,1,'slash-prefixed awareness records one read context in Team')
  console.log('PASS employee posts fan out as awareness, replies target their author, and slash-prefixed awareness remains content')
 
- // Arbitrary successful reading output is private; native success supplies the receipt.
+ // Arbitrary reading output stays in Team; it is never published to the group or the Direct ledger.
  for(const p of people)answer(p,JSON.stringify({text:'PRIVATE_AWARENESS_should_not_publish'}))
  const before=(await history()).messages.length,note=await post(a,'One reference with ordinary private reading output.','automatic-receipts')
  await waitDone(note.id);await waitIdle();assert.equal((await history()).messages.length,before+1)
  for(const d of (await message(note.id)).deliveries){assert.ok(d.readAt);assert.equal(d.ackMessageId,undefined)}await unchanged(b);await unchanged(c)
+ for(const p of [b,c]){assert.equal((await readContexts(p,note.id)).length,1,'reading awareness records one read context in Team');assert.ok((await transcript(p)).text.includes('PRIVATE_AWARENESS_should_not_publish'),'quiet native reading output is visible in Team')}
  const cleanStart=(await history()).messages.length,publicNote=await post(a,'Explicit publication remains available.','explicit-public-note');await waitDone(publicNote.id)
  const explicitB=await post(b,'B deliberately publishes.','explicit-b',publicNote.id),explicitC=await post(c,'C deliberately publishes.','explicit-c',publicNote.id)
  await waitDone(explicitB.id);await waitDone(explicitC.id);await waitIdle()
@@ -78,7 +89,7 @@ try{
  const failed=await post(a,'This awareness ACK fails visibly in its delivery status.','bad-awareness')
  await f.until(async()=>(await delivery(failed.id,c)).status==='failed','bad awareness rejected')
  await waitIdle();assert.equal((await delivery(failed.id,c)).readAt,undefined);assert.match((await delivery(failed.id,c)).error,/fixture acknowledgment failure/i)
- await unchanged(c);assert.equal((await rpc('session.snapshot',{id:(await status(c)).sessionId})).error,undefined)
+ await unchanged(c);assert.match((await rpc('session.snapshot',{id:(await status(c)).sessionId})).error,/fixture acknowledgment failure/i,'Team shows the real native read failure')
  answer(c,null);hold(b)
  const stopped=await post(a,'This pending shared context will be stopped.','stopped-awareness')
  await f.until(async()=>{const s=await status(b);return s.acknowledging&&s.currentTask?.chat?.messageId===stopped.id},'interruptible awareness')
@@ -97,15 +108,16 @@ try{
  const queuedNotice=await post(a,'Awareness releases the same queue when complete.','notice-then-private')
  await f.until(async()=>{const s=await status(b);return s.acknowledging&&s.currentTask?.chat?.messageId===queuedNotice.id},'queued awareness')
  await rpc('session.enqueue',{id:session,text:'Private task following awareness'})
- const privateMessage=text=>{const [context,body]=text.split('\n\n[Current message]\n');assert.ok(context.startsWith('[Agents Company role]\n'+JSON.stringify({employeeId:b.id,managementRole:'employee'})+'\n\n[Agents Company message source]\n{"sourceView":null}\n'));assert.ok(!context.includes('[Group request]'));return body}
+ const privateMessage=text=>{const [context,body]=text.split('\n\n[Current message]\n');assert.ok(context.startsWith('[Agents Company role]\n'+JSON.stringify({employeeId:b.id,managementRole:'employee'})+'\n'));assert.ok(context.includes('[Agents Company message source]\n{"sourceView":null}\n'));assert.ok(!context.includes('[Group request]'));return body}
  assert.equal(privateMessage(work(b).at(-1).text),'A real private task after awareness')
  release(b);await waitDone(queuedNotice.id)
  await f.until(async()=>privateMessage(work(b).at(-1).text)==='Private task following awareness'&&!(await status(b)).busy,'awareness queue continuation')
  assert.ok(work(b).at(-1).at>=(await delivery(queuedNotice.id,b)).readAt)
  assert.equal((await transcript(b)).items.filter(item=>item.role==='user'&&item.text==='Private task following awareness').length,1)
- const beforeClose={items:(await transcript(b)).items,lastReply:(await status(b)).lastReply}
  hold(b);const closing=await post(a,'Closing this held awareness session must finish cleanly.','closed-awareness')
  await f.until(async()=>{const s=await status(b);return s.acknowledging&&s.currentTask?.chat?.messageId===closing.id},'closeable awareness')
+ const beforeClose={items:(await transcript(b)).items,lastReply:(await status(b)).lastReply}
+ assert.equal((await readContexts(b,closing.id)).length,1,'held awareness already records its read context in Team')
  await rpc('session.close',{id:session})
  assert.equal((await delivery(closing.id,b)).status,'interrupted');assert.equal((await delivery(closing.id,b)).readAt,undefined)
  assert.deepEqual((await transcript(b)).items,beforeClose.items);assert.deepEqual((await status(b)).lastReply,beforeClose.lastReply)
@@ -119,8 +131,9 @@ try{
  assert.equal((await status(governor)).currentTask.viewId,undefined)
  assert.equal((await f.request(tokens.get(a.id),'session.send',{employee:governor.id,text:'No control permission was granted'})).ok,false)
  release(governor);await waitDone(globalNotice.id);await waitIdle()
- assert.equal((await transcript(governor)).items.length,0);assert.equal(work(governor).length,0)
+ assert.equal((await readContexts(governor,globalNotice.id)).length,1,'Governor awareness records one read context in Team')
+ assert.equal((await workContexts(governor)).length,0,'Governor awareness performs no formal work');assert.equal(work(governor).length,0);assert.deepEqual(await directItems(governor),[])
  assert.deepEqual(await rpc('terminal.list'),[])
- fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({passed:true,checks:['exact group notice scope','native delivered before authenticated read','no awareness work/user/old reply publication','reply author becomes primary','full shared reply context','employee post awareness without control permissions','slash content inert','ordinary text/JSON never creates public messages; successful native reading records receipt; explicit publication fans out once','failed and interrupted awareness stays in delivery status','queue Stop semantics and ordinary native environment recovery','successful queue continuation','close/reopen during ACK without native identity change','Governor awareness needs no work view and grants no control'],providerCalls:0,platform:process.platform},null,2))
- console.log('PASS failed/Stop awareness stays out of private transcript; queue semantics and same-native-thread work recovery are preserved')
+ fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({passed:true,checks:['exact group notice scope','native delivered before authenticated read','awareness appends only a Team read context and native output; no formal work, Direct row or activity receipt change','reply author becomes primary','full shared reply context','employee post awareness without control permissions','slash content inert','ordinary text/JSON never creates public messages; quiet native reading output stays in Team; explicit publication fans out once','failed and interrupted awareness stays in delivery status','queue Stop semantics and ordinary native environment recovery','successful queue continuation','close/reopen during ACK without native identity change','Governor awareness needs no work view and grants no control'],providerCalls:0,platform:process.platform},null,2))
+ console.log('PASS failed/Stop awareness adds no Direct rows; Team keeps read context and native output; queue semantics and same-native-thread work recovery are preserved')
 }finally{await f?.close();fs.rmSync(temp,{recursive:true,force:true,maxRetries:10,retryDelay:100})}

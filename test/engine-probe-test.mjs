@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import {fixtureCore} from './fixtures/headless-core.mjs'
+import {writeNativeProfiles,FIXTURE_SECRET} from './fixtures/native-profiles.mjs'
 const temp=fs.mkdtempSync(path.join(os.tmpdir(),'engine-probe-test-')),script=path.join(temp,'engine.cjs'),trace=path.join(temp,'calls.jsonl'),profile=path.join(temp,'claude')
 fs.mkdirSync(profile)
 fs.writeFileSync(script,`#!/usr/bin/env node
@@ -13,7 +14,8 @@ console.log(JSON.stringify(args[0]==='exec'?{type:'item.completed',item:{type:'a
 `,{mode:0o755})
 const binary=process.platform==='win32'?path.join(temp,'engine.cmd'):script
 if(process.platform==='win32')fs.writeFileSync(binary,`@echo off\r\n"${process.execPath}" "${script}" %*\r\n`)
-const f=await fixtureCore({CODEX_BIN:binary,CLAUDE_BIN:binary,CLAUDE_CONFIG_DIR:profile})
+const f=await fixtureCore({CODEX_BIN:binary,CLAUDE_BIN:binary,CLAUDE_CONFIG_DIR:profile,OPENAI_API_KEY:FIXTURE_SECRET})
+writeNativeProfiles(f.env,{engines:['codex']})
 try{
  assert.equal((await f.raw(null,'engine','probe','--engine','codex')).ok,false)
  assert.equal(fs.existsSync(trace),false,'no subprocess/inference before explicit confirmation')
@@ -26,11 +28,10 @@ try{
  assert.equal(calls.length,2);assert.ok(calls.every(c=>!c.hasCompanyToken&&!fs.existsSync(c.cwd)&&c.companyHome.startsWith(c.cwd+path.sep)),'temporary workspace cleaned and operator token absent')
  assert.ok(calls[0].args.includes('--ephemeral')&&calls[0].args.includes('read-only'))
  assert.ok(calls[1].args.includes('--no-session-persistence'));assert.equal(calls[1].args[calls[1].args.indexOf('--tools')+1],'')
- await f.cli('engine','configure','--engine','codex','--data','{"apiKey":"probe-test-sensitive"}')
- const catalog=await f.cli('engine','providers','--engine','codex');assert.equal(catalog.source,'app');assert.equal(catalog.profiles.find(p=>p.active).source,'app');assert.ok(!JSON.stringify(catalog).includes('probe-test-sensitive'))
+ const catalog=await f.cli('engine','providers','--engine','codex');assert.equal(catalog.source,'native');assert.equal(catalog.profiles.find(p=>p.active).source,'native');assert.ok(!JSON.stringify(catalog).includes(FIXTURE_SECRET))
  assert.equal((await f.raw(null,'engine','providers','--engine','invalid')).ok,false)
  const failed=await f.raw(null,'engine','probe','--engine','codex','--model','fail','--confirm')
- assert.equal(failed.ok,false);assert.ok(!failed.error.includes('probe-test-sensitive'));assert.match(failed.error,/redacted/)
+ assert.equal(failed.ok,false);assert.ok(!failed.error.includes(FIXTURE_SECRET));assert.match(failed.error,/redacted/)
  await f.cli('group','add','A');const card=await f.cli('card','create','--title','Employee','--group','A','--model','gpt-6-luna'),token=await f.token(card.id)
  assert.equal((await f.raw(token,'engine','probe','--engine','codex','--confirm')).ok,false)
  assert.equal((await f.raw(token,'engine','providers','--engine','codex')).ok,false)

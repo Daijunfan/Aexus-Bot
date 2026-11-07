@@ -7,6 +7,7 @@ import {randomUUID} from 'node:crypto'
 import {execFile} from 'node:child_process'
 import {promisify} from 'node:util'
 import {fixtureCore} from './fixtures/headless-core.mjs'
+import {seedLegacyWorkTeam} from './fixtures/legacy-plugin-team.mjs'
 
 const f=await fixtureCore({AGENTS_COMPANY_PLUGIN_DIRS:''})
 const {root,temp,env,cli}=f,run=promisify(execFile)
@@ -27,13 +28,13 @@ try{
   const view=await cli('plugin','view','mininotion')
   assert.equal(view.workspace,base)
   assert.ok((await call('page.list')).some(page=>page.sourceFile?.path==='default/old.md'))
-  await cli('group','add','default','--mode','work','--plugin','mininotion');assert.equal((await call('fs.info',{},['--team','default'])).root,path.join(base,'default'))
+  await seedLegacyWorkTeam(f,'default','mininotion');assert.equal((await call('fs.info',{},['--team','default'])).root,path.join(base,'default'))
   await cli('plugin','close',view.id)
   pass('normal built-in discovery uses the locked version and collection view; old default scope remains explicit and unmoved')
 
   const personal=await call('page.create',{title:'用户直接创建',color:'white'})
-  const creation=await cli('group','add',team,'--mode','work','--plugin','mininotion')
-  assert.equal(creation.teamRoots[team],path.join(base,directoryName(team,'team')))
+  await seedLegacyWorkTeam(f,team,'mininotion')
+  assert.equal((await cli('session','list')).teamRoots[team],path.join(base,directoryName(team,'team')))
   const main=await teamCall('page.create',{title:'项目文档',color:'white'})
   const other=await teamCall('page.create',{title:'研究资料',color:'white'})
   const location=await teamCall('fs.path',{pageId:main.id}),otherLocation=await teamCall('fs.path',{pageId:other.id})

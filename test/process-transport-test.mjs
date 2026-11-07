@@ -7,7 +7,8 @@ import {pathToFileURL} from 'node:url'
 import {createRequire} from 'node:module'
 import {build} from 'esbuild'
 import {spawn} from 'node:child_process'
-const temp=fs.mkdtempSync(path.join(os.tmpdir(),'ac-process-transport-')),require=createRequire(import.meta.url),relays=[],previousHome=process.env.AGENTS_COMPANY_HOME
+import {writeNativeProfiles,FIXTURE_SECRET} from './fixtures/native-profiles.mjs'
+const temp=fs.mkdtempSync(path.join(os.tmpdir(),'ac-process-transport-')),require=createRequire(import.meta.url),relays=[],previousHome=process.env.AGENTS_COMPANY_HOME,previousClineData=process.env.CLINE_DATA_DIR,previousHomeDirectory=process.env.HOME
 process.env.AGENTS_COMPANY_HOME=path.join(temp,'state')
 let received,upstreamCancelled=false
 const upstream=http.createServer(async(req,res)=>{
@@ -17,14 +18,21 @@ const upstream=http.createServer(async(req,res)=>{
 })
 await new Promise(resolve=>upstream.listen(0,'127.0.0.1',resolve));const endpoint=`http://127.0.0.1:${upstream.address().port}/v1`
 try{
+ // Isolate every native read: CLINE_DATA_DIR and HOME point inside temp, so the
+ // relay can only ever read the synthetic profile and the loopback endpoint.
+ process.env.CLINE_DATA_DIR=path.join(temp,'native-cline');process.env.HOME=temp
+ writeNativeProfiles(process.env,{engines:['cline']})
+ const nativeFile=path.join(process.env.CLINE_DATA_DIR,'settings/providers.json')
+ const setNative=(providers,lastUsedProvider='deepseek')=>fs.writeFileSync(nativeFile,JSON.stringify({version:1,lastUsedProvider,providers}))
+ const nativeProvider={...JSON.parse(fs.readFileSync(nativeFile,'utf8')).providers.deepseek.settings,baseUrl:endpoint}
+ setNative({deepseek:{settings:nativeProvider}})
  const outfile=path.join(temp,'helpers.cjs')
- await build({stdin:{contents:"export {prepareClineCompatibility,projectClineRequest} from './src/main/engines/cline-compat';export {preparePiTunnel} from './src/main/engines/pi-tunnel';export {configureEngine} from './src/main/engines/configuration'",resolveDir:process.cwd()},outfile,bundle:true,platform:'node',format:'cjs'})
- const {prepareClineCompatibility,projectClineRequest,preparePiTunnel,configureEngine}=require(outfile)
+ await build({stdin:{contents:"export {prepareClineCompatibility,projectClineRequest} from './src/main/engines/cline-compat';export {preparePiTunnel} from './src/main/engines/pi-tunnel'",resolveDir:process.cwd()},outfile,bundle:true,platform:'node',format:'cjs'})
+ const {prepareClineCompatibility,projectClineRequest,preparePiTunnel}=require(outfile)
  const open=async(name,remote)=>{
-  const directory=path.join(temp,name),file=path.join(directory,'data/settings/providers.json');fs.mkdirSync(path.dirname(file),{recursive:true})
-  fs.writeFileSync(file,JSON.stringify({version:1,providers:{deepseek:{settings:{baseUrl:endpoint,model:'deepseek-flash'}}}}))
+  const directory=path.join(temp,name),file=path.join(directory,'data/settings/providers.json')
   const relay=await prepareClineCompatibility(directory,remote,remote?{tools:[],call:async()=>({content:[]}),close(){}}:undefined);relays.push(relay)
-  const url=JSON.parse(fs.readFileSync(file)).providers.deepseek.settings.baseUrl+'/chat/completions'
+  const url=JSON.parse(fs.readFileSync(file)).providers[relay.provider].settings.baseUrl+'/chat/completions'
   return {directory,file,relay,url,post:(body,extra={})=>fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),...extra})}
  }
  const local=await open('local'),image={path:'approved.png',mimeType:'image/png',data:'fixture-base64'},attachment=local.relay.stage([image,image])
@@ -64,19 +72,30 @@ try{
   const reply=await new Promise((resolve,reject)=>{let buffer='';const timer=setTimeout(()=>reject(Error('MCP Unicode fixture timed out')),5000);child.once('error',reject);child.stdout.on('data',value=>{buffer+=value;if(buffer.includes('\n')){clearTimeout(timer);try{resolve(JSON.parse(buffer.split('\n')[0]))}catch(error){reject(error)}}});child.stdin.write(JSON.stringify({jsonrpc:'2.0',id:'unicode-call',method:'tools/call',params:{name:'agents_company_discussion_post',arguments:toolInput}})+'\n')})
   assert.deepEqual(bridged,{name:'agents_company_discussion_post',input:toolInput});assert.equal(reply.result.content[0].text,expected,'full Chinese and emoji context must survive chunk boundaries byte-exactly')
  }finally{child.stdin.end();child.kill('SIGTERM');await mcp.close()}
- // An employee profile cannot redirect a Core-configured gateway or replace its selected model.
- configureEngine('cline',{baseUrl:endpoint,model:'gateway-model'})
+ // Native configuration is the only upstream source. Rewriting it (as the native
+ // client would) keeps headers and credentials; a stale employee-private relay
+ // profile cannot redirect the upstream, and an unsupported native endpoint fails.
+ setNative({
+  'openai-compatible':{settings:{provider:'openai-compatible',baseUrl:endpoint,model:'wrong-model',apiKey:FIXTURE_SECRET,headers:{'x-native-setting':'retained'}}},
+  deepseek:{settings:{provider:'deepseek',baseUrl:'https://api.deepseek.com',model:'deepseek-flash',apiKey:FIXTURE_SECRET}}
+ },'openai-compatible')
  const customDir=path.join(temp,'custom'),customFile=path.join(customDir,'data/settings/providers.json');fs.mkdirSync(path.dirname(customFile),{recursive:true})
- const nativeSetting={provider:'openai-compatible',baseUrl:'https://employee-profile.invalid/v1',model:'wrong-model',headers:{'x-native-setting':'retained'}}
- fs.writeFileSync(customFile,JSON.stringify({version:1,providers:{'openai-compatible':{settings:nativeSetting},deepseek:{settings:{model:'deepseek-flash'}}}}))
- const custom=await prepareClineCompatibility(customDir);relays.push(custom)
+ fs.writeFileSync(customFile,JSON.stringify({version:1,lastUsedProvider:'openai-compatible',providers:{'openai-compatible':{settings:{provider:'openai-compatible',baseUrl:'http://employee-profile.invalid/v1',model:'employee-model',headers:{'x-employee-private':'true'}}}}}))
+ const custom=await prepareClineCompatibility(customDir,undefined,undefined,'gateway-model');relays.push(custom)
  assert.equal(custom.provider,'openai-compatible');assert.equal(custom.model,'gateway-model');assert.equal(custom.managedReasoning,true);assert.equal(custom.baseUrl,endpoint)
- const configured=JSON.parse(fs.readFileSync(customFile));assert.equal(configured.providers['openai-compatible'].settings.model,'gateway-model');assert.deepEqual(configured.providers.deepseek.settings,{model:'deepseek-flash'})
+ const configured=JSON.parse(fs.readFileSync(customFile));assert.equal(configured.providers['openai-compatible'].settings.model,'gateway-model')
+ assert.deepEqual(configured.providers['openai-compatible'].settings.headers,{'x-native-setting':'retained'},'native headers survive the relay profile rewrite')
+ assert.equal(configured.providers['openai-compatible'].settings.apiKey,FIXTURE_SECRET,'native credentials survive the relay profile rewrite')
+ assert.deepEqual(configured.providers.deepseek.settings,{provider:'deepseek',baseUrl:'https://api.deepseek.com',model:'deepseek-flash',apiKey:FIXTURE_SECRET})
  const customUrl=configured.providers['openai-compatible'].settings.baseUrl+'/chat/completions'
  await fetch(customUrl,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({model:custom.model,messages:[]})});assert.equal(received.model,'gateway-model')
- await custom.close();assert.equal(JSON.parse(fs.readFileSync(customFile)).providers['openai-compatible'].settings.baseUrl,endpoint)
- configureEngine('cline',{baseUrl:'',model:''})
- const untrusted=path.join(temp,'untrusted'),untrustedFile=path.join(untrusted,'data/settings/providers.json');fs.mkdirSync(path.dirname(untrustedFile),{recursive:true});fs.writeFileSync(untrustedFile,JSON.stringify({providers:{deepseek:{settings:{baseUrl:'https://employee-profile.invalid/v1'}}}}))
- await assert.rejects(()=>prepareClineCompatibility(untrusted),/Unsupported Cline provider endpoint/)
- console.log('PASS Cline compatibility transport: actual image bytes, native resume, unchanged thinking/stream/errors, private route, cancellation and cloud tool filtering; Pi extension/Core bridge')
-}finally{for(const relay of relays)await relay.close();upstream.closeAllConnections();await new Promise(resolve=>upstream.close(resolve));fs.rmSync(temp,{recursive:true,force:true});if(previousHome===undefined)delete process.env.AGENTS_COMPANY_HOME;else process.env.AGENTS_COMPANY_HOME=previousHome}
+ await custom.close()
+ const closed=JSON.parse(fs.readFileSync(customFile))
+ assert.equal(closed.providers['openai-compatible'].settings.baseUrl,endpoint)
+ assert.equal(closed.providers['openai-compatible'].settings.model,'gateway-model')
+ assert.deepEqual(closed.providers['openai-compatible'].settings.headers,{'x-native-setting':'retained'})
+ assert.equal(closed.providers['openai-compatible'].settings.apiKey,FIXTURE_SECRET)
+ setNative({deepseek:{settings:{provider:'deepseek',baseUrl:'http://employee-profile.invalid/v1',model:'deepseek-flash',apiKey:FIXTURE_SECRET}}})
+ await assert.rejects(()=>prepareClineCompatibility(path.join(temp,'untrusted')),/Unsupported Cline provider endpoint/)
+ console.log('PASS Cline compatibility transport: synthetic native profile only, actual image bytes, native resume, unchanged thinking/stream/errors, private route, cancellation and cloud tool filtering; Pi extension/Core bridge')
+}finally{for(const relay of relays)await relay.close();upstream.closeAllConnections();await new Promise(resolve=>upstream.close(resolve));fs.rmSync(temp,{recursive:true,force:true});if(previousHome===undefined)delete process.env.AGENTS_COMPANY_HOME;else process.env.AGENTS_COMPANY_HOME=previousHome;if(previousClineData===undefined)delete process.env.CLINE_DATA_DIR;else process.env.CLINE_DATA_DIR=previousClineData;if(previousHomeDirectory===undefined)delete process.env.HOME;else process.env.HOME=previousHomeDirectory}

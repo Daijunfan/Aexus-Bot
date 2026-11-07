@@ -10,7 +10,7 @@ export function spokenMessages(items:Item[]):Item[]{
   if(item.role==='notice')return []
   if(item.role==='user')return item.text.trim()||item.images?.length||item.files?.length?[item]:[]
   const blocks=item.blocks.filter(block=>block.kind==='text'&&block.text.trim())
-  return blocks.length?[blocks.length===item.blocks.length?item:{...item,blocks}]:[]
+  return blocks.length||item.images?.length||item.files?.length?[blocks.length===item.blocks.length?item:{...item,blocks}]:[]
  })
 }
 /** Display only timestamps actually recorded by the transcript/reply protocol. */

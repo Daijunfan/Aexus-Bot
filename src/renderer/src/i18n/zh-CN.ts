@@ -1,5 +1,14 @@
 /** Product interface copy only. User names, messages, files and model output are never translated. */
 export const zhCN:Record<string,string> = {
+  "Private messages": "私聊消息",
+  "Details": "详情",
+  "Avatar": "头像",
+  "Channel messages": "频道消息",
+  "now": "刚刚",
+  "Group": "群组",
+  "Group messages": "群聊消息",
+  "Choose an existing folder": "选择已有文件夹",
+  "Browse": "浏览",
   "Copy text": "复制文本",
   "Try another name or select All.": "换个名称搜索，或选择“全部”。",
   "Remove this connection from Aexus. The native bot and its history are retained.": "从 Aexus 移除此接入，保留原生 Bot 和历史。",

@@ -6,7 +6,7 @@ import {one,run,archiveAvatars} from './channel-store'
 const fail=(message:string,code='INVALID_CHANNEL_REQUEST',status=400)=>Object.assign(Error(message),{code,status})
 /** Authorization and source capability checks belong to the channel dispatcher. */
 export function putSourceAvatar(args:ChannelSourceAvatarInput):{sourceId:string;sha256:string}{
- const image=validatedChannelImage(args),previous=sourceAvatar(args.sourceId)
+ const image=validatedChannelImage(args),previous=one('SELECT sha256 FROM source_avatars WHERE source_id=?',args.sourceId)
  if(previous?.sha256!==image.sha256)run('INSERT INTO source_avatars(source_id,name,mime_type,data,sha256,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET name=excluded.name,mime_type=excluded.mime_type,data=excluded.data,sha256=excluded.sha256,updated_at=excluded.updated_at',args.sourceId,args.name.trim(),args.mimeType,image.data,image.sha256,Date.now())
  archiveAvatars.set(args.sourceId,{sha256:image.sha256,name:args.name.trim(),mimeType:args.mimeType,bytes:image.data.length})
  return {sourceId:args.sourceId,sha256:image.sha256}

@@ -39,7 +39,10 @@ try{
  fs.writeFileSync(stream,'A reply in progress.\n\nA second recorded detail.');await f.until(async()=>(await transcript(a.id)).text.includes('A second recorded detail.'),'stream grows');assert.equal((await transcript(a.id)).items.at(-1).createdAt,createdAt,'streaming does not move creation time')
  const queued=await f.call(managerToken,'session','enqueue','--employee',a.id,'--text','A queued reply from Lead.','--reply-to','old-answer');assert.equal(queued.replyTo,'old-answer');assert.equal((await f.cli('session','queue',opened.sessionId))[0].replyTo,'old-answer')
  fs.unlinkSync(hold);fs.unlinkSync(stream);await f.until(()=>input(a.id).includes('A queued reply from Lead.'),'queued reference reaches existing engine');await f.until(async()=>!(await f.status(a.id)).busy,'queued reply completes')
- const managerReply=(await transcript(a.id)).items.find(item=>item.text==='A queued reply from Lead.');assert.deepEqual(managerReply.author,{kind:'agent',employeeId:manager.id});assert.equal(managerReply.reply.id,'old-answer');const fromTeam=await f.cli('messenger','search','--conversation','employee:'+a.id,'--query','A queued reply from Lead.','--author','employee');assert.equal(fromTeam.messages[0].author,'Lead');assert.deepEqual(fromTeam.messages[0].authorIdentity,{kind:'agent',employeeId:manager.id});assert.equal((await f.cli('messenger','search','--conversation','employee:'+a.id,'--query','A queued reply from Lead.','--author','you')).total,0)
+ const managerReply=(await transcript(a.id)).items.find(item=>item.text==='A queued reply from Lead.');assert.deepEqual(managerReply.author,{kind:'agent',employeeId:manager.id});assert.equal(managerReply.reply.id,'old-answer')
+ // Native Team replies are not Message ledger rows; neither author filter may see them.
+ for(const author of ['employee','you'])assert.equal((await f.cli('messenger','search','--conversation','employee:'+a.id,'--query','A queued reply from Lead.','--author',author)).total,0,'native replies never enter messenger.search')
+ assert.equal((await rpc('direct.history',{employee:a.id,limit:500})).items.length,0,'no native reply was published as a private Message')
  await rpc('session.send',{employee:a.id,text:'Reply to the real sender.',replyTo:managerReply.id,reply:{id:foreign,text:'FORGED_EXCERPT'},author:{kind:'agent',employeeId:b.id}});await f.until(async()=>!(await f.status(a.id)).busy,'resolved sender reply')
  const actual=(await transcript(a.id)).items.find(item=>item.text==='Reply to the real sender.');assert.deepEqual(actual.author,{kind:'operator'});assert.deepEqual(actual.reply.author,managerReply.author);assert.equal(actual.reply.text,managerReply.text);assert.ok(!input(a.id).includes('FORGED_EXCERPT'))
  // The public excerpt is bounded by Unicode characters, without cutting surrogate pairs.
@@ -49,7 +52,9 @@ try{
  await assert.rejects(()=>f.cli('session','steer',opened.sessionId,'No ignored option.','--reply-to','old-answer'),/supported by session send/)
  history=(await transcript(a.id)).items;assert.equal(new Set(history.map(item=>item.id)).size,history.length)
  const exported=JSON.parse((await rpc('session.export',{id:a.id,format:'json'})).content);assert.deepEqual(exported,history)
- const dates=(await f.cli('messenger','search','--conversation','employee:'+a.id,'--query','public answer')).messages;assert.equal(dates.find(item=>item.id==='old-answer').createdAt,null,'no inferred timestamp for old assistant history')
+ // Timestamp-less legacy native items never leak into Message, and no date is fabricated.
+ assert.equal((await f.cli('messenger','search','--conversation','employee:'+a.id,'--query','public answer')).total,0,'old native history is not a Message row')
+ assert.equal((await rpc('direct.history',{employee:a.id,limit:500})).items.length,0,'native transcript stays Team-only')
  await f.stop();await f.start();assert.deepEqual((await transcript(a.id)).items,history)
  const after=await f.cli('session','list');for(const person of before.sessions){const saved=after.sessions.find(item=>item.id===person.id);for(const field of ['id','engine','group','cwd','managementRole','permissionMode'])assert.equal(saved[field],person[field])}
  assert.ok((await f.cli('api','describe','session.send')).args.includes('--reply-to'));assert.equal((await f.cli('api','describe','session.enqueue')).inputSchema.properties.replyTo.type,'string');assert.deepEqual(await f.cli('terminal','list'),[])

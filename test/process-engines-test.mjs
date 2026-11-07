@@ -2,13 +2,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import {fixtureCore} from './fixtures/headless-core.mjs'
+import {writeNativeProfiles} from './fixtures/native-profiles.mjs'
 const fixture=path.resolve('test/fixtures/process-adapter.cjs'),test=await fixtureCore({CLINE_BIN:fixture,PI_BIN:fixture}),{cli,until,status,request}=test
+writeNativeProfiles(test.env,{engines:['cline','pi']})
 const rpc=async(cmd,args)=>{const result=await request(null,cmd,args);assert.ok(result.ok,result.error);return result.data}
 try{
  await cli('group','add','A')
- assert.deepEqual((await cli('engine','list')).map(e=>e.engine).sort(),['claude','cline','codex','pi'])
+ assert.deepEqual((await cli('engine','list')).map(e=>e.engine).sort(),['claude','cline','codex','kilo','opencode','pi'])
  for(const engine of ['cline','pi']){
-  await rpc('engine.configure',{engine,patch:{apiKey:'fixture-key-not-real'}})
   const models=await cli('engine','models','--engine',engine);assert.equal(models.defaultModel,'deepseek-flash');assert.ok(models.models.every(m=>m.supportsEffort===false))
   const card=await cli('card','create','--title',engine,'--group','A','--engine',engine)
   assert.equal(card.model,'deepseek-flash');assert.equal(card.thinking,false)
@@ -32,5 +33,5 @@ try{
   if(engine==='pi')assert.match(before.piSessionId,/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i,JSON.stringify(before.nativeSessions))
   await cli('card','remove',card.id);assert.ok(!fs.existsSync(before[engine==='cline'?'clineConfigRoot':'piConfigRoot']))
  }
- console.log('PASS Cline/Pi Core CLI: defaults, Unicode streaming, approvals deny/allow, cancellation/errors, native resume and scoped history cleanup; fixture only')
+ console.log('PASS Cline/Pi Core CLI (native catalogs list all six engines; this fixture exercises Cline/Pi protocols only): defaults, Unicode streaming, approvals deny/allow, cancellation/errors, native resume and scoped history cleanup; fixture only')
 }finally{await test.close()}

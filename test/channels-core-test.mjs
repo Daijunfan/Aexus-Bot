@@ -74,10 +74,11 @@ try{
  for(const role of ['employee','manager','governor']){
   fs.writeFileSync(path.join(home,'sessions.json'),JSON.stringify({groups:['Test'],rooms:{},sessions:[{id:role,kind:'worker',engine:'codex',group:'Test',managementRole:role,initialization:{status:'ready'}}]}))
   const agent=(command,args={})=>core.withCaller({principal:{kind:'agent',employeeId:role},requestId:'test'},()=>core.channelRequest('channel.'+command,args))
-  const own=agent('list');assert.equal(own.length,rpc('list').length)
-  for(const value of own)assert.deepEqual(Object.keys(value).sort(),['adminIds','createdAt','engine','id','kind','memberIds','name','ownerId','revision','updatedAt'],'discovery returns identity only, not user news/collection projections')
+  assert.deepEqual(agent('list'),[]);assert.throws(()=>agent('get',{id:tg.channelId}),/Channel access required/);const access=rpc('access',{id:tg.channelId});rpc('access',{id:tg.channelId,employeeIds:[role],expectedRevision:access.revision});const own=agent('list');assert.equal(own.length,1)
+  for(const value of own)assert.deepEqual(Object.keys(value).sort(),['adminIds','createdAt','engine','id','kind','memberIds','name','ownerId','readerIds','revision','updatedAt'],'discovery returns identity only, not user news/collection projections')
   assert.equal(agent('get',{id:tg.channelId}).id,tg.channelId)
-  for(const [command,args] of [['sources',{}],['posts',{}],['update',{id:x.channelId,adminIds:[]}],['settings',{}]])assert.throws(()=>agent(command,args),/Only the user/)
+  assert.ok(agent('sources',{channelId:tg.channelId}).every(source=>source.channelId===tg.channelId));assert.equal(agent('timeline',{id:tg.channelId}).entries.length,0)
+  for(const [command,args] of [['update',{id:x.channelId,adminIds:[]}],['settings',{}]])assert.throws(()=>agent(command,args),/Only the user/)
 
  }
  assert.ok(events.some(e=>e.kind==='posts'));assert.ok(events.some(e=>e.kind==='sources'))

@@ -39,11 +39,12 @@ try{
  // An employee publishes own text/image/file rows only, with durable idempotency.
  const p1=await rpc(at,'direct.post',{text:'AGENT_TEXT_1',clientMessageId:'agent-text-1'})
  await rpc(at,'direct.post',{images:['media/photo.png'],clientMessageId:'agent-image-1'})
- await rpc(at,'direct.post',{files:['media/brief.txt'],clientMessageId:'agent-file-1'})
+ const fileOnly=await rpc(at,'direct.post',{files:['media/brief.txt'],clientMessageId:'agent-file-1'})
  const privateKey='employee:'+a.id
  const rawId=(await f.cli('session','transcript',a.id)).items.find(i=>i.role==='user'&&i.text==='RAW_NATIVE_SENTINEL').id
  for(const query of ['RAW_NATIVE_SENTINEL','GROUP_ONLY_SENTINEL'])assert.equal((await rpc(null,'messenger.search',{conversation:privateKey,query})).total,0,'private search cannot leak native/shared history')
  assert.equal((await rpc(null,'messenger.search',{conversation:privateKey,query:'AGENT_TEXT_1'})).total,1)
+ const fileSearch=await rpc(null,'messenger.search',{conversation:privateKey,query:'brief',filter:'files'});assert.equal(fileSearch.total,1);assert.equal(fileSearch.messages[0].id,fileOnly.id);assert.equal(fileSearch.messages[0].files[0].name,'brief.txt')
  await deny(null,'messenger.reference',{conversation:privateKey,id:rawId})
  assert.equal((await rpc(null,'messenger.reference',{conversation:privateKey,id:p1.id})).text,'AGENT_TEXT_1')
  const gallery=await rpc(null,'messenger.gallery',{conversation:privateKey});assert.equal(gallery.images.length,1);assert.ok(gallery.images[0].path.startsWith('@direct/'))

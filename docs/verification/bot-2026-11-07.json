@@ -92,5 +92,6 @@
     "repository": "https://github.com/Daijunfan/xhs_publisher",
     "commit": "67b1194",
     "clientEmbedsCrawler": false
-  }
+  },
+  "supersededBy": "bot-repair-2026-11-07.json"
 }

@@ -6,9 +6,13 @@ const f=await fixtureCore(),ref=id=>'employee:'+id
 const rpc=async(cmd,args={})=>{const r=await f.request(null,cmd,args);assert.ok(r.ok,r.error);return r.data}
 try{
  await f.cli('group','add','Studio');const a=await f.create('Aster','Studio'),b=await f.create('Rowan','Studio'),g=await f.create('Governor','Studio','governor')
- fs.writeFileSync(path.join(f.control,a.id+'.reply.txt'),'A considered workspace. Read https://example.org/design for the full notes.')
- await f.cli('session','send','--employee',a.id,'--text','Find the original brief');await f.until(async()=>!(await f.status(a.id)).busy,'reply')
- const before=await f.cli('session','transcript',a.id),reply=before.items.find(item=>item.role==='assistant'),stateBefore=await f.cli('session','list'),receipt=(await f.status(a.id)).lastReply
+ // Native output stays Team-only; Message rows come from the published Direct ledger.
+ fs.writeFileSync(path.join(f.control,a.id+'.reply.txt'),'A native answer that must stay out of Messages.')
+ await f.cli('session','send','--employee',a.id,'--text','RAW_NATIVE_MESSENGER_SENTINEL');await f.until(async()=>!(await f.status(a.id)).busy,'native reply')
+ const priorReply=(await f.status(a.id)).lastReply?.id,sent=await rpc('direct.send',{employee:a.id,text:'A considered workspace. Read https://example.org/design for the full notes.',clientMessageId:'messenger-source'}),reply={id:sent.directMessageId}
+ await f.until(async()=>{const s=await f.status(a.id);return !s.busy&&!s.pendingMessages?.length&&s.lastReply?.id!==priorReply&&(await f.cli('session','transcript',a.id)).items.some(i=>i.text?.includes('A considered workspace.'))},'private source delivered')
+ const before=await f.cli('session','transcript',a.id),stateBefore=await f.cli('session','list'),receipt=(await f.status(a.id)).lastReply
+ assert.equal((await f.cli('messenger','search','--query','RAW_NATIVE_MESSENGER_SENTINEL')).total,0,'native output never enters Message search')
  await f.cli('messenger','conversation','--conversations',JSON.stringify([ref(a.id),ref(b.id)]),'--patch','{"pinned":true,"favorite":true}')
  await f.cli('messenger','conversation','--conversations',JSON.stringify([ref(b.id)]),'--patch','{"archived":true,"unread":true}')
  let state=await f.cli('messenger','state');assert.equal(state.conversations[ref(a.id)].pinned,true);assert.equal(state.conversations[ref(b.id)].archived,true)
@@ -23,7 +27,7 @@ try{
  const page=await f.cli('messenger','search','--conversation',groupRef,'--limit','30');assert.equal(page.messages.length,30);assert.equal(page.total,105);assert.equal(page.hasMore,true)
  const next=await f.cli('messenger','search','--conversation',groupRef,'--offset','30','--limit','30');assert.ok(next.messages.every(item=>!page.messages.some(first=>first.id===item.id)))
  await f.cli('messenger','message',ref(a.id),reply.id,'--patch','{"hidden":true}');assert.equal((await f.cli('messenger','search','--filter','saved')).total,0)
- assert.deepEqual((await f.cli('session','transcript',a.id)).items,before.items,'personal actions never rewrite native conversation context')
+ const current=(await f.cli('session','transcript',a.id)).items;for(const original of before.items)assert.deepEqual(current.find(item=>item.id===original.id),original,'personal actions never rewrite existing native context');assert.equal((await rpc('direct.history',{employee:a.id})).items.length,1,'shared group reading never publishes a private message')
  await f.cli('messenger','message',ref(a.id),reply.id,'--patch','{"hidden":false,"reaction":""}')
  for(const card of [a,g]){const token=await f.token(card.id);for(const cmd of ['messenger.state','messenger.search','messenger.conversation','messenger.message','messenger.draft'])assert.equal((await f.request(token,cmd,{})).ok,false,cmd+' is personal operator state, including against Governors')}
  assert.equal((await f.request(null,'messenger.message',{conversation:ref(a.id),id:'does-not-exist',patch:{saved:true}})).ok,false)

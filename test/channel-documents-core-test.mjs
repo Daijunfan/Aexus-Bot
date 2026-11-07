@@ -23,7 +23,7 @@ try{
  const published=await rpc('channel.publish',args),workspace=await rpc('conversation.workspace',{conversation:'channel:'+source.channelId})
  ok((await rpc('conversation.file',{conversation:'channel:'+source.channelId,operation:'list'})).entries.length===0,'publishing document metadata does not copy any cloud bytes to the channel')
  const post=await rpc('channel.post',{id:published.id});ok(post.files.length===3&&post.body===args.body,'PDF, EPUB and other files keep their original metadata and caption')
- ok(post.expiresAt===args.publishedAt+7*86400000,'document channel posts use the same seven-day cloud retention')
+ ok(post.expiresAt===Number.MAX_SAFE_INTEGER,'document channel posts use capacity retention without age expiry')
  ok((await rpc('channel.collector-config')).targets.find(t=>t.sourceId===source.id).collectFiles===true,'worker configuration explicitly enables document collection')
  ok((await rpc('channel.publish',args)).status==='duplicate','document metadata re-publication is idempotent')
  fs.writeFileSync(path.join(workspace.root,'annual.pdf'),'User-owned original')
@@ -42,7 +42,7 @@ try{
  await rpc('channel.file-download',{postId:bad.id,fileId:'damaged'});const rejected=await f.until(async()=>{const value=await rpc('channel.file-status',{postId:bad.id,fileId:'damaged'});return value.state==='failed'&&value},'SHA and byte verification')
  ok(rejected.error.includes('SHA-256')&&!fs.existsSync(path.join(workspace.root,'notes ('+damaged.sha256.slice(0,8)+').txt')),'incorrect document metadata leaves no completed local file')
  await f.stop();await f.start();ok((await rpc('channel.file-status',{postId:post.id,fileId:files[0].id})).state==='completed','download completion persists across Core restart')
- await rpc('channel.delete',{id:post.id});ok(fs.readdirSync(workspace.root).some(name=>name.endsWith('.epub')),'local channel documents survive removal of the remote news item')
+ assert.equal((await f.request(null,'channel.post',{id:post.id})).ok,false,'download status does not require persisting unsaved news');assert.equal((await rpc('channel.publish',args)).id,post.id);await rpc('channel.delete',{id:post.id});ok(fs.readdirSync(workspace.root).some(name=>name.endsWith('.epub')),'local channel documents survive removal of the remote news item')
  await f.stop();await f.start();ok(fs.readdirSync((await rpc('conversation.workspace',{conversation:'channel:'+source.channelId})).root).some(name=>name.endsWith('.epub')),'the channel workspace survives Core restart')
  console.log('PASS '+checks+' channel document checks — isolated CLI/Core and SSH protocol fixture, no models')
 }finally{await f.close();built.dispose();fs.rmSync(temp,{recursive:true,force:true})}

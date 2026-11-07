@@ -2,13 +2,15 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import {fixtureCore} from './fixtures/headless-core.mjs'
+import {seedLegacyWorkTeam} from './fixtures/legacy-plugin-team.mjs'
 
 // Public conversations stay pristine; every role performs the shared native identity/index initialization.
 const f=await fixtureCore(),{cli,create,ready,until,control}=f
 const read=(employee,name)=>JSON.parse(fs.readFileSync(path.join(control,employee.id+'-'+name+'.json'),'utf8'))
 try{
  await cli('group','add','Build')
- await cli('group','add','Work','--mode','work','--plugin','mininotion')
+ // Existing Work Teams predate the content-authorized plugin contract; seed one only in this disposable HOME.
+ await seedLegacyWorkTeam(f,'Work','mininotion')
  const worker=await create('Clean Worker','Work'),buildWorker=await create('Build Worker','Build')
  let commonInstructions
  for(const [employee,profile] of [[worker,'agents-company-work'],[buildWorker,'agents-company-readonly']]){
@@ -30,7 +32,7 @@ try{
   if(commonInstructions===undefined)commonInstructions=launch.developerInstructions
   else assert.equal(launch.developerInstructions,commonInstructions,'Build and Work share the same router prompt')
   const [context,body]=work.text.split('\n\n[Current message]\n')
-  assert.ok(context.startsWith('[Agents Company role]\n'+JSON.stringify({employeeId:employee.id,managementRole:'employee'})+'\n\n[Agents Company message source]\n{"sourceView":null}\n'));assert.equal(body,'Read the current directory.');assert.ok(!context.includes('[Agents Company private initialization]'))
+  assert.ok(context.startsWith('[Agents Company role]\n'+JSON.stringify({employeeId:employee.id,managementRole:'employee'})+'\n'));assert.ok(context.includes('[Agents Company message source]\n{"sourceView":null}\n'));assert.equal(body,'Read the current directory.');assert.ok(!context.includes('[Agents Company private initialization]'))
   const history=(await cli('session','transcript','--employee',employee.id)).items
   assert.equal(history.filter(item=>item.role==='user').length,1)
   assert.ok(!JSON.stringify(history).includes('PRIVATE_INIT_READING_COMMENTARY'))

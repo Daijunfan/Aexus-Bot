@@ -21,14 +21,14 @@ try{
  for(let ownerIndex=0;ownerIndex<4;ownerIndex++)for(let adminIndex=0;adminIndex<4;adminIndex++)if(ownerIndex!==adminIndex){
   const matrix=await rpc('chat.create',{name:'Office matrix '+ownerIndex+adminIndex,members:employees.map(card=>card.id),ownerId:employees[ownerIndex].id}),ref='group:'+matrix.id
   await rpc('conversation.role',{conversation:ref,employee:employees[adminIndex].id,role:'admin',expectedRevision:matrix.revision},tokens[ownerIndex])
-  for(let actor=0;actor<4;actor++){const actual=await rpc('conversation.policy',{conversation:ref},tokens[actor]);assert.equal(actual.actorRole,actor===ownerIndex?'owner':actor===adminIndex?'admin':'member');const response=await f.request(tokens[actor],'conversation.notice-list',{conversation:ref});assert.equal(response.ok,actor===ownerIndex||actor===adminIndex)}
-  await deny('chat.delete',{id:matrix.id},tokens[adminIndex]);await rpc('chat.delete',{id:matrix.id},tokens[ownerIndex])
+  for(let actor=0;actor<4;actor++){const actual=await rpc('conversation.policy',{conversation:ref},tokens[actor]);assert.equal(actual.actorRole,actor===ownerIndex?'owner':actor===adminIndex?'admin':'member');const response=await f.request(tokens[actor],'conversation.notice-list',{conversation:ref});assert.equal(response.ok,actor===ownerIndex||actor===adminIndex||actor===3)}
+  if(adminIndex!==3)await deny('chat.delete',{id:matrix.id},tokens[adminIndex]);await rpc('chat.delete',{id:matrix.id},tokens[ownerIndex])
  }
  note('Full 48-combination Company/conversation role matrix and 12 non-Owner dissolution denials; DST gap/overlap and invalid calendar/interval boundaries.')
  const group=await rpc('chat.create',{name:'Independent offices',members:employees.map(card=>card.id),ownerId:owner.id}),conversation='group:'+group.id
  const policy=token=>rpc('conversation.policy',{conversation},token)
  assert.equal((await policy(tokens[0])).actorRole,'owner');assert.equal((await policy(tokens[3])).actorRole,'member')
- for(const token of tokens.slice(1)){
+ for(const token of tokens.slice(1,3)){
   await deny('chat.update',{id:group.id,name:'Unauthorized'},token);await deny('chat.delete',{id:group.id},token);await deny('chat.mute',{id:group.id,member:owner.id,muted:true},token)
   await deny('conversation.silence',{conversation,silent:true,expectedRevision:1},token)
   await deny('conversation.notice-list',{conversation},token)
@@ -37,12 +37,12 @@ try{
  await rpc('conversation.role',{conversation,employee:member.id,role:'admin',expectedRevision:p.revision},tokens[1]);p=await policy(tokens[1]);await rpc('conversation.role',{conversation,employee:member.id,role:'member',expectedRevision:p.revision},tokens[1])
  await deny('conversation.role',{conversation,employee:owner.id,role:'member',expectedRevision:(await policy(tokens[1])).revision},tokens[1]);await deny('conversation.role',{conversation,employee:admin.id,role:'owner',expectedRevision:(await policy(tokens[1])).revision},tokens[1]);await deny('chat.delete',{id:group.id},tokens[1])
  await deny('session.send',{employee:secretary.id,text:'Group role cannot grant Company control'},tokens[0]);await deny('schedule.create',{spec:{name:'No escalation',action:{type:'agent',employeeId:secretary.id,prompt:'Must not run'},afterSeconds:3600,enabled:false}},tokens[0])
- const outsider=await f.create('Outside secretary','Office','secretary'),outside=await f.token(outsider.id);await deny('conversation.policy',{conversation},outside);await deny('chat.get',{id:group.id},outside)
- assert.equal((await rpc('chat.list',{},outside)).some(item=>item.id===group.id),false)
- note('Independent offices: Company Secretary/Governor/Manager are ordinary group Members; only actual Owner/Admin moderate and appoint Admins; Owner protected and Admin cannot dissolve or acquire Company/Plan authority.')
+ const outsider=await f.create('Outside secretary','Office','secretary'),outside=await f.token(outsider.id);assert.equal((await rpc('conversation.policy',{conversation},outside)).actorRole,null);assert.equal((await rpc('chat.get',{id:group.id},outside)).id,group.id)
+ assert.equal((await rpc('chat.list',{},outside)).some(item=>item.id===group.id),true)
+ note('Independent offices: Governor/Manager do not inherit group offices; Secretary has global application authority; actual Owner/Admin moderate and appoint Admins; Owner protected and Admin cannot dissolve or acquire Company/Plan authority.')
  const mute=async(memberId,muted,extra={})=>rpc('conversation.mute',{conversation,member:memberId,muted,expectedRevision:(await policy(tokens[1])).revision,...extra},tokens[1])
  await mute(member.id,true);await deny('chat.post',{id:group.id,text:'Muted post'},tokens[2]);assert.ok(await rpc('chat.history',{id:group.id},tokens[2]));await mute(member.id,false)
- await mute('all',true);await deny('chat.post',{id:group.id,text:'All members muted'},tokens[3]);assert.equal((await policy(tokens[0])).members.find(card=>card.id===owner.id).mutedUntil,undefined);await mute('all',false)
+ await mute('all',true);await deny('chat.post',{id:group.id,text:'All members muted'},tokens[2]);assert.equal((await policy(tokens[0])).members.find(card=>card.id===owner.id).mutedUntil,undefined);await mute('all',false)
  await mute(member.id,true,{durationSeconds:1});await new Promise(resolve=>setTimeout(resolve,1050));assert.equal((await policy(tokens[2])).members.find(card=>card.id===member.id).mutedUntil,undefined)
  p=await policy(tokens[1]);await rpc('conversation.silence',{conversation,silent:true,expectedRevision:p.revision},tokens[1]);await deny('conversation.silence',{conversation,silent:false,expectedRevision:p.revision},tokens[1])
  note('Per-member and all-Member mute, duration expiry, read access while muted, independent quiet mode and revision conflicts.')

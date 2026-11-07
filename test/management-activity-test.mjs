@@ -30,7 +30,7 @@ try{
  for(const worker of workers)assert.equal((await status(worker.id)).busy,true,'display timeout must not stop execution')
  const follow=async employee=>{
   const socket=net.connect(platform.controlEndpoint(env.AGENTS_COMPANY_HOME));followers.push(socket)
-  await new Promise((resolve,reject)=>{socket.once('error',reject);socket.once('connect',()=>socket.write(JSON.stringify({cmd:'session.follow',args:{employee},auth})+'\n'));socket.once('data',chunk=>{assert.ok(JSON.parse(chunk.toString().split('\n')[0]).ok);resolve()})})
+  await new Promise((resolve,reject)=>{let buffer='';socket.setEncoding('utf8');socket.once('error',reject);socket.once('connect',()=>socket.write(JSON.stringify({cmd:'session.follow',args:{employee},auth})+'\n'));const first=chunk=>{buffer+=chunk;if(!buffer.includes('\n'))return;socket.off('data',first);try{assert.ok(JSON.parse(buffer.split('\n')[0]).ok);resolve()}catch(error){reject(error)}};socket.on('data',first)})
   return socket
  }
  const streams=await Promise.all(workers.map(worker=>follow(worker.id))),duplicate=await follow(workers[0].id)

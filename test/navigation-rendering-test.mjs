@@ -18,7 +18,7 @@ try{
  assert.notEqual(cachedConnectionPlan('geometry-b',compute),first)
  for(let i=0;i<8;i++)cachedConnectionPlan('changed-'+i,compute)
  assert.notEqual(cachedConnectionPlan('geometry-a',compute),first,'old geometry is evicted instead of retaining unbounded scenes')
- assert.equal(SELECTABLE_AVATARS.length,15+FATE_AVATARS.length);assert.ok(FATE_AVATARS.every(id=>SELECTABLE_AVATARS.includes(id)));assert.ok(!SELECTABLE_AVATARS.includes('clawd'))
+ assert.equal(SELECTABLE_AVATARS.length,FATE_AVATARS.length/2);assert.ok(SELECTABLE_AVATARS.every(id=>id.endsWith('-chibi')&&FATE_AVATARS.includes(id)));assert.ok(!SELECTABLE_AVATARS.includes('clawd'))
  let before=0,after=0,frames=0
  for(const [name,[row,column]] of Object.entries(SPRITE_REST_FRAMES)){
   const directory=path.join(root,'src/renderer/src/assets/pets'),source=path.join(directory,name+'.webp'),preview=path.join(directory,'previews',name+'.webp')

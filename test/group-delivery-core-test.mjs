@@ -21,6 +21,9 @@ try{
  f=await fixtureCore({},entry)
  const rpc=async(cmd,args={},token=null)=>{const result=await f.request(token,cmd,args);assert.ok(result.ok,result.error);return result.data}
  const deny=async(cmd,args,token=null,pattern)=>{const result=await f.request(token,cmd,args);assert.equal(result.ok,false,cmd+' must reject');if(pattern)assert.match(result.error,pattern)}
+ const directItems=async employee=>(await rpc('direct.history',{employee,limit:500})).items
+ const teamItems=async employee=>(await f.cli('session','transcript',employee)).items
+ const contexts=(items,phase,messageId)=>items.filter(item=>item.role==='user'&&item.context?.phase===phase&&item.context.origin?.messageId===messageId)
  await f.cli('group','add','Studio');const a=await f.create('Aster','Studio'),b=await f.create('Rowan','Studio'),c=await f.create('Later member','Studio'),manager=await f.create('Manager','Studio','manager'),governor=await f.create('Governor','Studio','governor')
  const tokens=new Map();for(const employee of [a,b,c,manager,governor])tokens.set(employee.id,await f.token(employee.id))
  const holdAck=(...employees)=>{for(const employee of employees)fs.writeFileSync(path.join(f.control,employee+'.hold-ack'),'')},releaseAck=employee=>fs.rmSync(path.join(f.control,employee+'.hold-ack'),{force:true})
@@ -32,7 +35,12 @@ try{
  await f.stop();const legacy={id:'gm_'+randomUUID(),sequence:1,createdAt:Date.now(),author:{kind:'operator'},authorName:'You',text:'Legacy reference',kind:'message',mentions:[],deliveries:[],clientMessageId:'legacy-note',fingerprint:createHash('sha256').update(JSON.stringify(['Legacy reference',[],'message',null,null])).digest('hex')};fs.writeFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'chats',group.id+'.json'),JSON.stringify([legacy]));await f.start()
  assert.deepEqual(await rpc('chat.send',{id:group.id,text:legacy.text,clientMessageId:'legacy-note'}),legacy,'old records are never retroactively dispatched')
  const plain=await rpc('chat.post',{id:group.id,kind:'message',text:'A published reference for everyone',clientMessageId:'public-note'});assert.deepEqual(plain.deliveries.map(value=>[value.employeeId,value.mode]),[[a.id,'awareness'],[b.id,'awareness']]);await complete(plain.id)
- for(const employee of [a,b])assert.deepEqual((await f.cli('session','transcript',employee.id)).items,[],'awareness does not create private work messages')
+ for(const employee of [a,b]){
+  const items=await teamItems(employee.id),reads=contexts(items,'read',plain.id)
+  assert.equal(reads.length,1,'awareness records one read context in Team');assert.ok(reads[0].text.includes(plain.text))
+  assert.equal(contexts(items,'work',plain.id).length,0,'awareness does not become formal work')
+  assert.deepEqual(await directItems(employee.id),[],'awareness does not create a Direct message')
+ }
  await deny('chat.post',{id:group.id,kind:'message',text:'Agent cannot use operator publication'},tokens.get(a.id))
 
  holdAck(a.id,b.id);const broadcastArgs={id:group.id,text:'BROADCAST_TO_CURRENT_MEMBERS',clientMessageId:'broadcast-once'},broadcast=await rpc('chat.send',broadcastArgs)
@@ -43,7 +51,12 @@ try{
  assert.equal((await history()).messages.length,beforeCount);const afterAck=await rpc('chat.get',{id:group.id});assert.equal(afterAck.lastIncomingSequence,beforeAck.lastIncomingSequence);assert.equal(afterAck.readSequence,beforeAck.readSequence);assert.deepEqual(afterAck.lastMessage,beforeAck.lastMessage)
  assert.equal((await f.raw(tokens.get(b.id),'chat','post',group.id,'--reply-to',broadcast.id,'--silent')).ok,false);await readReceipt(broadcast.id,b.id);await complete(broadcast.id)
  assert.equal((await f.status(a.id)).lastReply?.readAt,undefined)
- for(const employee of [a,b])assert.equal((await f.cli('session','transcript',employee.id)).items.filter(item=>item.role==='user'&&item.text===broadcastArgs.text).length,1)
+ for(const employee of [a,b]){
+  const items=await teamItems(employee.id)
+  assert.equal(contexts(items,'work',broadcast.id).length,1,'formal group work records exactly one work context')
+  assert.equal(contexts(items,'read',broadcast.id).length,1,'the shared reading records exactly one read context')
+  assert.deepEqual(await directItems(employee.id),[],'group work never writes a Direct message')
+ }
  await rpc('chat.update',{id:group.id,members:[a.id,b.id,c.id]});const again=await rpc('chat.send',broadcastArgs);assert.deepEqual(again.deliveries.map(item=>item.employeeId),[a.id,b.id]);assert.equal((await f.cli('session','transcript',c.id)).items.filter(item=>item.role==='user').length,0)
  await deny('chat.send',{...broadcastArgs,mentions:'all'},null,/different content/);await deny('chat.send',{...broadcastArgs,text:'Changed retry'},null,/different content/)
  const agentReply=await rpc('chat.send',{id:group.id,text:'An employee update reaches the other members.',clientMessageId:'employee-no-mentions'},tokens.get(a.id));assert.deepEqual(agentReply.deliveries.map(item=>[item.employeeId,item.mode]),[[b.id,'awareness'],[c.id,'awareness']]);await complete(agentReply.id)
@@ -52,6 +65,8 @@ try{
  holdAck(a.id,b.id,c.id);const target=await rpc('chat.send',{id:group.id,text:'TARGETED_REQUEST',mentions:[a.id],clientMessageId:'targeted-once'});assert.deepEqual(target.mentions,[a.id]);assert.deepEqual(target.deliveries.map(item=>[item.employeeId,item.mode]),[[a.id,'work'],[b.id,'awareness'],[c.id,'awareness']]);assert.equal((await context(target.id,a.id)).acknowledgment.required,'silent-only')
  const firstRead=await readReceipt(target.id,a.id);const acknowledgment=await visible(target.id,a.id,'target-ack'),read=await delivery(target.id,a.id);assert.equal(read.ackMessageId,acknowledgment.id);assert.equal(read.readAt,firstRead.readAt);assert.deepEqual(acknowledgment.deliveries.map(item=>[item.employeeId,item.mode]),[[b.id,'awareness'],[c.id,'awareness']])
  for(const employee of [b,c])await readReceipt(target.id,employee.id);await complete(target.id);await complete(acknowledgment.id);assert.equal((await visible(target.id,a.id,'target-ack')).id,acknowledgment.id);assert.equal((await readReceipt(target.id,a.id)).readAt,read.readAt)
+ const targetItemsA=await teamItems(a.id);assert.equal(contexts(targetItemsA,'work',target.id).length,1);assert.equal(contexts(targetItemsA,'read',target.id).length,1)
+ for(const employee of [b,c]){const items=await teamItems(employee.id);assert.equal(contexts(items,'read',target.id).length,1);assert.equal(contexts(items,'work',target.id).length,0);assert.deepEqual(await directItems(employee.id),[])}
  const reply=await rpc('chat.send',{id:group.id,text:'REPLY_CONVERSATION_UNION',replyTo:acknowledgment.id,mentions:[b.id],clientMessageId:'reply-union'});assert.deepEqual(reply.deliveries.map(item=>[item.employeeId,item.mode]),[[a.id,'work'],[b.id,'work'],[c.id,'awareness']]);await complete(reply.id)
  const prompt=JSON.parse(fs.readFileSync(path.join(f.control,a.id+'-work.json'),'utf8')).text;assert.ok(prompt.includes(acknowledgment.text));assert.ok(prompt.includes(a.id),'Core supplies the actual reply author, not a guessed display-name match')
  const originalDeliverySnapshot=(await message(acknowledgment.id)).deliveries

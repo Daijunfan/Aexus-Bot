@@ -35,7 +35,7 @@ try{
   const page=await rpc('plan.query',{filter:{search:'Case'},sort:'name',limit:100});assert.equal(page.total,115);assert.equal(page.rows.length,100);assert.ok(page.facets.tags.includes('second-page'))
   const two=await rpc('plan.query',{filter:{search:'Case'},sort:'name',offset:100,limit:100});assert.equal(two.rows.length,15);assert.ok(two.rows.every(row=>!page.rows.some(first=>first.id===row.id)))
   const token=await f.token(a.id),own=await rpc('schedule.create',{spec:{...spec('Private reminder',{kind:'once',at:iso(future)}),action:{type:'agent',employeeId:'self',prompt:'Resume my work.'},plan:{tags:['self-only']}}},token)
-  const scoped=await rpc('plan.query',{},token);assert.deepEqual(scoped.rows.map(row=>row.id),[own.id]);assert.deepEqual(scoped.facets.tags,['self-only'])
+  const scoped=await rpc('plan.query',{limit:500},token),expected=(await rpc('schedule.list')).filter(job=>job.action.employeeId===a.id);assert.deepEqual(scoped.rows.map(row=>row.id).sort(),expected.map(row=>row.id).sort());assert.ok(scoped.rows.some(row=>row.id===own.id));assert.deepEqual(scoped.facets.tags,[...new Set(expected.flatMap(row=>row.plan?.tags??[]))].sort())
  })
  await test('Calendar truncation distinguishes a complete 100-run quota from high-frequency overflow',async()=>{
   const fixed=await rpc('schedule.create',{spec:spec('Exactly one hundred',{kind:'interval',everySeconds:60,anchor:iso(future)},{maxOccurrences:100})})

@@ -10,12 +10,12 @@ const pass=text=>{checks.push(text);console.log('PASS '+text)},hash=file=>create
 const report={passed:false,checks,paidModelCalls:0,productionData:false}
 try{
  f=await assetWorkbenchFixture(application.directory);const {rpc,a,b,conversation,member,workspace,source,channelWorkspace,remote}=f
- await rpc('card.avatar',{id:a.id,avatar:'fireball'});await rpc('card.avatar',{id:b.id,avatar:'robot'})
+ await rpc('card.avatar',{id:a.id,avatar:'fate-saber-chibi'});await rpc('card.avatar',{id:b.id,avatar:'fate-cu-chulainn-chibi'})
  const catalog=await rpc('assets.tree'),nodes=flatten(catalog),remoteNode=nodes.find(n=>n.id==='team:Remote%20team'),host=remoteNode.host
  assert.equal(host.name,'Fixture remote');assert.equal(host.kind,'remote');assert.equal(host.os,'linux');assert.equal(nodes.find(n=>n.id==='employee:'+a.id).host.kind,'local')
- assert.equal(nodes.find(n=>n.owner?.employee===a.id&&n.id.startsWith(conversation+'|')).owner.avatar,'fireball')
+ assert.equal(nodes.find(n=>n.owner?.employee===a.id&&n.id.startsWith(conversation+'|')).owner.avatar,'fate-saber-chibi')
  assert.ok(!JSON.stringify(nodes.map(n=>n.host)).includes(remote));for(const h of catalog.facets.hosts)for(const key of ['address','identityFile','password','secret','defaultDirectory','host'])assert.ok(!(key in h),'Host projection must not disclose '+key)
- const shelf=await rpc('assets.browse',{employee:a.id});assert.equal(shelf.entries.length,3);assert.ok(shelf.entries.every(n=>n.owner.employee===a.id));assert.deepEqual(new Set(shelf.entries.map(n=>n.owner.view)),new Set(['Company','Messages']))
+ const shelf=await rpc('assets.browse',{employee:a.id});assert.equal(shelf.entries.length,2);assert.ok(shelf.entries.every(n=>n.owner.employee===a.id));assert.deepEqual(new Set(shelf.entries.map(n=>n.owner.view)),new Set(['Company','Messages']))
  assert.ok((await rpc('assets.browse',{host:host.id})).entries.every(n=>n.host.id===host.id));assert.ok((await rpc('assets.browse',{view:'Messages',employee:b.id})).entries.every(n=>n.owner.view==='Messages'&&n.owner.employee===b.id))
  pass('Canonical workspace shelves carry real host and employee portrait metadata; Team/employee/host filters keep separate ownership across views without exposing connection secrets.')
  const ownInfo=await rpc('assets.info',{id:'employee:'+a.id});assert.equal(ownInfo.physicalPath,a.cwd);assert.equal(ownInfo.verified,'local');assert.ok(ownInfo.exists)
@@ -37,7 +37,7 @@ try{
  const reader=createRequire(path.join(root,'build/plugins/margin-reader/package.json')),pdfLib=reader('pdf-lib'),pdf=await pdfLib.PDFDocument.create(),cover=pdf.addPage([360,480]);cover.drawText('Research Library',{x:35,y:380,size:25});fs.writeFileSync(path.join(f.shared,'Documents','Research.pdf'),await pdf.save());fs.writeFileSync(path.join(f.shared,'Documents','Article.html'),'<html><title>Reading notes</title><h1>Reading notes</h1><p>Original local material.</p><script>throw Error("Never execute")</script><img src="https://example.invalid/no-network.png"></html>')
  const sourceFiles=['Research.pdf','Article.html'].map(name=>path.join(f.shared,'Documents',name)),before=sourceFiles.map(hash)
  for(const name of ['Research.pdf','Article.html','Deep Folder/report.md']){const preview=await rpc('assets.preview',{id:nodeId('shared','Documents/'+name)});assert.equal(preview.kind,'image',name+': '+preview.reason);assert.equal(preview.mimeType,'image/png');assert.ok(Buffer.from(preview.data,'base64').subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])));assert.ok(preview.width<=360&&preview.height<=480);if(name.endsWith('.pdf'))assert.equal(preview.pageCount,1)}
- assert.equal((await rpc('assets.preview',{id:image.id})).kind,'image');assert.equal((await rpc('assets.preview',{id:cloud.id})).kind,'fallback');assert.equal((await rpc('assets.preview',{id:nodeId('team:Remote%20team','remote.txt')})).kind,'fallback');assert.deepEqual(sourceFiles.map(hash),before)
+ const savedImagePreview=await rpc('assets.preview',{id:image.id});assert.equal(savedImagePreview.kind,'image',JSON.stringify({image,preview:savedImagePreview}));assert.equal((await rpc('assets.preview',{id:cloud.id})).kind,'fallback');assert.equal((await rpc('assets.preview',{id:nodeId('team:Remote%20team','remote.txt')})).kind,'fallback');assert.deepEqual(sourceFiles.map(hash),before)
  const textPath=path.join(f.shared,'Documents','Deep Folder','report.md'),first=await rpc('assets.preview',{id:nodeId('shared','Documents/Deep Folder/report.md')});fs.writeFileSync(textPath,'# Changed source\nNew evidence.');const second=await rpc('assets.preview',{id:nodeId('shared','Documents/Deep Folder/report.md')});assert.notEqual(first.version,second.version)
  pass('Actual Reader workers render PDF/HTML/Markdown/image covers with bounded dimensions and current-version checks; no remote original is auto-fetched and source bytes remain unchanged.')
  report.passed=true

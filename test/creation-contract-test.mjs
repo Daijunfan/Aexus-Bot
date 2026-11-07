@@ -18,7 +18,7 @@ try{
     const supervisor=await create(role,'Original',role),token=await f.token(supervisor.id),response=await f.request(token,'card.update',{id:employee.id,patch:{engine:'claude'}})
     assert.equal(response.ok,false);assert.match(response.error,/引擎创建后固定|Forbidden: card.update/)
   }
-  await cli('card','update',employee.id,'--engine','codex') // An unchanged form value is allowed.
+  await cli('card','update',employee.id,'--title',employee.title,'--engine','codex') // An unchanged form value is allowed alongside editable profile fields.
   const unchanged=(await cli('session','list')).sessions.find(card=>card.id===employee.id)
   for(const key of ['engine','threadId','nativeSessions','cwd','title'])assert.deepEqual(unchanged[key],original[key])
   assert.equal((await cli('session','status','--employee',employee.id))[0].sessionId,session.sessionId)

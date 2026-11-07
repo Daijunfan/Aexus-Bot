@@ -77,7 +77,7 @@ function messageSource(ref:ReturnType<typeof resolve>):MessageSource{
  return {id:ref.key,version:JSON.stringify([typeof version==='number'?[liveEpoch,version]:version,ref.card?.lastReply?.id,ref.card?.lastReply?.createdAt,ref.card?.lastReply?.itemId]),read:()=>ref.kind==='group'?readChatMessages(ref.id).map(message=>({conversation:ref.key,id:message.id,author:message.authorName,authorIdentity:message.author,role:message.author.kind==='operator'?'user':'assistant',text:message.text,images:message.attachments?.filter(file=>file.kind==='image').map(file=>file.path)??[],files:message.attachments?.filter(file=>file.kind==='file'),createdAt:message.createdAt,editedAt:message.editedAt,editRevision:message.editRevision})):directItems(ref.id).flatMap(item=>{
   if(item.role==='notice')return []
   const text=item.role==='user'?item.text:item.blocks.filter(block=>block.kind==='text').map(block=>block.text).join('\n\n'),images=item.images??[]
-  if(!text.trim()&&!images.length&&!(item.role==='user'&&item.files?.length))return []
+  if(!text.trim()&&!images.length&&!item.files?.length)return []
   const authorIdentity=item.role==='user'?item.author:{kind:'agent' as const,employeeId:ref.id}
   return [{conversation:ref.key,id:item.id,author:'',authorIdentity,role:item.role,text,images,files:item.files,createdAt:messageTime(item,ref.card?.lastReply)}]
  })}

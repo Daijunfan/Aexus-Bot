@@ -5,6 +5,7 @@ import path from 'node:path'
 import assert from 'node:assert/strict'
 import {build} from 'esbuild'
 import {fixtureCore} from './fixtures/headless-core.mjs'
+import {writeNativeProfiles} from './fixtures/native-profiles.mjs'
 const root=path.resolve(import.meta.dirname,'..'),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-api-process-'))),checks=[];let f
 try{
  fs.symlinkSync(path.join(root,'node_modules'),path.join(temp,'node_modules'),'dir');const entry=path.join(temp,'daemon.cjs')
@@ -18,12 +19,12 @@ try{
  `
  fixture=fixture.replace(marker,hook+marker);const fixtureFile=path.join(temp,'api-process.cjs');fs.writeFileSync(fixtureFile,fixture,{mode:0o755});f=await fixtureCore({CLINE_BIN:fixtureFile,PI_BIN:fixtureFile},entry)
  const rpc=async(cmd,args={})=>{const r=await f.request(null,cmd,args);assert.ok(r.ok,r.error);return r.data}
+ writeNativeProfiles(f.env,{engines:['cline','pi']})
  await rpc('group.add',{name:'API adapters'})
  const reader=await f.create('Native authorized reader','API adapters'),sources=[]
  for(const plugin of ['x','youtube','telegram'])sources.push(await rpc('channel.source-add',{plugin,locator:'@nativeapi',name:plugin}))
  await rpc('channel.publish',{sourceId:sources[0].id,externalId:'api-fixture',publishedAt:Date.now()-1000,title:'Native API news',body:'Full synthetic news, no paid model.'})
  for(const engine of ['cline','pi']){
-  await rpc('engine.configure',{engine,patch:{apiKey:'fixture-only-not-a-real-key'}})
   const card=await rpc('card.create',{title:engine+' Secretary',group:'API adapters',managementRole:'secretary',engine,model:'deepseek-flash'});await f.ready(card.id)
   const session=(await rpc('session.open',{cardId:card.id})).sessionId;await rpc('config.permission',{id:session,mode:'bypassPermissions'})
   const job=await rpc('schedule.create',{spec:{name:engine+' API task',enabled:false,action:{type:'agent',employeeId:card.id,prompt:'NO_MODEL_TASK'},rule:{kind:'interval',everySeconds:3600}}})

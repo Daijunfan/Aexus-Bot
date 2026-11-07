@@ -49,12 +49,12 @@ function materialize(){
   '## 三个 Core 视图','',
   '| 视图 | 负责内容 | API 入口 |',
   '| --- | --- | --- |',
-  '| Agents | Team、员工、关系与画布 | `group.*`、`card.*`、`management.*`、`office.*`、`team-view.*` |',
+   '| Team | 团队、员工、完整原生会话与画布 | `group.*`、`card.*`、`session.*`、`management.*`、`office.*`、`team-view.*` |',
   '| Message | 私聊、群聊、外部 Worker、新闻频道与讨论 | `bot.*`、`direct.*`、`session.*`、`chat.*`、`channel.*`、`messenger.*`、`conversation.*` |',
-  '| Plan | 员工任务的计划、排期与运行记录 | `plan.*`、`schedule.*`、`monitor.*` |','',
+   '| Mission | 员工任务的计划、排期与运行记录 | `plan.*`、`schedule.*`、`monitor.*` |','',
   '**Plan 是 Core 视图，不是 MiniNotion 插件。** Core Plan 操作同一套调度记录；MiniNotion 是独立的笔记/数据库软件，插件命令不能替代 `agents plan` 或 `agents schedule`。','',
   '`describe` 仅查询 Core 命令，例如 `agents api describe schedule.create --all --json`；不接收插件方法名或文档 ID。`--all` 只扩展公开文档发现，不授予执行权限；实际身份用 `agents auth whoami --json` 查询。','',
-  '群组 Owner / Admin / Member 与 Company 职位独立。先读 `conversation.policy` 获取实际职位和可执行动作。固定正文通知、静音与禁言只由会话 Owner/Admin 配置；通知使用 `conversation.notice-*`，不调用模型、不进入 Plan。频道按新增帖数触发成员提示词使用 `channel.post-trigger-*`，会调用成员但不进入 Plan；Plan 排期继续使用 `schedule.*`。`workspace.catalog` 列出本人所有工作区；`conversation.entry/download/download-status` 读取完整公开帖子并复制附件到本人工作区。完整界限见 `agents api docs core/message-collaboration`。','',
+   '群组 Owner / Admin / Member 与 Company 职位独立；先读 `conversation.policy` 查询可用动作。Secretary 可直接管理群组。群通知使用 `conversation.notice-*`，排期使用 `schedule.*`。频道是只读资讯流，没有成员、讨论或群通知；普通员工须获 `channel.access` 阅读授权，Secretary 自动可读。用 `channel.fetch-text/fetch-images/search` 选择数量、来源、时间及关键词。`workspace.catalog` 列出工作区；共享附件使用 `conversation.entry/download/download-status`。见 `core/message-collaboration`。','',
   '外部 Dot/Grok Worker 委派与授权见 `core/bot-workers`。Grok 可执行原生 X 任务；Dot 可以分多次、长间隔回复。委派前先用 `schedule.*` 保存持续的 message.received 计划，不把确认消息或安静间隔当结束。软件事件与程序监控见 `core/event-tasks`。','',
   '## 查询与操作','',
   '正式任务可直接使用 `agents_company_api`，参数 `command` 为已有 Core 命令，`args` 为该命令的参数对象。它以当前员工身份调用同一 API，无需 shell；写操作遵循当前 Ask/Full access，原生 planning 模式只读。初始化和静默阅读不可操作。','',
@@ -67,8 +67,8 @@ function materialize(){
   ...plugins.map(plugin=>'- **'+plugin.name+'** (`'+plugin.id+'`, '+plugin.version+') — [方法索引](plugins/'+plugin.id+'/README.md); `agents api docs plugin/'+plugin.id+'/index`。'),
   ...(plugins.length?[]:['当前没有已安装插件。']), '',
   '先读插件 index，再用文档工具 `{"operation":"document","document":"plugin/mininotion/command/page.create"}`（或 `agents api docs plugin/mininotion/command/page.create`）读取单方法；先看准确参数再执行，不能猜。完整参考仍为 `plugin/PLUGIN_ID/api` 或 `plugin/PLUGIN_ID/schema`。','',
-  "执行模板：`agents plugin call mininotion page.create --employee EMPLOYEE_ID --params '{\"title\":\"...\"}' --json`。EMPLOYEE_ID 取 identity 返回的员工 ID，此模板操作其已绑定的 Work 插件工作区；也可使用统一工具的 `command=plugin.call`、`args={id,method,employee,params}`；两者进入同一工作区授权。",
-  'Governor 操作插件默认共享范围时省略 `--employee`、`--team`、`--workspace`；MiniNotion 默认是共享 collection 根目录。显式传 `--employee` 仍选择该员工工作区。','',
+   "执行模板：`agents plugin call mininotion page.create --params '{\"title\":\"...\"}' --json`。员工以真实身份进入插件共享内容范围，由 `plugin.access` 的页面 read/write/create 授权校验；也可用统一工具 `command=plugin.call`、`args={id,method,params}`。",
+   '新团队不绑定插件。省略 `--employee`、`--team`、`--workspace` 使用默认共享内容范围；这些参数仅用于明确指定已有工作区，不授予权限。Secretary 具有用户级插件权限。','',
   '插件列表来自当前安装包。执行插件仍须使用已授权工作区。远端或隔离环境可通过原生只读文档工具或同一 CLI 按需取正文，不需要复制手册到员工文件夹。',''
  ].join('\n')})
  for(const {file,text} of documents.values()){

@@ -4,10 +4,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {createHash,randomUUID} from 'node:crypto'
 import {requireConversation} from './conversation-policy'
+import {channelReaderIds} from './channel-access'
 import {readChatMessages,groupMediaRoot} from './chat-groups'
 import {getChannelMessage} from './channel-discussion'
-import {requireSavedChannelEntry} from './channel-content-policy'
-import {channelFileEndpoint} from './channels'
+import {channelFileEndpoint,getChannel} from './channels'
 import {one,run,liveChannelPost,projectChannelPost,projectChannelDocuments} from './channel-store'
 import {cloudDocumentSource} from './channel-files'
 import {conversationFileEndpoint,workspaceForMember} from './conversation-workspaces'
@@ -26,7 +26,11 @@ const hash=(text:string)=>createHash('sha256').update(text).digest('hex')
 const actor=(principal:PrincipalRef)=>principal.kind==='operator'?'operator':principal.employeeId
 const relative=(value:unknown='.')=>{if(typeof value!=='string'||!value||value.includes('\0')||value.includes('\\')||path.isAbsolute(value)||value.split('/').some(p=>p==='..'||p==='.agents-company'||p.startsWith('.agents-transfer-')))throw Error('Use a relative path inside your own workspace');return path.posix.normalize(value)}
 const filename=(value:unknown)=>{if(typeof value!=='string'||!value.trim()||value.length>240||/[\\/\x00-\x1f]/.test(value)||['.','..','.agents-company'].includes(value)||value.startsWith('.agents-transfer-'))throw Error('Choose a regular attachment filename');return value}
-function publishedScope(conversation:string){if(typeof conversation==='string'&&/^employee:[a-zA-Z0-9_-]+$/.test(conversation)){const id=conversation.slice(9);directHistory({employee:id,limit:1});return {conversation,kind:'employee' as const,id,members:[id]}}return requireConversation(conversation)}
+function publishedScope(conversation:string){
+ if(typeof conversation==='string'&&/^employee:[a-zA-Z0-9_-]+$/.test(conversation)){const id=conversation.slice(9);directHistory({employee:id,limit:1});return {conversation,kind:'employee' as const,id,members:[id]}}
+ if(typeof conversation==='string'&&/^channel:[a-zA-Z0-9_-]+$/.test(conversation)){const channel=getChannel(conversation.slice(8));return {conversation:'channel:'+channel.id,kind:'channel' as const,id:channel.id,members:channelReaderIds(channel.id)}}
+ return requireConversation(conversation)
+}
 
 /** Full public data, never a private transcript or a guessed latest-N summary. */
 export function conversationEntry(args:Record<string,any>){
@@ -52,7 +56,7 @@ async function attachmentSource(conversation:string,entryId:string,file:Attachme
  const scope=publishedScope(conversation),context=requestContext();let endpoint:FileEndpoint
  if(file.fileId){const row=liveChannelPost(entryId),original=projectChannelDocuments(row).find(value=>value.id===file.fileId)!
   const cached=one('SELECT path FROM channel_file_imports WHERE post_id=? AND file_id=? AND sha256=?',entryId,file.fileId,file.sha256!)
-  endpoint=cached&&fs.existsSync(cached.path)?conversationFileEndpoint(conversation,path.relative(workspaceForMember(conversation).root,cached.path)):cloudDocumentSource(row,original)
+  endpoint=cached&&fs.existsSync(cached.path)?{root:path.dirname(cached.path),path:path.basename(cached.path)}:cloudDocumentSource(row,original)
  }else if(file.mediaId)endpoint=channelFileEndpoint({channelId:scope.id,postId:entryId,mediaId:file.mediaId})
  else if(scope.kind==='employee'&&file.path)endpoint=directFileEndpoint(scope.id,file.path)
  else if(scope.kind==='group'&&botGroup(scope.id)&&file.path?.startsWith('@bot/'))endpoint=await botFileEndpoint(scope.id,file.path)

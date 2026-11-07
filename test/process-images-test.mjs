@@ -2,14 +2,15 @@ import fs from 'node:fs'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import {fixtureCore} from './fixtures/headless-core.mjs'
+import {writeNativeProfiles} from './fixtures/native-profiles.mjs'
 const fixture=path.resolve('test/fixtures/process-adapter.cjs'),f=await fixtureCore({CLINE_BIN:fixture,PI_BIN:fixture})
+writeNativeProfiles(f.env,{engines:['cline','pi']})
 const rpc=async(cmd,args={})=>{const value=await f.request(null,cmd,args);assert.ok(value.ok,value.error);return value.data}
 const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII='
 const idle=card=>f.until(async()=>!(await f.status(card.id)).busy,'image turn')
 try{
  await f.cli('group','add','Images')
  for(const engine of ['cline','pi']){
-  await rpc('engine.configure',{engine,patch:{apiKey:'fixture-key-not-real'}})
   const card=await f.cli('card','create','--title',engine,'--group','Images','--engine',engine)
   await f.ready(card.id)
   await rpc('workspace.write',{employee:card.id,path:'image.png',contentBase64:png,create:true})

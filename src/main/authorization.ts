@@ -1,3 +1,5 @@
+import {canControl,canSchedule,canReadEmployee,canDeleteEmployee} from './employee-authority'
+export {canControl,canSchedule,canReadEmployee,canDeleteEmployee} from './employee-authority'
 import {validateEventAccess} from './scheduler/event-access'
 import {CHANNEL_POST_TRIGGER_APIS} from '../shared/message-collaboration'
 import {validatePostTriggerDelegation} from './channel-post-triggers'
@@ -37,22 +39,6 @@ export function callerIdentity(context=requestContext(),store=readStore()){
   const policy=rolePolicy(card?.managementRole)
   return {principal,managementRole:card?.managementRole??'employee',roleDescription:roleDescription(card?.managementRole),appAdministrator:principal.kind==='operator'||!!policy.appAdministrator,team:card?.group,globalManager:principal.kind==='operator'||hasGlobalRole(store.access,card),managerTeam:null,globalByTeam:false,accessMode:card?.accessMode??'trusted',
     ...(card?{employee:{id:card.id,title:card.title,role:card.role,engine:card.engine,model:card.model,kind:card.kind??'worker',cwd:card.cwd,workEnvironment:card.workEnvironment??'team'},teamMode:settings!.mode,...(settings!.pluginId?{pluginId:settings!.pluginId}:{})}:{})}
-}
-let indexedRevision:number|undefined,indexed:{cards:Map<string,StoredSession>}|undefined
-function managementIndex(){const store=readStore();if(!indexed||indexedRevision!==store.revision){indexedRevision=store.revision;indexed={cards:new Map(store.sessions.map(card=>[card.id,card]))}}return indexed}
-export function canControl(principal:PrincipalRef,targetId:string){
-  if(principal.kind==='operator')return true
-  const index=managementIndex(),caller=index.cards.get(principal.employeeId),target=index.cards.get(targetId)
-  if(!caller||caller.deleting||!target||target.deleting)return false
-  const policy=rolePolicy(caller.managementRole)
-  return policy.controls.includes(target.managementRole??'employee')&&(policy.scope==='global'||policy.scope==='team'&&caller.group===target.group)
-}
-
-/** Secretary administers the user's plans; other employees schedule self or subordinates. */
-export function canSchedule(principal:PrincipalRef,targetId:string){
-  if(principal.kind==='operator'||isAppAdministrator(principal))return true
-  const index=managementIndex(),caller=index.cards.get(principal.employeeId),target=index.cards.get(targetId)
-  return !!caller&&!caller.deleting&&!!target&&!target.deleting&&(caller.id===target.id||rolePolicy(caller.managementRole).schedules.includes(target.managementRole??'employee')&&canControl(principal,targetId))
 }
 
 export function delegationFor(targetId:string,context=requestContext()):Delegation{
@@ -172,12 +158,6 @@ export function authorizeSlash(text:string,targetId:string,delegation:Delegation
   const context={principal:delegation.requestedBy,requestId:delegation.requestId,credentialHash:delegation.credentialHash}
   if(!commands[name]&&!isGlobal(context.principal))throw Error('Manager messages cannot invoke unscoped slash commands')
   if(commands[name])authorize(commands[name],{id:targetId},targetId,context)
-}
-export function canReadEmployee(principal:PrincipalRef,id:string){return principal.kind==='operator'||principal.employeeId===id||canControl(principal,id)}
-export function canDeleteEmployee(principal:PrincipalRef,id:string){
-  if(principal.kind==='operator')return true
-  const caller=managementIndex().cards.get(principal.employeeId),target=managementIndex().cards.get(id)
-  return !!caller&&!!target&&!rolePolicy(target.managementRole).userManaged&&rolePolicy(caller.managementRole).removes.includes(target.managementRole??'employee')&&canControl(principal,id)
 }
 
 export function visibleEmployees(principal=requestContext().principal){return readStore().sessions.filter(card=>!card.deleting&&canReadEmployee(principal,card.id))}

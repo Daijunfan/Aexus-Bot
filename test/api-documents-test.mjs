@@ -11,7 +11,7 @@ const root=path.resolve(import.meta.dirname,'..'),temp=fs.mkdtempSync(path.join(
 const keys=['AGENTS_COMPANY_HOME','AGENTS_COMPANY_PACKAGE_ROOT','AGENTS_COMPANY_BUILTIN_PLUGINS','AGENTS_COMPANY_PLUGIN_DIRS'],previous=Object.fromEntries(keys.map(key=>[key,process.env[key]])),checks=[]
 try{
  fs.mkdirSync(resources);fs.mkdirSync(plugins);fs.writeFileSync(path.join(resources,'package.json'),'{"name":"agents-company"}')
- for(const file of ['API.md','PERMISSIONS.md','PLAN.md','SCHEDULER.md','ARCHITECTURE.md','docs/CONVERSATION_WORKSPACES.md','docs/CONVERSATION_CONTROLS.md','docs/MESSAGE_COLLABORATION.md','docs/CHANNELS.md','docs/CHANNEL_FILTERS.md','docs/SECRETARY_API_PARITY.md']){fs.mkdirSync(path.dirname(path.join(resources,file)),{recursive:true});fs.copyFileSync(path.join(root,file),path.join(resources,file))}
+ for(const file of JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).build.files.filter(file=>typeof file==='string'&&file.endsWith('.md')&&!file.includes('*'))){fs.mkdirSync(path.dirname(path.join(resources,file)),{recursive:true});fs.copyFileSync(path.join(root,file),path.join(resources,file))}
  const makePlugin=(id,version)=>{
   const directory=path.join(plugins,id);fs.mkdirSync(directory,{recursive:true})
   const api=`---\nschema: agents-company.cli/v1\nplugin: ${id}\n---\n# ${id} ${version}\n\n${['Purpose','Workspace','Quick start','Commands','Files','Errors','Compatibility'].map(title=>'## '+title+'\n\nFixture '+title+'\n').join('\n')}`
@@ -27,9 +27,9 @@ try{
  await build({entryPoints:[path.join(root,'src/main/api-documents.ts')],outfile:entry,bundle:true,platform:'node',format:'cjs',target:'node22',logLevel:'silent'})
  const {ensureApiDocuments,readApiDocument}=createRequire(import.meta.url)(entry),catalogRoot=ensureApiDocuments(),index=readApiDocument()
  assert.equal(catalogRoot,path.join(home,'api-docs'));assert.equal(index.document,'index');assert.equal(index.path,path.join(catalogRoot,'README.md'));assert.equal(index.catalogRoot,catalogRoot)
- assert.ok(index.markdown.length<5000,'Default index stays small');assert.ok(index.markdown.indexOf('| Company |')<index.markdown.indexOf('| Messages |'));assert.ok(index.markdown.indexOf('| Messages |')<index.markdown.indexOf('| Plan |'));assert.ok(index.markdown.indexOf('| Plan |')<index.markdown.indexOf('## 已安装插件'))
+ assert.ok(index.markdown.length<5000,'Default index stays small');assert.ok(index.markdown.indexOf('| Team |')<index.markdown.indexOf('| Message |'));assert.ok(index.markdown.indexOf('| Message |')<index.markdown.indexOf('| Mission |'));assert.ok(index.markdown.indexOf('| Mission |')<index.markdown.indexOf('## 已安装插件'))
  assert.match(index.markdown,/Plan 是 Core 视图，不是 MiniNotion 插件/);assert.match(index.markdown,/describe` 仅查询 Core/);assert.doesNotMatch(index.markdown,/### card\.create|全部 CLI 命令索引/)
- assert.match(index.markdown,/"operation":"document","document":"plugin\/mininotion\/command\/page.create"/);assert.match(index.markdown,/EMPLOYEE_ID 取 identity/);assert.match(index.markdown,/省略 `--employee`、`--team`、`--workspace`/)
+ assert.match(index.markdown,/"operation":"document","document":"plugin\/mininotion\/command\/page.create"/);assert.match(index.markdown,/plugin.access/);assert.match(index.markdown,/省略 `--employee`、`--team`、`--workspace`/)
  const parsed=JSON.parse(execFileSync(process.execPath,[path.join(root,'bin/agents'),'plugin','call','mininotion','page.create','--employee','fixture-employee','--params','{"title":"..."}','--json'],{env:{...process.env,AGENTS_COMPANY_PARSE_ONLY:'1'},encoding:'utf8'}))
  assert.equal(parsed.cmd,'plugin.call');assert.equal(parsed.args.employee,'fixture-employee');assert.equal(parsed.args.method,'page.create');assert.deepEqual(parsed.args.params,{title:'...'})
  checks.push('Short default index separates all three Core views from installed plugins without injecting the full command catalogue')

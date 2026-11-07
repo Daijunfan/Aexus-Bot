@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-07",
+  "application": "Aexus Bot",
+  "version": "0.58.1",
+  "passed": true,
+  "fixes": [
+    "Render and index image-only/file-only employee private messages.",
+    "Authorize complete channel entries and attachment downloads using current reading grants; default to the employee personal workspace.",
+    "Retain explicit document download completion across restart without persisting unsaved news bodies.",
+    "Restore evicted source avatar bytes on same-hash collector retry.",
+    "Remove the runtime authority/event-monitor dependency cycle.",
+    "Refresh public API guidance, missing Chinese labels and obsolete test contracts."
+  ],
+  "core": {
+    "passed": 103,
+    "failed": 0,
+    "skipped": 0,
+    "previousBaseline": {
+      "passed": 44,
+      "failed": 51
+    },
+    "scope": "Isolated temporary Core/native profiles, deterministic protocol fixtures; no production test employees or tasks."
+  },
+  "ui": {
+    "sourceMacPrivateMessages": true,
+    "webBoardTelegramXYouTube": true,
+    "installedMacPrivateMessages": true,
+    "installedMacBoardTelegramXYouTube": true,
+    "checks": [
+      "Published text/JSON/file-only rows; no native tools/reasoning leakage.",
+      "Complete native Team transcript retained.",
+      "Persistent three-dot work animation and completion cleanup.",
+      "First-image Board previews; complete long text and six-photo details.",
+      "Image and detail close controls, Escape and 80/100/125 percent zoom."
+    ]
+  },
+  "nativeAcp": {
+    "engines": [
+      "opencode",
+      "kilo"
+    ],
+    "actualCliProcesses": true,
+    "loopbackModelRequests": 39,
+    "productionInferenceInitiated": 0
+  },
+  "installation": {
+    "passed": true,
+    "employeesPreserved": 4,
+    "nativeProfilesPreserved": 11,
+    "nativeIdentitiesAndWorkspacesPreserved": true,
+    "busyAtVerification": 0,
+    "jobs": 0,
+    "asarSha256": "98432631e6480f20cd11fd11e240a34210c83806ece17b3e1777a93a8a2d2f94",
+    "runtimeRestored": true
+  },
+  "untestedPlatforms": [
+    "Windows desktop",
+    "Linux deployment"
+  ],
+  "collector": {
+    "repository": "https://github.com/Daijunfan/xhs_publisher",
+    "commit": "67b11940f716754a33127d935ec031e4e28fd930",
+    "clientEmbedsCrawler": false
+  }
+}

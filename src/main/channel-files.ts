@@ -4,7 +4,7 @@ import path from 'node:path'
 import {channelStorageRpc,channelStorageSettings} from './channel-storage-transport'
 import {createHash} from 'node:crypto'
 import type {ChannelDocument,ChannelFileStatus} from '../shared/channels'
-import {run,liveChannelPost,changed,projectChannelDocuments,type Row} from './channel-store'
+import {one,run,liveChannelPost,changed,projectChannelDocuments,type Row} from './channel-store'
 import {channelEngine} from './channel-engines'
 import {cloudHostTarget} from './cloud-hosts'
 import {conversationFileEndpoint} from './conversation-workspaces'
@@ -46,6 +46,8 @@ export function cloudDocumentSource(post:Row,file:ChannelDocument):FileEndpoint{
  })}
 }
 export function channelFileStatus(postId:string,fileId:string):ChannelFileStatus{
+ const downloaded=one('SELECT path FROM channel_file_imports WHERE post_id=? AND file_id=?',postId,fileId)
+ if(downloaded&&fs.existsSync(downloaded.path)){const file=fs.statSync(downloaded.path);if(file.isFile())return {postId,fileId,state:'completed',bytes:file.size,totalBytes:file.size,path:path.basename(downloaded.path)}}
  const post=liveChannelPost(postId),file=projectChannelDocuments(post).find(value=>value.id===fileId)
  if(!file)throw Error('Unknown channel document')
  if(file.savedPath)return {postId,fileId,state:'completed',bytes:file.bytes,totalBytes:file.bytes,path:file.savedPath}

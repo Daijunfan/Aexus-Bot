@@ -1,5 +1,13 @@
 # Group and channel workspaces
 
+Current channel scope: news feeds have reading grants (`channel.access`), without
+employee membership or shared member folders. Employees read full news/attachments
+with `conversation.entry` and explicitly copy them with `conversation.download`;
+the default destination is their personal Company workspace. Channel workspaces
+hold the user's explicit downloads and retained legacy files. Group members keep
+equal shared-file rights. References to channel member folders below describe
+existing legacy layouts only and do not enable new channel membership.
+
 Groups and channels have a persistent workspace on the Core host. The workspace is independent of every employee's existing personal workspace, native session, company Team and execution host.
 
 ## Location and identity

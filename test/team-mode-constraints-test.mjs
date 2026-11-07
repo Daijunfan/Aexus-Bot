@@ -15,7 +15,7 @@ try{
  const state=await rpc('session.list');assert.deepEqual(state.groups,initial.groups);assert.deepEqual(state.teamRoots,initial.teamRoots)
  await f.stop();const file=path.join(f.env.AGENTS_COMPANY_HOME,'sessions.json'),legacy=JSON.parse(fs.readFileSync(file));legacy.groups.push('Unbound legacy');legacy.teamSettings={...legacy.teamSettings,'Unbound legacy':{mode:'build'}};fs.writeFileSync(file,JSON.stringify(legacy));await f.start()
  const configured=await f.request(null,'group.configure',{name:'Unbound legacy',mode:'cloud',pluginId:'mininotion',hostId:host.id,directory:'/srv/projects'});assert.equal(configured.ok,false);assert.match(configured.error,/云端团队不支持插件/)
- await rpc('group.add',{name:'Local project',mode:'build'});await rpc('group.add',{name:'Local plugin',mode:'work',pluginId:'mininotion'})
- const valid=await rpc('session.list');assert.equal(valid.teamSettings['Local project'].mode,'build');assert.equal(valid.teamSettings['Local plugin'].mode,'work');assert.equal(valid.teamSettings['Local plugin'].pluginId,'mininotion');assert.ok(!valid.teamSettings['Local plugin'].hostId)
- console.log('PASS cloud/plugin combinations rejected through Core and CLI before host lookup/SSH; unbound configure also rejects; local project/plugin creation remains functional')
+ await rpc('group.add',{name:'Local project',mode:'build'});const plugin=await f.request(null,'group.add',{name:'Local plugin',mode:'work',pluginId:'mininotion'});assert.equal(plugin.ok,false);assert.match(plugin.error,/团队不再绑定插件/)
+ const valid=await rpc('session.list');assert.equal(valid.teamSettings['Local project'].mode,'build');assert.ok(!valid.groups.includes('Local plugin'));assert.ok(!valid.teamSettings['Local plugin'])
+ console.log('PASS cloud/plugin combinations rejected through Core and CLI before host lookup/SSH; unbound configure also rejects; local projects remain functional and plugin teams cannot be created')
 }finally{await f.close()}

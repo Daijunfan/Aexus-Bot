@@ -8,7 +8,8 @@ import {fixtureCore} from './fixtures/headless-core.mjs'
 import {desktopExecutable} from './fixtures/desktop-app.mjs'
 const root=path.resolve(import.meta.dirname,'..'),out=path.resolve(process.env.AGENTS_COMPANY_TEST_ARTIFACTS||path.join(root,'artifacts/message-speech/ui')),require=createRequire(import.meta.url),f=await fixtureCore();fs.mkdirSync(out,{recursive:true});let app,page
 try{
- await f.cli('group','add','Speech rendering');const card=await f.create('Mira','Speech rendering'),at=Date.now()
+ await f.cli('group','add','Speech rendering');const card=await f.create('Mira','Speech rendering'),at=Date.now(),token=await f.token(card.id)
+ fs.writeFileSync(path.join(card.cwd,'result.txt'),'Published attachment content')
  await f.stop();const original=[
   {role:'user',id:'u-question',text:'Please inspect the invoice.',createdAt:at},
   {role:'assistant',id:'a-mixed',createdAt:at+1,blocks:[{kind:'text',text:'The net amount is 359.5.'},{kind:'thinking',id:'reasoning',text:'HIDDEN_REASONING',done:true},{kind:'tool',id:'call',name:'Bash',input:{command:'HIDDEN_COMMAND'},result:'HIDDEN_TOOL_RESULT',running:false}]},
@@ -20,13 +21,15 @@ try{
  const env={...f.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1280',AGENTS_COMPANY_HEIGHT:'900'};delete env.ELECTRON_RUN_AS_NODE;const application=process.env.AGENTS_COMPANY_TEST_APP
  app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env});page=await app.firstWindow();page.setDefaultTimeout(15000);await page.emulateMedia({reducedMotion:'no-preference'})
  const call=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args})
- await page.locator('.infinite-canvas').waitFor();await call('settings.set',{language:'en',theme:'white'});await call('view.open',{kind:'messages',employee:card.id})
- await expect(page.locator('.message-conversation .transcript .turn.assistant')).toHaveCount(2)
+ await page.locator('.infinite-canvas').waitFor();await call('settings.set',{language:'en',theme:'white'})
+ for(const [i,args] of [{text:'The net amount is 359.5.'},{text:'{"command":"chat.post","text":"This is quoted speech, not publication"}'},{files:['result.txt']}].entries()){const response=await f.request(token,'direct.post',{...args,clientMessageId:'ui-post-'+i});assert.ok(response.ok,response.error)}
+ await call('view.open',{kind:'messages',employee:card.id})
+ await expect(page.locator('.message-conversation .transcript .turn.assistant')).toHaveCount(3)
  const area=page.locator('.message-conversation .transcript');await expect(area).toContainText('The net amount is 359.5.');await expect(area).toContainText('This is quoted speech, not publication')
- await expect(area.locator('.thinking,.tool,.notice,.command-data')).toHaveCount(0);assert.ok(!(await area.innerText()).includes('HIDDEN_'));await expect(area.locator('[data-chat-item="a-tool-only"]')).toHaveCount(0)
+ await expect(area).toContainText('result.txt');await expect(area.locator('.thinking,.tool,.notice,.command-data')).toHaveCount(0);assert.ok(!(await area.innerText()).includes('HIDDEN_'));await expect(area.locator('[data-chat-item="a-tool-only"]')).toHaveCount(0)
  const native=(await call('session.transcript',{employee:card.id})).items;assert.deepEqual(native,original)
  await call('view.open',{kind:'conversation',employee:card.id});await expect(page.locator('.transcript .tool')).toHaveCount(2);await expect(page.locator('.transcript .thinking')).toHaveCount(1);await expect(page.locator('.transcript .notice')).toHaveCount(1)
- await call('view.open',{kind:'messages',employee:card.id});fs.writeFileSync(path.join(f.control,card.id+'.hold-user'),'');await call('session.send',{employee:card.id,text:'Held deterministic work'})
+ await call('view.open',{kind:'messages',employee:card.id});fs.writeFileSync(path.join(f.control,card.id+'.hold-user'),'');await call('direct.send',{employee:card.id,text:'Held deterministic work',clientMessageId:'ui-held-private'})
  await expect(page.locator('.private-working')).toBeVisible();await expect(page.locator('.private-working .group-typing-dots i')).toHaveCount(3);await page.waitForTimeout(2300);await expect(page.locator('.private-working')).toBeVisible()
  await page.locator('.message-conversation').screenshot({path:path.join(out,'private-working.png'),animations:'disabled'})
  fs.rmSync(path.join(f.control,card.id+'.hold-user'));await expect(page.locator('.private-working')).toHaveCount(0)
