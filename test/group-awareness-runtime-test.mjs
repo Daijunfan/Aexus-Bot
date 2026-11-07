@@ -108,7 +108,7 @@ try{
  const queuedNotice=await post(a,'Awareness releases the same queue when complete.','notice-then-private')
  await f.until(async()=>{const s=await status(b);return s.acknowledging&&s.currentTask?.chat?.messageId===queuedNotice.id},'queued awareness')
  await rpc('session.enqueue',{id:session,text:'Private task following awareness'})
- const privateMessage=text=>{const [context,body]=text.split('\n\n[Current message]\n');assert.ok(context.startsWith('[Agents Company role]\n'+JSON.stringify({employeeId:b.id,managementRole:'employee'})+'\n'));assert.ok(context.includes('[Agents Company message source]\n{"sourceView":null}\n'));assert.ok(!context.includes('[Group request]'));return body}
+ const privateMessage=text=>{assert.ok(text.startsWith('[Agents Company role]\n'+JSON.stringify({employeeId:b.id,managementRole:'employee'})+'\n'));assert.ok(!text.includes('[Agents Company message source]'));assert.ok(!text.includes('[Group request]'));return text.split('\n\n').at(-1)}
  assert.equal(privateMessage(work(b).at(-1).text),'A real private task after awareness')
  release(b);await waitDone(queuedNotice.id)
  await f.until(async()=>privateMessage(work(b).at(-1).text)==='Private task following awareness'&&!(await status(b)).busy,'awareness queue continuation')

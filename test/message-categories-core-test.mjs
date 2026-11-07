@@ -4,7 +4,7 @@ import path from 'node:path'
 import assert from 'node:assert/strict'
 import {profileApplication} from './fixtures/profile-application.mjs'
 import {fixtureCore} from './fixtures/headless-core.mjs'
-import {inCategory} from '../src/shared/message-categories.ts'
+import {inCategory,messageSection,orderBySection} from '../src/shared/message-categories.ts'
 const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'artifacts/message-categories');fs.mkdirSync(out,{recursive:true})
 const app=await profileApplication();let f;const checks=[]
 try{
@@ -50,6 +50,12 @@ try{
  assert.equal(manual.include,undefined);assert.deepEqual(manual.conversations,['channel:'+x1.channelId],'manual author references normalize to the aggregate channel')
  assert.equal(inCategory(manual,{key:'channel:'+x1.channelId,kind:'channel',platform:'x'}),true);assert.equal(inCategory(manual,{key:'channel:future-x',kind:'channel',platform:'x'}),false);assert.equal(inCategory(manual,sourceEntry(x3)),false)
  checks.push('Aggregate X/YouTube/Telegram channel rules, future channels, multi-select union dedupe, exclusions, manual subsets, guarded ordering and CLI rule removal preserve category revisions')
+ assert.equal(inCategory({conversations:[],include:'private'},{key:'bot:dot',kind:'group',botKind:'private'}),false);assert.equal(inCategory({conversations:[],include:'outsource'},{key:'bot:dot',kind:'group',botKind:'private'}),true);assert.equal(inCategory({conversations:[],include:'channels'},{key:'channel:'+x1.channelId,kind:'channel',platform:'x'}),true)
+ const sectioned=[{key:'group:'+group.id,kind:'group'},{key:'bot:dot',kind:'group',botKind:'private'},{key:'channel:'+x1.channelId,kind:'channel',platform:'x'},{key:'employee:'+a.id,kind:'employee'},{key:'bot:grok-group',kind:'group',botKind:'group'}]
+ assert.deepEqual(sectioned.map(messageSection),['groups','outsource','channels','private','outsource'])
+ assert.deepEqual(orderBySection(sectioned).map(e=>e.key),['bot:dot','bot:grok-group','employee:'+a.id,'group:'+group.id,'channel:'+x1.channelId],'sections follow the user order: outsource, private, groups, channels; own order is kept inside each')
+ assert.deepEqual(orderBySection([...sectioned].reverse()).map(e=>e.key),['bot:grok-group','bot:dot','employee:'+a.id,'group:'+group.id,'channel:'+x1.channelId],'section grouping is a stable partition, never a re-sort')
+ assert.equal(messageSection({key:'source:'+x1.id,kind:'source',platform:'x'}),'channels','individual authors travel with their channel section')
  await rpc('messenger.draft',{conversation:'employee:'+a.id,text:'Unsent private draft',clientMessageId:'untouched'})
  await rpc('messenger.conversation',{conversations:['employee:'+a.id,'group:'+group.id,'channel:'+youtube.channelId,'source:'+x1.id],patch:{archived:true}})
  const preferences=await rpc('messenger.state');assert.equal(Object.values(preferences.conversations).filter(v=>v.archived).length,4)

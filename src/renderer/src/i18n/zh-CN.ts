@@ -1,6 +1,9 @@
 /** Product interface copy only. User names, messages, files and model output are never translated. */
 export const zhCN:Record<string,string> = {
   "Private messages": "私聊消息",
+  "Direct messages": "私聊",
+  "Outsource": "外包",
+  "Channels": "频道",
   "Details": "详情",
   "Avatar": "头像",
   "Channel messages": "频道消息",

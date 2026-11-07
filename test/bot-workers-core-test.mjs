@@ -41,7 +41,7 @@ try{
  await deny('bot.appearance',{id:grok.id,avatar:'fate-rin-chibi',expectedRevision:1},ts)
  await rpc('bot.sync');assert.equal((await rpc('bot.appearance',{id:dot.id},ts)).avatar,'fate-illya-chibi')
  pass('Dot appearance survives native sync and uses independent user/Secretary authorization; Grok keeps its original visual identity')
- assert.equal(dot.bot.role,'worker');assert.equal(dot.bot.kind,'private');assert.equal(dot.memberIds.length,0);assert.ok((await rpc('messenger.directory',{type:'private'})).entries.some(e=>e.id===dot.id));assert.ok(!(await rpc('messenger.directory',{type:'groups'})).entries.some(e=>e.id===dot.id))
+ assert.equal(dot.bot.role,'worker');assert.equal(dot.bot.kind,'private');assert.equal(dot.memberIds.length,0);assert.ok((await rpc('messenger.directory',{type:'outsource'})).entries.some(e=>e.id===dot.id));assert.ok(!(await rpc('messenger.directory',{type:'private'})).entries.some(e=>e.id===dot.id));assert.ok(!(await rpc('messenger.directory',{type:'groups'})).entries.some(e=>e.id===dot.id))
  assert.deepEqual(await rpc('bot.list',{},ta),[]);await deny('direct.send',{employee:dot.id,text:'denied',clientMessageId:'denied'},ta);await deny('chat.history',{id:dot.id},ta)
  const access=await rpc('bot.access',{id:dot.id});await rpc('bot.access',{id:dot.id,employeeIds:[a.id],expectedRevision:access.revision})
  assert.ok((await rpc('api.list',{},ta)).some(c=>c.name==='direct.send'));assert.equal((await rpc('bot.list',{},ta)).length,1)

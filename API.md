@@ -1,5 +1,15 @@
 # CLI and Core API
 
+## Reply destination
+
+Team, CLI and untagged native inputs use the Coding Agent's ordinary text response.
+They do not call `direct.post` just because the reply is addressed to the user.
+Message private inputs carry a current-message source tag and use `direct.post`;
+group inputs carry their group name/ID and use `chat.post` or the scoped discussion
+tool. A user's explicit cross-conversation request overrides that default. Each
+input has its own source; never inherit the preceding input's reply destination.
+Native reasoning, tools and all exact application wrappers remain in Team.
+
 ## Live character catalog
 
 Use `avatar.list` for currently enabled characters, `avatar.list --status archived`
@@ -3245,7 +3255,7 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 | <code>agents worker stop</code> | <code>ID</code> | Stop the native CLI process; retain Worker record, work files and native history | Stop Worker | worker |
 | <code>agents worker remove</code> | <code>ID</code> | Stop and remove your Worker record; preserve work files, engine configuration, authentication and native history | Remove Worker | worker |
 | <code>agents direct send</code> | <code>--employee ID --text TEXT [--images JSON --files JSON --mode send&#124;enqueue&#124;steer --client-message-id KEY --reply-to ID]</code> | Send a private message using employee ID. For a native employee, only user/Secretary may dispatch work. For an external Dot/Grok Worker ID from bot.list, any employee with bot.access may explicitly delegate raw text/images/files; no Company context is injected. Native session.send/enqueue alone do not publish private messages. | Messages private composer | chat |
-| <code>agents direct post</code> | <code>--text TEXT [--images JSON --files JSON --reply-to ID] --client-message-id KEY</code> | Employee: explicitly send one private message to the user as yourself. Text, images and files may be combined or sent in multiple calls with different IDs. Identical retries return the same message; never dispatches Agent work or posts to groups. | Employee private publication | identity |
+| <code>agents direct post</code> | <code>--text TEXT [--images JSON --files JSON --reply-to ID] --client-message-id KEY</code> | Employee: reply to a tagged Message private input, or explicitly requested private delivery. Team/CLI/untagged input defaults to native Agent text; do not call this for ordinary Team replies. Supports text/images/files and multiple messages with distinct IDs; identical retries reuse the ID. Publishes only as yourself; never dispatches work or posts to groups. | Employee private publication | identity |
 | <code>agents direct history</code> | <code>--employee ID [--limit N --before N --around ID]</code> | Read only explicitly published private messages, media and delivery evidence; never includes native output, shared inputs, wrappers or silent context reads. Querying does not mark read. | Private message history | employee.read |
 | <code>agents direct send-status</code> | <code>--employee ID --client-message-id KEY</code> | Read an existing private input acceptance without replaying work. Native employee input is user/Secretary-only; external Worker sends are available to their currently authorized sender. | Private send recovery | chat |
 | <code>agents direct acknowledge</code> | <code>--employee ID --message-id ID</code> | User/Secretary: acknowledge an exact published incoming private message. A stale ID never acknowledges a newer post. | Private message read state | operator |
@@ -3327,7 +3337,7 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 | <code>agents messenger forward-draft</code> | <code>--data JSON&#124;null [--expected-client-message-id ID]</code> | User-only: retain or discard one forwarding setup; discarding never cancels accepted work | Resume forwarding | operator |
 | <code>agents messenger forward-status</code> | <code>--client-message-id ID</code> | User-only: check a forwarding receipt without sending, reading sources or starting work | Forwarding result | operator |
 | <code>agents messenger state</code> | <code>—</code> | User or Secretary: read persisted conversation preferences, saved messages, reactions and drafts | Messages organization | operator |
-| <code>agents messenger folder-save</code> | <code>--name NAME --conversations JSON [--include private&#124;groups&#124;telegram&#124;x&#124;youtube&#124;null] [--excluded JSON] [--id ID] [--expected-revision N]</code> | User or Secretary: create or update a personal folder of private, group and channel conversations without moving their content | Conversation folders | operator |
+| <code>agents messenger folder-save</code> | <code>--name NAME --conversations JSON [--include outsource&#124;private&#124;groups&#124;channels&#124;telegram&#124;x&#124;youtube&#124;null] [--excluded JSON] [--id ID] [--expected-revision N]</code> | User or Secretary: create or update a personal folder of private, group and channel conversations without moving their content | Conversation folders | operator |
 | <code>agents messenger folder-delete</code> | <code>ID [--expected-revision N]</code> | User or Secretary: remove a personal conversation folder while retaining every conversation and message | Conversation folders | operator |
 | <code>agents messenger conversation</code> | <code>--conversations JSON --patch JSON</code> | User or Secretary: pin, favorite, archive or mark conversations unread in one atomic update | Messages list and bulk actions | operator |
 | <code>agents messenger message</code> | <code>CONVERSATION [MESSAGE_ID &#124; --ids JSON] --patch JSON</code> | User or Secretary: save, pin, react to or hide an existing public message; native history stays intact | Messages actions | operator |

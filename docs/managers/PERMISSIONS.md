@@ -34,9 +34,9 @@ Secretary 可出现在 Company、Messages、Plan 中；视图只过滤展示。�
 
 Secretaries 的任免和 `auth.agent-token` 身份凭据签发仍由用户掌握。Secretary 保持实际 Agent principal；其显式 `session/chat/channel.acknowledge`、`chat.edit`、转发、客户端文件/媒体和 UI 操作可用，与用户执行同一参数、revision、幂等和发起客户端许可检查。普通查询不会自动标记用户已读，文件只在显式收藏/下载时落盘。原生 Ask/Full access 与 planning 许可仍独立执行。
 
-用户或 Secretary 向员工发送私聊输入使用 `direct.send {employee,text?,images?,files?,mode?,clientMessageId?}`。`mode` 默认为 `enqueue`，也可显式 `send`（立即在现有原生会话派发）或 `steer`（追加到活动轮次，不接受附件）。它以用户身份发布独立的私聊条目并派发/排队工作；`direct.send-status` 用同一 `clientMessageId` 读取接受状态，不重开引擎、不重放工作。`session.send/enqueue` 仍用于原生工作派发，不发布 Messages 私聊条目。员工回复用户必须调用 `direct.post`，不能对自己调用 `session.send/enqueue` 冒充私聊。同一请求的重试确认仍检查当前权限、员工身份及初始化状态；其他调用者不能用相同编号读取或冒用该确认。发送确认不等于员工已读，不改变阅读回执。转发草稿及状态查询也不能派发工作；放弃转发草稿不取消已发送的消息或任务。
+用户或 Secretary 向员工发送私聊输入使用 `direct.send {employee,text?,images?,files?,mode?,clientMessageId?}`。`mode` 默认为 `enqueue`，也可显式 `send`（立即在现有原生会话派发）或 `steer`（追加到活动轮次，不接受附件）。它以用户身份发布独立的私聊条目并派发/排队工作；`direct.send-status` 用同一 `clientMessageId` 读取接受状态，不重开引擎、不重放工作。`session.send/enqueue` 仍用于原生工作派发，不发布 Messages 私聊条目。员工回复带有当前私聊来源标签的 Message 输入时调用 `direct.post`；Team/CLI/无私聊群聊标签的输入默认用原生正文回复，只有用户明确要求跨会话发送时才改变目标，不能对自己调用 `session.send/enqueue` 冒充私聊。同一请求的重试确认仍检查当前权限、员工身份及初始化状态；其他调用者不能用相同编号读取或冒用该确认。发送确认不等于员工已读，不改变阅读回执。转发草稿及状态查询也不能派发工作；放弃转发草稿不取消已发送的消息或任务。
 
-私聊 `session.send/enqueue/steer` 可携带 `sourceView`（company/messages/plan），由发送客户端声明，仅供理解当前消息。该字段与 Governor 的目标团队视图 viewId 独立，不改变真实作者、角色、委派范围、执行主机或群组成员资格。四种角色均收到来源提示；优先遵循正文，不能仅依据来源自动建群或群发。未提供的来源保持未知，不读取其他客户端的当前界面。排队和未变请求重试保留发送时快照；新回执绑定来源，改变来源的同键请求拒绝，旧回执仍可确认且不补造历史。追加消息单独记录来源，不覆盖原始任务来源。历史正文和引用不包含来源提示词。用户 DM 输入经 `direct.send` 发布时固定标记为 Messages 来源。
+原生会话 `session.send/enqueue/steer` 可携带 `sourceView`（company/messages/plan），由发送客户端声明，仅供理解当前消息。该字段与 Governor 的目标团队视图 viewId 独立，不改变真实作者、角色、委派范围、执行主机或群组成员资格。四种角色遵循同一来源协议；Team 普通输入不伪造私聊标签，优先遵循正文，不能仅依据来源自动建群或群发。未提供或 company 来源的输入不附加私聊/群聊来源标签，默认原生回复，不读取其他客户端的当前界面，也不沿用历史私聊标签。排队和未变请求重试保留发送时快照；新回执绑定来源，改变来源的同键请求拒绝，旧回执仍可确认且不补造历史。追加消息单独记录来源，不覆盖原始任务来源。原始正文和引用不含应用提示；完整原生会话的 context 保留实际包装。用户 DM 输入经 `direct.send` 发布时固定标记为 Messages 来源。
 
 频道个人阅读状态通过 `channel.read-state` 向用户和 Secretary 开放；`channel.acknowledge` 由用户或 Secretary 显式调用，支持 entryIds/all/sourceId/sourceIds，查询不标记。手动点击频道到底部箭头时，可一次标记当前所选来源（或全部来源）的保留未读，包括未加载的历史；搜索/收藏和自动滚动不触发批量已读。员工工作阅读回执与用户阅读状态彼此独立；没有旧记录仍保持未知。
 

@@ -1242,7 +1242,7 @@
   {
     "name": "direct.post",
     "args": "--text TEXT [--images JSON --files JSON --reply-to ID] --client-message-id KEY",
-    "summary": "Employee: explicitly send one private message to the user as yourself. Text, images and files may be combined or sent in multiple calls with different IDs. Identical retries return the same message; never dispatches Agent work or posts to groups.",
+    "summary": "Employee: reply to a tagged Message private input, or explicitly requested private delivery. Team/CLI/untagged input defaults to native Agent text; do not call this for ordinary Team replies. Supports text/images/files and multiple messages with distinct IDs; identical retries reuse the ID. Publishes only as yourself; never dispatches work or posts to groups.",
     "gui": "Employee private publication",
     "inputSchema": {
       "type": "object",
@@ -4350,6 +4350,7 @@
         "type": {
           "enum": [
             "all",
+            "outsource",
             "private",
             "groups",
             "channels",
@@ -4942,7 +4943,7 @@
   },
   {
     "name": "messenger.folder-save",
-    "args": "--name NAME --conversations JSON [--include private|groups|telegram|x|youtube|null] [--excluded JSON] [--id ID] [--expected-revision N]",
+    "args": "--name NAME --conversations JSON [--include outsource|private|groups|channels|telegram|x|youtube|null] [--excluded JSON] [--id ID] [--expected-revision N]",
     "summary": "User or Secretary: create or update a personal folder of private, group and channel conversations without moving their content",
     "gui": "Conversation folders",
     "inputSchema": {
@@ -4971,8 +4972,10 @@
             "null"
           ],
           "enum": [
+            "outsource",
             "private",
             "groups",
+            "channels",
             "telegram",
             "x",
             "youtube",
@@ -5228,7 +5231,7 @@
             "messages",
             "plan"
           ],
-          "description": "Optional sender-declared presentation at send time (company/messages/plan). Context only: not a target, permission or current-screen lookup. Preserve on unchanged retries."
+          "description": "Sender-declared origin for this input. company or omitted: native Team reply, without private/group tags. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Not an execution target or permission. Preserve on unchanged retries."
         },
         "expectedClientMessageId": {
           "type": "string",
@@ -10589,7 +10592,7 @@
             "messages",
             "plan"
           ],
-          "description": "Optional sender-declared presentation at send time (company/messages/plan). Context only: not a target, permission or current-screen lookup. Preserve on unchanged retries."
+          "description": "Sender-declared origin for this input. company or omitted: native Team reply, without private/group tags. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Not an execution target or permission. Preserve on unchanged retries."
         },
         "clientMessageId": {
           "type": "string",
@@ -11069,7 +11072,7 @@
             "messages",
             "plan"
           ],
-          "description": "Optional sender-declared presentation at send time (company/messages/plan). Context only: not a target, permission or current-screen lookup. Preserve on unchanged retries."
+          "description": "Sender-declared origin for this input. company or omitted: native Team reply, without private/group tags. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Not an execution target or permission. Preserve on unchanged retries."
         }
       },
       "anyOf": [
@@ -11155,7 +11158,7 @@
             "messages",
             "plan"
           ],
-          "description": "Optional sender-declared presentation at send time (company/messages/plan). Context only: not a target, permission or current-screen lookup. Preserve on unchanged retries."
+          "description": "Sender-declared origin for this input. company or omitted: native Team reply, without private/group tags. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Not an execution target or permission. Preserve on unchanged retries."
         },
         "clientMessageId": {
           "type": "string",

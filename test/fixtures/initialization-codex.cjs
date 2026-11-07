@@ -5,7 +5,7 @@ const control=process.env.AC_INIT_FIXTURE;if(!control)throw Error('AC_INIT_FIXTU
 const employee=process.env.AGENTS_COMPANY_EMPLOYEE||'catalog',send=value=>process.stdout.write(JSON.stringify(value)+'\n')
 const event=(method,params)=>send({method,params})
 let thread='',cwd=process.cwd(),turn='',timer,generation=0,environments=[],discussionUrl,enabledTools=[]
-const note=(suffix,value)=>fs.writeFileSync(path.join(control,employee+'-'+suffix+'.json'),JSON.stringify(value))
+const note=(suffix,value)=>{const file=path.join(control,employee+'-'+suffix+'.json'),temporary=file+'.'+process.pid+'.tmp';fs.writeFileSync(temporary,JSON.stringify(value));fs.renameSync(temporary,file)}
 async function nativeTool(name,input,callId='fixture-tool-'+crypto.randomUUID()){
  if(!discussionUrl||!enabledTools.includes(name))throw Error('Fixture received no enabled native '+name)
  const mcp=async(method,params,id)=>{const response=await fetch(discussionUrl,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id,method,params})});if(!response.ok)throw Error('Company MCP transport failed: '+response.status);return response.json()}

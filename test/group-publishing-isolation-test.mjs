@@ -41,7 +41,7 @@ try{
  checks.push('Null, whitespace, placeholder strings and --silent cannot create a message, delivery wave or unread change')
  // Group/user read and private/user read are independent in both directions.
  assert.equal((await rpc('chat.get',{id:group.id})).unread,true)
- const currentReplies=new Map(await Promise.all(people.map(async p=>[p.id,(await f.status(p.id)).lastReply])));await rpc('session.acknowledge',{employee:b.id,replyId:currentReplies.get(b.id).id});assert.equal((await rpc('chat.get',{id:group.id})).unread,false,'reading the latest Team reply also reads its group source')
+ const currentReplies=new Map(await Promise.all(people.map(async p=>[p.id,(await f.status(p.id)).lastReply])));const latestAuthor=messages.at(-1).author.employeeId;await rpc('session.acknowledge',{employee:latestAuthor,replyId:currentReplies.get(latestAuthor).id});assert.equal((await rpc('chat.get',{id:group.id})).unread,false,'reading the latest Team reply also reads its group source')
  await rpc('chat.acknowledge',{id:group.id,messageId:messages.at(-1).id});assert.equal((await rpc('chat.get',{id:group.id})).unread,false)
  assert.ok((await f.status(b.id)).lastReply.readAt);for(const p of [a,c])assert.ok((await f.status(p.id)).lastReply.readAt)
  for(const p of people)fs.rmSync(path.join(f.control,p.id+'.work-post.json'))

@@ -61,5 +61,6 @@
     "repository": "https://github.com/Daijunfan/xhs_publisher",
     "commit": "67b11940f716754a33127d935ec031e4e28fd930",
     "clientEmbedsCrawler": false
-  }
+  },
+  "supersededBy": "reply-routing-2026-11-07.json"
 }

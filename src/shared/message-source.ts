@@ -4,13 +4,13 @@ import {APP_VIEWS,type AppViewId} from './app-views.ts'
 export type MessageSourceView=AppViewId
 /** Exact application-owned input shown only in the full Company conversation. */
 export type NativeInputContext={origin:{kind:'direct'|'group'|'channel'|'company'|'plan'|'unknown';name:string;id?:string;messageId?:string};phase:'work'|'read';prompt:string;executionInstructions?:string}
-export const SOURCE_VIEW_LABELS:Record<MessageSourceView,string>={company:'Agents',messages:'Message',plan:'Plan'}
-export const SOURCE_VIEW_SCHEMA={type:'string',enum:APP_VIEWS.map(view=>view.id),description:'Optional sender-declared presentation at send time (company/messages/plan). Context only: not a target, permission or current-screen lookup. Preserve on unchanged retries.'}
+export const SOURCE_VIEW_LABELS:Record<MessageSourceView,string>={company:'Team',messages:'Message',plan:'Mission'}
+export const SOURCE_VIEW_SCHEMA={type:'string',enum:APP_VIEWS.map(view=>view.id),description:'Sender-declared origin for this input. company or omitted: native Team reply, without private/group tags. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Not an execution target or permission. Preserve on unchanged retries.'}
 export function messageSourceView(value:unknown):MessageSourceView|undefined{
  if(value===undefined)return undefined
  if(!APP_VIEWS.some(view=>view.id===value))throw Error('sourceView must be company, messages or plan')
  return value as MessageSourceView
 }
 
-export const MESSAGE_REPLY_GUIDANCE='原生 Agent 的普通正文、思考和工具过程只属于 Agents 完整会话，不会发送到私聊或群聊。给用户发私聊必须显式调用 direct.post，可用 text、images、files；每个 clientMessageId 对应一条消息，不同 ID 可以连续发送多段文字、图片或文件。direct.post 只向用户发布你自己的私聊，不派发工作；用户要求私聊时使用它，不要给自己调用 session.send/enqueue。群聊发言仍必须显式调用 chat.post 或 agents_company_discussion_post。旁观消息只静默阅读，不自动接话、互相确认或派生工作。'
-export const MESSAGE_DELIVERY_CONTRACT='[Current message delivery contract]\n以下规则替代历史中的旧消息路由：原生正文、思考和工具输出只在 Agents 显示。向用户发私聊必须显式调用 direct.post（text/images/files，不同 clientMessageId 可连续发多条）；群聊仍须显式 chat.post。不要把原生正文当作已发送私聊，也不要给自己派发任务来回复用户。'
+export const MESSAGE_REPLY_GUIDANCE='回复位置以本条消息的来源标签和用户明确要求为准，不沿用历史来源。没有私聊或群聊来源标签时（包括 Team、CLI 和普通 Mission 工作），直接用原生 Coding Agent 正文回复，不调用发消息 API。带 Message 私聊来源标签时，使用 direct.post 回复；带群聊来源标签时，使用 chat.post 或 agents_company_discussion_post 回复该群。用户明确要求跨会话发送时才切换目标，例如在 Team 或群聊要求发私聊。direct.post 只发布本人给用户的私聊，支持 text/images/files；不同 clientMessageId 可连续发多条，原样重试复用原 ID。不要给自己调用 session.send/enqueue 来回复。旁观消息只静默阅读，不自动接话或派生工作。不要把 API 名称、消息 ID 或投递过程当作答复正文。'
+export const MESSAGE_DELIVERY_CONTRACT='[Current message delivery contract]\n本条规则替代历史中的旧路由：无私聊/群聊来源标签，默认原生正文回复，留在 Team；有私聊标签才用 direct.post，有群聊标签才向该群显式发布。用户本条明确指定其他目标时按要求发送。不能把 Team 中的普通对话自动搬到私聊。思考与工具过程始终只在 Team 完整会话中展示。'

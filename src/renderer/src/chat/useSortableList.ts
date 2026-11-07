@@ -5,7 +5,7 @@ import {useConversationListMotion} from './useConversationListMotion'
 import {playMessageMotion} from './surfaceMotion'
 import '../styles/message-sorting.css'
 
-type Options={keys:string[];identity:string;axis:'x'|'y';disabled?:boolean;label:(key:string)=>string;save:(keys:string[])=>Promise<boolean>}
+type Options={keys:string[];identity:string;axis:'x'|'y';disabled?:boolean;group?:(key:string)=>string;label:(key:string)=>string;save:(keys:string[])=>Promise<boolean>}
 type Gesture={key:string;node:HTMLElement;pointer:number;touch:boolean;start:number;cross:number;at:number;crossAt:number;grab:number;active:boolean;initial:string[];order:string[];identity:string;save:Options['save'];stop:()=>void}
 /** One pointer interaction for tabs and rows. Only release commits; moves are local, animated previews. */
 export function useSortableList(options:Options){
@@ -54,9 +54,10 @@ export function useSortableList(options:Options){
    paint();if(!inside(32))return
    // Use layout slots, not moving animation rectangles: crossing a neighbour cannot oscillate.
    const box=list.getBoundingClientRect(),factor=box.width/list.offsetWidth||1,start=(axis==='x'?box.left:box.top),scroll=axis==='x'?list.scrollLeft:list.scrollTop,position=(g.at-start)/factor+scroll
-   const rows=[...list.children].filter((item):item is HTMLElement=>item instanceof HTMLElement&&!!item.dataset.sortKey),others=rows.filter(item=>item!==node)
-   const to=others.filter(item=>position>(axis==='x'?item.offsetLeft+item.offsetWidth/2:item.offsetTop+item.offsetHeight/2)).length,next=others.map(item=>item.dataset.sortKey!)
-   next.splice(to,0,key)
+   const group=latest.current.group,rows=[...list.children].filter((item):item is HTMLElement=>item instanceof HTMLElement&&!!item.dataset.sortKey),others=rows.filter(item=>item!==node&&(!group||group(item.dataset.sortKey!)===group(key)))
+   const to=others.filter(item=>position>(axis==='x'?item.offsetLeft+item.offsetWidth/2:item.offsetTop+item.offsetHeight/2)).length,peers=others.map(item=>item.dataset.sortKey!)
+   peers.splice(to,0,key)
+   let slot=0;const next=group?g.initial.map(id=>group(id)===group(key)?peers[slot++]:id):peers
    if(!sameOrder(g.order,next)){g.order=next;setPreview({identity:g.identity,keys:next})}
   }
   const tick=(time:number)=>{
@@ -94,6 +95,7 @@ export function useSortableList(options:Options){
   event.preventDefault();event.stopPropagation();if(blocked.current||options.disabled)return
   const focus=(event.target as Element).closest<HTMLElement>('button')??node,index=keys.indexOf(node.dataset.sortKey!),next=index+(event.key===direction[0]?-1:1)
   if(index<0||next<0||next>=keys.length)return
+  if(options.group&&options.group(keys[index])!==options.group(keys[next]))return
   const order=[...keys];order.splice(next,0,order.splice(index,1)[0]);announce(node.dataset.sortKey!,order);void save(order,options.identity,options.save)
   requestAnimationFrame(()=>{if(focus.isConnected){focus.focus({preventScroll:true});node.scrollIntoView({block:'nearest',inline:'nearest'})}})
  }

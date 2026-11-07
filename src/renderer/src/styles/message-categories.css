@@ -9,7 +9,7 @@
 .message-sidebar .message-archive-entry small{display:none}
 .message-sidebar .message-archive-icon{width:28px;height:28px;border-radius:9px}
 .message-sidebar .message-search-history{margin:0 16px 6px;padding:8px 10px}
-.category-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0 16px}
+.category-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 16px}
 .category-presets>button{display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:79px;padding:12px;border:1px solid var(--border-soft);border-radius:13px;background:var(--bg-alt);color:var(--fg-dim);font:inherit;font-size:11px;text-align:left;cursor:pointer}
 .category-presets>button>.codicon{font-size:19px;color:var(--accent)}
 .category-presets>button[aria-pressed=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--bg-elev));color:var(--accent)}

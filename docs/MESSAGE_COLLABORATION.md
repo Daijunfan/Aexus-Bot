@@ -2,6 +2,17 @@
 
 ## Native conversation, published direct messages and explicit group publication
 
+**Default reply is native.** A Team/CLI input or an input without a private/group
+source tag is answered with ordinary Coding Agent text in Team. Do not publish a
+private message unless the current input carries a private source tag or the user
+explicitly requests private delivery. Message private inputs contain
+`[Agents Company message source]` with `conversationType:"private"` and
+`replyVia:"direct.post"`; group inputs contain `from [group: NAME]` and a
+`[Group request]` with the real group ID. Mission work defaults to a native result
+unless its task specifies publication. A following untagged input returns to the
+native default even after private or group work. API/tool descriptions do not
+override the actual input source. These tags route replies and never grant authority.
+
 All native Agent text, reasoning, tool calls/results and completion events belong
 only to that employee's full Company native conversation. The same is true of every
 group/shared input, channel input and silent/awareness read: these inputs and their
@@ -11,9 +22,9 @@ Messages direct conversation.
 Messages direct conversations are an independent published ledger. A direct entry
 exists only when the user or Secretary explicitly calls `direct.send`, or when the
 authenticated employee explicitly calls `direct.post`. Native output alone never
-publishes a direct message. Do not call `session.send/enqueue` on yourself, or rely
-on ordinary output, to reply to the user: `session.send/enqueue` assign native work
-and do not publish a direct message.
+publishes a direct message. For a tagged Message private reply, do not call
+`session.send/enqueue` on yourself or rely on ordinary output to publish that reply.
+`session.send/enqueue` assign native work whose ordinary output remains in Team.
 
 Only an explicit authenticated `chat.post` or `agents_company_discussion_post`
 call publishes a group reply. `direct.post` addresses only the caller's own user

@@ -1,0 +1,73 @@
+{
+  "date": "2026-11-07",
+  "application": "Aexus Bot",
+  "passed": true,
+  "causes": [
+    "Global tool/role guidance described private publication too broadly.",
+    "Native conversation composer inherited the Message visual presentation as its reply origin.",
+    "Secretary asked redundant questions for already specified order and authorized installation steps."
+  ],
+  "behavior": {
+    "teamAndUntagged": "Native Coding Agent text; no private/group source tag and no automatic publication.",
+    "private": "Current-message private source tag and explicit direct.post.",
+    "group": "Current group name/ID and explicit group publication.",
+    "crossConversation": "Only on the current user request; never infer from previous turns.",
+    "messageSections": [
+      "outsource",
+      "private",
+      "groups",
+      "channels"
+    ],
+    "externalWorkersExcludedFromOrdinaryPrivate": true,
+    "reorderWithinSection": true
+  },
+  "core": {
+    "passed": 103,
+    "failed": 0,
+    "skipped": 0
+  },
+  "realModel": {
+    "engine": "claude",
+    "model": "deepseek-flash",
+    "effort": "low",
+    "passed": true,
+    "mockedEngine": false,
+    "productionDataUsed": false,
+    "cases": [
+      "Company native response remains native only",
+      "Natural private request independently publishes text → image → file",
+      "Untagged ordinary input after private work returns to native reply",
+      "Group work privately publishes; awareness stays silent; full read/work wrappers stay Company",
+      "Native Plan mode can explicitly reply privately",
+      "Secretary independently discovers and applies requested channel order without API hints or redundant questions"
+    ],
+    "secretaryIndependentlyCalledApiWithoutHints": true,
+    "secretaryAskedRedundantQuestion": false
+  },
+  "ui": {
+    "web": true,
+    "hiddenMac": true,
+    "installedMac": true,
+    "checks": [
+      "Fixed section order and separate Dot/Grok/Grok groups.",
+      "Same-section ordering with preserved boundaries.",
+      "Outsource category and All list restoration.",
+      "Private composer tagged; full native composer uses Team even when opened from Message.",
+      "Team input creates no private row."
+    ]
+  },
+  "installation": {
+    "passed": true,
+    "employeesPreserved": 8,
+    "nativeConfigurationsPreserved": 11,
+    "schedulesPreserved": 5,
+    "workspaceAndNativeSessionBindingsPreserved": true,
+    "runtimeRestored": true,
+    "asarSha256": "0d896149e0e22d4f324807a576f6ceb80536c384c3315fb32834d24e2ca23b9b"
+  },
+  "untestedPlatforms": [
+    "Windows desktop",
+    "Linux deployment"
+  ],
+  "collectorRepository": "https://github.com/Daijunfan/xhs_publisher"
+}
