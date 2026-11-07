@@ -17,11 +17,11 @@
     "visibleRows": 4,
     "scrollbar": 4,
     "colors": [
+      "#aa617b",
+      "#358b7b",
       "#a6753d",
       "#708447",
       "#5579b8",
-      "#358b7b",
-      "#aa617b",
       "#8c6bb0"
     ],
     "rowWrap": false,
@@ -44,7 +44,8 @@
     "typecheck": true,
     "languageCoverage": true,
     "calendarErrorLoadingRecovery": true,
-    "modelCalls": 0
+    "modelCalls": 0,
+    "emptyDatesPermitOuterMonthScroll": true
   },
   "installation": {
     "passed": true,
@@ -53,7 +54,7 @@
     "nativeConfigurationsPreserved": 11,
     "nativeSessionsAndWorkspacesPreserved": true,
     "runtimeRestored": true,
-    "asarSha256": "a9f13173607b65facdc06a89ed86aabda68a232842789c7a4b45e19208da2a40"
+    "asarSha256": "b4d173424e0153cfedd8a6b37c04f1f9bef74b5c273fa2e941d9080b15cddc72"
   },
   "untestedPlatforms": [
     "Windows desktop",

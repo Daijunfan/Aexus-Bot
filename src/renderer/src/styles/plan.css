@@ -106,7 +106,7 @@
 .plan-calendar-weekday{padding:8px;text-align:center;color:var(--fg-dim);font-size:10px;font-weight:550;background:var(--bg-alt);border-bottom:1px solid var(--border-soft)}
 .plan-calendar-day{display:flex;flex-direction:column;box-sizing:border-box;height:148px;min-height:0;min-width:0;padding:6px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft);overflow:hidden}
 .plan-calendar-day>.plan-day-number{flex:none}
-.plan-calendar-events{display:flex;flex-direction:column;gap:3px;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;padding-top:4px}
+.plan-calendar-events{display:flex;flex-direction:column;gap:3px;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;padding-top:4px}
 .plan-calendar-events::-webkit-scrollbar{width:4px}
 .plan-calendar-events::-webkit-scrollbar-thumb{min-height:18px;border:0;border-radius:4px;background:color-mix(in srgb,var(--fg-dim) 35%,transparent);background-clip:border-box}
 .plan-calendar-events::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--fg-dim) 55%,transparent);background-clip:border-box}
