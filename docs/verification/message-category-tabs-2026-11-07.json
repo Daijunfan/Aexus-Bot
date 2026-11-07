@@ -1,0 +1,63 @@
+{
+  "date": "2026-11-07",
+  "application": "Aexus Bot",
+  "passed": true,
+  "cause": "Conversation types had been rendered as sections inside All instead of selectable categories beside All.",
+  "behavior": {
+    "categories": [
+      "All",
+      "Outsource",
+      "Private",
+      "Groups",
+      "Channels"
+    ],
+    "customCategoriesRetained": true,
+    "selection": "One category only; repeat click keeps it selected; All always opens the combined inbox without restoring previous selections.",
+    "allList": "Flat list using saved/pinned/recent ordering, without section headings or section-restricted sorting.",
+    "archive": "Archive hides conversations only from All; fixed and custom categories include their archived conversations and have no archive/restore controls.",
+    "api": "Single folder or type query; virtual permanent type:* category catalogue; matching authenticated sort scopes and JSON schema; existing custom records unchanged."
+  },
+  "core": {
+    "passed": 103,
+    "failed": 0,
+    "skipped": 0
+  },
+  "finalSchemaChecks": {
+    "passed": [
+      "message-categories-core",
+      "api-documents",
+      "cli-contract"
+    ],
+    "failed": [],
+    "cliPayloads": 492
+  },
+  "typecheck": true,
+  "ui": {
+    "web": true,
+    "hiddenMac": true,
+    "installedMac": true,
+    "checks": [
+      "four real category filters immediately beside All; no section headings",
+      "one category active; repeat click stays; All never restores prior category",
+      "legacy selection migration, reload, search and scoped ordering",
+      "archive hides only in All; fixed/custom categories retain archived entries; no category archive controls",
+      "private input tagged; full native conversation uses Team even after Message navigation",
+      "no private row created by Team input"
+    ]
+  },
+  "installation": {
+    "passed": true,
+    "employeesPreserved": 8,
+    "schedulesPreserved": 5,
+    "nativeConfigurationsPreserved": 11,
+    "workspaceAndNativeSessionBindingsPreserved": true,
+    "runtimeRestored": true,
+    "asarSha256": "bce6e3ce1d37f602c7cb840565f1af8671862ae96cdba7b3d683373b6e7cf43b"
+  },
+  "paidModelCalls": 0,
+  "productionTestRecordsCreated": 0,
+  "untestedPlatforms": [
+    "Windows desktop",
+    "Linux deployment"
+  ]
+}

@@ -168,6 +168,8 @@ formal work. Silent acknowledgments create no further delivery.
 
 ## 自建混合会话分类
 
+All 右侧固定显示外包、私聊、群组、频道四个类别筛选；不在 All 列表内插入分段标题。`messenger.state.categories` 投影四个 `type:*` 固定筛选与自建 `mf_*` 分类，原 `folders` 仅包含自建记录。`messenger.directory {folder:ID}` 查询一个类别，不指定类别表示 All；界面同一时间只选中一个类别，重复点击仍保持选中，All 不恢复历史类别；归档标记仅影响 All 的展示；进入固定或自建类别仍显示其中的已归档会话，类别内不提供归档/恢复入口。固定筛选不创建或复制消息、不自动写入用户自建分类。用户与 Secretary 可用既有 `messenger.reorder` 调整类别栏（scope=categories），也可用固定类别 ID 作为 scope 整理该列表。固定类型不可删改，自建类别权限和 revision 规则不变。
+
 `messenger.folder-save/delete` 允许用户或 Secretary 调用，默认 API 发现对二者列出；与其他个人整理操作共用 `messenger.json`。分类只保存已验证的私聊、群聊、频道引用；同一会话可以加入多个分类。每个分类有独立 revision，同名及相同成员重试保持幂等；并发修改同一分类时显式 expectedRevision 冲突拒绝。无关草稿写入不会造成分类冲突。删除分类保留全部会话、消息、草稿、置顶、收藏和归档；固定 All 没有可编辑或删除的分类记录。
 
 频道会话可使用相同的个人置顶、收藏夹、归档和未读提醒；这些仍只影响用户整理状态。新闻文章收藏始终属于频道 Core 中的稳定 postId，不复制到随作者路由变化的 messenger key。`messenger.search` 以同一用户权限合并仍保留的新闻，外部作者不冒充 operator 或 agent。新闻可作为用户明确选择的引用或转发来源；目标仍为已有私聊或群聊，图片复制继续使用原有认证文件传输。频道讨论支持文字、图片、文件、mentions 和同频道 replyTo 草稿。用户附件保存在频道共享根目录；员工仅收到原文与文件清单，不自动收到私聊附件。

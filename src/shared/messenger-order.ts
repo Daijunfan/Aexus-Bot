@@ -1,3 +1,4 @@
+import {isBuiltinMessageCategory} from './message-categories.ts'
 /** Apply saved positions without dropping newly created or currently unranked items. */
 export function orderedKeys(keys:readonly string[],order:readonly string[]=[]):string[]{
  const remaining=new Set(keys),result:string[]=[]
@@ -10,5 +11,5 @@ export function mergeOrder(previous:readonly string[],next:readonly string[]):st
  return [...previous.map(key=>selected.has(key)?next[index++]:key),...next.slice(index)]
 }
 export const sameOrder=(a:readonly string[],b:readonly string[])=>a.length===b.length&&a.every((key,index)=>key===b[index])
-export const orderScope=(value:unknown):value is string=>typeof value==='string'&&(/^(categories|all|favorites|archive)$/.test(value)||/^mf_[a-f0-9-]{36}$/.test(value))
+export const orderScope=(value:unknown):value is string=>typeof value==='string'&&(/^(categories|all|favorites|archive)$/.test(value)||/^mf_[a-f0-9-]{36}$/.test(value)||isBuiltinMessageCategory(value))
 export const validOrder=(value:unknown):value is string[]=>Array.isArray(value)&&value.length<=10000&&value.every(key=>typeof key==='string'&&key.length>0&&key.length<=200)&&new Set(value).size===value.length

@@ -69,5 +69,6 @@
     "Windows desktop",
     "Linux deployment"
   ],
-  "collectorRepository": "https://github.com/Daijunfan/xhs_publisher"
+  "collectorRepository": "https://github.com/Daijunfan/xhs_publisher",
+  "presentationSupersededBy": "message-category-tabs-2026-11-07.json"
 }

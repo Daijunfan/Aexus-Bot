@@ -4340,9 +4340,9 @@
   },
   {
     "name": "messenger.directory",
-    "args": "[--type all|private|groups|channels|telegram|x|youtube] [--query TEXT] [--folder ID] [--archived exclude|only|include] [--offset N] [--limit N]",
-    "summary": "User or Secretary: search current worker/group/channel/social identities and dynamic categories; no message bodies, read receipts or execution",
-    "gui": "Message type filtering",
+    "args": "[--type all|outsource|private|groups|channels|telegram|x|youtube] [--query TEXT] [--folder ID] [--archived exclude|only|include] [--offset N] [--limit N]",
+    "summary": "User or Secretary: query one category using folder ID from messenger.state.categories, or one type. No category means All. Archive filtering applies only to All; category queries include their archived conversations. No message bodies, read acknowledgements or execution.",
+    "gui": "Message category filtering",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4418,7 +4418,7 @@
   {
     "name": "messenger.reorder",
     "args": "SCOPE --order JSON|null [--expected-order JSON]",
-    "summary": "User or Secretary: persist category or mixed conversation positions in categories/all/favorites/archive/a folder ID; null restores automatic order, unrelated drafts and hidden positions remain unchanged",
+    "summary": "User or Secretary: persist category or conversation positions in categories/all/favorites/archive/a type:* category ID/a custom folder ID; null restores automatic order, unrelated drafts and hidden positions remain unchanged",
     "gui": "Message drag ordering",
     "inputSchema": {
       "type": "object",
@@ -4426,7 +4426,7 @@
       "properties": {
         "scope": {
           "type": "string",
-          "pattern": "^(categories|all|favorites|archive|mf_[a-f0-9-]{36})$"
+          "pattern": "^(categories|all|favorites|archive|type:(outsource|private|groups|channels)|mf_[a-f0-9-]{36})$"
         },
         "order": {
           "anyOf": [
@@ -4929,7 +4929,7 @@
   {
     "name": "messenger.state",
     "args": "",
-    "summary": "User or Secretary: read persisted conversation preferences, saved messages, reactions and drafts",
+    "summary": "User or Secretary: read conversation preferences, drafts and orders. categories projects permanent type:* filters plus editable custom mf_* categories; folders contains only custom records. Use category IDs for directory queries and reorder scopes.",
     "gui": "Messages organization",
     "inputSchema": {
       "type": "object",

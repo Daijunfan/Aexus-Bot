@@ -47,7 +47,7 @@ try{
  await rpc('channel.source-remove',{id:added.id});assert.equal((await directory({folder:x.id})).total,1);await deny('messenger.reorder',{scope:x.id,order:['channel:'+sources[2].channelId]});await rpc('channel.source-update',{id:added.id,patch:{enabled:true}});assert.equal((await directory({folder:x.id})).total,1)
  checks.push('Worker/group add, delete and same-name recreation update dynamic categories using stable IDs; the aggregate platform rule and explicit curated lists both resolve authors to the channel, never to per-source entries.')
  await rpc('messenger.conversation',{conversations:['employee:'+b.id,'group:'+room2.id,'source:'+sources[0].id],patch:{archived:true}})
- assert.equal((await directory({archived:'only'})).total,3);assert.equal((await directory({folder:people.id})).total,3)
+ assert.equal((await directory({archived:'only'})).total,3);assert.equal((await directory({folder:people.id})).total,4)
  const complete=await directory({archived:'include'}),paged=[];for(let offset=0;offset<complete.total;offset+=2)paged.push(...keys(await directory({archived:'include',offset,limit:2})))
  assert.deepEqual(paged.sort(),keys(complete));assert.equal(new Set(paged).size,complete.total)
  assert.equal((await directory({type:'x',query:'X',archived:'only'})).total,1)

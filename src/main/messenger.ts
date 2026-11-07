@@ -4,7 +4,7 @@ import {all as channelRows,canonicalChannelId} from './channel-store'
 import {saveChannelContent,saveChannelMessageContent,ensureChannelContent,loadChannelPost,loadChannelMessage} from './channel-content'
 import {requireSavedChannelEntry} from './channel-content-policy'
 import {socialElements,socialIdentity,categoryRule} from './message-categories'
-import {inCategory,matchesConversationType,matchesConversationQuery,uniqueConversations,CONVERSATION_TYPES,type CategoryEntry,type ConversationType} from '../shared/message-categories'
+import {conversationCategories,inCategory,matchesConversationType,matchesConversationQuery,uniqueConversations,CONVERSATION_TYPES,type CategoryEntry,type ConversationType} from '../shared/message-categories'
 import {resolveAvatar} from '../shared/avatars'
 import {validatedImage} from './image-input'
 import type {PublicMessage,MessageSource} from './message-index'
@@ -49,9 +49,9 @@ function read(){
   if(Object.keys(channelDrafts).length)atomicJson(file,{...state,drafts:Object.fromEntries(Object.entries(state.drafts).filter(([key])=>!key.startsWith('channel:')))})
   const previous=readJson<MessengerState|undefined>(file+'.previous',()=>undefined);if(previous&&Object.keys(previous.drafts??{}).some(key=>key.startsWith('channel:')))atomicJson(file+'.previous',{...previous,drafts:Object.fromEntries(Object.entries(previous.drafts??{}).filter(([key])=>!key.startsWith('channel:')))})
  }
- return {...state,drafts:{...state.drafts,...channelDrafts}}
+ return {...state,categories:conversationCategories(state.folders),drafts:{...state.drafts,...channelDrafts}}
 }
-function write(state:MessengerState,conversation?:string){state.revision++;channelDrafts=Object.fromEntries(Object.entries(state.drafts).filter(([key])=>key.startsWith('channel:')));atomicJson(file,{...state,drafts:Object.fromEntries(Object.entries(state.drafts).filter(([key])=>!key.startsWith('channel:')))},true);emit({revision:state.revision,conversation});return state}
+function write(state:MessengerState,conversation?:string){state.revision++;channelDrafts=Object.fromEntries(Object.entries(state.drafts).filter(([key])=>key.startsWith('channel:')));const {categories,...persisted}=state;atomicJson(file,{...persisted,drafts:Object.fromEntries(Object.entries(state.drafts).filter(([key])=>!key.startsWith('channel:')))},true);emit({revision:state.revision,conversation});return {...state,categories:conversationCategories(state.folders)}}
 function resolve(input:unknown){
  if(typeof input!=='string'||!/^(employee|group|channel):[a-zA-Z0-9_-]+$/.test(input))throw Error('Choose a valid conversation')
  let value=input
@@ -139,10 +139,10 @@ export async function messengerRequest(command:string,args:Record<string,any>={}
   case 'messenger.state':return state
   case 'messenger.reorder':{
    if(Object.keys(args).some(key=>!['scope','order','expectedOrder'].includes(key))||!orderScope(args.scope)||args.order!==null&&!validOrder(args.order)||args.expectedOrder!==undefined&&!validOrder(args.expectedOrder))throw Error('Invalid conversation order')
-   const scope=args.scope,folder=state.folders?.find(value=>value.id===scope)
+   const scope=args.scope,folder=state.categories?.find(value=>value.id===scope)
    if(scope.startsWith('mf_')&&!folder)throw Error('Unknown conversation folder')
    if(args.order!==null)for(const key of args.order){
-    if(scope==='categories'){if(key!=='all'&&!state.folders?.some(value=>value.id===key))throw Error('Unknown conversation category')}
+    if(scope==='categories'){if(key!=='all'&&!state.categories?.some(value=>value.id===key))throw Error('Unknown conversation category')}
     else {const entry=listIdentity(key);if(folder&&!inCategory(folder,entry as import('../shared/message-categories').CategoryEntry))throw Error('Conversation is not in this category')}
    }
    const current=state.orders?.[scope]??[],next=args.order===null?[]:mergeOrder(current,args.order)
@@ -244,8 +244,9 @@ export async function messengerRequest(command:string,args:Record<string,any>={}
 function conversationDirectory(args:Record<string,any>,state:MessengerState){
  const {type='all',query='',folder,archived='exclude',offset=0,limit=100}=args
  if(Object.keys(args).some(key=>!['type','query','folder','archived','offset','limit'].includes(key))||!CONVERSATION_TYPES.includes(type)||typeof query!=='string'||query.length>500||!['exclude','only','include'].includes(archived)||!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>200)throw Error('Invalid conversation directory query')
- const category=folder===undefined?undefined:state.folders?.find(item=>item.id===folder)
+ const category=folder===undefined?undefined:state.categories?.find(item=>item.id===folder)
  if(folder!==undefined&&!category)throw Error('Unknown conversation folder')
+ const categoryQuery=!!category||type!=='all'
  type Entry=CategoryEntry&{id:string;title:string;description:string;channelId?:string;locator?:string;team?:string;role?:string;engine?:string;archived:boolean}
  const entries:Entry[]=[
   ...visibleEmployees().filter(card=>!card.deleting).map(card=>({key:'employee:'+card.id,id:card.id,kind:'employee' as const,title:card.title,description:[card.group,card.managementRole??'employee',card.engine].join(' · '),team:card.group,role:card.managementRole??'employee',engine:card.engine,archived:false})),
@@ -253,7 +254,7 @@ function conversationDirectory(args:Record<string,any>,state:MessengerState){
   ...(channelRequest('channel.list',{}) as {id:string;name:string;kind:string;sourceCount?:number}[]).map(channel=>({key:'channel:'+channel.id,id:channel.id,kind:'channel' as const,title:channel.name,description:channel.kind,platform:channel.kind,sourceCount:channel.sourceCount,archived:false})),
   ...socialElements({includeDisabled:true}).map(source=>({key:source.key,id:source.id,kind:'source' as const,title:source.name,description:source.platform+' · '+source.locator,platform:source.platform,locator:source.locator,channelId:source.channelId,enabled:source.enabled,archived:false}))
  ].map(entry=>({...entry,archived:!!state.conversations[entry.key]?.archived}))
- const found=entries.filter(entry=>(archived==='include'||entry.archived===(archived==='only'))&&(!category||inCategory(category,entry))&&matchesConversationQuery(query,entry.title,entry.description))
+ const found=entries.filter(entry=>(categoryQuery||archived==='include'||entry.archived===(archived==='only'))&&(!category||inCategory(category,entry))&&matchesConversationQuery(query,entry.title,entry.description))
  const counts=Object.fromEntries(CONVERSATION_TYPES.map(type=>[type,uniqueConversations(found.filter(entry=>matchesConversationType(type,entry))).length]))
  const matched=uniqueConversations(found.filter(entry=>matchesConversationType(type as ConversationType,entry))).sort((a,b)=>a.title.localeCompare(b.title)||a.key.localeCompare(b.key))
  return {entries:matched.slice(offset,offset+limit),total:matched.length,hasMore:offset+limit<matched.length,offset,counts}

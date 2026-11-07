@@ -127,14 +127,27 @@ The full GUI/API comparison and Plan workflow are available as `core/secretary-a
 
 ## Message filtering and dynamic categories
 
+The category row is `All · Outsource · Private · Groups · Channels`, followed by
+custom categories. These are category filters, not section headings inside All. Exactly one category
+is active. Clicking a category shows that category; clicking it again keeps it
+active. All always shows the combined inbox, without restoring a previous filter.
+Custom categories and their stored contents are retained.
+
+`messenger.state.categories` exposes the fixed `type:outsource`, `type:private`,
+`type:groups`, `type:channels` filters and custom `mf_*` categories. `folders` contains
+only editable custom records. Query one category with `messenger.directory {folder:"type:private"}`; omit
+`folder` for All (or use the existing single `type` option). Fixed filters
+are permanent; custom records use `folder-save/delete`. User/Secretary can reorder
+the category row with `messenger.reorder {scope:"categories",order,expectedOrder}`
+and reorder a fixed filter's conversation list using its `type:*` ID as `scope`.
+
 `messenger.directory` lists current workers, groups, parent channels and social elements
 without loading messages, starting engines or acknowledging reads. It is available to
-the user and Secretary. The Message sidebar has a permanent All button and multi-select
-categories. Selected categories form a union over the live catalog, deduplicated by
-canonical conversation key. Clicking a selected category deselects it; no selection
-shows the full inbox. All clears selected categories and remembers that set; clicking
-All again restores it. Category selection is remembered on this client. Legacy single
-category selection is retained; the removed UI Filter/type switch no longer hides rows.
+the user and Secretary. The Message sidebar has All followed by category buttons.
+Only one category is selected; repeated clicks keep the same category active.
+The current category is remembered on this client; All always opens the full inbox.
+Archiving hides a conversation only from All. Fixed and custom category lists still
+include their archived conversations, and offer no archive/restore controls.
 Telegram, X and YouTube each appear once as an aggregate channel; author subscriptions
 remain available through their source selectors and APIs. CLI type queries remain
 available independently of the sidebar presentation.
@@ -142,19 +155,21 @@ available independently of the sidebar presentation.
 ```sh
 agents messenger directory --type groups --json
 agents messenger directory --type private --query "Research" --json
-agents messenger directory --type x --query "@author" --json
+agents messenger directory --type x --json
 agents messenger directory --folder CATEGORY_ID --archived include --offset 0 --limit 100 --json
 ```
 
-Types: `all`, `private` (employees, management roles, Dot/Grok bots and native Grok
-rooms), `groups` (ordinary groups), `channels` (parent channel containers), and
+Types: `all`, `private` (employees and management roles), `outsource` (Dot/Grok bots
+and native Grok rooms), `groups` (ordinary groups), `channels` (parent channel containers), and
 `telegram`, `x`, `youtube` (one aggregate channel per platform).
 Search matches names, Team/role/engine labels, group member names or platform/accounts.
-`archived` is `exclude` by default, `only`, or `include`; `limit` is 1–200, default 100.
+`archived` is `exclude` by default, `only`, or `include`, and applies only to an
+All query. With a category (`folder` or a non-All `type`), archive filtering is
+inactive and both archived/non-archived entries are returned. `limit` is 1–200, default 100.
 The result contains `entries`, `total`, `hasMore`, `offset` and per-type `counts`.
 Counts include the search/category/archive constraints but precede the type selection.
 
-Dynamic categories must store `include: private|groups|telegram|x|youtube` rather than
+Dynamic categories must store `include: outsource|private|groups|channels|telegram|x|youtube` rather than
 a one-time ID list. They follow creation and deletion immediately; source rules also
 follow subscription enable/disable. Explicit `conversations` and `excluded` selections
 remain intentional overrides. Category names are labels and never silently determine
@@ -162,8 +177,8 @@ membership. Convert an old static category with `messenger.folder-save`, preserv
 ID/name and passing `conversations:[]`, the intended `include` and `expectedRevision`.
 Deleting a category never deletes its objects, histories or workspaces.
 
-The All Conversations button is independent of category tabs. Selecting it clears the
-current category, type and search. Switching categories clears old search/type filters,
+The All Conversations button always selects All and clears the current search.
+Switching categories clears the search,
 so a previous platform query cannot hide a group or worker category. Archived objects
 remain in the existing unified archive and are queryable with `--archived include`.
 
@@ -3343,9 +3358,9 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 | <code>agents channel publish</code> | <code>--data JSON&#124;@file</code> | External collector or user import only: publish source-scoped news; employees read channels through fetch/search APIs and cannot post | Channel publishing | chat |
 | <code>agents messenger profile</code> | <code>[--avatar ID&#124;null &#124; --image JSON&#124;@file]</code> | User-only: upload a personal image, choose an avatar.list ID or reset with null; author identity stays unchanged | Your message avatar | operator |
 | <code>agents messenger profile-image</code> | <code>--sha256 HASH</code> | User-only: read the current personal avatar image at its exact saved revision | Your message avatar | operator |
-| <code>agents messenger directory</code> | <code>[--type all&#124;private&#124;groups&#124;channels&#124;telegram&#124;x&#124;youtube] [--query TEXT] [--folder ID] [--archived exclude&#124;only&#124;include] [--offset N] [--limit N]</code> | User or Secretary: search current worker/group/channel/social identities and dynamic categories; no message bodies, read receipts or execution | Message type filtering | operator |
+| <code>agents messenger directory</code> | <code>[--type all&#124;outsource&#124;private&#124;groups&#124;channels&#124;telegram&#124;x&#124;youtube] [--query TEXT] [--folder ID] [--archived exclude&#124;only&#124;include] [--offset N] [--limit N]</code> | User or Secretary: query one category using folder ID from messenger.state.categories, or one type. No category means All. Archive filtering applies only to All; category queries include their archived conversations. No message bodies, read acknowledgements or execution. | Message category filtering | operator |
 | <code>agents messenger social</code> | <code>[--platform telegram&#124;x&#124;youtube] [--include-disabled]</code> | User or Secretary: list each social element with stable source ID, parent channel, latest publication and per-source unread count; no reads acknowledged | Social category picker | operator |
-| <code>agents messenger reorder</code> | <code>SCOPE --order JSON&#124;null [--expected-order JSON]</code> | User or Secretary: persist category or mixed conversation positions in categories/all/favorites/archive/a folder ID; null restores automatic order, unrelated drafts and hidden positions remain unchanged | Message drag ordering | operator |
+| <code>agents messenger reorder</code> | <code>SCOPE --order JSON&#124;null [--expected-order JSON]</code> | User or Secretary: persist category or conversation positions in categories/all/favorites/archive/a type:* category ID/a custom folder ID; null restores automatic order, unrelated drafts and hidden positions remain unchanged | Message drag ordering | operator |
 | <code>agents messenger media-open</code> | <code>CONVERSATION --path PATH</code> | User-only: open a client-scoped audio/video preview with a bounded lifetime; no inference | Media playback | operator |
 | <code>agents messenger media-info</code> | <code>ID</code> | User-only: validate the owned media preview and file version | Media playback | operator |
 | <code>agents messenger media-read</code> | <code>ID --offset N</code> | User-only: read at most 256 KiB from an owned media preview at a validated offset | Media playback | operator |
@@ -3356,7 +3371,7 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 | <code>agents messenger forward</code> | <code>--messages JSON --to REF --client-message-id ID [--comment TEXT] [--text-only] [--retry]</code> | User-only: deliberately forward selected public messages through existing Core send/queue paths, with durable retry protection | Message forwarding | operator |
 | <code>agents messenger forward-draft</code> | <code>--data JSON&#124;null [--expected-client-message-id ID]</code> | User-only: retain or discard one forwarding setup; discarding never cancels accepted work | Resume forwarding | operator |
 | <code>agents messenger forward-status</code> | <code>--client-message-id ID</code> | User-only: check a forwarding receipt without sending, reading sources or starting work | Forwarding result | operator |
-| <code>agents messenger state</code> | <code>—</code> | User or Secretary: read persisted conversation preferences, saved messages, reactions and drafts | Messages organization | operator |
+| <code>agents messenger state</code> | <code>—</code> | User or Secretary: read conversation preferences, drafts and orders. categories projects permanent type:* filters plus editable custom mf_* categories; folders contains only custom records. Use category IDs for directory queries and reorder scopes. | Messages organization | operator |
 | <code>agents messenger folder-save</code> | <code>--name NAME --conversations JSON [--include outsource&#124;private&#124;groups&#124;channels&#124;telegram&#124;x&#124;youtube&#124;null] [--excluded JSON] [--id ID] [--expected-revision N]</code> | User or Secretary: create or update a personal folder of private, group and channel conversations without moving their content | Conversation folders | operator |
 | <code>agents messenger folder-delete</code> | <code>ID [--expected-revision N]</code> | User or Secretary: remove a personal conversation folder while retaining every conversation and message | Conversation folders | operator |
 | <code>agents messenger conversation</code> | <code>--conversations JSON --patch JSON</code> | User or Secretary: pin, favorite, archive or mark conversations unread in one atomic update | Messages list and bulk actions | operator |

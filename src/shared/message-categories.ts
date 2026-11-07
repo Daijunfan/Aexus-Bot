@@ -1,3 +1,4 @@
+import type {ConversationFolder} from './messenger'
 /** Category membership is a projection over existing conversations, not another history. */
 export const CATEGORY_INCLUDES=['outsource','private','groups','channels','telegram','x','youtube'] as const
 export type CategoryInclude=typeof CATEGORY_INCLUDES[number]
@@ -18,13 +19,12 @@ export function uniqueConversations<T extends CategoryEntry>(entries:T[]):T[]{
 }
 export const CONVERSATION_TYPE_LABELS:Record<ConversationType,string>={all:'All types',outsource:'Outsource',private:'Private chats',groups:'Groups',channels:'Channels',telegram:'Telegram channel',x:'X channel',youtube:'YouTube channel'}
 
-/** Inbox sections: external Workers are kept apart from people, teams and channels. */
-export const MESSAGE_SECTIONS=['outsource','private','groups','channels'] as const
-export type MessageSection=typeof MESSAGE_SECTIONS[number]
-export const MESSAGE_SECTION_LABELS:Record<MessageSection,string>={private:'Direct messages',groups:'Groups',channels:'Channels',outsource:'Outsource'}
-/** Dot/Grok connections are group conversations carrying a bot kind, so they are classified first. */
-export const messageSection=(entry:Pick<CategoryEntry,'kind'|'botKind'>):MessageSection=>entry.kind==='employee'?'private':entry.botKind?'outsource':entry.kind==='group'?'groups':'channels'
-/** Stable section-major ordering; positions inside a section are preserved as given. */
-export function orderBySection<T extends Pick<CategoryEntry,'kind'|'botKind'>>(entries:readonly T[]):T[]{
- return entries.map((entry,index)=>({entry,index})).sort((a,b)=>MESSAGE_SECTIONS.indexOf(messageSection(a.entry))-MESSAGE_SECTIONS.indexOf(messageSection(b.entry))||a.index-b.index).map(item=>item.entry)
-}
+/** Permanent category filters, followed by the user's editable categories. No histories are copied. */
+export const MESSAGE_CATEGORY_PRESETS=[
+ {id:'type:outsource',name:'Outsource',include:'outsource'},
+ {id:'type:private',name:'Private',include:'private'},
+ {id:'type:groups',name:'Groups',include:'groups'},
+ {id:'type:channels',name:'Channels',include:'channels'}
+] as const
+export const isBuiltinMessageCategory=(id:string)=>MESSAGE_CATEGORY_PRESETS.some(category=>category.id===id)
+export function conversationCategories(folders:ConversationFolder[]=[]):ConversationFolder[]{return [...MESSAGE_CATEGORY_PRESETS.map(category=>({...category,conversations:[],revision:0})),...folders]}

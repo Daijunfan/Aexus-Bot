@@ -10,14 +10,14 @@ import {EMPTY_MESSENGER,hasDraftContent,type MessengerState,type ConversationPre
 export type MessageTarget={conversation:string;id:string;quote?:MessageQuote}
 export type ReplyDestination=MessageTarget&{text:string;images:number}
 type LocalDraft=MessageDraft&{expectedClientMessageId?:string}
-type DirectoryState={scope:'all'|'favorites'|'archive';folderIds:string[];previousFolderIds:string[];query:string}
-const DEFAULT_DIRECTORY:DirectoryState={scope:'all',folderIds:[],previousFolderIds:[],query:''}
+type DirectoryState={scope:'all'|'favorites'|'archive';categoryId?:string;query:string}
+const DEFAULT_DIRECTORY:DirectoryState={scope:'all',query:''}
 const directoryKey=()=>'agents-company-message-directory-'+(api.mode==='web'?sessionStorage.getItem('agents-company-client'):'desktop')
 function rememberedDirectory():DirectoryState{
  try{
   const value=JSON.parse(localStorage.getItem(directoryKey())??'{}')
-  const ids=(items:unknown)=>Array.isArray(items)?[...new Set(items.filter((id):id is string=>typeof id==='string'))]:[]
-  return {scope:['all','favorites','archive'].includes(value.scope)?value.scope:'all',folderIds:Array.isArray(value.folderIds)?ids(value.folderIds):typeof value.folderId==='string'?[value.folderId]:[],previousFolderIds:ids(value.previousFolderIds),query:typeof value.query==='string'?value.query:''}
+  const categoryId=typeof value.categoryId==='string'?value.categoryId:typeof value.folderId==='string'?value.folderId:Array.isArray(value.folderIds)?value.folderIds.filter((id:unknown)=>typeof id==='string').at(-1):undefined
+  return {scope:categoryId?'all':['all','favorites','archive'].includes(value.scope)?value.scope:'all',categoryId,query:typeof value.query==='string'?value.query:''}
  }catch{return DEFAULT_DIRECTORY}
 }
 
