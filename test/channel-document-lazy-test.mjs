@@ -1,3 +1,4 @@
+import {collectorSourceRoot} from './fixtures/collector-source.mjs'
 // Two fixture roots model the Mac and Linux. SSH/file RPC is real, with a local-only SSH fixture.
 import fs from 'node:fs'
 import os from 'node:os'
@@ -14,7 +15,7 @@ const payload=Buffer.from('%PDF-lazy-fixture\n'.repeat(4096)),digest=createHash(
 const f=await fixtureCore({PATH:bin+path.delimiter+process.env.PATH}),rpc=async(cmd,args={})=>{const value=await f.request(null,cmd,args);assert.ok(value.ok,value.error);return value.data}
 const python=spawn('python3',['-B','-u','-c',`import sys,json,base64
 from pathlib import Path
-sys.path.insert(0,${JSON.stringify(path.join(root,'Collectors'))})
+sys.path.insert(0,${JSON.stringify(collectorSourceRoot)})
 from channel_content import ChannelContentStore
 store=ChannelContentStore(Path(${JSON.stringify(server)}));calls=0
 for line in sys.stdin:

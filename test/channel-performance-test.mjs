@@ -1,3 +1,4 @@
+import {collectorSourceRoot} from './fixtures/collector-source.mjs'
 // Actual Core/HTTP, indexed Python archive and a bounded simulated network delay.
 // Large synthetic history and image originals exist only in the separate server fixture.
 import fs from 'node:fs'
@@ -13,7 +14,7 @@ const root=path.resolve(import.meta.dirname,'..'),server=fs.mkdtempSync(path.joi
 const rpc=async(cmd,args={})=>{const r=await f.request(null,cmd,args);assert.ok(r.ok,r.error);return r.data}
 const python=spawn(process.env.AGENTS_ARCHIVE_TEST_PYTHON||'python3',['-B','-u','-c',`import sys,json,time,random,hashlib
 from pathlib import Path
-sys.path.insert(0,${JSON.stringify(path.join(root,'Collectors'))})
+sys.path.insert(0,${JSON.stringify(collectorSourceRoot)})
 from channel_content import ChannelContentStore
 store=ChannelContentStore(Path(${JSON.stringify(server)}),Path(${JSON.stringify(path.join(server,'originals'))}))
 for line in sys.stdin:

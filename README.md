@@ -34,7 +34,7 @@ Aexus Bot 把 Codex、Claude Code、Cline 和 Pi 等既有 Coding Agent 接入�
 
 ## 独立的社交媒体采集项目
 
-Telegram、X、YouTube 的爬虫和服务器采集逻辑由另一个开源项目 [xhs_publisher](https://github.com/Daijunfan/xhs_publisher) 维护，不属于本客户端。Aexus Bot 通过受控接口管理订阅、读取与搜索内容，并在 Message 中展示；采集进程和内容存储运行在 Linux 服务器。
+Telegram、X、YouTube 的爬虫和服务器采集逻辑由另一个开源项目 [xhs_publisher](https://github.com/Daijunfan/xhs_publisher) 维护，不属于本客户端。Aexus Bot 通过受控接口管理订阅、读取与搜索内容，并在 Message 中展示；采集进程和内容存储运行在 Linux 服务器。跨项目集成测试通过 `AEXUS_COLLECTOR_SOURCE` 指向该仓库的 `integrations/aexus-bot`，不在客户端复制爬虫实现。
 
 ## 一个 Core，多种用法
 

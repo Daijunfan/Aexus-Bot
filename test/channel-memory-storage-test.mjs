@@ -1,3 +1,4 @@
+import {collectorSourceRoot} from './fixtures/collector-source.mjs'
 // Real Core + scoped HTTP + the actual Python server store in a separate fixture directory.
 // No user news, platform access, native agents or model calls.
 import fs from 'node:fs'
@@ -13,7 +14,7 @@ import {fixtureCore} from './fixtures/headless-core.mjs'
 const root=path.resolve(import.meta.dirname,'..'),server=fs.mkdtempSync(path.join(os.tmpdir(),'aexus-content-server-')),f=await fixtureCore(),checks=[]
 const rpc=async(cmd,args={})=>{const result=await f.request(null,cmd,args);assert.ok(result.ok,result.error);return result.data}
 const child=spawn(process.env.AGENTS_ARCHIVE_TEST_PYTHON||'python3',['-B','-u','-c',`import sys,json
-sys.path.insert(0,${JSON.stringify(path.join(root,'Collectors'))})
+sys.path.insert(0,${JSON.stringify(collectorSourceRoot)})
 from channel_content import ChannelContentStore
 from pathlib import Path
 store=ChannelContentStore(Path(${JSON.stringify(server)}))
