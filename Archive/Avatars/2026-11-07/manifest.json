@@ -1603,9 +1603,6 @@
     }
   ],
   "sourceBytes": 69147689,
-  "archive": {
-    "file": "animation-sources.tar.gz",
-    "bytes": 68868348,
-    "sha256": "ffa26a5b90dc23f485c7ba21d61e48e07e6a9b80fa611e0dd0116e892c0e0346"
-  }
+  "sourceDirectory": "source",
+  "storage": "Unpacked files; no compressed archive"
 }
