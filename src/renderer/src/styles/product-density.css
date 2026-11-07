@@ -27,7 +27,6 @@
 /* One vertical scroller keeps the time axis and event rows in the same viewport. */
 .plan-database-content:has(>.plan-timeline-view){display:flex;flex:1;overflow:hidden}.plan-timeline-view.plan-time-workspace{display:flex;flex-direction:column;flex:1;min-height:0}.plan-timeline-view.plan-time-workspace>:not(.plan-timeline-scroll){flex:none}.plan-timeline-view.plan-time-workspace .plan-timeline-scroll{flex:1;min-height:180px;max-height:none}
 
-.plan-calendar-day{min-height:146px;padding:6px}.calendar-event{padding:5px;gap:5px;margin-top:4px;font-size:10px}.calendar-event small{margin-top:2px;font-size:9px}.plan-day-more{padding:4px 5px}.plan-day-number>span{height:25px;width:25px}.plan-calendar-weekday{padding:9px 7px}
 .plan-day-agenda>header{padding:17px 20px}.plan-day-agenda header h2{font-size:21px;margin:6px 0}.plan-day-event{padding:11px 9px;gap:11px}.plan-day-event strong{font-size:12px}.plan-day-events{padding:6px 12px}
 .plan-day-event{padding:7px 9px}.plan-day-agenda>header{padding:13px 18px}
 /* Agenda uses the available width to compare days, rather than a centered long list. */

@@ -1,5 +1,6 @@
 /** Product interface copy only. User names, messages, files and model output are never translated. */
 export const zhCN:Record<string,string> = {
+  "Events on {0}": "{0} 的日程",
   "Private messages": "私聊消息",
   "Direct messages": "私聊",
   "Outsource": "外包",

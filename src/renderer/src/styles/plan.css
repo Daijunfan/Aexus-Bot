@@ -103,15 +103,21 @@
 .plan-calendar h2{flex:1;font-size:19px;font-weight:600;letter-spacing:-.4px;margin:0}
 .plan-calendar header button{font-size:11px;padding:7px 9px}
 .plan-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(100px,1fr));border-left:1px solid var(--border-soft);border-top:1px solid var(--border-soft);overflow:hidden;margin-bottom:0}
-.plan-calendar-weekday{padding:12px 8px;text-align:center;color:var(--fg-dim);font-size:10px;font-weight:550;background:var(--bg-alt);border-bottom:1px solid var(--border-soft)}
-.plan-calendar-day{min-height:156px;padding:8px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft)}
+.plan-calendar-weekday{padding:8px;text-align:center;color:var(--fg-dim);font-size:10px;font-weight:550;background:var(--bg-alt);border-bottom:1px solid var(--border-soft)}
+.plan-calendar-day{display:flex;flex-direction:column;box-sizing:border-box;height:148px;min-height:0;min-width:0;padding:6px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft);overflow:hidden}
+.plan-calendar-day>.plan-day-number{flex:none}
+.plan-calendar-events{display:flex;flex-direction:column;gap:3px;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;padding-top:4px}
+.plan-calendar-events::-webkit-scrollbar{width:4px}
+.plan-calendar-events::-webkit-scrollbar-thumb{min-height:18px;border:0;border-radius:4px;background:color-mix(in srgb,var(--fg-dim) 35%,transparent);background-clip:border-box}
+.plan-calendar-events::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--fg-dim) 55%,transparent);background-clip:border-box}
+.plan-calendar-events:focus-visible{outline:1px solid var(--accent);outline-offset:-1px;border-radius:4px}
 
 
 .plan-calendar-day.outside{background:var(--bg-alt)}
 
-.calendar-event{display:flex;gap:7px;align-items:flex-start;max-width:100%;width:100%;text-align:left;border:1px solid transparent;border-left:2px solid var(--accent);border-radius:6px;margin-top:6px;padding:8px 6px;background:color-mix(in srgb,var(--accent) 7%,var(--bg-elev));color:var(--fg);font-size:11px;line-height:1.4}
-.calendar-event time{font-size:10px;color:var(--fg-dim);flex:none;font-variant-numeric:tabular-nums;padding-top:1px}
-.calendar-event span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.calendar-event{display:flex;flex:none;gap:5px;align-items:center;max-width:100%;width:100%;min-height:23px;text-align:left;border:1px solid transparent;border-left:2px solid var(--calendar-event-color,var(--accent));border-radius:4px;margin:0;padding:3px 5px;background:color-mix(in srgb,var(--calendar-event-color,var(--accent)) 12%,var(--bg-elev));color:var(--fg);font-size:11px;line-height:1.3}
+.calendar-event time{font-size:10px;color:var(--fg-dim);flex:none;font-variant-numeric:tabular-nums}
+.calendar-event span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .calendar-event.event-succeeded{border-color:#55937d}
 .calendar-event.event-failed{border-color:#b66161}
 .plan-calendar-warning{font-size:11px;color:var(--fg-dim);padding:8px;background:var(--bg-alt)}
@@ -272,13 +278,13 @@
 .plan-task-list .plan-status{justify-self:start}
 .plan-task-list>button>.codicon:last-child{color:var(--fg-faint)}
 .plan-day-number{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;border-radius:6px;background:none;color:var(--fg-dim);font:inherit;text-align:left;padding:0 0 3px}
-.plan-day-number>span{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;font-size:12px;font-weight:600}
+.plan-day-number>span{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;font-size:12px;font-weight:600}
 .plan-day-number>small{font-size:10px;color:var(--fg-faint);padding:0 5px}
 .plan-day-number:hover{background:var(--bg-alt)}
 .plan-calendar-day.today .plan-day-number>span{background:var(--accent);color:var(--button-ink,#fff)}
 .plan-calendar-day.outside .plan-day-number>span{color:var(--fg-faint)}
-.calendar-event small{display:block;font-size:9px;color:var(--fg-dim);margin-top:4px;overflow:hidden;text-overflow:ellipsis}
-.calendar-event:hover{border-color:color-mix(in srgb,var(--accent) 40%,var(--border));background:color-mix(in srgb,var(--accent) 12%,var(--bg-elev))}
+.calendar-event small{display:block;flex:0 1 auto;max-width:30%;font-size:9px;color:var(--fg-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.calendar-event:hover{border-color:var(--calendar-event-color,var(--accent));background:color-mix(in srgb,var(--calendar-event-color,var(--accent)) 20%,var(--bg-elev))}
 .plan-editor-section-heading{display:flex;align-items:center;gap:9px;margin:4px 0 0;padding-top:19px;border-top:1px solid var(--border-soft);font-size:13px;font-weight:600;color:var(--fg)}
 .plan-editor-section-heading:first-child{border:0;padding-top:0;margin-top:0}
 .plan-editor-section-heading>span{font-size:10px;color:var(--fg-faint);font-variant-numeric:tabular-nums}

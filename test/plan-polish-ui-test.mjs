@@ -51,7 +51,7 @@ try{
  const denseDay=new Date(Date.now()+86400000);denseDay.setUTCHours(8,0,0,0)
  for(let i=0;i<8;i++)await make('Dense launch '+(i+1),i%2?a.id:b.id,{kind:'once',at:iso(+denseDay+i*300000)},{tags:['launch-day'],notes:'Parallel release checklist '+(i+1)})
  await tab('Calendar').click();await page.getByRole('combobox',{name:'Filter by tag'}).selectOption('launch-day');await page.getByRole('combobox',{name:'Calendar time zone'}).selectOption('UTC')
- const day=denseDay.toISOString().slice(0,10),cell=page.locator(`[data-plan-date="${day}"]`);await expect(cell.locator('.calendar-event')).toHaveCount(3);await cell.locator('.plan-day-more').click()
+ const day=denseDay.toISOString().slice(0,10),cell=page.locator(`[data-plan-date="${day}"]`);await expect(cell.locator('.calendar-event')).toHaveCount(8);await cell.locator('.plan-day-number').click()
  await expect(page.getByRole('dialog',{name:'Day agenda',exact:true})).toBeVisible();await expect(page.locator('.plan-day-event')).toHaveCount(8);await expect(page.locator('.plan-day-agenda')).toContainText('Upcoming occurrence');await page.screenshot({path:path.join(output,'dense-day-agenda.png')})
  await page.locator('.plan-day-event').last().click();await expect(editor.locator('[name=plan-name]')).toHaveValue('Dense launch 8');await editor.getByRole('button',{name:'Close schedule editor',exact:true}).click()
  await page.getByRole('combobox',{name:'Calendar time zone'}).selectOption('America/New_York');await expect(cell.locator('.calendar-event time').first()).toHaveText(denseDay.toLocaleTimeString('en',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:false}))

@@ -1,0 +1,62 @@
+{
+  "date": "2026-11-07",
+  "application": "Aexus Bot",
+  "passed": true,
+  "changes": [
+    "Compact single-line calendar entries with time, title and assignee.",
+    "Fixed-height date cells with independent vertical scrolling; all returned entries are rendered.",
+    "Deterministic muted task colors; recurring occurrences keep their task color.",
+    "Day agenda and schedule details remain accessible.",
+    "Grouped date/employee lookups avoid repeated full-list filtering."
+  ],
+  "metrics": {
+    "height": 148,
+    "rowHeight": 23,
+    "scrollHeight": 651,
+    "clientHeight": 107,
+    "visibleRows": 4,
+    "scrollbar": 4,
+    "colors": [
+      "#a6753d",
+      "#708447",
+      "#5579b8",
+      "#358b7b",
+      "#aa617b",
+      "#8c6bb0"
+    ],
+    "rowWrap": false,
+    "overflowX": false
+  },
+  "validation": {
+    "web": true,
+    "hiddenMac": true,
+    "installedMac": true,
+    "installedThumbDrag": true,
+    "headlessWebThumbDrag": "not exercised; native Electron drag, Web wheel/keyboard verified",
+    "sameDayEvents": 25,
+    "neighborScrollUnchanged": true,
+    "dateHeaderPinned": true,
+    "keyboardScroll": true,
+    "bottomEntryOpensCorrectTask": true,
+    "dayAgendaRetained": true,
+    "lightAndDark": true,
+    "schedulesUnchanged": true,
+    "typecheck": true,
+    "languageCoverage": true,
+    "calendarErrorLoadingRecovery": true,
+    "modelCalls": 0
+  },
+  "installation": {
+    "passed": true,
+    "employeesPreserved": 8,
+    "schedulesPreserved": 5,
+    "nativeConfigurationsPreserved": 11,
+    "nativeSessionsAndWorkspacesPreserved": true,
+    "runtimeRestored": true,
+    "asarSha256": "a9f13173607b65facdc06a89ed86aabda68a232842789c7a4b45e19208da2a40"
+  },
+  "untestedPlatforms": [
+    "Windows desktop",
+    "Linux deployment"
+  ]
+}
