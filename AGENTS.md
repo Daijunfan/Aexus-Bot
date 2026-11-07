@@ -2,6 +2,8 @@
 
 ## Current development baseline
 
+后续开发统一以 `main` 最新已提交的 Bot 版本为准，不再回退到其他历史版本。社交媒体爬虫代码由独立开源项目 `Daijunfan/xhs_publisher` 维护；本仓库保留客户端与认证 API，不重新嵌入采集实现。
+
 用户已于 2026-11-04 选定 0.58.1（原始基线提交 `25d686e`），并要求重建仓库历史、只保留当前版本。唯一开发分支为 `main`。后续开发以此版本的 Company / Messages / Plan 和频道功能为基础；Secretary 保持为 Company 角色，不恢复独立秘书侧栏或后来的多看板外壳，不自行切换开发基线。
 
 正式 App 名称为 `Aexus Bot`，安装位置为 `/Applications/Aexus Bot.app`，GitHub 主仓库为 `Daijunfan/Aexus-Bot`。用户图标原图为根目录 `Aexus-bot.png`，现有图标构建输入为 `app_icon.png`。macOS 统一通过根目录 `python3 build.py` 调用此版本原有打包流程；安装仍使用下文的项目安装器，保留用户数据、认证及工作区。

@@ -4,7 +4,7 @@ Channels are Core-owned read-only news feeds populated by external collectors. E
 The renderer never calls social platforms or reads a collector's configuration files.
 
 The deployed Linux integration and its CLI/service commands are documented in
-[`Collectors/README.md`](../Collectors/README.md). YouTube channels receive
+[独立 xhs_publisher 采集项目](https://github.com/Daijunfan/xhs_publisher/tree/main/integrations/aexus-bot). YouTube channels receive
 DeepSeek summaries and source links; full translations are disabled in that
 worker. All Messages channel backgrounds use the original Telegram Web A pattern
 with theme-specific colors, independently of whether a channel stores documents.
