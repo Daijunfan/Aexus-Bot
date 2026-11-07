@@ -24,9 +24,9 @@ agents schedule create --name 'Sunday review' --employee EMPLOYEE_ID --time 17:0
 agents schedule preview JOB_ID --count 5 --json
 ```
 
-Every employee can schedule itself. `self` resolves from the authenticated Agent ID, never a name, directory or caller-supplied identity. A user must provide an explicit employee ID. A Manager may schedule only its own Team’s Employees; a Governor may schedule Employees and Managers globally; a Secretary may schedule Employees, Managers and Governors globally. Every role may schedule itself. No Agent may schedule a different peer or a superior, including another Secretary. Ordinary employees gain no authority over other employees. Non-global callers retain their own authored-job scope. Secretary can read the complete Plan database, including missing-target records; mutation and execution capabilities are returned per row.
+Every employee can schedule itself. `self` resolves from the authenticated Agent ID, never a name, directory or caller-supplied identity. A user must provide an explicit employee ID. Every role may create, read, modify, pause, resume and delete its own one-off, recurring and event plans regardless of who created the record. Authorization follows the current target: a Manager covers itself and lower-role Employees in its own Team; a Governor covers itself and global Employees/Managers, but not another Governor or Secretary; a Secretary covers itself and every legitimate employee, including other Secretaries. No Agent may schedule a different peer or superior outside those scopes. Modification uses the current target, not the record’s `createdBy`; changing the target requires authority over both the old and new target, and `createdBy` remains unchanged audit history. Non-administrators see the plans they can manage, not only ones they authored. Secretary can read the complete Plan database, including missing-target records; mutation and execution capabilities are returned per row.
 
-Self scheduling carries a Core-created, self-target-only delegation. This does not open direct `session.send` authority for Employees or let callers supply delegation fields. Roles and credential revocation are rechecked before a run starts and after asynchronous startup. A removed employee or revoked authority disables affected future work. Governor targets still require `action.viewId` / `--view` with a stable Company subview ID.
+Self scheduling carries a Core-created, self-target-only delegation. This does not open direct `session.send` authority for Employees or let callers supply delegation fields. An explicit update or resume is re-authorized against the current actor and target; a manual run or signal trigger uses the caller’s current authorization, not the original author’s credentials, and does not re-enable a revoked automatic delegation. Background due runs recheck the saved delegation. Roles and credential revocation are rechecked before a run starts and after asynchronous startup. A removed employee or revoked authority disables affected future work; revoked automatic delegation stays disabled until a legitimate actor explicitly updates or resumes the task. Governor targets still require `action.viewId` / `--view` with a stable Company subview ID.
 ## When to run
 
 Exactly one of `rule` and `afterSeconds` is required when creating a schedule. Relative time is resolved on the Core host at acceptance, not after the current task completes.
@@ -185,7 +185,7 @@ agents schedule trigger JOB_ID --event-id webhook-delivery-42 --json
 agents schedule create --name 'Review incoming posts' --employee self --on-event channel.posted --event-channel CHANNEL_ID --cooldown-seconds 60 --prompt 'Read the referenced new post and report findings.' --json
 ```
 
-An event rule is `{kind:"event",event:"signal"|"channel.posted",channelId?,cooldownSeconds?}`. The cooldown defaults to 60 seconds (0–86400). Only channel.posted requires channelId. Signal jobs are activated by `schedule.trigger {id,eventId}`, whose nonempty eventId is at most 160 characters. The current caller must have permission over the saved task; execution keeps and rechecks the original author’s delegation. Channel events come from Core after a first successful publication. Updates, duplicate submissions and the target employee’s own publications do not emit work for that target. External collector credentials cannot invoke schedule APIs or forge native events.
+An event rule is `{kind:"event",event:"signal"|"channel.posted",channelId?,cooldownSeconds?}`. The cooldown defaults to 60 seconds (0–86400). Only channel.posted requires channelId. Signal jobs are activated by `schedule.trigger {id,eventId}`, whose nonempty eventId is at most 160 characters. The current caller must have permission over the saved task. A manual run or signal trigger uses that caller’s current authorization rather than the original author’s credentials and does not re-enable revoked automatic delegation; background due runs recheck the saved delegation. Channel events come from Core after a first successful publication. Updates, duplicate submissions and the target employee’s own publications do not emit work for that target. External collector credentials cannot invoke schedule APIs or forge native events.
 
 The target must remain a member of the event source channel. The scheduling Agent must also be a source member, except for the existing Secretary application-administration scope. A publishing task cannot subscribe to its own destination. Changing membership, role, credentials or target invalidates affected future work; permissions are also checked after asynchronous session preparation. Previously permitted same-rank delegations are disabled on restart, preserving IDs and history.
 
@@ -206,14 +206,15 @@ Team, role, prompts, notes and tags. `offset/limit/hasMore` expose all pages.
 
 `target` retains the stable employee ID and stored engine even when its employee was
 removed. `exists:false` and null title/role/Team mark unavailable legacy information.
-Secretary can read, pause and delete these records, or edit disabled metadata; a full
-replacement action can reassign one to a current permitted target. It cannot run or
-resume a missing employee. Read-only saved-rule preview can inspect timing without
+Only the user or Secretary can read, pause and delete these records or edit disabled
+metadata; a full replacement action can reassign one to a current permitted target when
+the actor can manage both targets. Missing-employee records cannot be run or resumed. Read-only saved-rule preview can inspect timing without
 requiring the missing employee to execute anything.
 
-Secretary can read other Secretaries' schedules for application administration, but
-cannot modify or execute a different live same-rank target. Existing strict downward
-scheduling and explicit user-only permissions remain enforced. `allowedActions` is a
+Secretary can read, modify, pause/resume and delete other Secretaries’ schedules;
+same-rank records are within Secretary scope and do not depend on `createdBy`.
+Manager/Governor remain strictly downward within their own Team or global scope.
+Existing explicit user-only Secretary appointment permissions remain enforced. `allowedActions` is a
 current preflight hint, not an authorization token; mutations recheck current state.
 
 ` schedule.delete {id,expectedRevision?}` preserves the single-record contract.
@@ -239,4 +240,9 @@ window state are presentation actions and do not require a parallel scheduling A
 
 ## Conversation notices are separate from Plan
 
-Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Company managementRole. Only actual conversation Owner/Admin configures mute, quiet mode and fixed-text notifications; Company Secretary has no conversation-office bypass. Owner alone dissolves groups or transfers ownership, with the human user's external recovery override. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Company managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Company roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+
+
+## Secretary 应用管理
+
+Secretary 代表用户全局管理合法员工的 Plan，包括其他 Secretary。Manager/Governor 保持严格下行和原 Team 范围。任务执行仍检查当前目标、原始委派、初始化、原生执行许可与时效；用户独占 Secretary 任免，不借排期变更身份。

@@ -1,8 +1,8 @@
 'use strict';
 const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
-const exec=require('node:util').promisify(require('node:child_process').execFile),root=path.resolve(__dirname,'..'),host=path.resolve(root,'../..'),{_electron:electron,expect}=require(path.join(host,'node_modules/@playwright/test'));
+const exec=require('node:util').promisify(require('node:child_process').execFile),root=path.resolve(__dirname,'..'),host=path.resolve(process.env.AEXUS_HOST_ROOT||path.join(root,'../..')),{_electron:electron,expect}=require(path.join(host,'node_modules/@playwright/test'));
 (async()=>{
- const temp=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'mr-xmind-native-'))),out=(await fs.readFile(path.join(root,'artifacts/read-map-current.txt'),'utf8')).trim();
+ const temp=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'mr-xmind-native-'))),out=path.join(root,'artifacts/read-map-native',new Date().toISOString().replace(/[:.]/g,'-'));await fs.mkdir(out,{recursive:true});
  const plugin=process.env.MR_XMIND_PLUGIN_ROOT||path.join(root,'dist-plugin'),env={...process.env,HOME:'/Users/djf',AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_BUILTIN_PLUGINS:path.join(temp,'empty'),AGENTS_COMPANY_PLUGIN_DIRS:plugin,AGENTS_COMPANY_HIDDEN:'1'};
  for(const key of Object.keys(env))if(key.startsWith('AGENTS_COMPANY_TOKEN')||['ELECTRON_RUN_AS_NODE','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_PORT','AGENTS_COMPANY_URL','AGENTS_COMPANY_CLIENT','AGENTS_COMPANY_PLUGIN_RPC','AGENTS_WORKSPACE'].includes(key))delete env[key];
  const report={passed:false,checks:[],errors:[],modelCalls:0,plugin};let app,page;const pass=text=>{report.checks.push(text);console.log('PASS '+text);};
@@ -19,7 +19,7 @@ const exec=require('node:util').promisify(require('node:child_process').execFile
   const anchor={x:v.width*.42,y:v.height*.43},oldCamera=await cam(),world={x:(anchor.x-oldCamera.x)/oldCamera.z,y:(anchor.y-oldCamera.y)/oldCamera.z};
   await page.mouse.move(v.x+anchor.x,v.y+anchor.y);await page.keyboard.down('Control');await page.mouse.wheel(0,-120);await page.keyboard.up('Control');await expect.poll(async()=>(await cam()).z).toBeGreaterThan(oldCamera.z);const afterZoom=await cam();assert(Math.abs((anchor.x-afterZoom.x)/afterZoom.z-world.x)<2);assert(Math.abs((anchor.y-afterZoom.y)/afterZoom.z-world.y)<2);
   await page.click('#study-zoom-fit');pass('Actual native two-axis camera panning and pointer-anchored pinch-style zoom operate without any card, outline or review view');
-  await page.click('[data-study-view=documents]');await expect(page.locator('#study-documents')).toBeVisible();await page.locator('.study-document-open').click();await expect(page.locator('.pdf-page canvas').first()).toBeVisible();await page.click('#next-page');await expect(page.locator('#page-number')).toHaveValue('2');
+  await page.click('[data-study-view=documents]');await expect(page.locator('#workspace')).toHaveClass(/study-split/);await expect(page.locator('.pdf-page canvas').first()).toBeVisible();await page.click('#next-page');await expect(page.locator('#page-number')).toHaveValue('2');
   set=await api('study.get',{setId:set.id});set=await api('study.view.set',{setId:set.id,expectedRevision:set.revision,view:'map'});await expect(view).toBeVisible();await expect(page.locator('#reader-view')).toBeHidden();assert.deepEqual(await fs.readFile(path.join(info.workspace,'native-reading.pdf')),originalPdf);
   await page.click('#study-zoom-fit');pass('A separate CLI switches the actual native reader back to the map, while PDF page navigation and original bytes are preserved');
   await page.evaluate(()=>{window.dragstarts=0;document.addEventListener('dragstart',()=>window.dragstarts++);});
@@ -36,9 +36,9 @@ const exec=require('node:util').promisify(require('node:child_process').execFile
   const pdf=await api('study.mindmap.export',{setId:tiny.id,expectedRevision:tiny.revision,format:'pdf',path:'native-vector.pdf'}),pptx=await api('study.mindmap.export',{setId:tiny.id,expectedRevision:tiny.revision,format:'pptx',path:'native-pitch.pptx'});assert(pdf.vector);assert.equal(pptx.slides,3);assert(pptx.editableText);
   await page.reload();await page.locator('body[data-ready=true]').waitFor();await expect(page.locator('.mm-equation svg')).toBeVisible();await page.click('#study-zoom-fit');await page.screenshot({path:path.join(out,process.env.MR_XMIND_PLUGIN_ROOT?'installed-native-completion.png':'native-completion.png')});
   pass('Native formula editing, local design saving, automatic presenter mode and vector/PPTX export work through the installed host Core and survive renderer reload');
-const splitOutput=process.env.MR_SPLIT_OUTPUT||(await fs.readFile(path.join(root,'artifacts/split-read-map-current.txt'),'utf8')).trim();
+const splitOutput=process.env.MR_SPLIT_OUTPUT||path.join(out,'split');await fs.mkdir(splitOutput,{recursive:true});
   await require('./split-read-map-exercise.cjs').exercise({page,api,workspace:info.workspace,output:splitOutput,pass,native:true});
-  const dragOutput=process.env.MR_TOPIC_COVER_OUTPUT||(await fs.readFile(path.join(root,'artifacts/topic-cover-current.txt'),'utf8')).trim();
+  const dragOutput=process.env.MR_TOPIC_COVER_OUTPUT||path.join(out,'topic-covers');await fs.mkdir(path.join(dragOutput,'native'),{recursive:true});
   await require('./topic-ownership-exercise.cjs').exercise({page,api,pass,output:path.join(dragOutput,'native')});
   await require('./topic-drop-boundary-exercise.cjs').exercise({page,api,pass,workspace:info.workspace,output:path.join(dragOutput,'native')});
 assert(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(w=>!w.isVisible())));assert.deepEqual(report.errors,[]);report.passed=true;

@@ -74,3 +74,24 @@ test('folder trash, restore, purge and cross-workspace boundaries operate on rea
   for(const method of ['agent.start','workspace.replace','backup.restore','backup.export'])assert.ok((await new BackendClient({workspace:root}).request(method,{})).error,method);
   assert.equal((await call('status')).workspaceRoot,root);
 });
+
+test('folder move history includes relocated raw files and survives undo and redo',async t=>{
+  const {root,call}=await fixture(t);
+  const parent=await call('page.create',{title:'History parent',color:'white'});
+  const destination=await call('page.create',{title:'Target parent',color:'white'});
+  await call('fs.write',{path:'History parent/notes.txt',content:'Untouched original bytes'});
+  const raw=(await call('page.list')).find(page=>page.sourceFile?.path==='History parent/notes.txt');
+  assert.ok(raw);
+  await call('page.move',{pageId:parent.id,parentId:destination.id});
+  assert.equal((await call('page.get',{pageId:parent.id})).parentId,destination.id,'the move command must change the parent');
+  assert.equal((await call('fs.path',{pageId:parent.id})).path,'Target parent/History parent/index.mininotion.json');
+  assert.equal((await call('page.get',{pageId:raw.id})).sourceFile.path,'Target parent/History parent/notes.txt');
+  const operations=await call('history.operations',{pageId:raw.id});
+  assert.ok(operations.some(operation=>operation.pageIds.includes(parent.id)),'move history must include the relocated raw page');
+  await call('history.undo',{pageId:parent.id});
+  assert.equal((await call('page.get',{pageId:raw.id})).sourceFile.path,'History parent/notes.txt');
+  assert.equal(fs.readFileSync(path.join(root,'History parent/notes.txt'),'utf8'),'Untouched original bytes');
+  await call('history.redo',{pageId:parent.id});
+  assert.equal((await call('page.get',{pageId:raw.id})).sourceFile.path,'Target parent/History parent/notes.txt');
+  assert.equal(fs.readFileSync(path.join(root,'Target parent/History parent/notes.txt'),'utf8'),'Untouched original bytes');
+});

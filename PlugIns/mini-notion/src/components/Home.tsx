@@ -1,5 +1,7 @@
+import { CoverImage } from './CoverImage';
 import { coverPresentation } from '../presentation';
-import { isInternalPage } from '../model';
+import { internalPageIds } from '../model';
+import { useMemo, useState } from 'react';
 import { Clock3, ArrowUpRight, Plus, FolderOpen, FileText } from 'lucide-react';
 import { useWorkspace } from '../store';
 import { PageIcon, relativeDate, EmptyState } from '../ui';
@@ -8,8 +10,13 @@ import { Overview } from './Overview';
 
 export function Home() {
   const { workspace: ws, navigate, create } = useWorkspace();
-  const pages = ws!.pages.filter((p) => !p.trashedAt && !isInternalPage(p, ws!.pages));
-  const recent = [...pages].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6);
+  const pages = useMemo(() => {
+    const internal = internalPageIds(ws!.pages);
+    return ws!.pages.filter(page => !page.trashedAt && !internal.has(page.id));
+  }, [ws!.pages]);
+  const [pageLimit, setPageLimit] = useState(60);
+  const roots = useMemo(() => pages.filter(page => !page.parentId), [pages]);
+  const recent = useMemo(() => [...pages].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6), [pages]);
   return (
     <div className="home-scroll">
       <div className="home-content">
@@ -27,8 +34,9 @@ export function Home() {
               <button className="recent-card" key={page.id} onClick={() => navigate(page.id)}>
                 <div
                   className={`card-preview ${coverPresentation(page.cover).className}`}
-                  style={coverPresentation(page.cover, page.coverPosition).style}
+                  style={coverPresentation(page.cover, page.coverPosition, true).style}
                 >
+                  <CoverImage url={page.cover} />
                   {!page.cover && (
                     <span>{plainText(page.blocks).slice(0, 135) || '一个新想法，从这里开始。'}</span>
                   )}
@@ -62,8 +70,7 @@ export function Home() {
           </button>
         </div>
         <div className="home-page-list">
-          {pages
-            .filter((p) => !p.parentId)
+          {roots.slice(0, window.native?.printMode ? undefined : pageLimit)
             .map((page) => (
               <button key={page.id} onClick={() => navigate(page.id)}>
                 <PageIcon icon={page.icon} />
@@ -73,6 +80,7 @@ export function Home() {
               </button>
             ))}
         </div>
+        {!window.native?.printMode && roots.length > pageLimit && <button className="home-show-more secondary-button" onClick={() => setPageLimit(limit => limit + 60)}>显示更多页面（还有 {roots.length - pageLimit} 页）</button>}
       </div>
     </div>
   );

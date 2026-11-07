@@ -53,7 +53,7 @@ function useStore() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [modal, setModal] = useState<ModalState>(null);
-  const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
+  const [toast, setToast] = useState<{ message: string; undo?: () => void; kind?: 'error' } | null>(null);
   const [commentPanel, setCommentPanel] = useState<{
     pageId: string;
     blockId?: string;
@@ -80,6 +80,7 @@ function useStore() {
   const checkpoint = useRef<DraftCheckpoint | null>(null);
   const [conflictId, setConflictId] = useState<string>();
   const notify = useCallback((message: string, undo?: () => void) => setToast({ message, undo }), []);
+  const notifyError = useCallback((message: string) => setToast({ message, kind: 'error' }), []);
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 5000);
@@ -129,17 +130,24 @@ function useStore() {
   );
 
   const load = useCallback(async () => {
+    performance.mark('mini:workspace-load-start');
     setLoadError('');
     try {
-      const result = window.native
-        ? await window.native.load()
-        : {
+      const result = window.native?.loadSerialized
+        ? JSON.parse(await window.native.loadSerialized()) as Awaited<ReturnType<NonNullable<typeof window.native>['load']>>
+        : window.native ? await window.native.load() : {
             workspace: JSON.parse(
               localStorage.getItem('mini-notion-workspace') || 'null',
             ) as Workspace | null,
             dataPath: '浏览器本地存储',
           };
-      let next = normalizeWorkspace(result.workspace || createWorkspace(), true);
+      // The single-writer service has already normalized and validated its
+      // snapshot. Re-normalizing every page in the renderer doubles cold-start
+      // work (including all rich blocks), so only migrate browser-only data.
+      performance.mark('mini:workspace-load-result');
+      let next = result.workspace && window.native
+        ? result.workspace
+        : normalizeWorkspace(result.workspace || createWorkspace(), true);
       if (window.native) {
         if (!result.workspace) {
           const initialized = await window.native.api('workspace.init');
@@ -147,6 +155,9 @@ function useStore() {
             throw new Error(initialized.error.message);
           next = initialized.workspace || (await window.native.load()).workspace!;
         }
+        // Load a persisted draft before subscribing to live workspace events.
+        // An incoming refresh can otherwise clear the stored draft before recovery.
+        const saved = window.native?.loadDraft ? await window.native.loadDraft() : JSON.parse(localStorage.getItem('mini-notion-pending') || '[]');
         const engine = new WorkspaceSync(next, window.native.api, { debounceMs: 120 });
         sync.current = engine;
         checkpoint.current = window.native.saveDraft ? new DraftCheckpoint(value => window.native!.saveDraft!(value), error => setSaveError(String(error))) : null;
@@ -168,7 +179,6 @@ function useStore() {
             setSaveError('无法保留待保存草稿，请保持应用打开并重试保存');
           }
         });
-        const saved = window.native?.loadDraft ? await window.native.loadDraft() : JSON.parse(localStorage.getItem('mini-notion-pending') || '[]');
         const pending = (Array.isArray(saved) ? saved : saved.patches) as WorkspacePatch[];
         if (pending.length) {
           engine.recover(
@@ -194,6 +204,7 @@ function useStore() {
         }
         next = engine.workspace;
       }
+      performance.mark('mini:workspace-state-ready');
       current.current = next;
       setWorkspace(next);
       setDataPath(result.dataPath);
@@ -427,6 +438,8 @@ function useStore() {
       const response = await window.native!.api(method, params);
       if (response.workspace)
         sync.current?.receive({ type: 'state', workspace: response.workspace, revision: response.revision });
+      else if (response.delta)
+        sync.current?.receive({ type: 'delta', delta: response.delta, revision: response.revision });
       if (response.error) throw new Error(response.error.message);
       return response.result;
     },
@@ -459,6 +472,7 @@ function useStore() {
     setModal,
     toast,
     notify,
+    notifyError,
     commentPanel,
     setCommentPanel,
     pageMenu,

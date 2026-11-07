@@ -21,6 +21,19 @@ test('default palette text maintains contrast and batching keeps every branch pa
  const {layoutMindmap}=await import('../ui/mindmap-layout.mjs'),{diagramPaths}=await import('../ui/mindmap-view.mjs'),{overviewGlyphs,hitTopic}=await import('../ui/mindmap-overview.mjs');
  const cards=[{id:'root',title:'Root',parentId:null},...Array.from({length:1500},(_,i)=>({id:'t'+i,title:'Topic '+i,parentId:'root'}))],l=layoutMindmap(cards,{mindmap:{enabled:true}});const svg=diagramPaths(l,[]);assert((svg.match(/<path /g)||[]).length<50);assert.equal((svg.match(/M[-\d.]+,/g)||[]).length,1500);const glyphs=overviewGlyphs(l,new Set(l.positions.keys()),'root');assert.equal(glyphs.count,1500);assert.equal((glyphs.svg.match(/M[-\d.]+,/g)||[]).length,1500);const p=l.positions.get('t1499');assert.equal(hitTopic(l,p.x+p.width/2,p.y+p.height/2),'t1499');
 });
+test('layout-local theme and contrast reuse preserves topic overrides without leaking between layouts',async()=>{
+ const {mapStyle,topicStyle}=await import('../ui/mindmap-style.mjs'),catalog=require('../ui/mindmap-catalog.json');
+ const cards=[{title:'默认主题'},{title:'局部颜色',mindmap:{branchColor:'#A378BB',fill:'#FFF8F1'}},{title:'显式文字',mindmap:{textColor:'#334455',fontSize:21,shape:'hexagon'}}];
+ for(const theme of Object.keys(catalog.themes)){
+  const config={theme,levelStyles:[{size:6},{size:2}],showTags:true},resolved={theme:mapStyle(config),textColors:new Map()};
+  for(let repeat=0;repeat<2;repeat++)for(let depth=0;depth<4;depth++)for(let branch=0;branch<6;branch++)for(const card of cards)assert.deepEqual(topicStyle(card,config,depth,branch,resolved),topicStyle(card,config,depth,branch));
+ }
+ const {layoutMindmap}=await import('../ui/mindmap-layout.mjs'),input=[{id:'root',title:'Root',parentId:null},{id:'child',title:'Child',parentId:'root'}],options={mindmap:{theme:'radiance'}};
+ const before=layoutMindmap(input,options);options.mindmap.theme='mono';const changed=layoutMindmap(input,options);
+ assert.notDeepEqual(changed.topics.get('child'),before.topics.get('child'));
+ assert.deepEqual(changed,layoutMindmap(input,{mindmap:{theme:'mono'}}));
+ options.mindmap.theme='radiance';assert.deepEqual(layoutMindmap(input,options),before);
+});
 test('map SVG export keeps literal rich-title formatting, note previews and saved handwriting',async t=>{
  const f=await fixture(t),id=f.root;await f.change('study.card.update',{cardId:id,title:'Formatted title',note:'Visible note preview'});await f.change('study.mindmap.topics.update',{cardIds:[id],patch:{runs:[{start:0,end:9,color:'#A23355',italic:true}],showNote:true}});
  await f.change('study.card.ink.add',{cardId:id,points:[[.1,.7],[.8,.8]],color:'blue',width:.004});await f.change('study.canvas.ink.add',{points:[[15,25],[80,40]],color:'green',width:2});

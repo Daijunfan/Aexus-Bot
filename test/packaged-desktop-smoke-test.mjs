@@ -4,6 +4,8 @@ import os from 'node:os'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import {fileURLToPath} from 'node:url'
+import {execFile} from 'node:child_process'
+import {promisify} from 'node:util'
 import { _electron as electron,expect } from '@playwright/test'
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..')
 const executable=process.env.AGENTS_COMPANY_TEST_APP
@@ -69,6 +71,21 @@ try{
     await child.screenshot({path:path.join(output,plugin.id+'.png')})
     await call('plugin.dismiss',{id:opened.id})
     checks.push(plugin.id+': portable workspace, actual plugin window and save/close lifecycle')
+  }
+  if(process.platform==='darwin'){
+    const binary=path.resolve(path.dirname(executable),'../Resources/cli/aexus-bot'),run=promisify(execFile)
+    const cli=async(...args)=>{const reply=JSON.parse((await run(binary,[...args,'--json'],{env,timeout:60000,maxBuffer:8e6})).stdout);assert.ok(reply.ok,reply.error);return reply.data}
+    const plugin=(id,method,params={})=>cli('plugin','call',id,method,'--params',JSON.stringify(params))
+    const note=await plugin('mininotion','page.create',{title:'Packaged PDF',color:'white'})
+    await plugin('mininotion','block.append',{pageId:note.id,text:'FINAL_PLUGIN_PDF_OK'})
+    const pdf=await plugin('mininotion','file.export',{pageId:note.id,type:'pdf',output:'Exports/packaged.pdf'})
+    assert.equal(fs.readFileSync(pdf.path).subarray(0,5).toString(),'%PDF-')
+    fs.copyFileSync(pdf.path,path.join(output,'plugin-cli.pdf'))
+    assert.equal((await plugin('margin-reader','study.create',{title:'Installed CLI study'})).title,'Installed CLI study')
+    const hosts=await cli('plugin','describe','cloud-hosts')
+    assert.ok(hosts.api.commands.some(command=>command.method==='hosts.terminal-open'))
+    assert.ok(!hosts.api.commands.some(command=>command.method.includes('desktop')))
+    checks.push('Actual packaged CLI edits MiniNotion, exports a self-contained PDF, creates a Reader study and exposes SSH-only Cloud Hosts')
   }
   assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())))
   assert.deepEqual(errors,[])

@@ -1,7 +1,9 @@
 import emojiData from './emojis.json' with { type: 'json' };
+import iconKeywords from './iconKeywords.json' with { type: 'json' };
 import { iconNames } from './icons.ts';
+import type { CustomEmoji } from '../types.ts';
 
-// Unicode Emoji 16.0 + CLDR 48 Chinese annotations; entirely bundled, no requests at runtime.
+// Unicode Emoji 17.0 + CLDR 48 annotations; entirely bundled, no runtime requests.
 export const emojiGroups: Record<string, string> = {
   'Smileys & Emotion': '表情与情感',
   'People & Body': '人物与手势',
@@ -13,7 +15,24 @@ export const emojiGroups: Record<string, string> = {
   Symbols: '符号',
   Flags: '旗帜',
 };
-export const emojis = emojiData.map(([emoji, name, keywords, group]) => ({ emoji, name, keywords, group }));
+function normalize(text: string) {
+  return text
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/\uFE0F/g, '')
+    .replace(/[_:\-]+/g, ' ')
+    .trim();
+}
+export const emojis = emojiData.map(([emoji, name, keywords, group, englishName]) => ({
+  emoji,
+  name,
+  keywords,
+  group,
+  searchText: normalize(`${emoji} ${name} ${keywords}`),
+  searchName: normalize(name),
+  searchValue: normalize(emoji),
+  searchAlias: normalize(englishName || ''),
+}));
 const keywords: Record<string, string> = {
   Book: '书 读书 阅读 知识 笔记',
   Notebook: '笔记本 日记',
@@ -153,21 +172,59 @@ const keywords: Record<string, string> = {
   Banknote: '钞票 钱 财务',
   CreditCard: '信用卡 财务',
 };
-export const symbols = iconNames.map((name) => ({
-  name,
-  keywords:
-    name.replace(/([a-z])([A-Z])/g, '$1 $2') +
+const translations = Object.entries(keywords);
+export const symbols = iconNames.map((name) => {
+  const keywords =
+    name.replace(/([a-z0-9])([A-Z])/g, '$1 $2') +
     ' ' +
-    Object.entries(keywords)
+    iconKeywords[name as keyof typeof iconKeywords] +
+    ' ' +
+    translations
       .filter(([prefix]) => name.includes(prefix))
       .map(([, value]) => value)
-      .join(' '),
-}));
+      .join(' ');
+  return {
+    name,
+    keywords,
+    searchText: normalize(`${name} ${keywords}`),
+    searchName: normalize(name),
+    searchValue: normalize(name),
+    searchAlias: normalize(name.replace(/([a-z0-9])([A-Z])/g, '$1 $2')),
+  };
+});
+function search<
+  T extends { searchText: string; searchName: string; searchValue: string; searchAlias: string },
+>(items: T[], query: string) {
+  const normalized = normalize(query);
+  if (!normalized) return items;
+  const words = normalized.split(/\s+/);
+  const exact: T[] = [],
+    matches: T[] = [];
+  for (const item of items) {
+    if (!words.every((word) => item.searchText.includes(word))) continue;
+    (item.searchValue === normalized || item.searchName === normalized || item.searchAlias === normalized
+      ? exact
+      : matches
+    ).push(item);
+  }
+  return exact.concat(matches);
+}
+const groupedEmojis = new Map(
+  Object.keys(emojiGroups).map((group) => [group, emojis.filter((item) => item.group === group)]),
+);
+export function searchEmojis(query: string, group = '') {
+  return search(group ? groupedEmojis.get(group) || [] : emojis, query);
+}
+export function searchSymbols(query: string) {
+  return search(symbols, query);
+}
+export function searchCustomEmojis(items: CustomEmoji[], query: string) {
+  return items.filter((item) => matchesIcon(query, item.name, item.keywords || ''));
+}
+// Retained for consumers that search arbitrary text rather than a catalog.
 export function matchesIcon(query: string, ...text: string[]) {
-  const value = text.join(' ').toLocaleLowerCase();
-  return query
-    .trim()
-    .toLocaleLowerCase()
+  const value = normalize(text.join(' '));
+  return normalize(query)
     .split(/\s+/)
     .every((word) => value.includes(word));
 }

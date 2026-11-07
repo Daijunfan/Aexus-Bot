@@ -904,6 +904,1512 @@
     "target": "request"
   },
   {
+    "name": "worker.create",
+    "args": "[--employee ID] --engine codex|claude|cline|pi|opencode|kilo [--title NAME --cwd PATH]",
+    "summary": "Create a native Worker owned by yourself (user supplies employee); no inference, role prompt or Company tools",
+    "gui": "Employee profile / Workers",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "engine": {
+          "enum": [
+            "codex",
+            "claude",
+            "cline",
+            "pi",
+            "opencode",
+            "kilo"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cwd": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "engine"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.list",
+    "args": "[--employee ID]",
+    "summary": "List directly owned native Workers (user/Secretary may administer all); user and Secretary may list all",
+    "gui": "Workers",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "readOnly": true,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.start",
+    "args": "ID [--cols N --rows N]",
+    "summary": "Open the native CLI with its own configuration and no injected task; does not resume an old conversation automatically",
+    "gui": "Open native Worker",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cols": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 500
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 300
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.read",
+    "args": "ID [--cursor N --wait-ms N]",
+    "summary": "Read native terminal output; optional wait up to 15000ms",
+    "gui": "Native terminal",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cursor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "waitMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15000
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.input",
+    "args": "ID --data TEXT|--file PATH [--enter]",
+    "summary": "Send literal native CLI input or a task; no Company prompt wrapping",
+    "gui": "Native terminal input",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "data"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.resize",
+    "args": "ID --cols N --rows N",
+    "summary": "Resize the native terminal",
+    "gui": "Native terminal size",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cols": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 500
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 300
+        }
+      },
+      "required": [
+        "id",
+        "cols",
+        "rows"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.interrupt",
+    "args": "ID",
+    "summary": "Send Ctrl-C to the native CLI; native approval and task semantics apply",
+    "gui": "Interrupt Worker",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.stop",
+    "args": "ID",
+    "summary": "Stop the native CLI process; retain Worker record, work files and native history",
+    "gui": "Stop Worker",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.remove",
+    "args": "ID",
+    "summary": "Stop and remove your Worker record; preserve work files, engine configuration, authentication and native history",
+    "gui": "Remove Worker",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "direct.send",
+    "args": "--employee ID --text TEXT [--images JSON --files JSON --mode send|enqueue|steer --client-message-id KEY --reply-to ID]",
+    "summary": "Send a private message using employee ID. For a native employee, only user/Secretary may dispatch work. For an external Dot/Grok Worker ID from bot.list, any employee with bot.access may explicitly delegate raw text/images/files; no Company context is injected. Native session.send/enqueue alone do not publish private messages.",
+    "gui": "Messages private composer",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 100000
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 16
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 16
+        },
+        "mode": {
+          "enum": [
+            "send",
+            "enqueue",
+            "steer"
+          ]
+        },
+        "clientMessageId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "replyTo": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replyQuote": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "text",
+            "offset"
+          ],
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2400
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "replyConversation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replyTextOnly": {
+          "type": "boolean"
+        },
+        "viewId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "employee"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "direct.post",
+    "args": "--text TEXT [--images JSON --files JSON --reply-to ID] --client-message-id KEY",
+    "summary": "Employee: explicitly send one private message to the user as yourself. Text, images and files may be combined or sent in multiple calls with different IDs. Identical retries return the same message; never dispatches Agent work or posts to groups.",
+    "gui": "Employee private publication",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 64000
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 16
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 16
+        },
+        "replyTo": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replyQuote": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "text",
+            "offset"
+          ],
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2400
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "clientMessageId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "clientMessageId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "identity",
+    "target": "request"
+  },
+  {
+    "name": "direct.history",
+    "args": "--employee ID [--limit N --before N --around ID]",
+    "summary": "Read only explicitly published private messages, media and delivery evidence; never includes native output, shared inputs, wrappers or silent context reads. Querying does not mark read.",
+    "gui": "Private message history",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        },
+        "before": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "around": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "employee"
+      ]
+    },
+    "readOnly": true,
+    "permission": "employee.read",
+    "target": "request"
+  },
+  {
+    "name": "direct.send-status",
+    "args": "--employee ID --client-message-id KEY",
+    "summary": "Read an existing private input acceptance without replaying work. Native employee input is user/Secretary-only; external Worker sends are available to their currently authorized sender.",
+    "gui": "Private send recovery",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clientMessageId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "employee",
+        "clientMessageId"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "direct.acknowledge",
+    "args": "--employee ID --message-id ID",
+    "summary": "User/Secretary: acknowledge an exact published incoming private message. A stale ID never acknowledges a newer post.",
+    "gui": "Private message read state",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "messageId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "employee",
+        "messageId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "bot.appearance",
+    "args": "ID [--avatar ID --expected-revision N]",
+    "summary": "User/Secretary: read or change Dot’s built-in animated character. Grok uses its original native shape, color and animation. Does not modify the external Worker prompt or identity.",
+    "gui": "Bot appearance",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "avatar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "bot.list",
+    "args": "[--include-removed]",
+    "summary": "List authorized Dot/Grok Worker conversations. User/Secretary may include removed local connections for explicit restoration. Native bots have no application credentials.",
+    "gui": "Message bot workers",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "includeRemoved": {
+          "type": "boolean"
+        }
+      }
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "bot.update",
+    "args": "ID --name NAME --expected-revision N",
+    "summary": "User/Secretary: edit the local display name of an external Worker without changing its native prompt, identity or configuration. Uses an independent profile revision.",
+    "gui": "Edit bot",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "expectedRevision"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "bot.delete",
+    "args": "ID",
+    "summary": "User/Secretary: remove a Dot/Grok connection from Aexus, revoke local access and stop its watcher. Retain the native bot and recoverable history; ordinary sync never reimports removed connections.",
+    "gui": "Remove bot",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "bot.restore",
+    "args": "ID",
+    "summary": "User/Secretary: explicitly restore a removed local bot connection after verifying the native bot still exists. Restore history and appearance; employee grants must be added again.",
+    "gui": "Restore bot",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "bot.sync",
+    "args": "",
+    "summary": "User/Secretary: import existing native Dot and Grok bots/groups without changing their prompts, history or permissions. Refreshes account connectivity.",
+    "gui": "Connect bots",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "bot.create",
+    "args": "--name NAME --client-request-id UUID [--description TEXT]",
+    "summary": "User/Secretary: create a native Grok Worker. A stable UUID is the remote creation identity; unchanged retries never create another bot. No Company context is injected.",
+    "gui": "New Grok bot",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 8000
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "name",
+        "clientRequestId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "bot.group-create",
+    "args": "--name NAME --members JSON --client-request-id UUID",
+    "summary": "User/Secretary: create a native Grok group from imported Grok Worker conversation IDs. Does not add Aexus employees to the native group; bot.access grants application access separately.",
+    "gui": "New Grok group",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 50
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "name",
+        "members",
+        "clientRequestId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "bot.access",
+    "args": "ID [--employee-ids JSON --expected-revision N]",
+    "summary": "User/Secretary: grant employees access to an external Worker private conversation or Grok group. Secretary always has full access. Ordinary employee grants permit explicit messaging, history and files, never application authority for the bot.",
+    "gui": "Bot authorized employees",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "employeeIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 200
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "monitor.list",
+    "args": "[--employee ID]",
+    "summary": "List own supervised script/program monitors; user and Secretary manage all. Monitor execution remains on the owning employee’s execution host.",
+    "gui": "Plan event monitors",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "monitor.create",
+    "args": "--name NAME --program JSON [--employee ID --cwd DIR --restart-on-launch]",
+    "summary": "Register an own-workspace monitor program argv (no shell interpolation). Then create a schedule with rule.event monitor.output/monitor.exited and this monitorId BEFORE monitor.start. Emit JSON lines {id:stableEventId,data:any}; Core namespaces events, deduplicates and queues wakeups. The script receives no application identity.",
+    "gui": "Plan event monitor",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "program": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 80
+        },
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cwd": {
+          "type": "string",
+          "minLength": 1
+        },
+        "restartOnLaunch": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "program"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "monitor.start",
+    "args": "ID",
+    "summary": "Start a saved monitor on its pinned employee host/workspace. No local fallback. stdout JSON lines become monitor.output; termination becomes monitor.exited. Use schedule.* to select the employee wake action.",
+    "gui": "Start monitor",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "monitor.read",
+    "args": "ID [--cursor N]",
+    "summary": "Read bounded monitor process output and cursor without creating events or dispatching work.",
+    "gui": "Monitor output",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cursor": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "monitor.stop",
+    "args": "ID",
+    "summary": "Stop the managed monitor process and disable automatic restart. Does not remove schedules or user programs.",
+    "gui": "Stop monitor",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "monitor.remove",
+    "args": "ID",
+    "summary": "Stop and forget a monitor; retain user script/files and schedule history. Event schedules lose authorization to the removed source.",
+    "gui": "Remove monitor",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "channel.source-info",
+    "args": "SOURCE_ID",
+    "summary": "Read an authorized author/channel profile, original avatar, platform URL, retained count and latest publication time; never starts collection",
+    "gui": "Author information",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "channel.source-order",
+    "args": "CHANNEL_ID [--sources JSON --expected-revision N]",
+    "summary": "Read source chip order. User/Secretary can reorder existing sources atomically; omitted sources keep their relative order after the supplied sources, new sources append. Does not alter subscriptions",
+    "gui": "Source order",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "maxItems": 10000
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "channel.access",
+    "args": "CHANNEL_ID [--employees JSON --expected-revision N]",
+    "summary": "User or Secretary: list or replace employees authorized to read/search this news channel. Secretary always has access; grants never start jobs or enable posting.",
+    "gui": "Channel authorized people",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "employeeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 200,
+          "uniqueItems": true
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "channel.fetch-text",
+    "args": "CHANNEL_ID [--limit N] [--source SOURCE_ID | --sources JSON] [--since ISO --until ISO --time-ranges JSON --keywords-all JSON --keywords-any JSON --exclude-keywords JSON] [--cursor CURSOR]",
+    "summary": "Authorized employees (Secretary always authorized): explicitly fetch recent full news text with a reading grant, without saving; limit 1–100 (default 20), newest first. No images, downloads, receipts or model calls. Follow nextCursor for more.",
+    "gui": "Read-only channel API",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 10000,
+          "uniqueItems": true
+        },
+        "since": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+            }
+          ]
+        },
+        "until": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+            }
+          ]
+        },
+        "timeRanges": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 31,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "since": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+                  }
+                ]
+              },
+              "until": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "since",
+              "until"
+            ]
+          }
+        },
+        "keywordsAll": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "keywordsAny": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "excludeKeywords": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        },
+        "cursor": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "channel.fetch-images",
+    "args": "CHANNEL_ID [--limit N] [--source SOURCE_ID | --sources JSON] [--since ISO --until ISO --time-ranges JSON --keywords-all JSON --keywords-any JSON --exclude-keywords JSON] [--cursor CURSOR]",
+    "summary": "Authorized employees (Secretary always authorized): explicitly fetch recent full messages with published images; native API tools return actual image blocks, CLI/HTTP return base64. Reading grant required except user/Secretary; no save required. Pages are bounded to 32 images/8 MiB image bytes; follow nextCursor.",
+    "gui": "Read-only channel API",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 10000,
+          "uniqueItems": true
+        },
+        "since": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+            }
+          ]
+        },
+        "until": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+            }
+          ]
+        },
+        "timeRanges": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 31,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "since": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+                  }
+                ]
+              },
+              "until": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "since",
+              "until"
+            ]
+          }
+        },
+        "keywordsAll": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "keywordsAny": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "excludeKeywords": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        },
+        "cursor": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "channel.search",
+    "args": "CHANNEL_ID [--query TEXT | --keywords-all JSON | --keywords-any JSON] [--limit N] [--source SOURCE_ID | --sources JSON] [--since ISO --until ISO --time-ranges JSON --exclude-keywords JSON] [--cursor CURSOR] [--images]",
+    "summary": "Authorized employees (Secretary always authorized): search retained news text, titles and source names with a reading grant, without saving. Full results newest first; text only by default, --images includes native image blocks. Combine multiple source IDs (OR), absolute [since,until) ranges or timeRanges (OR), keywordsAll (AND), keywordsAny (OR), and excludeKeywords (NOT); groups combine with AND. Same bounded pagination as fetch APIs.",
+    "gui": "Read-only channel search",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 10000,
+          "uniqueItems": true
+        },
+        "since": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+            }
+          ]
+        },
+        "until": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+            }
+          ]
+        },
+        "timeRanges": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 31,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "since": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+                  }
+                ]
+              },
+              "until": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "since",
+              "until"
+            ]
+          }
+        },
+        "keywordsAll": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "keywordsAny": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "excludeKeywords": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        },
+        "cursor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "images": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "channel.aggregate",
+    "args": "--plugin telegram|x|youtube",
+    "summary": "User-only: consolidate empty platform channel wrappers into one aggregate while retaining subscription and article identities; old channel links remain aliases",
+    "gui": "Platform channel aggregation",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plugin": {
+          "enum": [
+            "telegram",
+            "x",
+            "youtube"
+          ]
+        }
+      },
+      "required": [
+        "plugin"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "channel.media-register",
+    "args": "--source-id ID --external-id ID --published-at MS --media-key KEY --name FILE --mime-type TYPE --sha256 SHA --bytes N",
+    "summary": "Configured archive collector only: verify and register an existing server image without sending its bytes through the Mac",
+    "gui": "Server-owned channel media",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "externalId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "publishedAt": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mediaKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mimeType": {
+          "enum": [
+            "image/png",
+            "image/jpeg",
+            "image/gif",
+            "image/webp"
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8388608
+        }
+      },
+      "required": [
+        "sourceId",
+        "externalId",
+        "publishedAt",
+        "mediaKey",
+        "name",
+        "mimeType",
+        "sha256",
+        "bytes"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
     "name": "channel.file-download",
     "args": "--post POST_ID --file FILE_ID",
     "summary": "User-only: copy a cloud document into this channel shared workspace, with SHA-256 verification; cloud cache retention never removes the local copy",
@@ -1034,8 +2540,8 @@
   },
   {
     "name": "channel.acknowledge",
-    "args": "ID (--entries JSON | --all [--source SOURCE_ID])",
-    "summary": "User-only: mark specific visible entries or explicitly mark all current unread channel entries read, independently of Agent delivery receipts",
+    "args": "ID (--entries JSON | --all [--source SOURCE_ID | --source-ids JSON])",
+    "summary": "User/Secretary: acknowledge visible entries, or explicitly mark all retained unread entries in the channel or selected source IDs, including unloaded history. Queries/automatic scroll do not do this; Agent delivery receipts stay independent.",
     "gui": "Channel user reading",
     "inputSchema": {
       "type": "object",
@@ -1059,6 +2565,16 @@
         "sourceId": {
           "type": "string",
           "minLength": 1
+        },
+        "sourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 10000,
+          "uniqueItems": true
         }
       },
       "required": [
@@ -1175,7 +2691,7 @@
   {
     "name": "channel.context",
     "args": "ID [--entry ID]",
-    "summary": "Read retained news or discussion context within a current channel membership",
+    "summary": "Read authorized channel identity, enabled author/source IDs and exact news text/image/search API routes; Secretary needs no grant",
     "gui": "Channel discussion",
     "inputSchema": {
       "type": "object",
@@ -1201,7 +2717,7 @@
   {
     "name": "channel.message-send",
     "args": "ID [--text TEXT] [--file PATH] [--images JSON] [--files JSON] [--mentions JSON|all] [--reply-to ID] [--client-message-id ID]",
-    "summary": "User or Secretary: share a channel message with all current members and assign work to its dialogue targets",
+    "summary": "Retired: channels are read-only news feeds; use chat.send for group discussion",
     "gui": "Channel composer",
     "inputSchema": {
       "type": "object",
@@ -1261,13 +2777,14 @@
       ]
     },
     "readOnly": false,
+    "replacement": "chat.send (group discussion; channels are read-only)",
     "permission": "operator",
     "target": "request"
   },
   {
     "name": "channel.message-post",
     "args": "ID [--text TEXT] [--file PATH] [--images JSON] [--files JSON] [--reply-to ID] [--kind summary|decision|blocker|question|result] [--client-message-id ID]",
-    "summary": "Deliberately publish a nonempty reply within a received user or Secretary discussion; no acknowledgment call is needed",
+    "summary": "Retired: channels are read-only news feeds; use chat.post for group replies",
     "gui": "Channel replies",
     "inputSchema": {
       "type": "object",
@@ -1323,6 +2840,7 @@
       ]
     },
     "readOnly": false,
+    "replacement": "chat.post (group replies; channels are read-only)",
     "permission": "chat",
     "target": "request"
   },
@@ -1370,7 +2888,7 @@
   {
     "name": "channel.source-image",
     "args": "SOURCE_ID",
-    "summary": "User or Secretary: read the original independently retained source avatar bytes",
+    "summary": "User: read original platform author avatar bytes",
     "gui": "Channel avatar",
     "inputSchema": {
       "type": "object",
@@ -1423,7 +2941,7 @@
   {
     "name": "channel.list",
     "args": "",
-    "summary": "List your current channel memberships; the user additionally receives retained-item summaries",
+    "summary": "Discover authorized news channels; user/Secretary see all channels and browsing summaries",
     "gui": "News channels",
     "inputSchema": {
       "type": "object",
@@ -1438,7 +2956,7 @@
   {
     "name": "channel.get",
     "args": "ID",
-    "summary": "Read one channel identity as the user or a current member without scanning news histories",
+    "summary": "Read an authorized channel identity without scanning history; Secretary has automatic access",
     "gui": "News channels",
     "inputSchema": {
       "type": "object",
@@ -1459,8 +2977,8 @@
   },
   {
     "name": "channel.sources",
-    "args": "[--channel ID] [--plugin telegram|x|youtube] [--include-disabled]",
-    "summary": "User or Secretary: list authoritative subscriptions, routes and retained author avatars",
+    "args": "[--channel ID] [--plugin telegram|x|youtube] [--query TEXT] [--include-disabled]",
+    "summary": "Search subscribed authors by name/handle within authorized channels; Secretary sees all. Returns stable source IDs, original avatars and source order",
     "gui": "News subscriptions",
     "inputSchema": {
       "type": "object",
@@ -1479,18 +2997,22 @@
         },
         "includeDisabled": {
           "type": "boolean"
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 200
         }
       },
       "required": []
     },
     "readOnly": true,
-    "permission": "operator",
+    "permission": "chat",
     "target": "request"
   },
   {
     "name": "channel.create",
     "args": "--name NAME --engine JSON [--avatar JSON|@file]",
-    "summary": "User or Secretary: explicitly choose employee or external-process publishing; an issued collector token is returned once in setup",
+    "summary": "User or Secretary: configure an external news collector; channel.access assigns API readers without discussion membership. An issued collector token is returned once in setup",
     "gui": "Channel publishing engine",
     "inputSchema": {
       "type": "object",
@@ -1502,28 +3024,6 @@
         },
         "engine": {
           "oneOf": [
-            {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "kind": {
-                  "const": "employees"
-                },
-                "employeeIds": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "minItems": 1,
-                  "maxItems": 200
-                }
-              },
-              "required": [
-                "kind",
-                "employeeIds"
-              ]
-            },
             {
               "type": "object",
               "additionalProperties": false,
@@ -1669,8 +3169,8 @@
   },
   {
     "name": "channel.update",
-    "args": "ID [--name NAME] [--admins JSON] [--engine JSON] [--avatar JSON|null] [--expected-revision N]",
-    "summary": "Update channel identity, publishing membership or external connection without changing company roles or engine type; null avatar restores the default",
+    "args": "ID [--name NAME] [--engine JSON] [--avatar JSON|null] [--expected-revision N]",
+    "summary": "Update channel identity or external collector connection; channels have no members or group controls. Null avatar restores the default",
     "gui": "Channel settings",
     "inputSchema": {
       "type": "object",
@@ -1690,32 +3190,11 @@
             "type": "string",
             "minLength": 1
           },
-          "maxItems": 200
+          "maxItems": 200,
+          "description": "Retired compatibility argument: Core rejects channel employee membership changes"
         },
         "engine": {
           "oneOf": [
-            {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "kind": {
-                  "const": "employees"
-                },
-                "employeeIds": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "minItems": 1,
-                  "maxItems": 200
-                }
-              },
-              "required": [
-                "kind",
-                "employeeIds"
-              ]
-            },
             {
               "type": "object",
               "additionalProperties": false,
@@ -1872,7 +3351,7 @@
   {
     "name": "channel.source-add",
     "args": "--data JSON|@file",
-    "summary": "User or Secretary: follow a source; Telegram creates a one-to-one channel, X/YouTube default to aggregators",
+    "summary": "User or Secretary: follow a source; Telegram, X and YouTube each default to one platform aggregate",
     "gui": "News subscriptions",
     "inputSchema": {
       "type": "object",
@@ -1991,7 +3470,7 @@
   },
   {
     "name": "channel.posts",
-    "args": "[--channel ID] [--source ID] [--saved] [--query TEXT] [--cursor CURSOR] [--limit N]",
+    "args": "[--channel ID] [--source ID | --sources JSON] [--saved] [--query TEXT] [--cursor CURSOR] [--limit N] [--order newest|discovery --seed TEXT --snapshot MS --avoid-first ID]",
     "summary": "User or Secretary: page current news and permanent saved items with stable item identities",
     "gui": "News feed",
     "inputSchema": {
@@ -2005,6 +3484,112 @@
         "sourceId": {
           "type": "string",
           "minLength": 1
+        },
+        "sourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 10000,
+          "uniqueItems": true
+        },
+        "since": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+            }
+          ]
+        },
+        "until": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+            }
+          ]
+        },
+        "timeRanges": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 31,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "since": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+                  }
+                ]
+              },
+              "until": {
+                "oneOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T.*(Z|[+-]\\d{2}:\\d{2})$"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "since",
+              "until"
+            ]
+          }
+        },
+        "keywordsAll": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "keywordsAny": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "excludeKeywords": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
         },
         "saved": {
           "type": "boolean"
@@ -2021,6 +3606,24 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 100
+        },
+        "order": {
+          "enum": [
+            "newest",
+            "discovery"
+          ]
+        },
+        "seed": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "snapshot": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "avoidFirst": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": []
@@ -2054,7 +3657,7 @@
   {
     "name": "channel.save",
     "args": "POST_ID on|off",
-    "summary": "User or Secretary: retain a news item and its local images permanently, or resume its original expiry",
+    "summary": "User or Secretary: explicitly save a news item and its images locally, or resume its original expiry",
     "gui": "Saved news",
     "inputSchema": {
       "type": "object",
@@ -2101,8 +3704,8 @@
   },
   {
     "name": "channel.image",
-    "args": "CHANNEL_ID --post POST_ID --media MEDIA_ID",
-    "summary": "User or Secretary: read a published local news image, never staging or arbitrary URLs",
+    "args": "CHANNEL_ID --post POST_ID --media MEDIA_ID [--max-edge 96|640|1280]",
+    "summary": "User or Secretary: read a published news image from memory or the server, never staging or arbitrary URLs",
     "gui": "News images",
     "inputSchema": {
       "type": "object",
@@ -2119,6 +3722,14 @@
         "mediaId": {
           "type": "string",
           "minLength": 1
+        },
+        "maxEdge": {
+          "type": "integer",
+          "enum": [
+            96,
+            640,
+            1280
+          ]
         }
       },
       "required": [
@@ -2134,7 +3745,7 @@
   {
     "name": "channel.export",
     "args": "POST_ID",
-    "summary": "User or Secretary: export a retained news article and original local images",
+    "summary": "User or Secretary: explicitly download a retained article and original images",
     "gui": "News download",
     "inputSchema": {
       "type": "object",
@@ -2238,6 +3849,137 @@
     "target": "request"
   },
   {
+    "name": "channel.storage",
+    "args": "[--patch JSON]",
+    "summary": "User or Secretary: configure server-owned channel content; unsaved Mac content stays in memory",
+    "gui": "Channel storage policy",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "patch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "collectorId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "hostId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "directory": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "collectorId",
+            "hostId",
+            "directory"
+          ]
+        }
+      },
+      "required": []
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "channel.storage-exchange",
+    "args": "[--wait-ms N]",
+    "summary": "Storage collector capability only: receive scoped channel storage operations",
+    "gui": "Storage transport",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "waitMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15000
+        }
+      },
+      "required": []
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "channel.storage-result",
+    "args": "--id ID [--result JSON --error TEXT]",
+    "summary": "Storage collector capability only: complete an issued storage operation",
+    "gui": "Storage transport",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "type": "object"
+        },
+        "error": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "channel.subscription-status",
+    "args": "[--channel ID]",
+    "summary": "User or Secretary: read server-confirmed subscription application and connectivity",
+    "gui": "Subscription synchronization",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "channelId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "channel.collector-ack",
+    "args": "--revision N",
+    "summary": "Collector capability only: acknowledge a delivered configuration after the server scheduler applies it",
+    "gui": "Server subscription receipt",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "revision"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
     "name": "channel.collector-config",
     "args": "[--since-revision N]",
     "summary": "Read authoritative collector targets; external access requires the dedicated channel capability",
@@ -2260,7 +4002,7 @@
   {
     "name": "channel.media-put",
     "args": "--data JSON|@file",
-    "summary": "Upload an item-scoped image: employee publishers use channelId, external collectors use sourceId; the authenticated employee identity is enforced",
+    "summary": "External collector or user import only: upload a source-scoped image; employees cannot publish channel content",
     "gui": "Channel publishing",
     "inputSchema": {
       "type": "object",
@@ -2341,7 +4083,7 @@
   {
     "name": "channel.publish",
     "args": "--data JSON|@file",
-    "summary": "Publish an article using a current employee channelId or an external sourceId. Scheduled employees may publish without a discussion parent; identity, deduplication and retention remain enforced",
+    "summary": "External collector or user import only: publish source-scoped news; employees read channels through fetch/search APIs and cannot post",
     "gui": "Channel publishing",
     "inputSchema": {
       "type": "object",
@@ -2421,6 +4163,13 @@
                 "type": "string",
                 "pattern": "^[a-f0-9]{64}$"
               },
+              "deferred": {
+                "type": "boolean"
+              },
+              "serverPath": {
+                "type": "string",
+                "minLength": 1
+              },
               "thumbnailMediaId": {
                 "type": "string",
                 "minLength": 1
@@ -2436,8 +4185,7 @@
               "id",
               "name",
               "mimeType",
-              "bytes",
-              "sha256"
+              "bytes"
             ]
           },
           "maxItems": 16
@@ -3979,7 +5727,7 @@
   {
     "name": "conversation.workspace",
     "args": "CONVERSATION [--employee ID]",
-    "summary": "Read the shared folder and named member workspaces; members may read all shared files but write only their own subfolder",
+    "summary": "Read shared paths and current file rights. Every group member may read/create/upload/edit/delete shared content; channel members write their own subfolder. User/Secretary administer without joining.",
     "gui": "Group / channel workspace",
     "inputSchema": {
       "type": "object",
@@ -4024,7 +5772,7 @@
   {
     "name": "conversation.file",
     "args": "CONVERSATION --operation list|read|image|info|chunk|write|mkdir|move|trash|restore [--path PATH] [--to PATH] [--content TEXT] [--hash HASH] [--create] [--hidden] [--offset N] [--id TRASH_ID]",
-    "summary": "Operate shared files with current membership checks; own member folder is writable; only a member Secretary may modify direct root files; peer folders are read-only",
+    "summary": "Group members have equal shared-file rights including root and peer folder contents. Named member folder identities and host metadata remain protected. Channel members write only their own subtree. info returns an opaque version for upload updates.",
     "gui": "Shared file browser",
     "inputSchema": {
       "type": "object",
@@ -4090,7 +5838,7 @@
   {
     "name": "conversation.copy",
     "args": "--from JSON --to JSON",
-    "summary": "Copy a shared file/folder to your named member folder or personal workspace; source is retained and existing destinations are never overwritten",
+    "summary": "Copy shared files/folders between allowed shared locations and your personal workspace. Group shared content is equally writable by every member; source retained, destination never overwritten. Use conversation.upload with expectedVersion to replace an edited group file.",
     "gui": "Shared workspace copy",
     "inputSchema": {
       "type": "object",
@@ -4268,7 +6016,7 @@
   {
     "name": "conversation.role",
     "args": "CONVERSATION --employee ID --role owner|admin|member --expected-revision N",
-    "summary": "Owner/Admin may appoint or revoke Admins; only Owner transfers ownership. Member demotes an Admin without removing membership; use conversation.member to remove. Owner exists in both groups and channels.",
+    "summary": "Owner/Admin may appoint or revoke Admins; only Owner transfers ownership. Member demotes an Admin without removing membership; use conversation.member to remove. Group-only: channels have no member offices.",
     "gui": "Conversation roles",
     "inputSchema": {
       "type": "object",
@@ -4308,7 +6056,7 @@
   {
     "name": "conversation.mute",
     "args": "CONVERSATION --member ID|all --muted true|false [--duration-seconds N] --expected-revision N",
-    "summary": "Owner/Admin changes public posting restrictions; all restricts Member posting in groups, all publishers in channels. Never changes Company work permissions.",
+    "summary": "Owner/Admin changes public posting restrictions; all restricts Member posting in groups. Channels do not support moderation. Never changes Company work permissions.",
     "gui": "Conversation moderation",
     "inputSchema": {
       "type": "object",
@@ -4883,6 +6631,86 @@
     "target": "request"
   },
   {
+    "name": "conversation.upload",
+    "args": "--conversation group:ID --from JSON --path FILE --client-request-id KEY [--expected-version VERSION]",
+    "summary": "Copy an own Company-workspace file into the group shared folder. All members have equal file rights. New files never overwrite; replacing requires the exact version returned by conversation.file info. Returns an async receipt, no automatic group speech.",
+    "gui": "Upload edited shared file",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation": {
+          "type": "string",
+          "pattern": "^group:[a-zA-Z0-9_-]+$"
+        },
+        "from": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "employee": {
+              "type": "string",
+              "minLength": 1
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "path"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "expectedVersion": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "conversation",
+        "from",
+        "path",
+        "clientRequestId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "conversation.upload-status",
+    "args": "ID [--cancel]",
+    "summary": "Read or cancel an uploaded shared-file copy. Only completed means committed; restart never replays. User/Secretary may manage receipts; other employees use their own and current group membership.",
+    "gui": "Shared upload progress",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cancel": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
     "name": "workspace.catalog",
     "args": "[--employee ID|self]",
     "summary": "List your Company workspace and every joined group/channel member workspace with exact paths, location, permissions and file API; does not choose a workspace or move files",
@@ -4904,7 +6732,7 @@
   {
     "name": "conversation.entry",
     "args": "CONVERSATION --id ENTRY_ID",
-    "summary": "Read a complete published group message, channel message or post: text, links, replies, media and downloadable document descriptors; current membership required",
+    "summary": "Read a complete published private/group/channel entry, links, replies, media and downloadable file descriptors. Private read scope or current group/channel access required; shared attachments include the current version.",
     "gui": "Published content and files",
     "inputSchema": {
       "type": "object",
@@ -4912,7 +6740,7 @@
       "properties": {
         "conversation": {
           "type": "string",
-          "pattern": "^(group|channel):[a-zA-Z0-9_-]+$"
+          "pattern": "^(employee|group|channel):[a-zA-Z0-9_-]+$"
         },
         "id": {
           "type": "string",
@@ -4931,7 +6759,7 @@
   {
     "name": "conversation.download",
     "args": "CONVERSATION --entry-id ID --attachment-id ID --client-request-id KEY [--workspace WORKSPACE_ID --employee ID --path DIR --name FILENAME]",
-    "summary": "Copy one published attachment into your own Company or joined Message member workspace; defaults to this conversation’s member workspace. Streams documents/images with integrity checks, never writes shared originals or overwrites files.",
+    "summary": "Copy one published private/group/channel attachment into your own Company execution workspace by default. Optional joined Message workspace. Streams with size/version/integrity checks; sources retained and existing destinations never overwritten.",
     "gui": "Download to employee workspace",
     "inputSchema": {
       "type": "object",
@@ -4939,7 +6767,7 @@
       "properties": {
         "conversation": {
           "type": "string",
-          "pattern": "^(group|channel):[a-zA-Z0-9_-]+$"
+          "pattern": "^(employee|group|channel):[a-zA-Z0-9_-]+$"
         },
         "entryId": {
           "type": "string",
@@ -4976,6 +6804,46 @@
         "entryId",
         "attachmentId",
         "clientRequestId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "conversation.download-local",
+    "args": "CONVERSATION --entry-id ID --attachment-id ID --path ABSOLUTE_FILE [--overwrite]",
+    "summary": "User/Secretary: stream a published private/group/channel file or image to an explicitly chosen Mac/Core-host file path. No implicit overwrite and no large renderer Blob.",
+    "gui": "Save attachment to chosen Mac path",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation": {
+          "type": "string",
+          "pattern": "^(employee|group|channel):[a-zA-Z0-9_-]+$"
+        },
+        "entryId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attachmentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "overwrite": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "conversation",
+        "entryId",
+        "attachmentId",
+        "path"
       ]
     },
     "readOnly": false,
@@ -5032,7 +6900,7 @@
   {
     "name": "channel.post-trigger-set",
     "args": "CHANNEL_ID --employee ID --every-posts N --prompt TEXT --enabled true|false --expected-revision N",
-    "summary": "Owner/Admin explicitly enables a saved prompt for one channel member every N newly accepted posts. Revision 0 creates; edits reset only this member’s counter. No Plan record; may invoke the selected Agent.",
+    "summary": "Retired: channels are read-only feeds; employees explicitly use channel.fetch-text, channel.fetch-images or channel.search. Old rule records remain.",
     "gui": "Per-Agent post-count editor",
     "inputSchema": {
       "type": "object",
@@ -5074,13 +6942,14 @@
       ]
     },
     "readOnly": false,
+    "replacement": "channel.fetch-text / channel.fetch-images / channel.search",
     "permission": "chat",
     "target": "request"
   },
   {
     "name": "channel.post-trigger-remove",
     "args": "CHANNEL_ID --employee ID --expected-revision N",
-    "summary": "Remove one post-count configuration and cancel its unstarted batches. Existing results and batch history remain; ordinary channel awareness resumes.",
+    "summary": "Retired: channel count-rule writes are disabled and old active rules are paused; retained rule/history reads remain available.",
     "gui": "Remove post-count rule",
     "inputSchema": {
       "type": "object",
@@ -5106,6 +6975,7 @@
       ]
     },
     "readOnly": false,
+    "replacement": "channel.fetch-text / channel.fetch-images / channel.search",
     "permission": "chat",
     "target": "request"
   },
@@ -5606,7 +7476,7 @@
   {
     "name": "chat.edit",
     "args": "ID --message MESSAGE_ID --text TEXT [--file PATH] --expected-revision N",
-    "summary": "User-only: correct own published group text or caption without changing accepted tasks or receipts",
+    "summary": "User or Secretary: correct user-authored published group text or caption without changing accepted tasks or receipts",
     "gui": "Group message editing",
     "inputSchema": {
       "type": "object",
@@ -5645,7 +7515,7 @@
   {
     "name": "chat.post",
     "args": "ID [--text TEXT] [--images JSON] [--files JSON] [--kind summary|decision|blocker|question|result|message] [--reply-to ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only] [--client-message-id ID]",
-    "summary": "Publish a public group message to all current members",
+    "summary": "Explicitly publish a group message; ordinary native output stays only in Company; private replies require direct.post",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -5659,7 +7529,7 @@
           "type": "string",
           "minLength": 0,
           "maxLength": 16000,
-          "description": "Explicit public text only. Agents require nonempty content (max 2000 Unicode characters); null/undefined placeholder strings are rejected. Operators allow attachment-only posts and max 16000 characters. Core records reading receipts. Muted employees cannot publish."
+          "description": "Explicit public text or attachment-only publication. Agents allow max 2000 Unicode characters; empty/null/undefined text without attachments is rejected. Use images/files with uploaded @workspace paths. Operators allow max 16000 characters. Core records reading receipts. Muted employees cannot publish."
         },
         "images": {
           "type": "array",
@@ -5732,7 +7602,7 @@
   {
     "name": "chat.acknowledge",
     "args": "ID --message ID",
-    "summary": "User-only: mark group messages read; private receipts remain separate",
+    "summary": "User or Secretary: explicitly mark group messages read; private receipts remain separate",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -5776,11 +7646,39 @@
   },
   {
     "name": "engine.capabilities",
-    "args": "--engine codex|claude|cline|pi",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo",
     "summary": "Read adapter capabilities, workspace modes and employee kinds before hiring; no credentials or inference",
     "gui": "创建员工能力检查",
     "readOnly": true,
     "permission": "identity",
+    "target": "request"
+  },
+  {
+    "name": "engine.providers",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo",
+    "summary": "Read every native provider/router and saved profile with active model, URLs, credential fingerprints and source files; never returns keys",
+    "gui": "Native engine provider catalog",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "enum": [
+            "codex",
+            "claude",
+            "cline",
+            "pi",
+            "opencode",
+            "kilo"
+          ]
+        }
+      },
+      "required": [
+        "engine"
+      ]
+    },
+    "readOnly": true,
+    "permission": "operator",
     "target": "request"
   },
   {
@@ -5813,7 +7711,7 @@
   {
     "name": "engine.configure",
     "args": "--engine ID --data JSON|@file",
-    "summary": "Set an executable path, encrypted key, or Cline/Pi compatible baseUrl and exact model ID (user or Secretary)",
+    "summary": "Set native executable/SDK paths or restore native mode (user or Secretary). Providers, keys and model defaults use the engine's native configuration.",
     "gui": "引擎配置",
     "readOnly": false,
     "permission": "operator",
@@ -6043,32 +7941,87 @@
   },
   {
     "name": "avatar.list",
-    "args": "[--query NAME] [--style default|anime|chibi] [--all]",
-    "summary": "Discover exact avatar IDs, character names, styles and aliases from the live picker catalog; no inference",
+    "args": "[--query NAME] [--style STYLE] [--status active|archived|all] [--all]",
+    "summary": "Read the live character catalog: enabled state, exact IDs, styles, usage counts and revision. Default returns enabled choices; omitted employee appearance chooses a random enabled character.",
     "gui": "人物形象目录",
     "inputSchema": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "query": {
-          "type": "string",
-          "description": "人物名称、别名或 ID；例如英雄王、吉尔伽美什、Saber"
+          "type": "string"
         },
         "style": {
           "type": "string",
+          "description": "Optional catalog style; discover values from the returned entries"
+        },
+        "status": {
           "enum": [
-            "default",
-            "anime",
-            "chibi"
+            "active",
+            "archived",
+            "all"
           ]
         },
         "all": {
           "type": "boolean",
-          "description": "Include retired appearances retained for compatibility"
+          "description": "Compatibility alias for status=all"
         }
       }
     },
     "readOnly": true,
     "permission": "identity",
+    "target": "request"
+  },
+  {
+    "name": "avatar.get",
+    "args": "ID",
+    "summary": "Read one active or archived character, its usage count, enabled display replacement and current catalog revision; any employee may read",
+    "gui": "人物形象信息",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "identity",
+    "target": "request"
+  },
+  {
+    "name": "avatar.update",
+    "args": "ID --enabled true|false [--expected-revision N]",
+    "summary": "User or Secretary: enable/archive a registered character immediately across Team, Message, Mission and pickers; retain all source assets and saved identities",
+    "gui": "启用或归档角色",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "enabled"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
     "target": "request"
   },
   {
@@ -6434,7 +8387,7 @@
   },
   {
     "name": "schedule.create",
-    "args": "--spec @file.json | --name NAME --employee ID|self --prompt TEXT (--after-seconds N | --at ISO | --time HH:mm | --every-seconds N | --on-event signal|channel.posted) [--enabled true|false|on|off | --paused] [--view VIEW_ID --days 7 --timezone IANA --month-day last --max-occurrences N --client-request-id KEY --duration-minutes N --channel ID --event-channel ID --cooldown-seconds N]",
+    "args": "--spec @file.json | --name NAME --employee ID|self --prompt TEXT (--after-seconds N | --at ISO | --time HH:mm | --every-seconds N | --on-event EVENT) [--enabled true|false|on|off | --paused] [--view VIEW_ID --days 7 --timezone IANA --month-day last --max-occurrences N --client-request-id KEY --duration-minutes N --channel ID --event-channel ID --event-conversation REF --event-employee ID --monitor-id ID --cooldown-seconds N]",
     "summary": "Schedule an existing employee or yourself; enabled by default; --paused or --enabled false disables automatic runs; Governor requires --view; retry-safe clientRequestId",
     "gui": "Plan task editor",
     "inputSchema": {
@@ -6471,7 +8424,9 @@
                     "codex",
                     "claude",
                     "cline",
-                    "pi"
+                    "pi",
+                    "opencode",
+                    "kilo"
                   ]
                 },
                 "prompt": {
@@ -6636,8 +8591,27 @@
                     "event": {
                       "enum": [
                         "signal",
-                        "channel.posted"
+                        "channel.posted",
+                        "message.received",
+                        "session.completed",
+                        "monitor.output",
+                        "monitor.exited"
                       ]
+                    },
+                    "conversation": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for message.received: canonical group:ID or employee:ID from the conversation API"
+                    },
+                    "employeeId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for session.completed: authorized employee ID"
+                    },
+                    "monitorId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for monitor.output/monitor.exited: monitor.list ID"
                     },
                     "channelId": {
                       "type": "string",
@@ -6851,7 +8825,9 @@
                     "codex",
                     "claude",
                     "cline",
-                    "pi"
+                    "pi",
+                    "opencode",
+                    "kilo"
                   ]
                 },
                 "prompt": {
@@ -7016,8 +8992,27 @@
                     "event": {
                       "enum": [
                         "signal",
-                        "channel.posted"
+                        "channel.posted",
+                        "message.received",
+                        "session.completed",
+                        "monitor.output",
+                        "monitor.exited"
                       ]
+                    },
+                    "conversation": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for message.received: canonical group:ID or employee:ID from the conversation API"
+                    },
+                    "employeeId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for session.completed: authorized employee ID"
+                    },
+                    "monitorId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for monitor.output/monitor.exited: monitor.list ID"
                     },
                     "channelId": {
                       "type": "string",
@@ -7218,7 +9213,7 @@
   {
     "name": "schedule.delete",
     "args": "[ID | --ids JSON] [--expected-revision N | --expected-revisions JSON]",
-    "summary": "Delete selected schedules, including orphaned records for Secretary; preflight all IDs and revisions before any cancellation; retain run history",
+    "summary": "Delete selected schedules, including orphaned records for Secretary; preflight all IDs and revisions before any cancellation; retain run history. Self-deletion removes future triggers and returns continuingRunIds while allowing that same current Agent turn to finish; other active runs are cancelled",
     "gui": "Plan task editor",
     "inputSchema": {
       "type": "object",
@@ -7320,7 +9315,9 @@
                     "codex",
                     "claude",
                     "cline",
-                    "pi"
+                    "pi",
+                    "opencode",
+                    "kilo"
                   ]
                 },
                 "prompt": {
@@ -7485,8 +9482,27 @@
                     "event": {
                       "enum": [
                         "signal",
-                        "channel.posted"
+                        "channel.posted",
+                        "message.received",
+                        "session.completed",
+                        "monitor.output",
+                        "monitor.exited"
                       ]
+                    },
+                    "conversation": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for message.received: canonical group:ID or employee:ID from the conversation API"
+                    },
+                    "employeeId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for session.completed: authorized employee ID"
+                    },
+                    "monitorId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for monitor.output/monitor.exited: monitor.list ID"
                     },
                     "channelId": {
                       "type": "string",
@@ -7670,7 +9686,9 @@
                     "codex",
                     "claude",
                     "cline",
-                    "pi"
+                    "pi",
+                    "opencode",
+                    "kilo"
                   ]
                 },
                 "prompt": {
@@ -7835,8 +9853,27 @@
                     "event": {
                       "enum": [
                         "signal",
-                        "channel.posted"
+                        "channel.posted",
+                        "message.received",
+                        "session.completed",
+                        "monitor.output",
+                        "monitor.exited"
                       ]
+                    },
+                    "conversation": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for message.received: canonical group:ID or employee:ID from the conversation API"
+                    },
+                    "employeeId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for session.completed: authorized employee ID"
+                    },
+                    "monitorId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Required for monitor.output/monitor.exited: monitor.list ID"
                     },
                     "channelId": {
                       "type": "string",
@@ -8133,7 +10170,7 @@
   },
   {
     "name": "engine.models",
-    "args": "--engine codex|claude|cline|pi [--kind worker|cloud-native-worker] [--team NAME]",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo [--kind worker|cloud-native-worker] [--team NAME]",
     "summary": "List available models before employee creation, without inference; Cloud Native reads the selected host",
     "gui": "创建员工和默认模型设置",
     "readOnly": true,
@@ -8155,6 +10192,7 @@
           "properties": {
             "pattern": {
               "enum": [
+                "telegram",
                 "daydream",
                 "botanical",
                 "cosmos",
@@ -8178,9 +10216,51 @@
               "type": "number",
               "minimum": 0,
               "maximum": 45
+            },
+            "palette": {
+              "enum": [
+                "theme",
+                "telegram-classic",
+                "telegram-night",
+                "gray",
+                "light-blue",
+                "blue",
+                "mint",
+                "lime",
+                "green",
+                "olive",
+                "sage",
+                "taupe",
+                "peach",
+                "orange",
+                "terracotta",
+                "pink",
+                "purple",
+                "pink-gradient",
+                "purple-gradient",
+                "blue-gradient",
+                "gray-gradient",
+                "dark-gray",
+                "black",
+                "custom"
+              ]
+            },
+            "colors": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "items": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              }
+            },
+            "rotation": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 360
             }
           },
-          "description": "Messages-only decoration. Partial fields merge; density 70–160%, ink opacity 0–45%. No files, messages or execution are changed."
+          "description": "Messages-only decoration shared by chats, groups and channels. Partial fields merge; Telegram colors/pattern, custom 1–4 RGB colors and rotation; density 70–160%, ink opacity 0–45%. No message or execution changes."
         },
         "language": {
           "enum": [
@@ -8634,42 +10714,6 @@
     "name": "host.terminal-close",
     "args": "<id> --terminal ID",
     "summary": "Close a host PTY",
-    "gui": "Cloud Hosts 工作台",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "host.desktop-list",
-    "args": "<id>",
-    "summary": "List active remote desktop transports",
-    "gui": "Cloud Hosts 工作台",
-    "readOnly": true,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "host.desktop-open",
-    "args": "<id>",
-    "summary": "Open configured RDP or VNC transport; does not imply desktop login",
-    "gui": "Cloud Hosts 工作台",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "host.desktop-launch",
-    "args": "<id> --session ID",
-    "summary": "Launch native RDP client on the Core machine",
-    "gui": "Cloud Hosts 工作台",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "host.desktop-close",
-    "args": "<id> --session ID",
-    "summary": "Close desktop transport and SSH forward",
     "gui": "Cloud Hosts 工作台",
     "readOnly": false,
     "permission": "operator",
@@ -9297,8 +11341,8 @@
   },
   {
     "name": "group.add",
-    "args": "<name> [--mode work|build|cloud] [--plugin ID] [--host-id ID] [--directory-mode default|bind] [--remote-dir PATH] [--os linux|macos|windows] [--distribution ID]",
-    "summary": "Create a real cloud Team with host-id; directory-mode default creates a new remote child folder; os/distribution assert actual host, never labels",
+    "args": "<name> [--mode build|cloud] [--host-id ID] [--directory-mode default|bind] [--remote-dir PATH] [--os linux|macos|windows] [--distribution ID]",
+    "summary": "Create a local or cloud project; plugins are independent and use per-content employee grants. Cloud uses host-id; os/distribution assert actual host.",
     "gui": "“+ Department”",
     "readOnly": false,
     "permission": "operator",
@@ -9306,8 +11350,8 @@
   },
   {
     "name": "group.configure",
-    "args": "<name> --mode work|build|cloud [--plugin ID] [--host-id ID --remote-dir PATH]",
-    "summary": "Configure a legacy unbound Team; created Team bindings are fixed",
+    "args": "<name> --mode build|cloud [--host-id ID --remote-dir PATH]",
+    "summary": "Configure an unbound local/cloud Team; no new plugin binding. Existing legacy plugin folders remain compatible.",
     "gui": "创建 Team 时配置工作方式",
     "readOnly": false,
     "permission": "operator",
@@ -9401,16 +11445,11 @@
         },
         "avatarStyle": {
           "type": "string",
-          "enum": [
-            "default",
-            "anime",
-            "chibi"
-          ],
-          "description": "Original-series anime or cute chibi; explicit when character has multiple appearances"
+          "description": "Optional style from the live avatar catalog; disabled styles cannot be selected"
         },
         "avatar": {
           "type": "string",
-          "description": "Exact avatar.list id, as an alternative to character + avatarStyle; e.g. fate-gilgamesh-chibi"
+          "description": "Exact avatar.list id, as an alternative to character + avatarStyle; omit appearance to choose a random selectable avatar"
         },
         "profession": {
           "type": "string",
@@ -9446,7 +11485,9 @@
             "codex",
             "claude",
             "cline",
-            "pi"
+            "pi",
+            "opencode",
+            "kilo"
           ]
         },
         "model": {
@@ -9477,7 +11518,7 @@
   {
     "name": "card.avatar",
     "args": "<employee-id> [--avatar ID | --character NAME --avatar-style anime|chibi]",
-    "summary": "Set only a controlled employee appearance and its default palette; Manager own Team, Governor across Teams; discover IDs with avatar.list",
+    "summary": "Set a controlled employee appearance and palette; omit appearance for a random enabled character. Manager own Team, Governor across Teams; discover live choices with avatar.list",
     "gui": "员工人物形象",
     "inputSchema": {
       "type": "object",
@@ -9496,11 +11537,7 @@
         },
         "avatarStyle": {
           "type": "string",
-          "enum": [
-            "default",
-            "anime",
-            "chibi"
-          ]
+          "description": "Optional style from avatar.list"
         }
       }
     },
@@ -9511,8 +11548,59 @@
   {
     "name": "card.update",
     "args": "<cardId> [--title NAME] [--avatar ID | --character NAME --avatar-style STYLE] [--profession TEXT]",
-    "summary": "Application-wide general profile editing; supervisors use card.avatar for appearance; Team and folder stay fixed",
+    "summary": "Edit employee profile with {id,patch:{...}}; profession is the displayed specialty, not managementRole. Supervisors use card.avatar for appearance; Team and folder stay fixed.",
     "gui": "员工资料",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "patch": {
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "profession": {
+              "type": "string",
+              "description": "Professional responsibilities; saved as employee.role"
+            },
+            "role": {
+              "type": "string",
+              "description": "Legacy alias for profession; does not change managementRole"
+            },
+            "avatar": {
+              "type": "string"
+            },
+            "character": {
+              "type": "string"
+            },
+            "avatarStyle": {
+              "type": "string",
+              "description": "Optional style from avatar.list"
+            },
+            "accessory": {
+              "type": "string"
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            }
+          },
+          "additionalProperties": true,
+          "description": "Nest profile fields here. Existing legacy forms may include unchanged binding fields, but Team/folder/engine cannot change. A patch with no editable fields is rejected."
+        }
+      },
+      "required": [
+        "id",
+        "patch"
+      ]
+    },
     "readOnly": false,
     "permission": "operator",
     "target": "session-or-employee"
@@ -9626,6 +11714,133 @@
     "target": "request"
   },
   {
+    "name": "plugin.resources",
+    "args": "--id PLUGIN [--workspace PATH]",
+    "summary": "List plugin pages/content and effective rights; employees see only authorized resources, Secretary sees all",
+    "gui": "Plugin content authorization",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspace": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "plugin",
+    "target": "request"
+  },
+  {
+    "name": "plugin.access",
+    "args": "--id PLUGIN [--workspace PATH --resources JSON --employees JSON --expected-revision N]",
+    "summary": "User or Secretary: read or replace per-employee read/write/create rights on selected plugin resources; Secretary always has full access",
+    "gui": "Plugin content authorization",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspace": {
+          "type": "string"
+        },
+        "resourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 1000,
+          "uniqueItems": true
+        },
+        "employees": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "employeeId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read": {
+                "type": "boolean"
+              },
+              "write": {
+                "type": "boolean"
+              },
+              "create": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "employeeId",
+              "read",
+              "write",
+              "create"
+            ]
+          }
+        },
+        "updates": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "employeeId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read": {
+                "type": "boolean"
+              },
+              "write": {
+                "type": "boolean"
+              },
+              "create": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "employeeId",
+              "resourceId",
+              "read",
+              "write",
+              "create"
+            ]
+          }
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
     "name": "plugin.call",
     "args": "<id> <method> --team NAME [--params JSON] [--raw]",
     "summary": "Invoke the shared plugin runtime; raw preserves the JSON-RPC error/result envelope",
@@ -9636,7 +11851,7 @@
   },
   {
     "name": "plugin.open",
-    "args": "<id> [--team NAME|--employee ID]",
+    "args": "<id> [--workspace PATH|--team NAME|--employee ID]",
     "summary": "Open or focus an independent plugin window",
     "gui": "独立插件窗口",
     "readOnly": false,
@@ -9681,9 +11896,9 @@
   },
   {
     "name": "plugin.view",
-    "args": "<id> [--team NAME|--employee ID]",
+    "args": "<id> [--workspace PATH|--team NAME|--employee ID]",
     "summary": "Open a plugin view in its managed root or selected scope",
-    "gui": "Team 工作空间",
+    "gui": "插件工作空间",
     "readOnly": false,
     "permission": "operator",
     "target": "request"

@@ -1,0 +1,81 @@
+/* Shared creation surfaces: neutral sections, white fields and one clear selection color. */
+.creation-panel{width:min(600px,100%);max-width:100%;min-width:0;box-sizing:border-box;padding:0;overflow:hidden;display:flex;flex-direction:column;background:var(--bg-elev);border-color:var(--border-soft);border-radius:20px}
+.creation-panel .panel-header{flex:none;align-items:center;padding:22px 26px 18px;margin:0;border-bottom:1px solid var(--border-soft)}
+.creation-panel .panel-header h2{margin:0;font-size:21px;font-weight:650;letter-spacing:-.4px;color:var(--fg)}
+.creation-panel .panel-close{width:30px;height:30px;background:var(--bg-hover);border:0;color:var(--fg-dim)}
+.creation-panel .workspace-note:empty{display:none}
+.creation-form{--creation-muted:color-mix(in srgb,var(--fg) 5%,var(--bg-elev));--creation-selected:color-mix(in srgb,var(--accent) 13%,var(--bg-elev));padding:22px 26px 0;overflow-y:auto;overscroll-behavior:contain;min-height:0;color:var(--fg)}
+.creation-form label{font-size:12px;font-weight:550;color:var(--fg-dim);gap:8px;margin:0 0 16px}
+.creation-form .creation-name{margin:0}
+.creation-form .form-row{gap:16px}
+.creation-form .form-row>label{flex:1;min-width:0}
+.creation-form input:not([type=checkbox]):not([type=color]),.creation-form .app-select-trigger{min-height:42px;padding:10px 12px;background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;color:var(--fg);font-family:inherit;font-weight:400;font-size:13px;line-height:1.5;box-shadow:0 1px 2px #00000004}
+.creation-form input:focus,.creation-form .app-select-trigger:focus-visible{outline:2px solid color-mix(in srgb,var(--accent) 35%,transparent);outline-offset:1px;border-color:var(--accent)}
+.creation-form .folder-input input[readonly],.creation-form input[name="team-root"][readonly]{background:var(--creation-selected);color:var(--fg-dim);font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;box-shadow:none}
+.creation-section{margin-top:22px;min-width:0}
+.creation-section>h3{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:12px;font-weight:650;color:var(--fg)}
+.creation-section>h3>.codicon{color:var(--fg-faint);font-size:15px}
+.creation-form .creation-team-types{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.creation-form .creation-team-types button{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:12px;min-height:108px;padding:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:13px;color:var(--fg);text-align:left;transition:background .15s,border-color .15s}
+.creation-form .creation-team-types strong{font-size:13px;font-weight:600;line-height:1.4}
+.creation-type-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--creation-muted);color:var(--accent)}
+.creation-type-icon>.codicon{font-size:19px}
+.creation-team-types button>.codicon{position:absolute;right:13px;top:14px;font-size:15px;color:var(--border)}
+.creation-form .creation-team-types button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--button-ink);box-shadow:0 3px 9px color-mix(in srgb,var(--accent) 19%,transparent)}
+.creation-team-types button[aria-pressed=true]>.codicon{color:inherit}
+.creation-team-types button[aria-pressed=true] .creation-type-icon{background:color-mix(in srgb,var(--button-ink) 16%,transparent);color:inherit}
+.creation-team-types button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.creation-workspace{background:var(--creation-muted);padding:16px;border-radius:14px;border:1px solid var(--border-soft)}
+.creation-workspace>label:last-child,.creation-workspace .remote-fields>label:last-of-type{margin-bottom:0}
+.creation-form .directory-mode-options{margin:0 0 14px;gap:6px;padding:4px;background:color-mix(in srgb,var(--fg) 7%,var(--bg-elev));border-radius:10px}
+.creation-form .directory-mode-options button{padding:8px 10px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--fg-dim);font-family:inherit;font-weight:500;font-size:12px;line-height:1.4;min-height:34px}
+.creation-form .directory-mode-options button[aria-pressed=true]{background:var(--bg-elev);border-color:var(--border);color:var(--accent);box-shadow:0 1px 4px #0000000c}
+.creation-form .folder-input{display:flex;min-width:0;align-items:stretch;gap:8px}
+.creation-form .folder-input>input{flex:1;min-width:0}
+.creation-form .folder-input>button{flex:none;padding:8px 12px;border:1px solid var(--border);border-radius:9px;background:var(--bg-elev);color:var(--accent);font-family:inherit;font-weight:500;font-size:12px}
+.creation-form .remote-fields{padding:0;border:0;margin:0;min-width:0}
+.creation-form .host-binding-actions{display:flex;gap:8px;align-items:center;margin:-6px 0 16px}
+.creation-form .host-binding-actions button{display:inline-flex;align-items:center;gap:6px;padding:3px 0;border:0;background:none;color:var(--accent);font-family:inherit;font-weight:500;font-size:11px}
+.creation-form .host-binding-actions button+button{padding:4px 7px}
+.creation-form .host-binding-actions>span{margin-left:auto;font-size:10px;color:var(--fg-faint)}
+.creation-form .workspace-note{font-size:11px;line-height:1.5;margin:8px 0}
+.creation-identity{display:flex;gap:18px;align-items:center;margin-bottom:20px;min-width:0}
+.creation-identity .employee-preview{flex:none;position:relative;width:88px;height:96px;padding:0;margin:0;display:grid;place-items:center;border:0;border-radius:16px;background:color-mix(in srgb,var(--accent) 9%,var(--bg-elev));overflow:hidden}
+.creation-identity .employee-preview .mascot{position:absolute;left:0;top:-4px;width:88px;height:108px}
+.creation-identity .employee-preview .employee-portrait{width:74px;height:74px}
+.creation-identity-fields{min-width:0;flex:1}
+.creation-identity-fields>label{margin:0 0 9px}
+.creation-identity .appearance-actions{display:flex;flex-wrap:nowrap;align-items:center;gap:8px}
+.creation-identity .appearance-actions button{width:auto;flex:none;display:inline-flex;align-items:center;gap:6px;margin:0;padding:4px 7px;border:0;border-radius:6px;background:transparent;color:var(--accent);font-family:inherit;font-weight:500;font-size:11px;min-height:26px}
+.creation-identity .appearance-actions button:hover{background:var(--bg-hover)}
+.creation-identity .appearance-actions .random-appearance{color:var(--fg-faint);border-right:1px solid var(--border-soft);border-radius:0;padding-right:12px}
+.creation-form .creation-engine{margin-top:4px}
+.creation-form .engine-choices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 16px}
+.creation-form .engine-choices button{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 6px;min-height:52px;border:1px solid var(--border);border-radius:10px;background:var(--bg-elev);color:var(--fg);font-size:12px}
+.creation-form .engine-choices button.selected{background:var(--creation-selected);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.creation-form .engine-choices button.selected:after{content:'✓';position:absolute;right:5px;top:2px;font-size:10px;font-weight:700;color:var(--accent)}
+.creation-form .engine-choices button:disabled{opacity:.4;cursor:not-allowed}
+.creation-form .creation-engine>label{margin-bottom:0}
+.creation-form .employee-advanced-settings{margin:20px 0 0;padding:0;border:1px solid var(--border-soft);border-radius:12px;background:var(--creation-muted)}
+.creation-form .employee-advanced-settings>summary{display:flex;align-items:center;gap:8px;padding:13px 14px;list-style:none;font-size:12px;font-weight:550;color:var(--fg-dim)}
+.creation-form .employee-advanced-settings>summary::-webkit-details-marker{display:none}
+.creation-form .employee-advanced-settings>summary>.codicon:last-child{margin-left:auto;transition:transform .15s}
+.creation-form .employee-advanced-settings[open]{padding:0 14px 14px}
+.creation-form .employee-advanced-settings[open]>summary{margin:0 -14px 14px;border-bottom:1px solid var(--border-soft)}
+.creation-form .employee-advanced-settings[open]>summary>.codicon:last-child{transform:rotate(180deg)}
+.creation-form .employee-advanced-settings>.text-button{padding:0;margin:0 0 14px;border:0;background:transparent;color:var(--accent);font-family:inherit;font-weight:500;font-size:11px}
+.creation-form .workspace-contract{padding:12px;margin:16px 0 0;border:1px solid var(--border-soft);border-radius:10px;background:var(--bg-elev)}
+.creation-form .workspace-contract>code{font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.creation-form .workspace-contract>span{font-size:10px;letter-spacing:0;color:var(--fg-faint)}
+.creation-form .default-employee-path{display:block;padding:9px 10px;border-radius:8px;background:var(--creation-selected);font-size:11px;overflow-wrap:anywhere;color:var(--fg-dim)}
+.creation-form .form-footer{position:sticky;bottom:0;z-index:2;justify-content:flex-end;gap:10px;margin:22px -26px 0;padding:16px 26px;background:var(--bg-elev);border-top:1px solid var(--border-soft)}
+.creation-form .form-footer .btn{min-height:40px;min-width:92px;justify-content:center;border-radius:10px;font-size:13px}
+.creation-form .form-footer .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--button-ink);font-weight:600}
+.creation-form .form-footer .creation-cancel{background:var(--bg-elev);border-color:var(--border);color:var(--fg-dim)}
+.creation-form .employee-form-error{font-size:12px;line-height:1.5;margin:12px 0 0}
+@media(max-width:520px){.creation-panel .panel-header{padding:18px}.creation-form{padding:18px 18px 0}.creation-form .form-footer{margin-inline:-18px;padding-inline:18px}.creation-form .creation-team-types{gap:7px}.creation-form .creation-team-types button{padding:11px;min-height:100px}.creation-form .engine-choices{grid-template-columns:repeat(2,minmax(0,1fr))}.creation-form .form-row{gap:10px}.creation-identity{gap:12px}}
+
+.creation-engine>h3>.creation-engine-settings{display:grid;place-items:center;margin-left:auto;width:26px;height:26px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--fg-faint)}
+.creation-engine>h3>.creation-engine-settings:hover{background:var(--bg-hover);color:var(--accent)}
+
+.creation-form .creation-team-types{grid-template-columns:repeat(2,minmax(0,1fr))}

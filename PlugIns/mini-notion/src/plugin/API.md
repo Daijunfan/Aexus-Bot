@@ -272,9 +272,10 @@ files, page colors, covers, workspace paths or execution permissions are rewritt
 
 Plugin contract version 1; Node 22+ runtime. The same source builds an independent
 macOS app, a `--workspace` CLI and this hosted renderer. Folder mode keeps AI
-sessions in the host and rejects `agent.*`. Full-workspace replacement/restore and
-PDF export are not offered in this profile; use the folder itself for backup and
-Markdown, HTML, JSON or CSV for document export. The normal standalone data mode
+sessions in the host and rejects `agent.*`. Full-workspace replacement/restore is
+not offered in this profile; use the folder itself for backup and
+Markdown, HTML, JSON, CSV or PDF for document export. PDF runs in a bundled hidden
+worker and does not require an independently installed Mini Notion app. The normal standalone data mode
 retains its existing desktop features. The host discovers this package from its
 manifest and does not import MiniNotion-specific domain code.
 
@@ -369,12 +370,12 @@ Calendar, timeline, plan and overview screens display persisted records. A recur
 In 1.22.1, `overview.get` / `overview.render` reminder items expose their effective snoozed date/time in the reminder's display timezone. `status` distinguishes `待提醒`, `稍后提醒` and `已提醒`; an old delivery key cannot mark a changed reminder completed. A short event's larger on-screen hit target does not extend its saved duration. Use the API timestamp fields for actual times and the displayed timezone for interpretation.
 
 
-### 编辑器分类与选区 AI（1.23.0）
+### 编辑器分类与选区 AI
 
 颜色菜单使用纯色块预览实际文字色/背景色，不再使用字母 A。斜杠菜单顶部横向分类，左右拖动排序；管理入口支持添加、改名、删除分类和勾选命令。删除分类不删除命令，全部分类一直可用；输入搜索词会跨分类搜索。`settings.set {changes:{slashCategories:[{id,name,commands:[命令标题]}]}}` 与 UI 保存同一工作空间偏好。
 
-选中文字点击机器人，默认自动发送，回复出现在迷你聊天框；点击框外或 Escape 关闭，不取消已发送任务。齿轮可编辑前置提示词、选择宿主员工及切换直接发送/先编辑再发送。`settings.set {changes:{selectionAI:{prompt,mode:"send"|"edit",employeeId?}}}` 保存相同配置。首次只自动选择与页面文件夹绑定的就绪员工；没有绑定时先选员工，随后一键发送。忙碌/未就绪/权限失败显示真实错误，不换员工。
+选中文字，在“更多文本操作”中选择“发送选区给 Agent”，默认自动发送，回复出现在迷你聊天框；点击框外或 Escape 关闭，不取消已发送任务。齿轮可编辑前置提示词、选择宿主员工及切换直接发送/先编辑再发送。`settings.set {changes:{selectionAI:{prompt,mode:"send"|"edit",employeeId?}}}` 保存相同配置。首次只自动选择与页面文件夹绑定的就绪员工；没有绑定时先选员工。忙碌/未就绪/权限失败显示真实错误，不换员工。
 
 宿主专用的 `assistant.list {}`、`assistant.send {employeeId,text,clientMessageId}` 和 `assistant.read {employeeId,messageId}` 也可经 `agents plugin call mininotion METHOD --params JSON` 或宿主绑定 CLI 调用。send 的 clientMessageId 复用 Core 私聊重试机制；read 仅投影该 messageId 对应原生回合的文字回复与错误，不包括后续无关回合、不确认用户已读。
 
-这些方法不启动 MiniNotion 独立 Agent、不创建员工、不得任意调用宿主 API。方法 schema 标记 `agentAccess:operator`，普通员工不能因插件工作空间授权获得此入口；用户/全局管理者仍通过原 requestHost 进入 session.status/list/send/transcript/info 的当前身份及目标授权。独立 App 使用原空间 Agent；文件夹模式只有在 Avalon 宿主中支持选区 AI。普通 API 覆盖报告独立统计文件夹后端方法，assistant 方法由宿主交互测试及确定性协议 fixture 验证。
+这些方法不启动 MiniNotion 独立 Agent、不创建员工、不得任意调用宿主 API。方法 schema 标记 `agentAccess:operator`，普通员工不能因插件工作空间授权获得此入口；用户/全局管理者仍通过原 requestHost 进入 session.status/list/send/transcript/info 的当前身份及目标授权。文件夹模式在 Aexus Bot 宿主中支持选区 AI。普通 API 覆盖报告独立统计文件夹后端方法，assistant 方法由宿主交互测试及确定性协议 fixture 验证。

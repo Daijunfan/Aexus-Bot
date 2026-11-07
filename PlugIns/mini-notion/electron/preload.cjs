@@ -1,7 +1,21 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// A single acknowledgement covers every registered editor. Independent IPC
+// listeners used to acknowledge as soon as the workspace store finished, even
+// while a folder document still had unsaved text in flight.
+const flushCallbacks = new Set();
+ipcRenderer.on('workspace:flush', async (_, id) => {
+  try {
+    await Promise.all([...flushCallbacks].map(callback => Promise.resolve().then(callback)));
+    ipcRenderer.send('workspace:flushed', id);
+  } catch (error) {
+    ipcRenderer.send('workspace:flushed', id, String(error?.message || error));
+  }
+});
+
 contextBridge.exposeInMainWorld('native', {
   folderMode: process.argv.includes('--mini-notion-folder-mode'),
+  startupContent: process.argv.find(value => value.startsWith('--mini-notion-startup-content='))?.split('=')[1],
   workspaceURL: relative => 'asset://local/workspace/'+relative.split('/').map(encodeURIComponent).join('/'),
   api: (method, params, id) => ipcRenderer.invoke('api:request', method, params, id),
   onState: (callback) => {
@@ -20,20 +34,13 @@ contextBridge.exposeInMainWorld('native', {
     return () => ipcRenderer.removeListener('agent:event', listener);
   },
   onFlush: (callback) => {
-    const listener = async (_, id) => {
-      try {
-        await callback();
-        ipcRenderer.send('workspace:flushed', id);
-      } catch (error) {
-        ipcRenderer.send('workspace:flushed', id, String(error?.message || error));
-      }
-    };
-    ipcRenderer.on('workspace:flush', listener);
-    return () => ipcRenderer.removeListener('workspace:flush', listener);
+    flushCallbacks.add(callback);
+    return () => flushCallbacks.delete(callback);
   },
   exportPage: (pageId, type) => ipcRenderer.invoke('page:export', pageId, type),
   chooseImports: () => ipcRenderer.invoke('file:choose-imports'),
   load: () => ipcRenderer.invoke('workspace:load'),
+  loadSerialized: () => ipcRenderer.invoke('workspace:load-json'),
   save: (workspace) => ipcRenderer.invoke('workspace:save', workspace),
   saveAsset: (name, bytes) => ipcRenderer.invoke('asset:save', name, bytes),
   uploadToSpace: (pageId, folderId, name, bytes) =>

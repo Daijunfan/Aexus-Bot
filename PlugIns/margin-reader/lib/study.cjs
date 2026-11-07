@@ -37,7 +37,7 @@ function createStudies(store,localReading) {
     const learning=require('./study-learning.cjs');
     if(learning.reads.has(method))return learning.read(store,method,p);
     if(learning.writes.has(method))return learning.request(store,method,p);
-    if(method==='study.map.geometry'){const set=M.findSet(await store.load(),p.setId),{layoutStudy}=await import('../ui/study-map-layout.mjs'),{extendInkLayout}=await import('../ui/ink-binding.mjs'),layout=extendInkLayout(set,layoutStudy(set.cards,set.map,set.appearance));return {revision:set.revision,...layout,positions:[...layout.positions].map(([cardId,box])=>({cardId,...box,imageBounds:layout.mindmap?(box.imageBounds||null):require('./image-ink.cjs').frame(M.card(set,cardId),box.width,box.height,set.appearance)}))};}
+    if(method==='study.map.geometry')return require('./study-geometry.cjs').geometry(M.findSet(await store.load(),p.setId),p.scope);
     if(method==='study.export.file')return exports.study(p);
     if(method==='document.pdf.export')return exports.document(p);
     if(method==='study.package.export')return require('./study-package.cjs').exportPackage(store,p);

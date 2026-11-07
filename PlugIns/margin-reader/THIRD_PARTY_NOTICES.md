@@ -42,3 +42,9 @@ MathJax uses local base/AMS/mhchem processors with no remote resource loaders. I
 - HTML sanitization: https://github.com/apostrophecms/sanitize-html
 
 Tests use original synthetic PDF, DOCX, EPUB and MOBI documents, not copied commercial books. External live test downloads, when used, are kept outside source Git.
+
+## Terminal width and release inventory
+
+The terminal uses string-width 7.2.0 (MIT, https://github.com/sindresorhus/string-width), loaded through its ESM entry. Its dependency licenses are retained by npm in installed packages. Generated release payloads include DEPENDENCY_LICENSES.json with the exact lockfile dependency inventory, licenses and platform selectors, including optional native packages. This inventory is not a substitute for the dependency license files.
+
+The transitive png-js 1.1.0 package omits license metadata in its lockfile entry; its distributed LICENSE is MIT, copyright 2017 Devon Govett. The release inventory records this verified exception without modifying upstream package metadata.

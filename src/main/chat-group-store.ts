@@ -1,9 +1,18 @@
 import {join} from 'node:path'
 import {APP_HOME} from '../shared/protocol'
-import {readJson} from './atomic-file'
+import {readJson,atomicJson} from './atomic-file'
 import type {ChatGroup,ChatMessage,ChatDelivery} from '../shared/chat-groups'
 
 export const directory=join(APP_HOME,'chats');export const indexFile=join(directory,'groups.json')
+let emitter:(id:string,editedMessageId?:string,messageId?:string)=>void=()=>{}
+export function setChatEmitter(handler:typeof emitter){emitter=handler}
+export const emitChatChange=(id:string,editedMessageId?:string,messageId?:string)=>emitter(id,editedMessageId,messageId)
+/** Shared user watermark, independent of employee delivery/work receipts. */
+export function advanceGroupRead(id:string,sequence:number){
+ const store=catalog(),group=store.groups.find(group=>group.id===id);if(!group)return undefined
+ if(group.readSequence<sequence){group.readSequence=sequence;group.revision++;group.updatedAt=Date.now();atomicJson(indexFile,store,true);emitChatChange(id)}
+ return group.readSequence
+}
 export type Catalog={version:1;groups:ChatGroup[]}
 export const catalog=()=>readJson<Catalog>(indexFile,()=>({version:1,groups:[]}),value=>!!value&&typeof value==='object'&&(value as Catalog).version===1&&Array.isArray((value as Catalog).groups)&&(value as Catalog).groups.every(group=>!!group&&typeof group.id==='string'&&/^cg_[a-f0-9-]{36}$/.test(group.id)&&typeof group.name==='string'&&Array.isArray(group.memberIds)&&group.memberIds.every(id=>typeof id==='string')&&(group.ownerId===undefined||group.ownerId===null||typeof group.ownerId==='string')&&(group.adminIds===undefined||Array.isArray(group.adminIds)&&group.adminIds.every(id=>typeof id==='string'))&&(group.silent===undefined||typeof group.silent==='boolean')&&Number.isSafeInteger(group.revision)&&Number.isSafeInteger(group.readSequence)&&Number.isSafeInteger(group.lastIncomingSequence)&&(group.mutes===undefined||!!group.mutes&&typeof group.mutes==='object'&&!Array.isArray(group.mutes)&&Object.values(group.mutes).every(until=>until===null||Number.isSafeInteger(until)&&until>0))))
 const idString=(value:unknown,label:string)=>{if(typeof value!=='string'||!value.trim()||value!==value.trim())throw Error('Provide a valid '+label);return value}

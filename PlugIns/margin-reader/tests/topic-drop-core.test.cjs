@@ -8,6 +8,16 @@ test('reparent and expand a collapsed destination is one guarded operation and o
  s=await f.api('study.undo',{setId:s.id,expectedRevision:s.revision});assert.deepEqual(s.cards,before);assert(s.cards.find(c=>c.id===f.ids.Destination).collapsed);
  s=await f.api('study.redo',{setId:s.id,expectedRevision:s.revision});assert.equal(s.cards.find(c=>c.id===f.ids.Moving).parentId,f.ids.Destination);assert.equal(s.cards.find(c=>c.id===f.ids.Destination).collapsed,false);
 });
+test('ancestor-to-descendant drop rotates the tree atomically and undo restores all parents',async t=>{
+ const f=await tree(t),before=structuredClone(f.s.cards);
+ const s=await f.api('study.cards.move',{setId:f.s.id,expectedRevision:f.s.revision,cardIds:[f.ids.Moving],parentId:f.ids.Descendant,rotateDescendant:true,expandParent:true});
+ assert.equal(s.cards.find(c=>c.id===f.ids.Moving).parentId,f.ids.Descendant);
+ assert.equal(s.cards.find(c=>c.id===f.ids.Descendant).parentId,f.ids.Root);
+ assert.equal(s.cards.find(c=>c.id===f.ids.Destination).parentId,f.ids.Root);
+ assert.equal(s.cards.length,5);
+ assert.equal((await f.api('study.map.geometry',{setId:s.id})).positions.length,4); // Unrelated collapsed branch remains collapsed.
+ const undone=await f.api('study.undo',{setId:s.id,expectedRevision:s.revision});assert.deepEqual(undone.cards,before);
+});
 test('failed drop cannot change destination fold state, source branches or unrelated data',async t=>{
  const f=await tree(t),file=path.join(f.workspace,'.margin-reader/state.json'),before=await fs.readFile(file),params={setId:f.s.id,expectedRevision:f.s.revision,cardIds:[f.ids.Moving],parentId:f.ids.Descendant,expandParent:true};
  await f.error('study.cards.move',params,'INVALID_OUTLINE');assert.deepEqual(await fs.readFile(file),before);

@@ -13,24 +13,59 @@ export function mapStyle(options={}){
  const skeleton=options.skeleton||(theme==='petal'||theme==='pastel'?'rounded':theme==='business'?'logical':theme==='mono'?'minimal':'classic'),sk=CATALOG.skeletons[skeleton]||CATALOG.skeletons.classic;
  return {...t,...options,skeleton,structure:options.structure||sk.structure,levels:options.levelStyles?.length?options.levelStyles.map((v,i)=>({...sk.levels[Math.min(i,sk.levels.length-1)],...v})):sk.levels,paper:options.background||t.paper,ink:options.textColor||t.ink,line:options.line||sk.line,spacing:options.spacing??sk.spacing,branchSpacing:options.branchSpacing??sk.branchSpacing,titleLines:options.titleLines??0,fontSize:options.fontSize??16,fontFamily:options.fontFamily||'system-ui',numbering:options.numbering||'none',autoBalance:options.autoBalance!==false};
 }
-export function topicStyle(card,config,depth=0,branch=0){
- const p=card.mindmap||{},theme=mapStyle(config),l=theme.levels[Math.min(depth,theme.levels.length-1)],colors=theme.palette,index=theme.colorMode==='single'?0:theme.colorMode==='level'?depth:branch;
+export function topicStyle(card,config,depth=0,branch=0,resolved={theme:mapStyle(config),textColors:new Map()}){
+ const p=card.mindmap||{},theme=resolved.theme,l=theme.levels[Math.min(depth,theme.levels.length-1)],colors=theme.palette,index=theme.colorMode==='single'?0:theme.colorMode==='level'?depth:branch;
  const accent=p.branchColor||colors[((index%colors.length)+colors.length)%colors.length],dark=theme.fill==='dark';
  const kind=l.fill,solid=kind==='solid',fill=p.fill||(solid?(depth===0?config?.centralColor||accent:accent):kind==='none'||kind==='white'?theme.paper:dark?mix(theme.paper,accent,.2):mix('#FFFFFF',accent,theme.fill==='pastel'?.68:.18));
  const shape=p.shape||(depth===0?theme.rootShapeOverride:theme.topicShape)||l.shape;
- return {...p,depth,branch,accent,fill,textColor:p.textColor||readableColor(solid?contrastInk(fill):theme.ink,fill),borderColor:p.borderColor||accent,borderWidth:p.borderWidth??l.borderWidth??(kind==='white'||shape==='underline'?1.15:0),borderDash:p.borderDash||l.borderDash||'solid',fontSize:p.fontSize??theme.fontSize+l.size,fontFamily:p.fontFamily||theme.fontFamily,bold:p.bold??l.bold,shape:depth===0?(p.shape||config?.rootShape||shape):shape,align:p.align||(depth===0||!['none','underline'].includes(shape)?'center':'left'),shadow:p.shadow??config?.shadow??false,gradient:p.gradient??config?.gradient??false,numbering:p.numbering||theme.numbering,line:p.branchLine||config?.line||l.line||theme.line,lineWidth:p.branchWidth||theme.lineWidth||Math.max(1.2,4.4-depth*1.25),lineColor:theme.fill==='pastel'?mix('#FFFFFF',accent,.48):accent,showImage:(p.showImage??theme.showImages??false)&&Boolean(card.image),showTags:theme.showTags===true,showSources:theme.showSources===true,paddingY:l.paddingY??(['none','underline'].includes(shape)?7:12),paddingX:l.paddingX??(['none','underline'].includes(shape)?9:18)};
+ let textColor=p.textColor;
+ if(!textColor){const seed=solid?contrastInk(fill):theme.ink,key=seed+'/'+fill;if(!resolved.textColors.has(key))resolved.textColors.set(key,readableColor(seed,fill));textColor=resolved.textColors.get(key);}
+ return {...p,depth,branch,accent,fill,textColor,borderColor:p.borderColor||accent,borderWidth:p.borderWidth??l.borderWidth??(kind==='white'||shape==='underline'?1.15:0),borderDash:p.borderDash||l.borderDash||'solid',fontSize:p.fontSize??theme.fontSize+l.size,fontFamily:p.fontFamily||theme.fontFamily,bold:p.bold??l.bold,shape:depth===0?(p.shape||config?.rootShape||shape):shape,align:p.align||(depth===0||!['none','underline'].includes(shape)?'center':'left'),shadow:p.shadow??config?.shadow??false,gradient:p.gradient??config?.gradient??false,numbering:p.numbering||theme.numbering,line:p.branchLine||config?.line||l.line||theme.line,lineWidth:p.branchWidth||theme.lineWidth||Math.max(1.2,4.4-depth*1.25),lineColor:theme.fill==='pastel'?mix('#FFFFFF',accent,.48):accent,showImage:(p.showImage??theme.showImages??false)&&Boolean(card.image),showTags:theme.showTags===true,showSources:theme.showSources===true,paddingY:l.paddingY??(['none','underline'].includes(shape)?7:12),paddingX:l.paddingX??(['none','underline'].includes(shape)?9:18)};
 }
-export function labelWidth(text,fontSize){let n=0;for(const c of text){if(/[\u0300-\u036f\ufe00-\ufe0f\u200d]/u.test(c))continue;n+=/\s/.test(c)?.32:/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Extended_Pictographic}]/u.test(c)?1:/[MW@#%]/.test(c)?.85:/[ilI.,'!:;]/.test(c)?.28:.58;}return n*fontSize;}
+const labelSegmenter=new Intl.Segmenter(undefined,{granularity:'grapheme'});
+const labelGraphemes=text=>Array.from(labelSegmenter.segment(String(text)),part=>part.segment);
+// A deterministic layout estimate, not a claim of exact platform font metrics.
+// Joined emoji, flags and keycaps occupy one visual glyph; combining marks do
+// not add an independent advance to their base character.
+function graphemeAdvance(value){
+ if(/[\p{Extended_Pictographic}\p{Regional_Indicator}\u20e3]/u.test(value))return 1;
+ let n=0;for(const c of value){if(/[\p{Mark}\u200c\u200d]/u.test(c))continue;n+=/\s/.test(c)?.32:/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\uFF01-\uFF60\uFFE0-\uFFE6]/u.test(c)?1:/[MW@#%]/.test(c)?.85:/[ilI.,'!:;]/.test(c)?.28:.58;}return n;
+}
+export function labelWidth(text,fontSize){let n=0;for(const g of labelGraphemes(text))n+=graphemeAdvance(g);return n*fontSize;}
+const lineStartPunctuation=new Set(Array.from('，。！？：；、）》】〕〉」』〗〙〛］｝’”»›…﹐﹑﹒﹔﹕﹖﹗,.;:!?)]}'));
+const lineEndPunctuation=new Set(Array.from('（《【〔〈「『〖〘〚［｛‘“«‹([{'));
+const hardLabelBreak=value=>/^(?:\r\n|[\n\r\u2028\u2029])$/u.test(value);
+function labelUnits(text,width,size){
+ const units=[];let previous=-1;
+ for(const g of labelGraphemes(text)){
+  const hard=hardLabelBreak(g),space=/^\s+$/u.test(g),advance=graphemeAdvance(g)*size;
+  if(!hard&&previous>=0&&(lineEndPunctuation.has(units[previous].last)||lineStartPunctuation.has(g[0]))){
+   const unit=units[previous];
+   for(const separator of units.splice(previous+1)){unit.text+=separator.text;unit.advance+=separator.advance;}
+   unit.text+=g;unit.advance+=advance;if(!space)unit.last=g[0];
+  }else units.push({text:g,advance,last:g[0]});
+  if(hard)previous=-1;else if(!space)previous=units.length-1;
+ }
+ // Keep punctuation with its adjacent grapheme without overflowing the line.
+ // If even this shortest unbreakable group is too wide, prefer a bounded
+ // grapheme wrap to dropped text, an infinite retry or a wider topic.
+ return units.flatMap(unit=>unit.advance>width?labelGraphemes(unit.text).map(g=>({text:g,advance:graphemeAdvance(g)*size})):[unit]);
+}
 export function wrapLabel(text,width,size){
- const lines=[];let line='',at=0,start=0;
+ const lines=[];let line='',at=0,start=0,lineWidth=0,breakAt=0,breakWidth=0;
  const emit=value=>{const shown=value.trimEnd();lines.push({text:shown,start,end:start+shown.length});};
- for(const c of String(text)){
-  if(c==='\n'){emit(line);line='';start=++at;continue;}
-  if(line&&labelWidth(line+c,size)>width){const split=line.match(/^(.*\s)\S*$/u)?.[1].length||0;
-   if(split){emit(line.slice(0,split));line=line.slice(split);start+=split;}
-   else{emit(line);line='';start=at;}
+ for(const {text:g,advance}of labelUnits(text,width,size)){
+  if(hardLabelBreak(g)){emit(line);line='';lineWidth=breakAt=breakWidth=0;at+=g.length;start=at;continue;}
+  let wrapped=false;
+  if(line&&lineWidth+advance>width){
+   if(breakAt){emit(line.slice(0,breakAt));line=line.slice(breakAt);start+=breakAt;lineWidth-=breakWidth;breakAt=breakWidth=0;wrapped=true;}
+   if(line&&lineWidth+advance>width){emit(line);line='';lineWidth=0;start=at;wrapped=true;}
   }
-  line+=c;at+=c.length;
+  // A separator at a soft wrap belongs to neither displayed line. Its UTF-16
+  // offset is still consumed, so rich-text ranges remain tied to the source.
+  if(wrapped&&!line&&/^\s+$/u.test(g)){at+=g.length;start=at;continue;}
+  line+=g;lineWidth+=advance;at+=g.length;
+  if(/^\s+$/u.test(g)){breakAt=line.length;breakWidth=lineWidth;}
  }
  emit(line);return lines;
 }
@@ -40,7 +75,7 @@ export function topicBox(card,style,config,prefix=''){
  const [side,top,bottom]=insets[style.shape]||[.03,0,0];
  const width=style.width||config.topicWidth||Math.min(style.depth===0?320:260,Math.max(style.depth===0?180:style.shape==='none'||style.shape==='underline'?50:96,Math.max(labelWidth(prefix+card.title,style.fontSize)+style.paddingX*2,(card.mindmap?.equation?.width||0)*(card.mindmap?.equation?.scale||1)+style.paddingX*2)/(1-side*2)));
  const padX=Math.max(style.paddingX??22,width*side),lines=wrapLabel(prefix+card.title,Math.max(30,width-padX*2),style.fontSize);
- if(config.titleLines&&lines.length>config.titleLines){lines.length=config.titleLines;const last=lines.at(-1);while(last.text&&labelWidth(last.text+'…',style.fontSize)>width-padX*2){const chars=Array.from(last.text),removed=chars.pop();last.text=chars.join('');last.end-=removed.length;}last.ellipsis=true;}
+ if(config.titleLines&&lines.length>config.titleLines){lines.length=config.titleLines;const last=lines.at(-1),chars=labelGraphemes(last.text);while(chars.length&&labelWidth(chars.join('')+'…',style.fontSize)>width-padX*2){last.end-=chars.pop().length;}last.text=chars.join('');last.ellipsis=true;}
  const markerCount=['priority','progress','status','symbol','flagColor'].filter(k=>style[k]!==undefined&&style[k]!==null&&(style[k]!==0||k==='progress')&&style[k]!=='none').length;
  const markers=markerCount?27:0,tags=style.showTags&&card.tags?.length?26:0,source=style.showSources&&(card.source||card.anchor||card.reference)||style.task?.due?22:0;
  const imageLeft=Math.max(12,padX-4),imageWidth=width-imageLeft*2;

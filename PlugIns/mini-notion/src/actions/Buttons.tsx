@@ -1,10 +1,18 @@
 import {AppSelect} from '../components/AppSelect';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, type ComponentProps } from 'react';
+import { LoadingSurface } from '../components/LoadingSurface';
 import { MoreHorizontal, MousePointer2, Play, Settings2 } from 'lucide-react';
 import { useWorkspace } from '../store';
 import { IconButton, Modal } from '../ui';
 import type { ButtonConfig } from './types';
-import { ActionEditor, ActionPreview } from './ActionEditor';
+const DeferredEditor = lazy(() => import('./ActionEditor').then(module => ({ default: module.ActionEditor })));
+const DeferredPreview = lazy(() => import('./ActionEditor').then(module => ({ default: module.ActionPreview })));
+function ActionEditor(props: ComponentProps<typeof DeferredEditor>) {
+  return <Suspense fallback={<LoadingSurface compact label="正在加载动作编辑器…" />}><DeferredEditor {...props} /></Suspense>;
+}
+function ActionPreview(props: ComponentProps<typeof DeferredPreview>) {
+  return <Suspense fallback={<LoadingSurface compact label="正在加载动作预览…" />}><DeferredPreview {...props} /></Suspense>;
+}
 import { validateActions } from './engine';
 
 export function ButtonControl({

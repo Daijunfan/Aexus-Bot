@@ -1,6 +1,7 @@
 import type { JsonBlock } from '../types.ts';
 import { normalizeCodeLanguage } from './codeLanguages';
 import { CommandError } from './errors.ts';
+import { validateCustomEmojis } from './icons.ts';
 
 export const blockTypes = [
   'bookmark',
@@ -57,7 +58,7 @@ export const blockFields = {
   bookmark: { content: 'omit', props: { url: 'http/https/mininotion URL', title: 'string', description: 'string' }, example: { type: 'bookmark', props: { url: 'https://example.com', title: '资料' } } },
   breadcrumb: { content: 'omit; derived from the page tree', example: { type: 'breadcrumb' } },
 } as const;
-export const inlineContentTypes = ['text', 'link', 'pageMention', 'inlineMath'] as const;
+export const inlineContentTypes = ['text', 'link', 'pageMention', 'inlineMath', 'customEmoji'] as const;
 function normalizedInline(value: any): any {
   if (!Array.isArray(value)) return value;
   return value.map(item => {
@@ -146,6 +147,8 @@ function validateInline(content: any) {
       validateInline(item.content);
     } else if (item?.type === 'inlineMath') {
       if (typeof item.props?.expression !== 'string') throw new CommandError('INVALID_EQUATION', '行内公式需要 props.expression 字符串');
+    } else if (item?.type === 'customEmoji') {
+      validateCustomEmojis([item.props]);
     } else if (item?.type !== 'pageMention')
       throw new CommandError('INVALID_CONTENT', `不支持行内类型 ${item?.type}`);
   }

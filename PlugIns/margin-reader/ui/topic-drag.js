@@ -58,10 +58,8 @@ export class TopicDrag {
     a.internal=a.overlay.querySelector('.mm-drag-internal');a.indicator=a.overlay.querySelector('.mm-drag-intent');
     a.badge=document.createElement('div');a.badge.className='mm-drop-status';a.badge.setAttribute('role','status');this.map.board.append(a.badge);
     this.map.board.dataset.topicDragging='true';
-    const tick=()=>{if(this.active!==a||a.saving)return;const r=this.view.getBoundingClientRect(),e=a.last,speed=(p,min,max)=>p<min+30?-Math.min(14,(min+30-p)/3):p>max-30?Math.min(14,(p-max+30)/3):0;
-      if(e.clientX>=r.left-20&&e.clientX<=r.right+20&&e.clientY>=r.top-20&&e.clientY<=r.bottom+20){const dx=speed(e.clientX,r.left,r.right),dy=speed(e.clientY,r.top,r.bottom);if(dx||dy){this.map.camera.panBy(dx,dy);this.map.camera.paint();this.paint(e);}}
-      a.frame=requestAnimationFrame(tick);
-    };a.frame=requestAnimationFrame(tick);
+    // A topic drag must never pan the entire map. Its geometry alone moves;
+    // blank-space pan remains available as a separate gesture.
   }
   mounted(){
     const a=this.active;if(!a?.moved)return;a.bound??=new WeakSet();
@@ -110,11 +108,18 @@ export class TopicDrag {
     if(!a.moved){this.cleanup();this.map.window.schedule();return;}
     if(!a.intent||['none','invalid','outside'].includes(a.intent.kind)||!this.accepts(e)){if(a.intent?.message)toast(a.intent.message,true);this.cancel();return;}
     if(this.study.current?.id!==a.set.id){this.cancel();return;}
-    const {parentId,index,positions,side}=a.intent;a.saving=true;cancelAnimationFrame(a.frame);a.cleanListeners();
+    const {parentId,index,positions,side,rotateDescendant}=a.intent;
+    // The camera belongs to the reader's viewport. Reparenting may recompute
+    // every topic box, but a drop must not pan the entire canvas afterward.
+    // MapCamera.sync already compensates for changes to the layout origin.
+    a.saving=true;cancelAnimationFrame(a.frame);a.cleanListeners();
     try{
-      const set=a.intent.kind==='position'?await api('study.mindmap.arrange',{setId:a.set.id,expectedRevision:a.set.revision,cardIds:a.roots.map(c=>c.id),action:'place',positions}):await api('study.cards.move',{setId:a.set.id,expectedRevision:a.set.revision,cardIds:a.roots.map(c=>c.id),parentId,...(a.intent.kind==='child'?{expandParent:true}:{}),...(index!==undefined?{index}:{}),...(positions?{positions}:{}),...(side?{side}:{})});
+      const set=a.intent.kind==='position'?await api('study.mindmap.arrange',{setId:a.set.id,expectedRevision:a.set.revision,cardIds:a.roots.map(c=>c.id),action:'place',positions}):await api('study.cards.move',{setId:a.set.id,expectedRevision:a.set.revision,cardIds:a.roots.map(c=>c.id),parentId,...(a.intent.kind==='child'?{expandParent:true}:{}),...(index!==undefined?{index}:{}),...(positions?{positions}:{}),...(side?{side}:{}),...(rotateDescendant?{rotateDescendant:true}:{})});
       this.cleanup(false);this.map.deferred=null;
-      if(this.study.current?.id===set.id){this.study.render(set);this.map.select(a.id);await this.study.refreshList();}
+      if(this.study.current?.id===set.id){
+        this.study.render(set);
+        // Selection updates visual focus without changing the camera center.
+        this.map.select(a.id);await this.study.refreshList();}
     }catch(error){this.cleanup();this.map.deferred=null;await this.study.refresh();throw error;}
     finally{this.map.window.schedule();}
   }

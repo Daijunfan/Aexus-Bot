@@ -39,10 +39,10 @@ try{
  assert.equal((await rpc('tools/list')).result.tools.find(t=>t.name===core.DISCUSSION_TOOL.name).inputSchema.properties.text.type,'string');assert.ok((await rpc('session.send')).error)
  assert.equal((await rpc('tools/call',{name:'chat.post',arguments:{text:'Not an unrestricted gateway'}})).result.isError,true)
  const posted=await rpc('tools/call',{name:core.DISCUSSION_TOOL.name,arguments:input(7,'Native response.')},'native');assert.equal(posted.result.isError,undefined);assert.equal(JSON.parse(posted.result.content[0].text).text,'Native response.');close();await transport.close();transport=undefined
- const channel=(name,args={})=>op(()=>core.channelRequest('channel.'+name,args)),src=channel('source-add',{plugin:'x',locator:'tool_fixture'}),news=channel('publish',{sourceId:src.id,externalId:'news',publishedAt:Date.now(),title:'Original',body:'News-only context.'});channel('update',{id:src.channelId,adminIds:['reader']})
+ const channel=(name,args={})=>op(()=>core.channelRequest('channel.'+name,args)),src=channel('source-add',{plugin:'x',locator:'tool_fixture'}),news=channel('publish',{sourceId:src.id,externalId:'news',publishedAt:Date.now(),title:'Original',body:'News-only context.'})
  core.run("INSERT INTO channel_deliveries(channel_id,entry_id,kind,employee_id,mode,status,read_at) VALUES(?,?,'news','reader','awareness','running',101)",src.channelId,news.id)
  const ctx={channelId:src.channelId,entryId:news.id};close=bind(ctx,'news');state.currentTask.delegation.channelNotice={...ctx,employeeId:'reader'}
- await assert.rejects(core.invokeDiscussionTool(state,{conversationType:'channel',conversationId:src.channelId,messageId:news.id,text:'Unsolicited news reply'},'news'),/Context-only/);assert.equal(channel('history',{id:src.channelId}).messages.length,0);close()
+ await assert.rejects(core.invokeDiscussionTool(state,{conversationType:'channel',conversationId:src.channelId,messageId:news.id,text:'Unsolicited news reply'},'news'),/read-only feeds/);assert.equal(channel('history',{id:src.channelId}).messages.length,0);close()
  assert.equal(history().messages.filter(m=>m.author.kind==='agent').length,2)
  console.log('PASS nonempty scoped publication only; target/task/credential/mute/abort guards, retry identity, no reading tools and no news-triggered reply')
 }finally{await transport?.close();core?.closeChannels();if(previous===undefined)delete process.env.AGENTS_COMPANY_HOME;else process.env.AGENTS_COMPANY_HOME=previous;await new Promise(r=>setImmediate(r));fs.rmSync(temp,{recursive:true,force:true})}

@@ -5399,5 +5399,706 @@
         "offset": 40
       }
     }
+  },
+  {
+    "args": [
+      "worker",
+      "start",
+      "w",
+      "--cols",
+      "90",
+      "--rows",
+      "30"
+    ],
+    "expected": {
+      "cmd": "worker.start",
+      "args": {
+        "id": "w",
+        "cols": 90,
+        "rows": 30
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "read",
+      "w",
+      "--cursor",
+      "7",
+      "--wait-ms",
+      "100"
+    ],
+    "expected": {
+      "cmd": "worker.read",
+      "args": {
+        "id": "w",
+        "cursor": 7,
+        "waitMs": 100
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "resize",
+      "w",
+      "--cols",
+      "88",
+      "--rows",
+      "28"
+    ],
+    "expected": {
+      "cmd": "worker.resize",
+      "args": {
+        "id": "w",
+        "cols": 88,
+        "rows": 28
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "interrupt",
+      "w"
+    ],
+    "expected": {
+      "cmd": "worker.interrupt",
+      "args": {
+        "id": "w"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "stop",
+      "w"
+    ],
+    "expected": {
+      "cmd": "worker.stop",
+      "args": {
+        "id": "w"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "remove",
+      "w"
+    ],
+    "expected": {
+      "cmd": "worker.remove",
+      "args": {
+        "id": "w"
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "subscription-status",
+      "--channel",
+      "news"
+    ],
+    "expected": {
+      "cmd": "channel.subscription-status",
+      "args": {
+        "channelId": "news"
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "collector-ack",
+      "--revision",
+      "17"
+    ],
+    "expected": {
+      "cmd": "channel.collector-ack",
+      "args": {
+        "revision": 17
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "storage",
+      "--patch",
+      "{\"collectorId\":\"collector\",\"hostId\":\"server\",\"directory\":\"/srv/news\"}"
+    ],
+    "expected": {
+      "cmd": "channel.storage",
+      "args": {
+        "patch": {
+          "collectorId": "collector",
+          "hostId": "server",
+          "directory": "/srv/news"
+        }
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "storage-exchange",
+      "--wait-ms",
+      "15000"
+    ],
+    "expected": {
+      "cmd": "channel.storage-exchange",
+      "args": {
+        "waitMs": 15000
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "storage-result",
+      "--id",
+      "request",
+      "--result",
+      "{\"written\":2}"
+    ],
+    "expected": {
+      "cmd": "channel.storage-result",
+      "args": {
+        "id": "request",
+        "result": {
+          "written": 2
+        }
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "media-register",
+      "--source-id",
+      "source",
+      "--external-id",
+      "post",
+      "--published-at",
+      "42",
+      "--media-key",
+      "cover",
+      "--name",
+      "cover.png",
+      "--mime-type",
+      "image/png",
+      "--sha256",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "--bytes",
+      "99"
+    ],
+    "expected": {
+      "cmd": "channel.media-register",
+      "args": {
+        "sourceId": "source",
+        "externalId": "post",
+        "publishedAt": 42,
+        "mediaKey": "cover",
+        "name": "cover.png",
+        "mimeType": "image/png",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bytes": 99
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "aggregate",
+      "--plugin",
+      "telegram"
+    ],
+    "expected": {
+      "cmd": "channel.aggregate",
+      "args": {
+        "plugin": "telegram"
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "fetch-text",
+      "nc_fixture",
+      "--limit",
+      "50",
+      "--source",
+      "ns_fixture"
+    ],
+    "expected": {
+      "cmd": "channel.fetch-text",
+      "args": {
+        "id": "nc_fixture",
+        "limit": 50,
+        "sourceId": "ns_fixture"
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "fetch-images",
+      "nc_fixture",
+      "--limit",
+      "25",
+      "--cursor",
+      "fixture-cursor"
+    ],
+    "expected": {
+      "cmd": "channel.fetch-images",
+      "args": {
+        "id": "nc_fixture",
+        "limit": 25,
+        "cursor": "fixture-cursor"
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "search",
+      "nc_fixture",
+      "--query",
+      "LLM AI",
+      "--limit",
+      "30",
+      "--images"
+    ],
+    "expected": {
+      "cmd": "channel.search",
+      "args": {
+        "id": "nc_fixture",
+        "query": "LLM AI",
+        "limit": 30,
+        "images": true
+      }
+    }
+  },
+  {
+    "args": [
+      "engine",
+      "providers",
+      "--engine",
+      "claude"
+    ],
+    "expected": {
+      "cmd": "engine.providers",
+      "args": {
+        "engine": "claude"
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "access",
+      "CHANNEL"
+    ],
+    "expected": {
+      "cmd": "channel.access",
+      "args": {
+        "id": "CHANNEL"
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "access",
+      "CHANNEL",
+      "--employees",
+      "[\"EMPLOYEE\"]",
+      "--expected-revision",
+      "3"
+    ],
+    "expected": {
+      "cmd": "channel.access",
+      "args": {
+        "id": "CHANNEL",
+        "employeeIds": [
+          "EMPLOYEE"
+        ],
+        "expectedRevision": 3
+      }
+    }
+  },
+  {
+    "args": [
+      "plugin",
+      "resources",
+      "--id",
+      "mininotion"
+    ],
+    "expected": {
+      "cmd": "plugin.resources",
+      "args": {
+        "id": "mininotion"
+      }
+    }
+  },
+  {
+    "args": [
+      "plugin",
+      "access",
+      "--id",
+      "mininotion"
+    ],
+    "expected": {
+      "cmd": "plugin.access",
+      "args": {
+        "id": "mininotion"
+      }
+    }
+  },
+  {
+    "args": [
+      "plugin",
+      "access",
+      "--id",
+      "mininotion",
+      "--resources",
+      "[\"PAGE\"]",
+      "--employees",
+      "[{\"employeeId\":\"E\",\"read\":true,\"write\":false,\"create\":false}]",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "plugin.access",
+      "args": {
+        "id": "mininotion",
+        "resourceIds": [
+          "PAGE"
+        ],
+        "employees": [
+          {
+            "employeeId": "E",
+            "read": true,
+            "write": false,
+            "create": false
+          }
+        ],
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "source-info",
+      "ns_fixture"
+    ],
+    "expected": {
+      "cmd": "channel.source-info",
+      "args": {
+        "id": "ns_fixture"
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "source-order",
+      "nc_fixture",
+      "--sources",
+      "[\"ns_first\",\"ns_second\"]",
+      "--expected-revision",
+      "4"
+    ],
+    "expected": {
+      "cmd": "channel.source-order",
+      "args": {
+        "id": "nc_fixture",
+        "sourceIds": [
+          "ns_first",
+          "ns_second"
+        ],
+        "expectedRevision": 4
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "search",
+      "nc_fixture",
+      "--query",
+      "AI safety",
+      "--sources",
+      "[\"ns_first\",\"ns_second\"]",
+      "--since",
+      "\"2026-10-01T00:00:00Z\"",
+      "--until",
+      "\"2026-10-02T00:00:00Z\"",
+      "--keywords-all",
+      "[\"llm\"]",
+      "--keywords-any",
+      "[\"openai\",\"anthropic\"]",
+      "--exclude-keywords",
+      "[\"rumor\"]"
+    ],
+    "expected": {
+      "cmd": "channel.search",
+      "args": {
+        "id": "nc_fixture",
+        "query": "AI safety",
+        "sourceIds": [
+          "ns_first",
+          "ns_second"
+        ],
+        "since": "2026-10-01T00:00:00Z",
+        "until": "2026-10-02T00:00:00Z",
+        "keywordsAll": [
+          "llm"
+        ],
+        "keywordsAny": [
+          "openai",
+          "anthropic"
+        ],
+        "excludeKeywords": [
+          "rumor"
+        ]
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "search",
+      "nc_fixture",
+      "--sources",
+      "[\"ns_first\"]",
+      "--time-ranges",
+      "[{\"since\":\"2026-10-01T00:00:00Z\",\"until\":\"2026-10-02T00:00:00Z\"},{\"since\":\"2026-10-03T00:00:00Z\",\"until\":\"2026-10-04T00:00:00Z\"}]",
+      "--limit",
+      "40",
+      "--images"
+    ],
+    "expected": {
+      "cmd": "channel.search",
+      "args": {
+        "id": "nc_fixture",
+        "sourceIds": [
+          "ns_first"
+        ],
+        "timeRanges": [
+          {
+            "since": "2026-10-01T00:00:00Z",
+            "until": "2026-10-02T00:00:00Z"
+          },
+          {
+            "since": "2026-10-03T00:00:00Z",
+            "until": "2026-10-04T00:00:00Z"
+          }
+        ],
+        "limit": 40,
+        "images": true
+      }
+    }
+  },
+  {
+    "args": [
+      "channel",
+      "search",
+      "nc_fixture",
+      "--keywords-all",
+      "[\"OpenAI\"]",
+      "--since",
+      "2026-11-03T14:30:00+08:00",
+      "--until",
+      "1793777400000"
+    ],
+    "expected": {
+      "cmd": "channel.search",
+      "args": {
+        "id": "nc_fixture",
+        "keywordsAll": [
+          "OpenAI"
+        ],
+        "since": "2026-11-03T14:30:00+08:00",
+        "until": 1793777400000
+      }
+    }
+  },
+  {
+    "args": [
+      "direct",
+      "send",
+      "--employee",
+      "employee_a",
+      "--text",
+      "User input",
+      "--mode",
+      "enqueue",
+      "--client-message-id",
+      "send-1"
+    ],
+    "expected": {
+      "cmd": "direct.send",
+      "args": {
+        "employee": "employee_a",
+        "text": "User input",
+        "mode": "enqueue",
+        "clientMessageId": "send-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "direct",
+      "post",
+      "--text",
+      "Agent reply",
+      "--images",
+      "[\"image.png\"]",
+      "--files",
+      "[\"brief.pdf\"]",
+      "--client-message-id",
+      "post-1"
+    ],
+    "expected": {
+      "cmd": "direct.post",
+      "args": {
+        "text": "Agent reply",
+        "images": [
+          "image.png"
+        ],
+        "files": [
+          "brief.pdf"
+        ],
+        "clientMessageId": "post-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "direct",
+      "history",
+      "--employee",
+      "employee_a",
+      "--limit",
+      "20",
+      "--before",
+      "30"
+    ],
+    "expected": {
+      "cmd": "direct.history",
+      "args": {
+        "employee": "employee_a",
+        "limit": 20,
+        "before": 30
+      }
+    }
+  },
+  {
+    "args": [
+      "direct",
+      "acknowledge",
+      "--employee",
+      "employee_a",
+      "--message-id",
+      "dm_message"
+    ],
+    "expected": {
+      "cmd": "direct.acknowledge",
+      "args": {
+        "employee": "employee_a",
+        "messageId": "dm_message"
+      }
+    }
+  },
+  {
+    "args": [
+      "direct",
+      "send-status",
+      "--employee",
+      "employee_a",
+      "--client-message-id",
+      "send-1"
+    ],
+    "expected": {
+      "cmd": "direct.send-status",
+      "args": {
+        "employee": "employee_a",
+        "clientMessageId": "send-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "conversation",
+      "upload",
+      "--conversation",
+      "group:test",
+      "--from",
+      "{\"employee\":\"self\",\"path\":\"notes.txt\"}",
+      "--path",
+      "shared.txt",
+      "--client-request-id",
+      "upload-1",
+      "--expected-version",
+      "file-version"
+    ],
+    "expected": {
+      "cmd": "conversation.upload",
+      "args": {
+        "conversation": "group:test",
+        "from": {
+          "employee": "self",
+          "path": "notes.txt"
+        },
+        "path": "shared.txt",
+        "clientRequestId": "upload-1",
+        "expectedVersion": "file-version"
+      }
+    }
+  },
+  {
+    "args": [
+      "conversation",
+      "upload-status",
+      "cu_test",
+      "--cancel"
+    ],
+    "expected": {
+      "cmd": "conversation.upload-status",
+      "args": {
+        "id": "cu_test",
+        "cancel": true
+      }
+    }
+  },
+  {
+    "args": [
+      "conversation",
+      "download-local",
+      "employee:test",
+      "--entry-id",
+      "dm_test",
+      "--attachment-id",
+      "attachment:test",
+      "--path",
+      "/tmp/saved file.txt",
+      "--overwrite"
+    ],
+    "expected": {
+      "cmd": "conversation.download-local",
+      "args": {
+        "conversation": "employee:test",
+        "entryId": "dm_test",
+        "attachmentId": "attachment:test",
+        "path": "/tmp/saved file.txt",
+        "overwrite": true
+      }
+    }
   }
 ]

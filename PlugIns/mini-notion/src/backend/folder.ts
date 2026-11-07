@@ -327,10 +327,13 @@ export class FolderWorkspace {
     if (this.importing) { persist(); return; }
     if (previous && !this.organizing && next.pages.length === previous.pages.length && next.pages.every((page, index) => page === previous.pages[index])) { persist(); return; }
     const locations = planPagePaths(this.root, next, this.index, previous, this.organizing);
+    const knownById = new Map(Object.entries(this.index.files)
+      .filter(([, entry]) => entry.kind === 'native')
+      .map(([relative,entry]) => [entry.id,{relative,entry}]));
     const allMoves: DirectoryMove[] = [...locations].flatMap(([id, relative]) => {
-      const known = Object.entries(this.index.files).find(([,entry])=>entry.id===id && entry.kind==='native');
-      if (!known || known[1].trash || known[0]===relative || path.posix.basename(known[0])!==ROOT_DOCUMENT || path.posix.basename(relative)!==ROOT_DOCUMENT) return [];
-      return [{from:withinFolder(this.root,path.posix.dirname(known[0])),to:withinFolder(this.root,path.posix.dirname(relative),true)}];
+      const known = knownById.get(id);
+      if (!known || known.entry.trash || known.relative===relative || path.posix.basename(known.relative)!==ROOT_DOCUMENT || path.posix.basename(relative)!==ROOT_DOCUMENT) return [];
+      return [{from:withinFolder(this.root,path.posix.dirname(known.relative)),to:withinFolder(this.root,path.posix.dirname(relative),true)}];
     });
     const moves=allMoves.filter(move=>!allMoves.some(parent=>parent!==move && move.from.startsWith(parent.from+path.sep) && movedPath(move.from,[parent])===move.to));
     const originalIndex=this.index;
@@ -435,6 +438,17 @@ export class FolderWorkspace {
     }
     if (!changes.length) { persist(); return; }
     fileTransaction([...assets.values(), ...changes, { file: this.indexFile, content: JSON.stringify(nextIndex) }], persist);
+    // Retain accurate stamps in memory immediately after our own atomic writes.
+    // Otherwise fs.watch re-scans the whole notebook for each local keystroke.
+    for (const change of changes) {
+      if (change.content === null) continue;
+      const relative = this.relative(change.file);
+      const entry = nextIndex.files[relative];
+      if (!entry) continue;
+      const stat = fs.statSync(change.file, {throwIfNoEntry:false});
+      if (stat?.isFile() && digest(change.content) === entry.hash)
+        entry.stamp = `${stat.mtimeMs}:${stat.size}`;
+    }
     this.index = nextIndex;
   }
 }

@@ -1,6 +1,32 @@
 import type { Page, Property, Workspace } from '../types.ts';
 import { requireEditable, requireRecord } from '../core/access.ts';
 import { CommandError } from '../core/errors.ts';
+import { pageIndex } from '../model.ts';
+
+const relationshipIndexes = new WeakMap<Page[], { subItems: Map<string, Page[]>; blocking: Map<string, string[]> }>();
+function relationshipIndex(pages: Page[]) {
+  let index = relationshipIndexes.get(pages);
+  if (!index) {
+    index = { subItems: new Map(), blocking: new Map() };
+    for (const page of pages) {
+      if (page.subItemOf) {
+        const children = index.subItems.get(page.subItemOf) || [];
+        children.push(page);
+        index.subItems.set(page.subItemOf, children);
+      }
+      for (const id of new Set(page.blockedBy)) {
+        const dependents = index.blocking.get(id) || [];
+        dependents.push(page.id);
+        index.blocking.set(id, dependents);
+      }
+    }
+    relationshipIndexes.set(pages, index);
+  }
+  return index;
+}
+export function subItemsFor(pageId: string, pages: Page[]): Page[] {
+  return (relationshipIndex(pages).subItems.get(pageId) || []).filter(page => !page.trashedAt);
+}
 
 export function relationIds(page: Page, column: Property, pages: Page[]): string[] {
   const value = page.values[column.id];
@@ -9,45 +35,60 @@ export function relationIds(page: Page, column: Property, pages: Page[]): string
     ids = Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
   else if (column.system === 'parentItem') ids = page.subItemOf ? [page.subItemOf] : [];
   else if (column.system === 'subItems')
-    ids = pages.filter((value) => value.subItemOf === page.id).map((page) => page.id);
+    ids = subItemsFor(page.id, pages).map(page => page.id);
   else if (column.system === 'blockedBy') ids = page.blockedBy || [];
   else if (column.system === 'blocking')
-    ids = pages.filter((value) => value.blockedBy?.includes(page.id)).map((page) => page.id);
+    ids = relationshipIndex(pages).blocking.get(page.id) || [];
   else ids = Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
-  return ids.filter((id) => pages.some((page) => page.id === id && !page.trashedAt));
+  const index = pageIndex(pages);
+  return ids.filter((id) => {
+    const target = index.get(id);
+    return target && !target.trashedAt;
+  });
 }
 export function validateRelationships(workspace: Workspace) {
-  const pages = new Map(workspace.pages.map((page) => [page.id, page]));
+  const pages = pageIndex(workspace.pages);
+  const remaining = new Map<string, number>();
+  const dependents = new Map<string, string[]>();
+  const ready: string[] = [];
   for (const page of workspace.pages) {
     if (page.subItemOf) {
       const parent = pages.get(page.subItemOf);
       if (!parent || parent.parentId !== page.parentId || !pages.get(page.parentId || '')?.database)
         throw new CommandError('INVALID_SUBITEM', '父项目必须是同一个数据库的记录');
-      const seen = new Set([page.id]);
-      let current: Page | undefined = parent;
-      while (current) {
-        if (seen.has(current.id)) throw new CommandError('SUBITEM_CYCLE', '子项目不能形成循环层级');
-        seen.add(current.id);
-        current = pages.get(current.subItemOf || '');
-      }
     }
-    for (const id of page.blockedBy || []) {
+    const dependencies = page.blockedBy || [];
+    remaining.set(page.id, dependencies.length);
+    if (!dependencies.length) ready.push(page.id);
+    for (const id of dependencies) {
       const dependency = pages.get(id);
       if (!dependency || dependency.parentId !== page.parentId || !pages.get(page.parentId || '')?.database)
         throw new CommandError('INVALID_DEPENDENCY', '依赖必须是同一数据库的记录');
+      const children = dependents.get(id) || [];
+      children.push(page.id);
+      dependents.set(id, children);
     }
   }
-  const visited = new Set<string>(),
-    visiting = new Set<string>();
-  const visit = (page: Page) => {
-    if (visited.has(page.id)) return;
-    if (visiting.has(page.id)) throw new CommandError('DEPENDENCY_CYCLE', '依赖关系不能形成循环');
-    visiting.add(page.id);
-    for (const id of page.blockedBy || []) visit(pages.get(id)!);
-    visiting.delete(page.id);
-    visited.add(page.id);
-  };
-  workspace.pages.forEach(visit);
+  const checked = new Set<string>();
+  for (const page of workspace.pages) {
+    const path = new Set<string>();
+    let current: Page | undefined = page;
+    while (current && !checked.has(current.id)) {
+      if (path.has(current.id)) throw new CommandError('SUBITEM_CYCLE', '子项目不能形成循环层级');
+      path.add(current.id);
+      current = pages.get(current.subItemOf || '');
+    }
+    for (const id of path) checked.add(id);
+  }
+  // Topological traversal handles deep dependency chains without recursion.
+  for (let i = 0; i < ready.length; i++)
+    for (const id of dependents.get(ready[i]) || []) {
+      const count = remaining.get(id)! - 1;
+      remaining.set(id, count);
+      if (!count) ready.push(id);
+    }
+  if (ready.length !== workspace.pages.length)
+    throw new CommandError('DEPENDENCY_CYCLE', '依赖关系不能形成循环');
 }
 export function assignSystemRelation(
   workspace: Workspace,

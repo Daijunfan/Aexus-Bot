@@ -19,7 +19,7 @@ test('central mailbox transport still validates workspace and sends only the ass
  for(const k of keys)delete process.env[k];Object.assign(process.env,f.env);t.after(()=>{for(const k of keys)if(previous[k]===undefined)delete process.env[k];else process.env[k]=previous[k];});
  const client=await mailboxClient(f.workspace,f.mailbox,{timeoutMs:1000,pollMs:5});t.after(()=>client.close());const request={jsonrpc:'2.0',id:randomUUID(),method:'settings.get',params:{}},pending=client.request(request);
  let envelope;for(let i=0;i<100;i++){try{envelope=JSON.parse(await fs.readFile(path.join(f.mailbox,request.id+'.request.json'),'utf8'));break;}catch(e){if(e.code!=='ENOENT')throw e;await new Promise(r=>setTimeout(r,5));}}
- assert.equal(envelope.auth,'fixture-private-credential');const response={jsonrpc:'2.0',id:request.id,result:{theme:'dark'}};await fs.writeFile(path.join(f.mailbox,request.id+'.response.json'),JSON.stringify(response));assert.deepEqual(await pending,response);
+ assert.equal(envelope.auth,'fixture-private-credential');const response={jsonrpc:'2.0',id:request.id,result:{theme:'dark'}},output=path.join(f.mailbox,request.id+'.response.json');await fs.writeFile(output+'.tmp',JSON.stringify(response));await fs.rename(output+'.tmp',output);assert.deepEqual(await pending,response);
  await fs.writeFile(path.join(f.mailbox,'host.json'),JSON.stringify({workspace:path.dirname(f.workspace),pid:process.pid}));await assert.rejects(client.request({...request,id:randomUUID()}),{code:'SCOPE_DENIED'});
  await assert.rejects(fs.stat(path.join(f.workspace,'.margin-reader')),{code:'ENOENT'});
 });

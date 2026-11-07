@@ -12,7 +12,7 @@ let errors: string[];
 
 test.beforeEach(async () => {
   directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mn-chat-ui-'));
-  process.env.MINI_NOTION_AGENT_CLAUDE = `${process.execPath} ${path.resolve('tests/fixtures/agent-engine.cjs')}`;
+  process.env.MINI_NOTION_AGENT_CLAUDE = `${process.execPath} ${path.join(import.meta.dirname, 'fixtures/agent-engine.cjs')}`;
   server = await startServer(directory);
   client = new BackendClient({ directory, autoStart: false });
   await client.call('workspace.init', { empty: true });
@@ -24,11 +24,16 @@ test.beforeEach(async () => {
     MINI_NOTION_BACKGROUND_TEST: '1',
   };
   delete env.ELECTRON_RUN_AS_NODE;
-  app = await electron.launch({ args: ['.'], env });
+  delete env.MINI_NOTION_WORKSPACE;
+  delete env.VITE_DEV_SERVER_URL;
+  delete env.AGENTS_COMPANY_PLUGIN_RPC;
+  app = await electron.launch({ executablePath: process.env.MINI_NOTION_EXECUTABLE,
+    args: process.env.MINI_NOTION_EXECUTABLE ? [] : [path.resolve(import.meta.dirname, '..')], env });
   page = await app.firstWindow();
   errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.waitForSelector('.app-shell');
+  expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().every(window => !window.isVisible()))).toBe(true);
   await client.call('ui.command', { command: 'open-page', params: { pageId: root.id } });
   await expect(page.locator('.page-title')).toHaveValue('产品设计');
   await client.call('ui.command', { command: 'agent', params: { pageId: root.id } });
@@ -56,6 +61,28 @@ async function images() {
   fs.writeFileSync(path.join(directory, 'brief.txt'), '项目：协作笔记；发布时间：周五。');
   return ['red.png', 'blue.png', 'brief.txt'].map((name) => path.join(directory, name));
 }
+
+test('selection assistant sends the quoted draft through the space Agent without changing the source', async () => {
+  await page.getByRole('button', { name: '关闭 Agent 面板', exact: true }).click();
+  const note = await client.call('page.create', { parentId: root.id, title: '空间选区测试', color: 'white', blocks: [
+    { type: 'paragraph', content: [{ type: 'text', text: '仅解释空间内这段文字', styles: {} }] },
+  ] });
+  await client.call('settings.set', { changes: { selectionAI: { prompt: '解释以下选区，不修改原文', mode: 'edit' } } });
+  await client.call('page.open', { pageId: note.id });
+  await expect(page.locator('.page-title')).toHaveValue(note.title);
+  await page.locator('.bn-editor .bn-inline-content').first().click();
+  await page.keyboard.press('Meta+a');
+  await page.getByRole('button', { name: '更多文本操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '发送选区给 Agent', exact: true }).click();
+  const assistant = page.getByRole('dialog', { name: '选区 AI 聊天', exact: true });
+  await expect(assistant).toContainText('空间 Agent');
+  const message = '解释以下选区，不修改原文\n\n仅解释空间内这段文字';
+  await expect(assistant.getByRole('textbox', { name: 'AI 消息', exact: true })).toHaveValue(message);
+  await assistant.getByRole('button', { name: '发送 AI 消息', exact: true }).click();
+  await expect(assistant.locator('.selection-ai-reply')).toContainText('已整理好');
+  expect((await client.call('agent.history', { pageId: root.id }))[0].text).toBe(message);
+  expect((await client.call('page.get', { pageId: note.id })).blocks).toEqual(note.blocks);
+});
 
 test('drag panel, persist position via CLI, keep controls reachable and maintain Notion paper styling', async () => {
   await page.getByRole('button', { name: '浮动 Agent 面板', exact: true }).click();

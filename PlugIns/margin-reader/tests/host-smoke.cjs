@@ -6,10 +6,11 @@ const os = require('node:os');
 const assert = require('node:assert/strict');
 const { spawn, execFile } = require('node:child_process');
 const run = require('node:util').promisify(execFile);
-const root = path.resolve(__dirname, '..'), host = path.resolve(root, '../..');
+const root = path.resolve(__dirname, '..'), host = path.resolve(process.env.AEXUS_HOST_ROOT || path.join(root, '../..'));
+const { controlEndpoint } = require(path.join(host, 'bin/platform.cjs'));
 async function main() {
   const temp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'margin-reader-host-')));
-  const home = path.join(temp, 'home'), workspaces = path.join(temp, 'workspaces');
+  const home = path.join(temp, 'home'), workspaces = path.join(temp, 'workspaces'), endpoint = controlEndpoint(home);
   const env = { ...process.env, AGENTS_COMPANY_HOME: home, AGENTS_COMPANY_WORKSPACES: workspaces, AGENTS_COMPANY_BUILTIN_PLUGINS: path.join(temp, 'empty-builtins') };
   for (const key of ['AGENTS_COMPANY_TOKEN','AGENTS_COMPANY_TOKEN_FILE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_PLUGIN_RPC','AGENTS_WORKSPACE','AGENTS_COMPANY_PLUGIN_DIRS']) delete env[key];
   const daemon = spawn(process.execPath, ['bin/agents','serve'], { cwd: host, env, stdio: ['ignore','pipe','pipe'] });
@@ -19,11 +20,11 @@ async function main() {
   const cli = async (...args) => { const process = await run(require('node:process').execPath, ['bin/agents', ...args, '--json'], { cwd: host, env, timeout: 60000, maxBuffer: 8 * 1024 * 1024 }); const reply = JSON.parse(process.stdout); assert(reply.ok, reply.error); return reply.data; };
   const call = (method, params = {}, team = 'Reader Test') => cli('plugin','call','margin-reader',method,'--team',team,'--params',JSON.stringify(params));
   try {
-    for (let i = 0; i < 200 && !fs.existsSync(path.join(home, 'agents.sock')); i++) {
+    for (let i = 0; i < 200 && !fs.existsSync(endpoint); i++) {
       if (daemon.exitCode !== null) throw new Error('Isolated host stopped: ' + log);
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    assert(fs.existsSync(path.join(home, 'agents.sock')), log);
+    assert(fs.existsSync(endpoint), log);
     const installed = await cli('plugin','install',path.join(root, 'dist-plugin')); assert.equal(installed.plugin.id, 'margin-reader'); pass('standard host plugin.install accepts the independent package');
     const described = await cli('plugin','describe','margin-reader'); assert.equal(described.api.commands.length, require('../schema.json').commands.length); pass('host discovers every declared API command');
     await cli('group','add','Reader Test','--mode','work','--plugin','margin-reader');

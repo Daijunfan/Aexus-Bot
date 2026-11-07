@@ -61,7 +61,7 @@ export class DocumentTextbox {
     if (this.study.ink?.dirty || this.study.cardInk?.dirty) throw Error('请先保存或放弃尚未保存的笔迹。');
     const doc = this.study.getDocument();
     if (!this.study.current?.documentIds.includes(doc?.id) || doc.kind !== 'pdf') throw Error('先在学习集中打开 PDF。');
-    this.study.ink.setMode('off'); this.study.cardInk.modeSet('off'); this.study.excerpts.setRegion(false);
+    this.study.excerpts.setRegion(false); this.study.ink.setMode('off'); this.study.cardInk.modeSet('off');
     this.active = true; this.documentId = doc.id;
     $('document-textbox').setAttribute('aria-pressed', 'true'); $('reader-scroll').classList.add('placing-textbox');
     toast('点击原页放置文本框；Escape 取消。');

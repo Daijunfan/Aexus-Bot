@@ -1,3 +1,4 @@
+import {AppSelect} from './AppSelect'
 import {useEffect,useState,type ReactNode} from 'react'
 import type {WorkspaceChoice} from '../../../shared/message-collaboration'
 import {api} from '../api'
@@ -18,7 +19,7 @@ function EmployeeWorkbench({employee,explorerWidth,terminalHeight,onAttachImage,
  const choose=async(value:string)=>{try{await flushPlugins();setSelected(value);setError('')}catch(cause){setError((cause as Error).message)}}
  const location=locations.find(value=>selected?value.conversation===selected:value.view==='company')
  return <div className="employee-workbench">
-  {locations.length>0&&<div className="employee-workspace-switch"><label>{uiText('Work files')}<select aria-label={uiText('Employee work folder')} value={selected} onFocus={load} onChange={event=>void choose(event.target.value)}><option value="">{uiText('Personal workspace')}</option>{locations.filter(value=>value.view==='messages').map(value=><option key={value.id} value={value.conversation}>Messages · {value.name}</option>)}</select></label><small title={location?.path}>{location?.path??uiText('Original employee workspace')}</small></div>}
+  {locations.length>0&&<div className="employee-workspace-switch"><label>{uiText('Work files')}<AppSelect aria-label={uiText('Employee work folder')} value={selected} onFocus={load} onChange={event=>void choose(event.target.value)}><option value="">{uiText('Personal workspace')}</option>{locations.filter(value=>value.view==='messages').map(value=><option key={value.id} value={value.conversation}>Messages · {value.name}</option>)}</AppSelect></label><small title={location?.path}>{location?.path??uiText('Original employee workspace')}</small></div>}
   {error&&<p className="workspace-error" role="alert">{error}</p>}
   <FileWorkspace explorerWidth={explorerWidth} onAttachImage={selected?undefined:onAttachImage} key={'files-'+employee+'/'+selected} employee={employee} conversation={selected||undefined} initialFolder={location?.memberDirectory}>{children}</FileWorkspace>
   <EmployeeTerminal terminalHeight={terminalHeight} key={'terminal-'+employee} employee={employee}/>

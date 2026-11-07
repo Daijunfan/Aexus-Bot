@@ -48,7 +48,7 @@ export class MindmapMotion{
    localizePaint(ghost,'mm-exit-'+id+'-');Object.assign(ghost.style,{left:(a.x-wr.x)/zoom+'px',top:(a.y-wr.y)/zoom+'px',width:a.width/zoom+'px',height:a.height/zoom+'px',transform:'none'});world.append(ghost);this.temporary.push(ghost);
    this.animate(ghost,[{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${p.x+p.width/2-(a.x-wr.x+a.width/2)/zoom}px,${p.y+p.height/2-(a.y-wr.y+a.height/2)/zoom}px) scale(.85)`,opacity:0}]);
   }
-  if(!geometry)for(const p of world.querySelectorAll('.study-map-links [data-mm-branch]')){const from=this.branchColors.get(p.dataset.mmBranch),to=getComputedStyle(p);for(const key of ['stroke','fill'])if(from?.[key]&&from[key]!==to[key])this.animate(p,[{[key]:from[key]},{[key]:to[key]}]);}
+  if(!geometry)for(const p of world.querySelectorAll('.study-map-links [data-mm-branch]')){const from=this.branchColors.get(p.dataset.mmBranch),to=getComputedStyle(p);for(const key of ['stroke','fill'])if(from?.[key]&&from[key]!=='none'&&to[key]!=='none'&&from[key]!==to[key])this.animate(p,[{[key]:from[key]},{[key]:to[key]}]);}
   if(geometry)this.transitionEdges(wr,zoom,ancestor);else{this.before=null;this.edges=null;}
  }
  transitionEdges(wr,zoom,ancestor){

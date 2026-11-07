@@ -19,7 +19,7 @@ const foreground: Record<string, string> = {
 };
 export function FormulaResult({ value }: { value: FormulaValue }) {
   const { workspace, navigate } = useWorkspace();
-  if (value === null) return <span className="muted">空</span>;
+  if (value === null || (Array.isArray(value) && !value.length)) return <span className="muted">空</span>;
   if (typeof value === 'boolean') return <span className="formula-checkbox">{value ? '☑' : '☐'}</span>;
   if (typeof value === 'string' || typeof value === 'number') return <span>{String(value)}</span>;
   if (Array.isArray(value))

@@ -549,8 +549,11 @@
 }
 
 /* Neutral document chrome. Page colors remain semantic labels, never a tinted sheet. */
-.hosted-folder .sidebar { padding-top:6px; }
-.hosted-folder .sidebar-titlebar { display:none; }
+.hosted-folder.embedded-plugin .sidebar { padding-top:6px; }
+.hosted-folder.embedded-plugin .sidebar-titlebar { display:none; }
+/* Native standalone windows must reserve their titlebar for the macOS traffic lights. */
+.hosted-folder:not(.embedded-plugin) .sidebar { padding-top:0; }
+.hosted-folder:not(.embedded-plugin) .sidebar-titlebar { display:flex; }
 .hosted-folder .workspace-switcher { padding:2px 10px 10px; min-height:42px; }
 .hosted-folder .workspace-switcher>.icon-button { opacity:0; }
 .hosted-folder .workspace-switcher:hover>.icon-button,
@@ -666,3 +669,7 @@
   border-radius: 3px;
 }
 
+
+/* Sidebar virtualization follows the same density as the rendered rows. */
+:root[data-density='compact'] .sidebar { --sidebar-row-height: 27px; }
+.hosted-folder .sidebar { --sidebar-row-height: 30px; }

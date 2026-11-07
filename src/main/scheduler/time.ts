@@ -32,12 +32,14 @@ export function validateRule(value: ScheduleRule): ScheduleRule {
     return {kind:'monthly',day:value.day,time:clock(value.time),timezone:zone(value.timezone)}
   }
   if(value?.kind==='event'){
-    if(!['signal','channel.posted'].includes(value.event))throw Error('Choose signal or channel.posted')
-    if(Object.keys(value).some(key=>!['kind','event','channelId','cooldownSeconds'].includes(key)))throw Error('Unknown event rule field')
+    if(!['signal','channel.posted','message.received','session.completed','monitor.output','monitor.exited'].includes(value.event))throw Error('Choose a supported Core event or monitor event')
+    if(Object.keys(value).some(key=>!['kind','event','channelId','conversation','employeeId','monitorId','cooldownSeconds'].includes(key)))throw Error('Unknown event rule field')
     if(value.event==='channel.posted'?(typeof value.channelId!=='string'||!value.channelId.trim()):value.channelId!==undefined)throw Error('channelId is required only for channel.posted')
+    for(const [field,required]of [['conversation',value.event==='message.received'],['employeeId',value.event==='session.completed'],['monitorId',value.event.startsWith('monitor.')]] as const)if(required?(typeof value[field]!=='string'||!value[field].trim()):value[field]!==undefined)throw Error(field+' is required only for its matching event')
+    if(value.conversation&&!/^(group|employee):[A-Za-z0-9_-]+$/.test(value.conversation))throw Error('Use a group:ID or employee:ID conversation')
     const cooldownSeconds=value.cooldownSeconds??60
     if(!Number.isInteger(cooldownSeconds)||cooldownSeconds<0||cooldownSeconds>86400)throw Error('Event cooldown must be 0–86400 seconds')
-    return {kind:'event',event:value.event,...(value.channelId?{channelId:value.channelId}:{}),cooldownSeconds}
+    return {kind:'event',event:value.event,...(value.channelId?{channelId:value.channelId}:{}),...(value.conversation?{conversation:value.conversation}:{}),...(value.employeeId?{employeeId:value.employeeId}:{}),...(value.monitorId?{monitorId:value.monitorId}:{}),cooldownSeconds}
   }
   throw new Error('rule.kind must be once, interval, weekly, monthly or event')
 }

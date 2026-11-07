@@ -598,7 +598,8 @@
 }
 .dependency-handle {
   position: absolute;
-  right: -10px;
+  /* Keep the dependency connector outside the bar's seven-pixel resize grip. */
+  right: -17px;
   width: 17px;
   height: 18px;
   top: 5px;
@@ -860,6 +861,12 @@
   flex-direction: column;
   gap: 8px;
 }
+.plan-lane-cards.windowed-cards {
+  display: block;
+}
+.plan-lane-cards.windowed-cards > .card-window-row {
+  padding-bottom: 8px;
+}
 .plan-card {
   border: 1px solid var(--line);
   background: var(--bg);
@@ -1088,6 +1095,7 @@
 }
 .sidebar {
   --tree-step: clamp(6px, 1.2vw, 14px);
+  --sidebar-row-height: 31px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1102,6 +1110,7 @@
   height: 48px;
   flex-shrink: 0;
   -webkit-app-region: drag;
+  cursor: default;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1109,9 +1118,12 @@
 }
 .sidebar-titlebar .icon-button {
   opacity: 0;
+  pointer-events: none;
 }
-.sidebar:hover .sidebar-titlebar .icon-button {
+.sidebar:hover .sidebar-titlebar .icon-button,
+.sidebar:focus-within .sidebar-titlebar .icon-button {
   opacity: 1;
+  pointer-events: auto;
 }
 .workspace-switcher {
   display: flex;
@@ -1397,6 +1409,7 @@
   justify-content: space-between;
   padding: 0 16px 0 14px;
   -webkit-app-region: drag;
+  cursor: default;
   user-select: none;
   gap: 8px;
 }
@@ -2339,6 +2352,9 @@
 .toast > svg {
   color: #6a9870;
 }
+.toast.toast-error > svg {
+  color: var(--danger, #c34747);
+}
 .toast > button {
   color: var(--blue);
   padding-left: 8px;
@@ -3061,7 +3077,7 @@
 }
 .database-search input {
   font-size: 12px;
-  width: 72px;
+  width: 112px;
   border: 0;
   background: none;
   box-shadow: none;
@@ -3344,12 +3360,17 @@
   width: 242px;
   min-width: 215px;
   flex: 1;
-  border-radius: 6px;
-  padding: 0 2px 5px;
+  border-radius: 7px;
+  padding: 6px 7px 10px;
+  --board-column-wash: transparent;
+  background: var(--board-column-wash);
   transition: background 0.15s;
 }
+.board-column.board-column-tinted {
+  --board-column-wash: color-mix(in srgb, var(--board-column-tint) 40%, var(--bg));
+}
 .board-column.drag-over {
-  background: #2383e217;
+  background: color-mix(in srgb, var(--blue) 13%, var(--board-column-wash));
 }
 .board-column-title {
   display: flex;
@@ -3382,6 +3403,12 @@
 }
 .database-card:hover {
   background: var(--hover);
+}
+.board-view .database-card.drop-before {
+  box-shadow: inset 0 3px 0 var(--blue), var(--shadow-card);
+}
+.board-view .database-card.drop-after {
+  box-shadow: inset 0 -3px 0 var(--blue), var(--shadow-card);
 }
 .database-card-body {
   padding: 12px;
@@ -3428,8 +3455,22 @@
   grid-template-columns: repeat(auto-fill, minmax(min(205px, 100%), 1fr));
   gap: 12px;
 }
+.gallery-view.windowed-cards {
+  row-gap: 0;
+}
+.card-window-row,
+.card-window-spacer {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
 .gallery-card {
   margin: 0;
+}
+.gallery-card.drop-before {
+  box-shadow: inset 3px 0 0 var(--blue), var(--shadow-card);
+}
+.gallery-card.drop-after {
+  box-shadow: inset -3px 0 0 var(--blue), var(--shadow-card);
 }
 .gallery-preview {
   height: 115px;
@@ -4216,18 +4257,20 @@
   accent-color: var(--blue);
   padding: 0;
 }
-.database-table th.title-column {
+.enhanced-table .table-frozen-cell {
   position: sticky;
-  left: 0;
-  z-index: 1;
+  z-index: 2;
   background: var(--bg);
+  background-clip: padding-box;
 }
-.enhanced-table td:nth-child(2) {
-  position: sticky;
-  left: 0;
-  background: var(--bg);
-  z-index: 1;
+.enhanced-table th.table-frozen-cell { z-index: 3; }
+.enhanced-table .table-frozen-edge {
+  box-shadow: 4px 0 5px -5px var(--text);
 }
+.enhanced-table tr:hover .table-frozen-cell { background: var(--hover); }
+.enhanced-table .selected-row .table-frozen-cell { background: #2383e212; }
+.enhanced-table th.title-column { min-width: 0; }
+.enhanced-table th.title-column > button { min-width: 0; }
 .column-resize {
   position: absolute;
   right: -2px;
@@ -4240,15 +4283,49 @@
 .column-resize:hover {
   background: var(--blue);
 }
+.enhanced-table th.property-drop-before::before,
+.enhanced-table th.property-drop-after::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--blue);
+  pointer-events: none;
+  z-index: 4;
+}
+.enhanced-table th.property-drop-before::before { left: 0; }
+.enhanced-table th.property-drop-after::after { right: 0; }
 .enhanced-table .selected-row td {
   background: #2383e212;
 }
-.enhanced-table.wrap-cells {
+.enhanced-table td.table-cell-wrap {
   white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
-.enhanced-table.wrap-cells .database-row-title strong {
+.enhanced-table td.table-cell-wrap .record-title-tree .database-row-title strong {
   white-space: normal;
   overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+.enhanced-table td.table-cell-wrap .property-computed,
+.enhanced-table td.table-cell-wrap .property-select {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.enhanced-table td.table-cell-nowrap {
+  white-space: nowrap;
+}
+.enhanced-table td.table-cell-nowrap .property-computed {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media print {
+  .enhanced-table .table-frozen-cell { position: static; box-shadow: none; }
+  .enhanced-table { width: 100% !important; min-width: 0 !important; }
 }
 .column-calculation {
   display: flex;
@@ -4560,7 +4637,8 @@
   font-weight: 500;
   margin-bottom: 12px;
 }
-.chart-drilldown > button {
+.chart-drilldown > button,
+.chart-drilldown-rows .chart-drilldown-row {
   display: flex;
   width: 100%;
   justify-content: flex-start;
@@ -4568,7 +4646,8 @@
   border-radius: 4px;
   font-size: 13px;
 }
-.chart-drilldown > button:hover {
+.chart-drilldown > button:hover,
+.chart-drilldown-rows .chart-drilldown-row:hover {
   background: var(--hover);
 }
 .timeline-controls > strong {
@@ -4758,6 +4837,11 @@
   color: #d45f55;
   font-style: normal;
 }
+.form-field-error {
+  color: #d45f55;
+  font-size: 12px;
+  font-weight: 400;
+}
 .form-field > input:not([type='checkbox']),
 .form-field > select {
   width: 100%;
@@ -4848,6 +4932,14 @@
   }
   .saved-view-database .view-tabs {
     flex-basis: 100%;
+  }
+  /* The full label is clipped in narrow windows. Keep the visible + action
+     and its accessible name; the adjacent menu still lists all views. */
+  .saved-view-database .view-tab-actions > .text-button {
+    width: 32px;
+    padding-inline: 6px;
+    gap: 0;
+    font-size: 0;
   }
   .donut-layout {
     gap: 25px;
@@ -5358,11 +5450,54 @@
   box-shadow: -6px 0 8px var(--bg);
 }
 .view-tabs > button > span {
-  max-width: 155px;
+  max-width: 125px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.saved-view-database .view-tabs > button[data-view-id] {
+  align-self: center;
+  min-height: 36px;
+  border-radius: 8px 8px 0 0;
+  padding-inline: 9px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.saved-view-database .view-tabs > button[data-view-id].active {
+  background: var(--selected);
+}
+.saved-view-database .view-tabs > button[data-view-id].active::after {
+  left: 8px;
+  right: 8px;
+  background: var(--blue);
+}
+.view-switcher-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  margin: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+}
+.view-switcher-search:focus-within { border-color: var(--blue); }
+.view-switcher-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+}
+.view-switcher-list { max-height: min(300px, 45vh); overflow-y: auto; overscroll-behavior: contain; }
+.view-switcher-row { display: flex; align-items: center; padding-right: 6px; }
+.view-switcher-row .menu-item { flex: 1; min-width: 0; }
+.view-switcher-row .menu-item > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.view-switcher-row .icon-button { flex: 0 0 28px; width: 28px; height: 28px; opacity: .65; }
+.view-switcher-row .icon-button:hover, .view-switcher-row .icon-button:focus-visible { opacity: 1; }
+.view-switcher-empty { padding: 16px 12px; margin: 0; font-size: 12px; color: var(--muted); text-align: center; }
 .property-input[type='date'][value='']::-webkit-datetime-edit {
   color: transparent;
 }
@@ -5655,6 +5790,25 @@
   outline-offset: 1px;
   z-index: 4;
 }
+.hourly-more-timed {
+  position: absolute;
+  z-index: 3;
+  min-width: 0;
+  height: 24px;
+  padding: 2px 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-size: 10px;
+  color: var(--blue);
+  background: var(--bg);
+  border: 1px solid var(--blue);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.hourly-more-timed:hover { background: var(--hover); }
+.hourly-more-timed:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .hourly-event:hover {
   filter: brightness(0.97);
   z-index: 3;
@@ -5724,6 +5878,7 @@
   }
   .hourly-toolbar,
   .hourly-resize,
+  .hourly-more-timed,
   .hourly-now {
     display: none;
   }
@@ -7628,6 +7783,22 @@ label>.app-select,.option-setting-row .app-select,.action-field .app-select { wi
   padding: 2px;
 }.database-search:focus-within{
   box-shadow: inset 0 0 0 1px var(--strong-line);
+}.database-search .icon-button {
+  width: 22px;
+  height: 22px;
+}.database-search-results {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-block: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}.database-search-results button {
+  color: var(--blue);
+  border-radius: 4px;
+  padding: 3px 6px;
+}.database-search-results button:hover {
+  background: var(--hover);
 }.database-card-body > small > span{
   min-width: 0;
   overflow-wrap: anywhere;
@@ -7668,3 +7839,189 @@ label>.app-select,.option-setting-row .app-select,.action-field .app-select { wi
 }
 
 .breadcrumbs button > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Native database controls: subtle chrome; a visible category creation
+   affordance at the trailing edge of a Notion-style board. */
+.group-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  margin: 10px 0 1px;
+  padding: 7px 9px;
+  border-radius: var(--radius-control);
+  font-size: 12px;
+  color: var(--subtle);
+}
+.group-add-button:hover:not(:disabled),
+.group-add-button:focus-visible {
+  background: var(--hover);
+  color: var(--text);
+}
+.group-add-board-column {
+  flex: 0 0 145px;
+  width: 145px;
+  margin: 20px 0 0;
+  min-height: 36px;
+  padding: 8px 10px;
+  align-self: flex-start;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+.group-add-board-column:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+.board-column-title.group-controls {
+  min-width: 0;
+}
+.group-controls .group-name-button {
+  min-width: 0;
+  max-width: calc(100% - 96px);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+.group-controls .group-name-button:hover:not(:disabled) { background: var(--hover); }
+.group-controls .group-name-button .tag { overflow: hidden; text-overflow: ellipsis; }
+.group-controls .group-rename-hint { opacity: .55; flex-shrink: 0; }
+.group-controls .group-name-button:hover .group-rename-hint,
+.group-controls .group-name-button:focus-visible .group-rename-hint { opacity: 1; }
+.group-controls > .icon-button:first-child { width: 20px; height: 22px; }
+.group-controls > .icon-button:not(:first-child) { margin-left: auto; width: 24px; height: 24px; }
+.group-controls > .icon-button:last-child:not(:first-child) { margin-left: 0; }
+.group-controls > small { font-size: 12px; color: var(--muted); }
+.database-group-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  min-height: 29px;
+  border-radius: var(--radius-control);
+  color: var(--subtle);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.database-group-control:hover, .database-group-control:focus-visible {
+  background: var(--hover);
+  color: var(--text);
+}
+
+/* BlockNote draws a four-pixel blue ProseMirror node selection halo around
+   nested interactive views. Keep selection feedback on other block types. */
+.note-editor .bn-block-content[data-content-type='databaseView'].ProseMirror-selectednode > *::after,
+.note-editor .ProseMirror-selectednode > .bn-block-content[data-content-type='databaseView'] > *::after,
+.note-editor .bn-block-content[data-content-type='databaseView'] .ProseMirror-selectednode::after {
+  content: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+/* Group management stays visible in the view toolbar, even when board
+   columns extend beyond the horizontal viewport. */
+.group-setup-dialog .modal-body { display: grid; gap: 8px; }
+.group-setup-dialog .view-settings-description { padding: 5px 2px 10px; }
+.group-setup-choice {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.group-setup-choice:hover:not(:disabled),
+.group-setup-choice:focus-visible { background: var(--hover); }
+.group-setup-choice > span { overflow: hidden; text-overflow: ellipsis; }
+.group-setup-choice > svg:last-child { margin-left: auto; color: var(--muted); transform: rotate(-90deg); }
+.group-setup-dialog .modal-actions { margin-top: 4px; }
+.group-settings-options {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+.group-settings-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 4px 9px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.group-settings-section-title small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.group-settings-option {
+  min-height: 37px;
+  gap: 8px;
+}
+.group-settings-rename {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: flex-start;
+  padding: 5px 6px;
+  border-radius: var(--radius-control);
+}
+.group-settings-rename:hover:not(:disabled) { background: var(--hover); }
+.group-settings-rename > .tag {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.group-settings-rename > svg { margin-left: auto; color: var(--muted); }
+.group-settings-add {
+  justify-content: flex-start;
+  padding: 9px 7px;
+  color: var(--subtle);
+  border-radius: var(--radius-control);
+  font-size: 12px;
+}
+.group-settings-add:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+}
+/* Suppress the BlockNote node-selection overlay only for interactive database
+   blocks. Keyboard focus indicators on their individual controls remain. */
+.note-editor .bn-block-content[data-content-type='databaseView'] .ProseMirror-selectednode > *::after,
+.note-editor .bn-block-content[data-content-type='databaseView'] > .ProseMirror-selectednode::after {
+  content: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+/* Inline category editing stays beside the clicked action, including narrow views. */
+.group-option-editor { padding: 0; border: 1px solid var(--strong-line); }
+.group-option-heading {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 12px 14px 8px; font-size: 13px;
+}
+.group-option-heading > span {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--muted); font-size: 11px;
+}
+.group-option-editor form { display: flex; flex-direction: column; gap: 9px; padding: 0 14px 12px; }
+.group-option-editor .field-label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--subtle); }
+.group-option-editor .field-label > input,
+.group-option-editor .field-label > select { width: 100%; margin-top: 0; }
+.group-option-error { color: var(--danger, #c34747); font-size: 11px; }
+.group-option-colors { display: flex; flex-wrap: wrap; gap: 9px; padding: 2px 4px 4px; }
+.group-option-colors > button {
+  display: inline-block; width: 23px; height: 23px; min-width: 23px;
+  flex-shrink: 0; border-radius: 50%; border: 2px solid var(--menu);
+  box-shadow: 0 0 0 1px var(--strong-line); cursor: pointer;
+}
+.group-option-colors > button:hover:not(:disabled) { transform: scale(1.08); }
+.group-option-colors > button[aria-pressed='true'] { outline: 2px solid var(--text); outline-offset: 2px; }
+.group-option-colors > button:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.group-option-hint { margin: 1px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.group-option-actions { display: flex; gap: 8px; justify-content: flex-end; padding-top: 4px; }
+.group-option-actions > button { min-width: 54px; padding: 5px 10px; font-size: 12px; }
+.group-option-dialog .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin: 14px 16px 16px; }
+.group-option-dialog > p { margin: 12px 16px; line-height: 1.6; }

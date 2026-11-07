@@ -62,7 +62,22 @@ async function atomicWrite(file, bytes) {
 }
 async function writeNew(file, bytes) {
   const handle = await fs.open(file, 'wx', 0o600).catch(e => { if (e.code === 'EEXIST') fail('ALREADY_EXISTS', 'Destination already exists.'); throw e; });
-  try { await handle.writeFile(bytes); await handle.sync(); } finally { await handle.close(); }
+  let created, error;
+  try { created = await handle.stat({ bigint: true }); await handle.writeFile(bytes); await handle.sync(); } catch (failure) { error = failure; }
+  try { await handle.close(); } catch (failure) { error ||= failure; }
+  if (error) {
+    // Compare the exclusively opened inode with the current destination before
+    // cleanup, preserving replacements observed during writing or close. lstat
+    // deliberately does not follow a replacement symbolic link.
+    try {
+      const current = await fs.lstat(file, { bigint: true });
+      if (!created) error.details = { ...error.details, cleanup: { code: 'OWNERSHIP_UNVERIFIED', message: 'Creation identity could not be read; the destination was preserved.', createdFileMayRemain: true } };
+      else if (current.isFile() && current.dev === created.dev && current.ino === created.ino && current.birthtimeNs === created.birthtimeNs) await fs.unlink(file);
+    } catch (cleanup) {
+      if (cleanup.code !== 'ENOENT') error.details = { ...error.details, cleanup: { code: cleanup.code || 'IO_ERROR', message: cleanup.message, createdFileMayRemain: true } };
+    }
+    throw error;
+  }
 }
 function digest(bytes) { return crypto.createHash('sha256').update(bytes).digest('hex'); }
 function version(st) { return digest(`${st.dev}:${st.ino}:${st.size}:${st.mtimeMs}:${st.ctimeMs}`).slice(0, 24); }

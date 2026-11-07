@@ -1,3 +1,4 @@
+import {engineProviderCatalog} from '../engine-providers'
 import { engineCapabilities } from '../../shared/engines'
 import { engineList,checkEngine,invalidateEngine } from '../engines/registry'
 import { configureEngine } from '../engines/configuration'
@@ -12,6 +13,7 @@ export async function engineRequest(command:string,a:Record<string,any>){
  const s=(value:unknown)=>String(value)
  switch(command){
     case 'engine.list': return engineList()
+    case 'engine.providers': return engineProviderCatalog(a.engine)
     case 'engine.capabilities': return engineCapabilities(a.engine)
     case 'engine.check': return checkEngine(a.engine,{team:a.team,force:a.force===true})
     case 'engine.probe': return probeEngine(a.engine,a.confirm===true,a.model)

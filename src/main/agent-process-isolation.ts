@@ -19,7 +19,7 @@ export function employeeProcessOptions(employeeId:string){
   const runtime=agentCredential(employeeId).folder,quote=(value:string)=>JSON.stringify(value)
   for(const engine of ['codex','claude']){
     const target=path.join(runtime,engine);fs.mkdirSync(target,{recursive:true,mode:0o700})
-    for(const file of engine==='codex'?['auth.json','config.toml','models_cache.json']:['.credentials.json']){const source=path.join((engine==='codex'?process.env.CODEX_HOME:process.env.CLAUDE_CONFIG_DIR)||path.join(os.homedir(),'.'+engine),file),copy=path.join(target,file);if(fs.existsSync(source)&&!fs.existsSync(copy))fs.copyFileSync(source,copy)}
+    for(const file of engine==='codex'?['auth.json','config.toml','models_cache.json']:['.credentials.json']){const source=path.join((engine==='codex'?process.env.CODEX_HOME:process.env.CLAUDE_CONFIG_DIR)||path.join(os.homedir(),'.'+engine),file),copy=path.join(target,file);if(fs.existsSync(source)&&(!fs.existsSync(copy)||!fs.readFileSync(source).equals(fs.readFileSync(copy)))){if(fs.existsSync(copy)&&!fs.existsSync(copy+'.before-native'))fs.copyFileSync(copy,copy+'.before-native');fs.copyFileSync(source,copy);fs.chmodSync(copy,0o600)}}
   }
   const store=readStore(),workRoot=store.teamSettings?.[card.group]?.mode==='work'?store.teamRoots?.[card.group]:undefined
   const writable=card.engine==='claude'||!card.planMode&&['acceptEdits','dontAsk','bypassPermissions'].includes(card.permissionMode??'default')

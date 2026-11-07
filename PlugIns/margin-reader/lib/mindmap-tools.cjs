@@ -25,11 +25,15 @@ function replacements(state,set,p){
 }
 function outlineRows(text){
  S.assert(typeof text==='string'&&Buffer.byteLength(text)<=1024*1024,'TOO_LARGE','Outline text is limited to 1 MiB.');
+ const lines=text.replaceAll('\r','').split('\n'),markdown=lines.some(line=>/^#{1,6}\s+\S/.test(line));
  const rows=[];let last=-1;
- for(const raw of text.replaceAll('\r','').split('\n')){
-  if(!raw.trim())continue;const heading=/^(#{1,6})\s+(.+)$/.exec(raw),bullet=/^(\s*)(?:[-*+]\s+|\d+[.)]\s+)?(.+)$/.exec(raw);let level,title;
+ for(const raw of lines){
+  if(!raw.trim()){if(markdown&&rows.length&&rows.at(-1).text)rows.at(-1).text+='\n';continue;}
+  const heading=/^(#{1,6})\s+(.+)$/.exec(raw);
+  if(markdown&&!heading){if(rows.length)rows.at(-1).text+=(rows.at(-1).text?'\n':'')+raw;continue;}
+  const bullet=/^(\s*)(?:[-*+]\s+|\d+[.)]\s+)?(.+)$/.exec(raw);let level,title;
   if(heading){level=heading[1].length-1;title=heading[2].trim();}else{level=Math.floor(bullet[1].replaceAll('\t','  ').length/2);title=bullet[2].trim();}
-  if(!rows.length)level=0;S.assert(level<=last+1&&level<64,'INVALID_PARAMS','Indentation may increase one level at a time.');M.title(title);rows.push({level,title});last=level;
+  if(!rows.length)level=0;S.assert(level<=last+1&&level<64,'INVALID_PARAMS','Indentation may increase one level at a time.');M.title(title);rows.push({level,title,text:''});last=level;
   S.assert(rows.length<=10000,'TOO_LARGE','At most 10000 outline topics.');
  }
  S.assert(rows.length,'INVALID_PARAMS','The outline is empty.');return rows;
@@ -43,7 +47,7 @@ async function request(store,method,p){
    const changes=replacements(state,set,p);for(const c of changes){require('./study-notebooks.cjs').guard(set,'study.mindmap.replace',{cardIds:[c.cardId]});const card=M.card(set,c.cardId);card[c.key]=c.after;if(c.key==='title'&&card.mindmap)delete card.mindmap.runs;card.updatedAt=new Date().toISOString();}set.lastMindmapReplace={cards:changes.length,matches:changes.reduce((n,c)=>n+c.matches,0)};
   }else if(method==='study.mindmap.outline.import'){
    const rows=outlineRows(p.text);S.assert(set.cards.length+rows.length<=10000,'TOO_LARGE','Study topic limit reached.');if(p.parentId){M.card(set,p.parentId);require('./study-notebooks.cjs').guard(set,'study.mindmap.outline.import',{cardIds:[p.parentId]});}
-   const stack=[],created=[];for(const r of rows){const c=require('./study-advanced.cjs').note(set,r.title);c.parentId=r.level?stack[r.level-1]:p.parentId||null;stack[r.level]=c.id;stack.length=r.level+1;created.push(c.id);}set.cards=M.order(set.cards);set.map??={};set.map.mindmap={...set.map.mindmap,enabled:true};set.lastInsertedCard=created[0];set.lastMindmapOutline={count:created.length,rootIds:created.filter((_id,index)=>rows[index].level===0)};
+   const stack=[],created=[];for(const r of rows){const c=require('./study-advanced.cjs').note(set,r.title,r.text?.trim()||'');c.parentId=r.level?stack[r.level-1]:p.parentId||null;stack[r.level]=c.id;stack.length=r.level+1;created.push(c.id);}set.cards=M.order(set.cards);set.map??={};set.map.mindmap={...set.map.mindmap,enabled:true};set.lastInsertedCard=created[0];set.lastMindmapOutline={count:created.length,rootIds:created.filter((_id,index)=>rows[index].level===0)};
   }else S.fail('METHOD_NOT_FOUND','Unknown mind-map tool.');M.touch(set);return set.id;
  });
  const state=await store.load(),set=M.findSet(state,id);return {...await M.describe(store,state,set),lastMindmapReplace:set.lastMindmapReplace||null,lastMindmapOutline:set.lastMindmapOutline||null};

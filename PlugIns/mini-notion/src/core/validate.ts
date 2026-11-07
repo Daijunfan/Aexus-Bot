@@ -14,12 +14,13 @@ import { flattenBlocks } from './blocks.ts';
 import { validateSyncedSources } from '../content/references.ts';
 import { validateOverviewConfig } from './overview.ts';
 import { validateAppearance, validatePageColor } from './appearance.ts';
-import { validateIcon } from './icons.ts';
+import { validateIcon, validateCustomEmojis } from './icons.ts';
 
 export function validateDomain(workspace: Workspace, previous?: Workspace | null) {
   const previousPages = new Map(previous?.pages.map(page => [page.id, page]));
   const pageIndex = new Map(workspace.pages.map(page => [page.id, page]));
   validateAppearance(workspace.settings.appearance, 'application');
+  validateCustomEmojis(workspace.settings.customEmojis);
   if (workspace.settings.pageTabs !== undefined && (!Array.isArray(workspace.settings.pageTabs) || !workspace.settings.pageTabs.length || workspace.settings.pageTabs.some(id => id !== null && typeof id !== 'string')))
     throw new CommandError('INVALID_SETTINGS', 'pageTabs 需要非空页面 ID/null 数组');
   if (workspace.settings.activeTab !== undefined && (!Number.isInteger(workspace.settings.activeTab) || workspace.settings.activeTab < 0 || workspace.settings.activeTab >= (workspace.settings.pageTabs?.length || 1)))
@@ -226,6 +227,11 @@ function validateView(view: DatabaseView) {
   if (view.timeZone) validateDateValue({ start: '2000-01-01T00:00', timeZone: view.timeZone });
   if (view.planShowBacklog !== undefined && typeof view.planShowBacklog !== 'boolean')
     throw new CommandError('INVALID_VIEW', 'planShowBacklog 必须是 boolean');
+  if (view.frozenThrough !== undefined && view.frozenThrough !== null && typeof view.frozenThrough !== 'string')
+    throw new CommandError('INVALID_VIEW', 'frozenThrough 必须是属性 ID 或 null');
+  if (view.columnWrap !== undefined && (!view.columnWrap || Array.isArray(view.columnWrap) ||
+    typeof view.columnWrap !== 'object' || Object.values(view.columnWrap).some((value) => typeof value !== 'boolean')))
+    throw new CommandError('INVALID_VIEW', 'columnWrap 必须是属性 ID 到 boolean 的映射');
   const enums = {
     cardSize: ['small', 'medium', 'large'],
     cardPreview: ['none', 'cover', 'content'],
@@ -269,6 +275,19 @@ function validateView(view: DatabaseView) {
     }
   };
   if (view.filters) filters(view.filters);
+  if (view.conditionalColors) {
+    if (!Array.isArray(view.conditionalColors))
+      throw new CommandError('INVALID_VIEW', 'conditionalColors 必须是规则数组');
+    const ids = new Set<string>();
+    for (const rule of view.conditionalColors) {
+      if (!rule || typeof rule.id !== 'string' || !rule.id || ids.has(rule.id) ||
+        (rule.targetProperty !== undefined && typeof rule.targetProperty !== 'string'))
+        throw new CommandError('INVALID_VIEW', '条件颜色需要唯一规则 ID，可选 targetProperty 必须是属性 ID');
+      ids.add(rule.id);
+      validatePageColor(rule.color, 'conditionalColors.color');
+      filters(rule.filter);
+    }
+  }
   if (
     view.sorts &&
     (!Array.isArray(view.sorts) ||

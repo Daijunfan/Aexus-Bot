@@ -1,9 +1,11 @@
 import { requestRpc } from './rpc-client.mjs';
 export const base = new URL('.', location.href);
 export const token = location.pathname.split('/')[1];
+// Identify this renderer so its frequent reading-position saves need no full UI refresh.
+const clientOrigin = crypto.randomUUID();
 const pending = new Set();
 export function api(method, params = {}) {
-  const work=requestRpc(new URL('rpc',base),method,params);
+  const work=requestRpc(new URL('rpc',base),method,params,{origin:clientOrigin});
   // Disposable cover rendering must not hold up the host's save-before-close handshake.
   if (method !== 'document.preview') pending.add(work);
   work.then(() => pending.delete(work), () => pending.delete(work));
@@ -25,7 +27,12 @@ export function external(url) {
 }
 export function subscribe(callback) {
   const source = new EventSource(new URL('events', base));
-  source.onmessage = () => callback();
+  source.onmessage = event => {
+    let update;
+    try { update = JSON.parse(event.data); } catch { callback(); return; }
+    if (update.origin === clientOrigin && update.method === 'reader.position.set') return;
+    callback(update);
+  };
   source.onopen = () => callback(); // Reconnects reload domain state even after an event gap.
   return () => source.close();
 }

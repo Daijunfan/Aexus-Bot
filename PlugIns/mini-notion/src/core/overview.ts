@@ -1,5 +1,5 @@
 import type { Page, Workspace } from '../types';
-import { ancestors, isInternalPage, plainText } from '../model';
+import { internalPageIds, plainText } from '../model';
 import { activeView } from '../database/model';
 import { addDays, dateKey, isHourlyPlan, planProjection, scheduledRange, parseDay } from '../database/dates';
 import { dateEpoch, dateParts, dateText, dateWall, localTimeZone, zonedDate } from '../database/dateValue';
@@ -62,9 +62,25 @@ export function overviewProjection(workspace: Workspace, changes: Partial<Overvi
   };
   const items: OverviewItem[] = [];
   validateOverviewConfig(config);
-  const pages = workspace.pages.filter((page) => !page.trashedAt && !isInternalPage(page, workspace.pages));
+  const hidden = internalPageIds(workspace.pages);
+  const pages = workspace.pages.filter(page => !page.trashedAt && !hidden.has(page.id));
+  const byId = new Map(pages.map(page => [page.id, page]));
+  const roots = new Map<string, Page | null>();
+  const rootFor = (page: Page) => {
+    if (page.space) return page;
+    const chain: Page[] = [], seen = new Set<string>();
+    let cursor: Page | undefined = page, root: Page | null = null;
+    while (cursor && !seen.has(cursor.id)) {
+      if (roots.has(cursor.id)) { root = roots.get(cursor.id)!; break; }
+      seen.add(cursor.id); chain.push(cursor);
+      if (cursor.space) root = cursor;
+      cursor = byId.get(cursor.subItemOf || cursor.parentId || '');
+    }
+    for (const item of chain) roots.set(item.id, root);
+    return root;
+  };
   for (const page of pages) {
-    const root = [page, ...ancestors(workspace.pages, page.id)].find((parent) => parent.space);
+    const root = rootFor(page);
     if (!root) continue;
     const base = {
       pageId: page.id,
@@ -75,7 +91,8 @@ export function overviewProjection(workspace: Workspace, changes: Partial<Overvi
       title: page.title || '无标题',
       url: `mininotion://page/${page.id}`,
     };
-    const database = pages.find((parent) => parent.id === page.parentId && parent.database);
+    const candidate = byId.get(page.parentId || '');
+    const database = candidate?.database ? candidate : undefined;
     if (database) {
       const view = activeView(database.database!);
       const plan = planProjection(database, view, [page]);
@@ -191,7 +208,9 @@ export function overviewProjection(workspace: Workspace, changes: Partial<Overvi
   const grouped = new Map<string, OverviewItem[]>();
   for (const item of filtered) {
     const key = config.view === 'board' ? item.status : item.start || '未排期';
-    grouped.set(key, [...(grouped.get(key) || []), item]);
+    const bucket = grouped.get(key);
+    if (bucket) bucket.push(item);
+    else grouped.set(key, [item]);
   }
   const groups = [...grouped].map(([name, items]) => ({ name, items }));
   const anchor = parseDay(config.date) || new Date();

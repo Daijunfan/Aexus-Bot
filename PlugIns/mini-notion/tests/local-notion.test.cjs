@@ -32,7 +32,7 @@ test('offline icons, images and block actions survive real CLI writes and a fold
   const glyphs = require('lucide-react').icons;
   assert.ok(schema.icons.names.every(name => glyphs[name]), 'every catalog symbol has a bundled renderer');
   const emojis = require('../src/core/emojis.json');
-  assert.equal(emojis.length, 3781);
+  assert.equal(emojis.length, 3953);
   assert.equal(new Set(emojis.map(item => item[0])).size, emojis.length);
   assert.equal(Object.keys(schema.icons.colors).length, 10);
   const page = await cli(

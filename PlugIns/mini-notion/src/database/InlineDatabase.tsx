@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
+import { LoadingSurface } from '../components/LoadingSurface';
 import { createReactBlockSpec } from '@blocknote/react';
 import { defaultProps } from '@blocknote/core';
 import { ArrowUpRight, Database as DatabaseIcon, Link2 } from 'lucide-react';
 import { useWorkspace } from '../store';
 import { MenuItem, PageIcon, Popover } from '../ui';
-import { Database } from '../components/Database';
+const Database = lazy(() => import('../components/Database').then(module => ({ default: module.Database })));
 import { newView } from './model';
 import type { DatabaseViewState } from '../types';
 
@@ -30,6 +31,9 @@ export const InlineDatabaseSpec = createReactBlockSpec(
     content: 'none',
   },
   {
+    // Database controls own their mouse/keyboard events; the side handle still
+    // selects and drags the surrounding block container.
+    meta: { selectable: false },
     render: ({ block, editor }) => {
       const { workspace, patch, navigate } = useWorkspace();
       const [picker, setPicker] = useState<{ x: number; y: number } | null>(null);
@@ -51,7 +55,15 @@ export const InlineDatabaseSpec = createReactBlockSpec(
         setPicker(null);
       };
       return (
-        <div className="inline-database" contentEditable={false} data-linked={block.props.linked}>
+        <div
+          className="inline-database"
+          contentEditable={false}
+          data-linked={block.props.linked}
+          // Interacting with controls inside a database must not select its
+          // containing ProseMirror block (or steal its native focus/drag).
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
           {source ? (
             <>
               <div className="inline-database-title">
@@ -79,7 +91,7 @@ export const InlineDatabaseSpec = createReactBlockSpec(
                   <ArrowUpRight size={15} />
                 </button>
               </div>
-              <Database
+              <Suspense fallback={<LoadingSurface compact label="正在加载数据库…" />}><Database
                 page={source}
                 viewState={block.props.linked ? parseViewState(block.props.viewState) : undefined}
                 onViewStateChange={
@@ -87,7 +99,7 @@ export const InlineDatabaseSpec = createReactBlockSpec(
                     ? (state) => editor.updateBlock(block, { props: { viewState: JSON.stringify(state) } })
                     : undefined
                 }
-              />
+              /></Suspense>
             </>
           ) : (
             <button

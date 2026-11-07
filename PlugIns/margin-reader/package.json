@@ -1,8 +1,7 @@
 {
-  "name": "agents-company-margin-reader",
-  "version": "0.9.4",
-  "private": true,
-  "description": "CLI-first, local-first document reader plugin for Agents Company",
+  "name": "marginreader",
+  "version": "0.11.0",
+  "description": "Standalone local-first CLI and terminal workspace for reading, excerpts, mind maps and FSRS review",
   "license": "MIT",
   "engines": {
     "node": ">=22.13.0"
@@ -69,10 +68,12 @@
     "test:study-library": "node tests/study-library-ui.cjs",
     "test:book-library:native": "node tests/book-library-native-ui.cjs",
     "test:mindmap": "node --test tests/mindmap.test.cjs tests/mindmap-tools.test.cjs tests/mindmap-stability.test.cjs",
+    "test:excerpt-parity": "node tests/study-excerpt-parity-ui.cjs && MR_WEBKIT_TEST=1 node tests/study-excerpt-parity-ui.cjs",
+    "test:card-menu-parity": "node tests/card-menu-parity-ui.cjs && MR_WEBKIT_TEST=1 node tests/card-menu-parity-ui.cjs",
     "test:mindmap-ui": "node tests/xmind-structures-ui.cjs && node tests/xmind-drag-ui.cjs && node tests/mindmap-tools-ui.cjs && node tests/mindmap-image-ui.cjs && node tests/mindmap-branch-motion-ui.cjs",
     "test:mindmap-native": "node tests/read-map-native-ui.cjs",
     "test:mindmap-performance": "node tests/mindmap-performance.cjs",
-    "test:sidebar": "node tests/sidebar-navigation-ui.cjs && node tests/sidebar-flow-ui.cjs",
+    "test:sidebar": "node tests/sidebar-disclosure-ui.cjs && node tests/sidebar-navigation-ui.cjs && node tests/sidebar-flow-ui.cjs",
     "test:topics": "node --test tests/topic-defaults.test.cjs && node tests/topic-default-ui.cjs",
     "test:xmind": "node tests/xmind-drag-ui.cjs && node tests/xmind-structures-ui.cjs && node tests/read-map-native-ui.cjs",
     "test:mindmap-completion": "node tests/mindmap-designs-ui.cjs && node tests/mindmap-manipulation-ui.cjs && node tests/mindmap-equation-ui.cjs && node tests/read-map-large-drag-ui.cjs && node tests/mindmap-pitch-ui.cjs && node tests/mindmap-filter-links-ui.cjs && node tests/mindmap-keyboard-ui.cjs && node tests/mindmap-gradient-motion-ui.cjs && node tests/mindmap-branch-motion-ui.cjs",
@@ -81,7 +82,11 @@
     "test:split-reading": "node --test tests/split-read-map.test.cjs && node tests/split-read-map-ui.cjs",
     "test:topic-covers": "node --test tests/topic-drop-target.test.cjs tests/topic-drop-core.test.cjs && node tests/document-covers-ui.cjs && node tests/topic-ownership-ui.cjs && node tests/topic-overview-drag-ui.cjs && node tests/topic-drop-boundary-ui.cjs",
     "test:mindmap-usability": "npm run build:plugin && node --test tests/mindmap-remove.test.cjs tests/excerpt-placement.test.cjs tests/mindmap-tasks.test.cjs tests/mindmap-zones.test.cjs && node tests/mindmap-usability-ui.cjs && node tests/excerpt-drag-ui.cjs && node tests/mindmap-explorer-ui.cjs && node tests/mindmap-zones-ui.cjs && node tests/mindmap-local-tools-ui.cjs",
-    "test:mindmap-usability:native": "node tests/mindmap-usability-native.cjs"
+    "test:mindmap-usability:native": "node tests/mindmap-usability-native.cjs",
+    "release:pack": "node scripts/release-pack.cjs",
+    "test:package": "node scripts/verify-package.cjs",
+    "test:release": "node scripts/release-checks.cjs",
+    "pretest": "node scripts/test-output.cjs"
   },
   "dependencies": {
     "@lingo-reader/mobi-parser": "0.4.6",
@@ -102,6 +107,7 @@
     "pptxgenjs": "4.0.1",
     "proper-lockfile": "4.1.2",
     "sanitize-html": "2.17.7",
+    "string-width": "7.2.0",
     "svg-to-pdfkit": "0.1.8",
     "ts-fsrs": "5.4.2",
     "word-extractor": "1.0.4"
@@ -110,5 +116,49 @@
     "speech-rule-engine": {
       "@xmldom/xmldom": "0.9.12"
     }
-  }
+  },
+  "keywords": [
+    "cli",
+    "tui",
+    "offline",
+    "reader",
+    "mindmap",
+    "fsrs"
+  ],
+  "files": [
+    "cli.cjs",
+    "runtime.cjs",
+    "npm-shrinkwrap.json",
+    "schema.json",
+    "agents-company.plugin.json",
+    "API.md",
+    "lib/**/*.cjs",
+    "lib/local-dictionary.py",
+    "tui/**/*.cjs",
+    "tui/**/*.mjs",
+    "tui/**/*.js",
+    "terminal-visuals/**/*.cjs",
+    "terminal-visuals/**/*.mjs",
+    "terminal-visuals/**/*.js",
+    "terminal-visuals/**/*.json",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "DEPENDENCY_LICENSES.json",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "docs/CLI_REFERENCE.md",
+    "docs/TERMINAL_WORKSPACE.md",
+    "docs/TERMINAL_VISUALS.md",
+    "docs/CLI_PRODUCT_ACCEPTANCE.md",
+    "docs/COMPETITIVE_GAPS.md",
+    "docs/RELEASING.md",
+    "ui/*.html",
+    "ui/*.css",
+    "ui/*.js",
+    "ui/*.mjs",
+    "ui/*.svg",
+    "ui/*.json",
+    "ui/vendor/**"
+  ]
 }

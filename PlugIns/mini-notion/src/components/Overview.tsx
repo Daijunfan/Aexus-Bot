@@ -2,7 +2,7 @@ import { EventSummary } from './EventSummary';
 import { eventPresenter, eventDescription, pageIndex, type EventInfo } from '../scheduling/presentation';
 import { Popover } from '../ui';
 import {AppSelect} from './AppSelect';
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { AppearanceTheme, recordAppearanceStyle } from '../appearance';
 import {
   CalendarDays,
@@ -29,8 +29,9 @@ export function Overview() {
   const theme = useContext(AppearanceTheme);
   const { workspace, api, navigate, notify } = useWorkspace();
   const [dayPanel, setDayPanel] = useState<{ date: string; x: number; y: number } | null>(null);
-  const describe = eventPresenter(workspace!);
-  const byId = pageIndex(workspace!.pages);
+  const [visibleLimit, setVisibleLimit] = useState(120);
+  const describe = useMemo(() => eventPresenter(workspace!), [workspace]);
+  const byId = useMemo(() => pageIndex(workspace!.pages), [workspace!.pages]);
   const describeItem = (item: OverviewItem): EventInfo => {
     const base = describe(byId.get(item.pageId)!);
     return { ...base, title: item.title, owner: item.spaceTitle,
@@ -41,8 +42,16 @@ export function Overview() {
       }),
     };
   };
-  const projection = overviewProjection(workspace!);
+  const projection = useMemo(() => overviewProjection(workspace!), [workspace]);
   const { config, counts, items, groups, days, spaces } = projection;
+  const anchor = parseDay(config.date) || new Date();
+  const timelineDays = Array.from({ length: 14 }, (_, i) => dateKey(addDays(anchor, i)));
+  useEffect(() => setVisibleLimit(120), [config.view, config.scope, config.spaceId, config.query, config.date, config.hideCompleted]);
+  const matchingItems = config.view === 'timeline'
+    ? items.filter(item => item.start && item.start <= timelineDays.at(-1)! && item.end >= config.date)
+    : items;
+  const shown = matchingItems.slice(0, visibleLimit);
+  const shownIds = new Set(shown.map(item => item.id));
   const configure = (changes: Partial<OverviewConfig>) =>
     void api('overview.configure', { changes }).catch((error) => notify(String(error)));
   const toggle = (item: OverviewItem) => {
@@ -71,8 +80,6 @@ export function Overview() {
       {!compact && <ArrowUpRight size={13} />}
     </div>
   );
-  const anchor = parseDay(config.date) || new Date();
-  const timelineDays = Array.from({ length: 14 }, (_, i) => dateKey(addDays(anchor, i)));
   return (
     <section className="overview" aria-label="综合日程">
       <div className="home-section-title overview-heading"><ListTodo size={16} /><span>我的任务</span></div>
@@ -206,7 +213,7 @@ export function Overview() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {shown.map((item) => (
                 <tr key={item.id}>
                   <td>{card(item)}</td>
                   <td>{item.spaceTitle}</td>
@@ -228,9 +235,7 @@ export function Overview() {
               <small key={day}>{day.slice(5)}</small>
             ))}
           </div>
-          {items
-            .filter((item) => item.start && item.start <= timelineDays.at(-1)! && item.end >= config.date)
-            .map((item) => {
+          {shown.map((item) => {
               const first = Math.max(
                 0,
                 timelineDays.findIndex((day) => day >= item.start),
@@ -254,24 +259,31 @@ export function Overview() {
         </div>
       ) : (
         <div className={`overview-groups ${config.view}`}>
-          {groups.map((group) => (
+          {groups.filter(group => group.items.some(item => shownIds.has(item.id))).map((group) => (
             <div className="overview-group" key={group.name}>
               <h3>
                 {group.name === dateKey(new Date()) ? '今天' : group.name}
                 <small>{group.items.length}</small>
               </h3>
-              {group.items.map((item) => card(item))}
+              {group.items.filter(item => shownIds.has(item.id)).map((item) => card(item))}
             </div>
           ))}
         </div>
       )}
       {dayPanel && <Popover {...dayPanel} width={380} role="dialog" label={`${dayPanel.date} 的综合日程`} onClose={() => setDayPanel(null)}>
         <div className="event-detail-list"><header>{dayPanel.date} · 全部日程</header>
-          {days.find(day => day.date === dayPanel.date)?.items.map(item => <button key={item.id} onClick={() => { setDayPanel(null); navigate(item.pageId, item.blockId); }}>
+          {days.find(day => day.date === dayPanel.date)?.items.slice(0,visibleLimit).map(item => <button key={item.id} onClick={() => { setDayPanel(null); navigate(item.pageId, item.blockId); }}>
             <EventSummary info={describeItem(item)} kind={item.kind} detailed />
           </button>)}
+          {(days.find(day=>day.date===dayPanel.date)?.items.length||0)>visibleLimit &&
+            <button type="button" onClick={() => setVisibleLimit(value => value + 120)}>加载更多日程</button>}
         </div>
       </Popover>}
+      {config.view !== 'calendar' && matchingItems.length > visibleLimit && (
+        <button className="overview-more" type="button" onClick={() => setVisibleLimit(value => value + 120)}>
+          加载更多（已显示 {shown.length} / {matchingItems.length} 项）
+        </button>
+      )}
       {!items.length && (
         <div className="overview-empty">
           <ListTodo size={26} />

@@ -9,7 +9,8 @@ const require=createRequire(import.meta.url),{_electron:electron,expect}=require
 const temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-host-ui-'))),home=path.join(temp,'state'),remote=path.join(temp,'remote'),bin=path.join(temp,'bin')
 for(const p of [home,remote,bin])fs.mkdirSync(p);fs.mkdirSync(path.join(remote,'Project'))
 fs.writeFileSync(path.join(bin,'ssh'),`#!/usr/bin/env python3\nimport os,sys\nos.execv('/bin/sh',['sh','-c',sys.argv[-1]])\n`,{mode:0o755})
-const env={...process.env,AGENTS_COMPANY_HOME:home,AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),PATH:bin+':'+process.env.PATH,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1500',AGENTS_COMPANY_HEIGHT:'1100'};delete env.ELECTRON_RUN_AS_NODE
+const control=path.join(temp,'fixture');fs.mkdirSync(control);fs.writeFileSync(path.join(control,'release-all'),'')
+const env={...process.env,CODEX_BIN:path.join(root,'test/fixtures/initialization-codex.cjs'),CODEX_HOME:path.join(temp,'codex'),AC_INIT_FIXTURE:control,AGENTS_COMPANY_HOME:home,AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),PATH:bin+':'+process.env.PATH,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1500',AGENTS_COMPANY_HEIGHT:'1100'};delete env.ELECTRON_RUN_AS_NODE
 const app=await electron.launch({executablePath:process.env.AGENTS_COMPANY_TEST_APP||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[root],env}),page=await app.firstWindow();page.setDefaultTimeout(20000)
 const cli=async(...args)=>{const reply=JSON.parse((await run(process.execPath,[root+'/bin/agents',...args,'--json'],{env,timeout:35000})).stdout);assert.ok(reply.ok,reply.error);return reply.data}
 const errors=[];page.on('pageerror',e=>errors.push(e.message))
@@ -21,7 +22,7 @@ try{
  assert.ok(await local.locator('.team-title strong').evaluate(e=>parseFloat(getComputedStyle(e).fontSize)>=34))
  assert.ok(await local.locator('.team-os-apple').evaluate(e=>getComputedStyle(e).maskImage!=='none'))
  const header=await local.locator('.team-header').boundingBox(),worker=await local.locator('.employee-location').boundingBox();assert.ok(worker.y>=header.y+header.height)
- const opened=app.waitForEvent('window');await page.locator('[data-plugin="cloud-hosts"]').click();const plugin=await opened;plugin.on('pageerror',e=>errors.push(e.message));await plugin.locator('#add').click()
+ const opened=app.waitForEvent('window');await page.locator('[data-plugin="cloud-hosts"]').click();const plugin=await opened;plugin.on('pageerror',e=>errors.push(e.message));await expect(plugin.locator('[data-tab=desktop],#desktop,#vnc-view')).toHaveCount(0);await plugin.locator('#add').click()
  await plugin.locator('input[name=name]').fill('GPU Lab');await plugin.locator('input[name=host]').fill('fixture');await plugin.locator('input[name=defaultDirectory]').fill(remote);await plugin.locator('input[name=password]').fill('fixture-only');await plugin.getByRole('button',{name:'保存主机',exact:true}).click()
  await expect(plugin.locator('#detail h2')).toHaveText('GPU Lab');await expect(plugin.locator('#password-view')).toHaveAttribute('type','password')
  await plugin.locator('#reveal').click();await expect(plugin.locator('#password-view')).toHaveValue('fixture-only');await plugin.locator('#reveal').click();await expect(plugin.locator('#password-view')).toHaveAttribute('type','password')
@@ -30,7 +31,7 @@ try{
  const host=(await cli('host','list'))[0];await page.locator('.add-team').click();await page.locator('input[name=team-name]').fill('Cloud Research');await page.locator('[data-mode=cloud]').click()
  await expect(page.locator('input[name=remote-host],input[name=ssh-port],select[name=remote-os]')).toHaveCount(0)
  await page.locator('select[name=cloud-host-id]').selectOption(host.id)
- await page.getByRole('button',{name:'浏览目录',exact:true}).click();await page.getByRole('button',{name:'▱ Project',exact:true}).click();await page.getByRole('button',{name:'绑定此目录',exact:true}).click()
+ await page.getByRole('button',{name:'Browse directories',exact:true}).click();await page.getByRole('button',{name:'▱ Project',exact:true}).click();await page.getByRole('button',{name:'Bind this directory',exact:true}).click()
  await expect(page.locator('input[name=remote-directory]')).toHaveValue(path.join(remote,'Project'))
  await page.screenshot({path:'artifacts/cloud-team-binding.png'});await page.locator('.save-team').click();await expect(page.locator('.office-panel')).toHaveCount(0)
  const settings=(await cli('group','list','--details')).find(g=>g.name==='Cloud Research');assert.equal(settings.hostId,host.id);assert.equal(settings.remote.directory,path.join(remote,'Project'))
@@ -40,4 +41,4 @@ try{
  await plugin.locator('#remove').click();await plugin.locator('#remove').click();await expect(plugin.locator('#message')).toContainText('仍被 Team 绑定')
  assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(w=>!w.isVisible())));assert.deepEqual(errors,[])
  console.log('PASS hidden installed-capable UI: full-height Team header, readable titles/macOS icon, employee clearance, independent Cloud Hosts CRUD/password/status, registry-only Team creation and remote directory picker')
-}finally{await app.close();fs.rmSync(temp,{recursive:true,force:true})}
+}catch(error){console.error('UI alerts:',await page.locator('[role=alert],.error-banner').allTextContents());console.error('Isolated groups:',(await cli('session','list')).groups);await page.screenshot({path:'artifacts/goal-customization/cloud-ui-failure.png'});throw error}finally{await app.close();fs.rmSync(temp,{recursive:true,force:true})}

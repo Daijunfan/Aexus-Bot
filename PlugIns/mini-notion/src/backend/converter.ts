@@ -1,12 +1,13 @@
 import { ServerBlockNoteEditor } from '@blocknote/server-util';
-import { BlockNoteSchema } from '@blocknote/core';
+import { BlockNoteSchema, defaultInlineContentSpecs } from '@blocknote/core';
 import { withMultiColumn } from '@blocknote/xl-multi-column';
 import type { JsonBlock } from '../types';
+import { CustomEmojiSpec } from '../content/CustomEmoji';
 
 // The same BlockNote parser and multi-column schema as the desktop editor.
 // App-specific blocks are converted by portableBlocks before serialization.
 const editor = ServerBlockNoteEditor.create({
-  schema: withMultiColumn(BlockNoteSchema.create()),
+  schema: withMultiColumn(BlockNoteSchema.create({ inlineContentSpecs: { ...defaultInlineContentSpecs, customEmoji: CustomEmojiSpec } })),
   links: { isValidLink: (href) => /^(https?:|mailto:|asset:|mininotion:|file:|#)/i.test(href) },
 });
 export async function parseDocument(content: string, type: string): Promise<JsonBlock[]> {

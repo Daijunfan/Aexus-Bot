@@ -56,4 +56,23 @@
 .book-turn-overlay{position:absolute;inset:0;z-index:12;pointer-events:none}
 .pdf-turn-label{display:flex;align-items:center}.reader-scroll[data-pdf-mode=paged]{touch-action:pan-y}
 @media(max-width:900px){.study-library-view{padding:18px}.collection-heading{flex-wrap:wrap;gap:12px}.collection-controls{gap:5px}.collection-controls>button{font-size:0;gap:0}.collection-controls>button .icon{width:17px}.collection-actions button{font-size:11px}.collection-items.grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}}
-@media(prefers-reduced-motion:reduce){.collection-tile,.collection-open{transition:none}}
+/* The two sidebar trees share a disclosure language and don't hijack reading. */
+#sidebar-navigation :is(.study-folder-row,.tree-row){scroll-margin-block:10px;transition:background-color .12s ease,color .12s ease}
+#sidebar-navigation .study-folder-row{min-height:40px;border-radius:9px}
+#sidebar-navigation .study-folder-row .folder-toggle{height:32px;width:24px;min-width:24px;color:var(--muted);border-radius:7px}
+#sidebar-navigation .study-folder-row .folder-open{min-height:34px;border-radius:7px}
+#sidebar-navigation .study-folder-row.expanded .folder-toggle,
+#sidebar-navigation .tree-row.folder[aria-expanded=true] .twisty{color:var(--accent)}
+#sidebar-navigation .study-folder-row .folder-open:hover,
+#sidebar-navigation .study-folder-row .folder-toggle:hover{background:transparent}
+#sidebar-navigation .study-folder-row:focus-within{background:var(--hover)}
+#sidebar-navigation .study-folder-row.active:focus-within{background:var(--accent-soft)}
+#sidebar-navigation .study-folder-row :is(.folder-open,.folder-toggle):focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+#sidebar-navigation .tree-row{min-height:40px;border-radius:9px}
+#sidebar-navigation .tree-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+#sidebar-navigation .tree-row.folder:hover{background:var(--hover)}
+#sidebar-navigation :is(.tree-row,.study-folder-row) :is(.file-more,[data-collection-more]){opacity:.58;transition:opacity .12s ease}
+#sidebar-navigation :is(.tree-row,.study-folder-row):is(:hover,:focus-within) :is(.file-more,[data-collection-more]),
+#sidebar-navigation :is(.file-more,[data-collection-more]):focus-visible{opacity:1}
+@media(hover:none){#sidebar-navigation :is(.tree-row,.study-folder-row) :is(.file-more,[data-collection-more]){opacity:1}}
+@media(prefers-reduced-motion:reduce){.collection-tile,.collection-open,#sidebar-navigation :is(.study-folder-row,.tree-row,.file-more,[data-collection-more]){transition:none}}

@@ -1,3 +1,4 @@
+import {isAppAdministrator} from '../application-authority'
 import fs from 'node:fs'
 import path from 'node:path'
 import {createHash,randomBytes,timingSafeEqual} from 'node:crypto'
@@ -38,7 +39,7 @@ export function createWebAuth(secure:boolean){
     const bearer=req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1]
     if(bearer){
       const caller=authenticate(bearer),client=req.headers['x-agents-client']
-      if(client&&caller.principal.kind!=='operator')throw Object.assign(Error('Only the user can target a browser client'),{status:403})
+      if(client&&!isAppAdministrator(caller.principal))throw Object.assign(Error('Only the user can target a browser client'),{status:403})
       if(client&&!/^[a-zA-Z0-9_-]{8,100}$/.test(String(client)))throw Object.assign(Error('Invalid browser client'),{status:400})
       return {context:{...caller,requestId,...(client?{clientId:String(client).startsWith('web-')?String(client):'web-'+client}:{})}}
     }

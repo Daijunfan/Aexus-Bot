@@ -8,11 +8,29 @@ export function overviewGlyphs(layout,ids,selected,highlighted){
  }
  return {count,svg:`<g class="mm-overview-glyphs" aria-label="${count} 个完整主题的缩略表示">${[...groups.values()].map(g=>`<path d="${g.paths.join(' ')}" fill="${g.fill}" stroke="${g.stroke}" stroke-width="1.3" opacity="${g.opacity}"/>`).join('')}</g>`};
 }
-export function hitTopic(layout,x,y,tolerance=0){
- let hit=null;for(const [id,p]of layout.positions)if(x>=p.x&&y>=p.y&&x<=p.x+p.width&&y<=p.y+p.height){const score=p.width*p.height;if(!hit||score<hit.score)hit={id,score};}if(hit)return hit.id;
- // At overview scales a topic can be narrower than one physical input pixel.
- // A small screen-space tolerance resolves its nearest center; it does not
- // change the stored topic rectangles or source-document coordinates.
- if(tolerance>0){let distance=tolerance;for(const [id,p]of layout.positions){const d=Math.hypot(x-p.x-p.width/2,y-p.y-p.height/2);if(d<distance){distance=d;hit={id};}}}
+export function hitTopic(layout,x,y,tolerance=0,index=null,order=null){
+ // The complete layout remains authoritative. Querying the viewport's index
+ // merely avoids testing every offscreen topic for each pointer event.
+ const pad=Math.max(0,tolerance),ids=index?index.query({x:x-pad,y:y-pad,width:2*pad,height:2*pad}):layout.positions.keys();
+ const rank=id=>order?.get(id)??Infinity;
+ let hit=null;
+ for(const id of ids){
+  const p=layout.positions.get(id);if(!p)continue;
+  if(x>=p.x&&y>=p.y&&x<=p.x+p.width&&y<=p.y+p.height){
+   const score=p.width*p.height;
+   if(!hit||score<hit.score||score===hit.score&&rank(id)<rank(hit.id))hit={id,score};
+  }
+ }
+ if(hit)return hit.id;
+ // At overview scales a topic may be narrower than one physical pixel.
+ // Keep nearest-center tolerance and stable source-order ties unchanged.
+ if(tolerance>0){
+  let distance=tolerance;
+  for(const id of ids){
+   const p=layout.positions.get(id);if(!p)continue;
+   const d=Math.hypot(x-p.x-p.width/2,y-p.y-p.height/2);
+   if(d<distance||hit&&d===distance&&rank(id)<rank(hit.id)){distance=d;hit={id};}
+  }
+ }
  return hit?.id||null;
 }

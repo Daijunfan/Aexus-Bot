@@ -1,0 +1,6 @@
+.telegram-wallpaper{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.telegram-wallpaper>canvas{position:absolute;inset:0;width:100%;height:100%}
+.telegram-wallpaper[data-pattern]:not([data-masked])::after{content:"";position:absolute;inset:0;background:var(--tg-pattern-ink);opacity:var(--tg-pattern-opacity);mix-blend-mode:var(--tg-pattern-blend);mask:url('../assets/telegram-document-pattern.svg') center/var(--tg-pattern-scale) repeat}
+.telegram-wallpaper[data-masked][data-pattern]>canvas{mask:url('../assets/telegram-document-pattern.svg') center/var(--tg-pattern-scale) repeat;opacity:var(--tg-pattern-opacity)}
+.message-wallpaper>.telegram-wallpaper{z-index:0}
+.message-wallpaper>.telegram-wallpaper~.message-wallpaper-pattern{z-index:1}

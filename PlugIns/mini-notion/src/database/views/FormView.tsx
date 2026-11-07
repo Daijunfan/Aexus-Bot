@@ -99,8 +99,10 @@ export function FormView({ page, view, columns, updateView }: ViewProps) {
           className="database-form"
           onSubmit={(e) => {
             e.preventDefault();
+            const cleanTitle = title.trim();
+            if (!cleanTitle) return;
             create(
-              { parentId: page.id, title: title.trim(), values },
+              { parentId: page.id, title: cleanTitle, values },
               false,
               defaultTemplateId(page.database!, view),
             );
@@ -117,13 +119,17 @@ export function FormView({ page, view, columns, updateView }: ViewProps) {
             <input
               aria-label="名称"
               required
+              aria-invalid={!!title && !title.trim()}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="请输入名称"
             />
+            {!!title && !title.trim() && <small className="form-field-error" role="alert">名称不能只包含空格</small>}
           </label>
-          {fields.map((column) => (
-            <label className="form-field" key={column.id}>
+          {fields.map((column) => {
+            const Field = column.type === 'multiSelect' ? 'div' : 'label';
+            return (
+            <Field className="form-field" key={column.id}>
               <span>
                 {column.name}
                 {view.formRequired?.includes(column.id) && <i> *</i>}
@@ -221,12 +227,14 @@ export function FormView({ page, view, columns, updateView }: ViewProps) {
                   }
                 />
               )}
-            </label>
-          ))}
+            </Field>
+            );
+          })}
           <button
             className="primary-button"
             type="submit"
             disabled={
+              (!!title && !title.trim()) ||
               page.locked ||
               pendingUploads > 0 ||
               fields.some(

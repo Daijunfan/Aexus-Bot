@@ -11,7 +11,7 @@ const root=path.resolve(import.meta.dirname,'..'),temp=fs.mkdtempSync(path.join(
 const keys=['AGENTS_COMPANY_HOME','AGENTS_COMPANY_PACKAGE_ROOT','AGENTS_COMPANY_BUILTIN_PLUGINS','AGENTS_COMPANY_PLUGIN_DIRS'],previous=Object.fromEntries(keys.map(key=>[key,process.env[key]])),checks=[]
 try{
  fs.mkdirSync(resources);fs.mkdirSync(plugins);fs.writeFileSync(path.join(resources,'package.json'),'{"name":"agents-company"}')
- for(const file of ['API.md','PERMISSIONS.md','PLAN.md','SCHEDULER.md','ARCHITECTURE.md','docs/CONVERSATION_WORKSPACES.md','docs/CONVERSATION_CONTROLS.md','docs/MESSAGE_COLLABORATION.md','docs/SECRETARY_API_PARITY.md']){fs.mkdirSync(path.dirname(path.join(resources,file)),{recursive:true});fs.copyFileSync(path.join(root,file),path.join(resources,file))}
+ for(const file of ['API.md','PERMISSIONS.md','PLAN.md','SCHEDULER.md','ARCHITECTURE.md','docs/CONVERSATION_WORKSPACES.md','docs/CONVERSATION_CONTROLS.md','docs/MESSAGE_COLLABORATION.md','docs/CHANNELS.md','docs/CHANNEL_FILTERS.md','docs/SECRETARY_API_PARITY.md']){fs.mkdirSync(path.dirname(path.join(resources,file)),{recursive:true});fs.copyFileSync(path.join(root,file),path.join(resources,file))}
  const makePlugin=(id,version)=>{
   const directory=path.join(plugins,id);fs.mkdirSync(directory,{recursive:true})
   const api=`---\nschema: agents-company.cli/v1\nplugin: ${id}\n---\n# ${id} ${version}\n\n${['Purpose','Workspace','Quick start','Commands','Files','Errors','Compatibility'].map(title=>'## '+title+'\n\nFixture '+title+'\n').join('\n')}`

@@ -1,3 +1,5 @@
+import {BOT_WORKER_GUIDANCE} from '../shared/bot-workers'
+import {botGroup,botRequest,readBotFile} from './bot-workers'
 import {requireConversation,conversationPolicy,moderateConversation,controlChanged} from './conversation-policy'
 import {groupRole,type NoticeReceipt} from '../shared/conversation-controls'
 import {sharedAttachments,conversationFileEndpoint,workspaceForMember} from './conversation-workspaces'
@@ -20,15 +22,15 @@ import {taskViewId} from './task-view'
 import type {Delegation,PrincipalRef} from '../shared/management'
 import {GROUP_PUBLISH_POLICY,effectiveChatMute,emptyAgentPost,type ChatGroup,type ChatGroupView,type ChatMessage,type ChatDelivery,type ChatTaskContext,type ChatAcknowledgment,type ChatAcknowledgmentPolicy} from '../shared/chat-groups'
 export {effectiveChatMute} from '../shared/chat-groups'
-import {directory,indexFile,catalog,groupId,historyFile,messages,type Catalog} from './chat-group-store'
+import {directory,indexFile,catalog,groupId,historyFile,messages,advanceGroupRead,emitChatChange as emit,type Catalog} from './chat-group-store'
+import {recordGroupReply,acknowledgeGroupReplies} from './reply-receipts'
+export {setChatEmitter} from './chat-group-store'
 const idString=(value:unknown,label:string)=>{if(typeof value!=='string'||!value.trim()||value!==value.trim())throw Error('Provide a valid '+label);return value}
-let emit:(id:string,editedMessageId?:string,messageId?:string)=>void=()=>{}
-export function setChatEmitter(handler:typeof emit){emit=handler}
-const operator=()=>{if(requestContext().principal.kind!=='operator')throw Error('Only the user may manage chat groups or read receipts')}
+const operator=requireAppAdministrator
 const fields=(args:Record<string,any>,allowed:string[])=>{for(const key of Object.keys(args))if(args[key]!==undefined&&!allowed.includes(key))throw Error('Unknown chat field: '+key)}
 function requireGroup(id:unknown,administrative=false){
  const group=catalog().groups.find(group=>group.id===groupId(id));if(!group)throw Error('Unknown chat group')
- const caller=callerEmployee();if(caller&&!group.memberIds.includes(caller.id))throw Error('Not a member of this chat group')
+ const caller=callerEmployee();if(caller&&!isAppAdministrator()&&!group.memberIds.includes(caller.id))throw Error('Not a member of this chat group')
  return group
 }
 function project(group:ChatGroup):ChatGroupView{
@@ -47,13 +49,13 @@ function memberIds(input:unknown,teams:unknown=[]){
  for(const id of ids)if(!store.sessions.some(card=>card.id===id&&!card.deleting))throw Error('Unknown employee: '+id)
  return ids
 }
-export function listChatGroups(){authorize('chat.list');const caller=callerEmployee();return catalog().groups.filter(group=>!caller||group.memberIds.includes(caller.id)).map(project)}
+export function listChatGroups(){authorize('chat.list');const caller=callerEmployee();return catalog().groups.filter(group=>isAppAdministrator()||!caller||group.memberIds.includes(caller.id)).map(project)}
 export function getChatGroup(id:unknown){authorize('chat.get');return project(requireGroup(id,true))}
 export function createChatGroup(args:Record<string,any>){
  authorize('chat.create');fields(args,['name','members','team','ownerId'])
  const name=idString(args.name,'group name');if(name.length>80)throw Error('Group name is too long')
  const ids=memberIds(args.members??[],args.team===undefined?[]:[args.team]);if(!ids.length)throw Error('Choose at least one employee')
- const principal=requestContext().principal,ownerId=args.ownerId??(principal.kind==='agent'?principal.employeeId:ids[0]);if(!ids.includes(ownerId))throw Error('Choose an Owner from the selected Agent members');if(principal.kind==='agent'&&ownerId!==principal.employeeId)throw Error('Agent creators must be their new group Owner')
+ const principal=requestContext().principal,ownerId=args.ownerId??(!isAppAdministrator(principal)&&principal.kind==='agent'?principal.employeeId:ids[0]);if(!ids.includes(ownerId))throw Error('Choose an Owner from the selected Agent members');if(!isAppAdministrator(principal)&&principal.kind==='agent'&&ownerId!==principal.employeeId)throw Error('Agent creators must be their new group Owner')
  const now=Date.now(),group:ChatGroup={id:'cg_'+randomUUID(),ownerId,adminIds:[],name,memberIds:ids,sourceTeam:args.team,createdAt:now,updatedAt:now,revision:1,readSequence:0,lastIncomingSequence:0}
  const store=catalog();store.groups.push(group);atomicJson(indexFile,store,true);emit(group.id);return project(group)
 }
@@ -61,6 +63,7 @@ export function updateChatGroup(args:Record<string,any>){
  authorize('chat.update',{id:args.id});requireConversation('group:'+args.id,'admin');fields(args,['id','name','members','addTeams','expectedRevision']);const current=requireGroup(args.id,true)
  if(args.expectedRevision!==undefined&&args.expectedRevision!==current.revision)throw Error('Group changed; reload before saving')
  const name=args.name===undefined?current.name:idString(args.name,'group name');if(name.length>80)throw Error('Group name is too long')
+ if(current.bot)throw Error('Use bot.access to change external Worker authorization; native Grok membership is separate')
  const ids=memberIds(args.members??project(current).memberIds,args.addTeams??[])
  if(current.ownerId&&current.memberIds.includes(current.ownerId)&&readStore().sessions.some(card=>card.id===current.ownerId&&!card.deleting)&&!ids.includes(current.ownerId))throw Error('Transfer ownership before removing the Owner')
  const result=project(mutateGroup(current.id,group=>{group.name=name;group.memberIds=ids;group.adminIds=group.adminIds?.filter(id=>ids.includes(id));group.mutes=Object.fromEntries(Object.entries(group.mutes??{}).filter(([id])=>id==='all'||ids.includes(id)))}));controlChanged('group:'+current.id);return result
@@ -70,6 +73,7 @@ export function muteChatMember(args:Record<string,any>){
  const current=requireConversation('group:'+args.id,'admin');moderateConversation({conversation:current.conversation,member:args.member,muted:args.muted,durationSeconds:args.durationSeconds,expectedRevision:args.expectedRevision??current.revision});return project(requireGroup(args.id))
 }
 export function deleteChatGroup(id:unknown){
+ if(botGroup(id))return botRequest('bot.delete',{id})
  authorize('chat.delete',{id});requireConversation('group:'+id,'owner');const group=requireGroup(id,true),store=catalog();store.groups=store.groups.filter(item=>item.id!==group.id)
  // Keep the conversation file recoverable; employees and private histories are untouched.
  atomicJson(indexFile,store,true);removeIndexedConversation('group:'+group.id);emit(group.id);controlChanged('group:'+group.id);return {removed:true,id:group.id}
@@ -81,9 +85,9 @@ export function groupMediaRoot(id:unknown){
  return fs.realpathSync(root)
 }
 export function groupAttachment(args:Record<string,any>){
- authorize('chat.file',args);const shared=typeof args.path==='string'&&args.path.startsWith(WORKSPACE_FILE_PREFIX)?conversationFileEndpoint('group:'+args.id,args.path):undefined;const root=shared?.root??groupMediaRoot(args.id)
+ authorize('chat.file',args);if(botGroup(args.id)&&typeof args.path==='string'&&args.path.startsWith('@bot/'))return readBotFile(args);const shared=typeof args.path==='string'&&args.path.startsWith(WORKSPACE_FILE_PREFIX)?conversationFileEndpoint('group:'+args.id,args.path):undefined;const root=shared?.root??groupMediaRoot(args.id)
  if(typeof args.path!=='string'||!args.path)throw Error('Choose a group attachment')
- if(requestContext().principal.kind!=='operator'&&!messages(String(args.id)).some(message=>message.attachments?.some(file=>file.path===args.path)))throw Error('Only published group attachments are readable')
+ if(!isAppAdministrator()&&!messages(String(args.id)).some(message=>message.attachments?.some(file=>file.path===args.path)))throw Error('Only published group attachments are readable')
  const operation=args.operation??'info'
  if(!['info','image','read','chunk'].includes(operation))throw Error('Unknown attachment operation')
  return workspaceFiles(root,({info:'copy-info',image:'read-image',read:'read',chunk:'copy-read'} as Record<string,string>)[operation],{path:shared?.path??args.path,offset:Number(args.offset??0),length:262144})
@@ -119,25 +123,26 @@ function messageText(value:unknown,hasAttachments:boolean,max:number){
 }
 function append(group:ChatGroup,args:Record<string,any>,targets:string[],kind:ChatMessage['kind'],broadcast=false,workTargets:string[]=[],acknowledgment=false){
  const principal=requestContext().principal,attachments=groupAttachments(group.id,args.images,args.files)
- const text=messageText(typeof args.text==='string'?args.text:'',attachments.length>0,principal.kind==='agent'?GROUP_PUBLISH_POLICY.maxCharacters:16000)
+ const text=messageText(typeof args.text==='string'?args.text:'',attachments.length>0,!isAppAdministrator(principal)?GROUP_PUBLISH_POLICY.maxCharacters:16000)
  const clientMessageId=messageKey(args.clientMessageId)
  const all=messages(group.id),quote=args.replyQuote===undefined?undefined:quoteShape(args.replyQuote),fingerprint=createHash('sha256').update(JSON.stringify([text,broadcast?[]:[...targets].sort(),kind,args.replyTo??null,args.viewId??null,...(quote?[quote]:[]),...(args.replyConversation?[args.replyConversation,!!args.replyTextOnly]:[]),...(attachments.length?[attachments.map(file=>[file.path,file.bytes,file.kind])]:[])])).digest('hex')
  const previous=all.find(message=>message.clientMessageId===clientMessageId&&authorEquals(message.author,principal))
  if(previous){if(previous.fingerprint!==fingerprint)throw Error('Client message ID already used with different content');return {message:previous,created:false}}
- if(principal.kind==='agent'&&emptyAgentPost(args.text))throw Error('Public replies require nonempty text')
-  if(principal.kind==='agent'&&effectiveChatMute(group,principal.employeeId)!==undefined)throw Error('You are muted in this group; reading and private work remain available')
- if(args.crossReply&&principal.kind!=='operator')throw Error('Only the user may quote another conversation')
+ if(!attachments.length&&!isAppAdministrator(principal)&&principal.kind==='agent'&&emptyAgentPost(args.text))throw Error('Public replies require nonempty text')
+  if(!isAppAdministrator(principal)&&principal.kind==='agent'&&effectiveChatMute(group,principal.employeeId)!==undefined)throw Error('You are muted in this group; reading and private work remain available')
+ if(args.crossReply&&!isAppAdministrator(principal))throw Error('Only the user may quote another conversation')
  const original=args.replyTo===undefined||args.crossReply?undefined:all.find(message=>message.id===args.replyTo)
  if(args.replyTo!==undefined&&!args.crossReply&&!original)throw Error('Unknown group reply target')
  if(quote&&!args.crossReply){if(!original)throw Error('A selected quote requires a reply message');validateQuote(original.text,quote)}
  const message:ChatMessage={id:'gm_'+randomUUID(),sequence:(all.at(-1)?.sequence??0)+1,createdAt:Date.now(),author:principal,authorName:callerEmployee()?.title??'You',text,...(attachments.length?{attachments}:{}),kind,mentions:broadcast?[]:targets,...(broadcast?{broadcast:true as const}:{}),...(acknowledgment?{acknowledgmentOf:args.replyTo}:{}),deliveries:project(group).memberIds.filter(id=>principal.kind!=='agent'||id!==principal.employeeId).map(employeeId=>({employeeId,mode:workTargets.includes(employeeId)?'work':'awareness',status:'pending'})),replyTo:args.replyTo,...(args.crossReply?{reply:args.crossReply}:{}),...(quote?{replyQuote:quote}:{}),clientMessageId,fingerprint}
  atomicJson(historyFile(group.id),[...all,message],true)
+ if(principal.kind==='agent')recordGroupReply(principal.employeeId,{groupId:group.id,messageId:message.id,sequence:message.sequence})
  mutateGroup(group.id,value=>{value.lastMessage={id:message.id,sequence:message.sequence,text:Array.from(text||attachments.map(file=>file.name).join(', ')).slice(0,240).join(''),createdAt:message.createdAt,authorName:message.authorName,author:message.author};if(principal.kind==='agent')value.lastIncomingSequence=message.sequence})
  return {message,created:true}
 }
 /** Corrections change published text only; accepted tasks retain their original queued prompt. */
 export function editChatMessage(args:Record<string,any>):ChatMessage{
- authorize('chat.edit');operator();fields(args,['id','messageId','text','expectedRevision'])
+ authorize('chat.edit');operator();if(botGroup(args.id))throw Error('Native bot messages cannot be edited through a local-only operation');fields(args,['id','messageId','text','expectedRevision'])
  if(!Number.isSafeInteger(args.expectedRevision)||args.expectedRevision<0)throw Error('Provide a non-negative expected message revision')
  const group=requireGroup(args.id),all=messages(group.id),messageId=idString(args.messageId,'message ID'),message=all.find(item=>item.id===messageId)
  if(!message)throw Error('Unknown group message')
@@ -185,12 +190,14 @@ export function postChatMessage(args:Record<string,any>,acknowledgment=false,pre
 export function acknowledgeChat(args:Record<string,any>){
  authorize('chat.acknowledge');operator();fields(args,['id','messageId']);const group=requireGroup(args.id),message=messages(group.id).find(item=>item.id===args.messageId)
  if(!message)throw Error('Unknown group message')
- if(group.readSequence<message.sequence)mutateGroup(group.id,value=>{value.readSequence=message.sequence})
+ const sequence=advanceGroupRead(group.id,message.sequence)!
+ acknowledgeGroupReplies(group.id,sequence)
  return {acknowledged:true,messageId:message.id}
 }
 export function chatContext(args:Record<string,any>){
  authorize('chat.context');fields(args,['id','messageId']);const group=project(requireGroup(args.id,true)),all=messages(group.id)
  const message=args.messageId===undefined?undefined:all.find(message=>message.id===args.messageId);if(args.messageId!==undefined&&!message)throw Error('Unknown group message')
+ if(group.bot)return {group,message,policy:{guidance:BOT_WORKER_GUIDANCE},recentMessages:all.slice(-20),privateDetails:'External Worker native history; no Company employee context or credentials are injected.'}
  const caller=callerEmployee(),delivery=caller&&message?.deliveries.find(delivery=>delivery.employeeId===caller.id)
  return {group,message,...(!caller||group.memberIds.includes(caller.id)?{workspace:workspaceForMember('group:'+group.id,caller?.id)}:{}),policy:GROUP_PUBLISH_POLICY,...(message&&delivery?{acknowledgment:acknowledgmentPolicy(group,message,delivery)}:{}),recentMessages:all.slice(-20),privateDetails:'Use the original employee conversation for full work details. Group membership never grants access to other private conversations.'}
 }
@@ -207,7 +214,7 @@ export function chatTaskPrompt(context:ChatTaskContext|undefined,employeeId:stri
  if(!context)return text
  const group=catalog().groups.find(group=>group.id===context.groupId),message=messages(context.groupId).find(item=>item.id===context.messageId)
  if(!group||!group.memberIds.includes(employeeId)||!message?.deliveries.some(delivery=>delivery.employeeId===employeeId)||!delegation||!authorEquals(message.author,delegation.requestedBy))throw Error('Group membership or message routing is no longer valid')
- if(message.author.kind==='agent'&&!group.memberIds.includes(message.author.employeeId))throw Error('Group sender is no longer a member')
+ if(message.author.kind==='agent'&&!isAppAdministrator(message.author)&&!group.memberIds.includes(message.author.employeeId))throw Error('Group sender is no longer a member')
  // append validated this immutable quote; a later source correction must not invalidate accepted work.
  if(message.replyQuote&&!message.reply&&!messages(group.id).some(item=>item.id===message.replyTo))throw Error('Unknown group reply target')
  const original=message.replyTo&&!message.reply?messages(group.id).find(item=>item.id===message.replyTo):undefined
@@ -215,7 +222,7 @@ export function chatTaskPrompt(context:ChatTaskContext|undefined,employeeId:stri
  const reply=message.reply??(original?{id:original.id,author:original.author,authorName:original.authorName,text:message.replyQuote?.text??original.text,...(message.replyQuote?{quote:message.replyQuote}:{})}:undefined)
  const base='[Group request]\n'+JSON.stringify({conversationType:'group',conversationId:group.id,groupId:group.id,groupName:group.name,messageId:message.id,sequence:message.sequence,sender:message.authorName,author:message.author,createdAt:message.createdAt,broadcast:!!message.broadcast,addressedTo,directlyAddressed:addressedTo.includes(employeeId),acknowledgment:chatAcknowledgmentPolicy(context,employeeId),...(reply?{replyTo:message.replyTo,reply}:{})})+'\n'+text
  if(reading)return base
- return base+'\n\n[Group reporting]\n'+GROUP_PUBLISH_POLICY.guidance+'\n[Shared workspace]\n'+JSON.stringify(workspaceForMember('group:'+group.id,employeeId))+'\nRead shared context with agents chat context '+group.id+' --message '+message.id+' --json. Older messages: agents chat history '+group.id+' --before '+message.sequence+' --limit 50 --json; use nextBefore for the next page. Publish with agents chat post '+group.id+' --reply-to '+message.id+' --text "Reply text" --json. Use workspace.catalog for your available locations and permissions. Read shared files with agents conversation file; use the returned memberDirectory paths.'
+ return base+'\n\n[Group reporting]\n'+GROUP_PUBLISH_POLICY.guidance+'\n[Shared workspace]\n'+JSON.stringify(workspaceForMember('group:'+group.id,employeeId))+'\nRead shared context with agents chat context '+group.id+' --message '+message.id+' --json. Older messages: agents chat history '+group.id+' --before '+message.sequence+' --limit 50 --json; use nextBefore for the next page. Only when a public group reply is intended, publish with agents chat post '+group.id+' --reply-to '+message.id+' --text "Reply text" --json. Use workspace.catalog for your available locations and permissions. Read shared files with agents conversation file; use the returned memberDirectory paths.'
 }
 type PrepareGroupAttachments=(employee:string,groupId:string,message:ChatMessage)=>Promise<{images:string[];files:string[]}>
 const sending=new SingleFlight<ChatMessage>()
@@ -237,10 +244,10 @@ export async function sendChatMessage(args:Record<string,any>,prepare?:PrepareGr
  authorize('chat.send');fields(args,['id','text','mentions','clientMessageId','viewId','replyTo','replyQuote','replyConversation','replyTextOnly','crossReply','images','files'])
  const group=project(requireGroup(args.id)),mention=args.mentions??[]
  if(mention!=='all'&&(!Array.isArray(mention)||mention.some(id=>typeof id!=='string')))throw Error('Mentions must be employee IDs or all')
- const principal=requestContext().principal,clientId=messageKey(args.clientMessageId),inputBroadcast=principal.kind==='operator'&&Array.isArray(mention)&&mention.length===0
+ const principal=requestContext().principal,clientId=messageKey(args.clientMessageId),inputBroadcast=isAppAdministrator(principal)&&Array.isArray(mention)&&mention.length===0
  const history=messages(group.id),previous=history.find(message=>message.clientMessageId===clientId&&authorEquals(message.author,principal))
  const original=args.replyTo&&!args.crossReply?history.find(message=>message.id===args.replyTo):undefined
- const replyTarget=principal.kind==='operator'&&original?.author.kind==='agent'&&group.memberIds.includes(original.author.employeeId)?original.author.employeeId:undefined
+ const replyTarget=isAppAdministrator(principal)&&original?.author.kind==='agent'&&group.memberIds.includes(original.author.employeeId)?original.author.employeeId:undefined
  const broadcast=inputBroadcast&&!replyTarget
  if(previous){
   if(previous.broadcast&&!inputBroadcast)throw Error('Client message ID already used with different content')

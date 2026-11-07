@@ -32,7 +32,7 @@ async function selectText(target = page) {
     const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
     document.dispatchEvent(new Event('selectionchange'));
   });
-  await expect(target.getByRole('button', { name: '发送选区给 Agent', exact: true })).toBeVisible();
+  await expect(target.getByRole('button', { name: '更多文本操作', exact: true })).toBeVisible();
 }
 async function slash() {
   await expect(page.locator(`[data-id="${slashBlock}"] .bn-inline-content`)).toHaveText('');
@@ -132,7 +132,7 @@ try {
   await tabs.getByRole('tab', { name: '数据库', exact: true }).click(); await page.keyboard.type('red background');
   await expect(page.locator('.slash-category-items')).toContainText('红色背景');
   await dismissSlash(); pass('rename/delete preserve commands and typed search works across categories');
-  await selectText(); await page.getByRole('button', { name: '发送选区给 Agent', exact: true }).click();
+  await selectText(); await page.getByRole('button', { name: '更多文本操作', exact: true }).click(); await page.getByRole('menuitem', { name: '发送选区给 Agent', exact: true }).click();
   const chat = page.getByRole('dialog', { name: '选区 AI 聊天' });
   await expect(chat).toBeVisible(); await expect(chat.locator('.selection-ai-reply')).toContainText('选区回复');
   const transcript = await cli('session', 'transcript', '--employee', employee.id);
@@ -141,14 +141,14 @@ try {
   await page.screenshot({ animations: 'disabled', path: path.join(out, 'selection-ai-response.png') });
   await page.getByRole('textbox', { name: '页面标题', exact: true }).click(); await expect(chat).toHaveCount(0);
   pass('one robot click sends only selection to the bound employee, shows Markdown response, and outside click dismisses');
-  await selectText(); await page.getByRole('button', { name: '发送选区给 Agent', exact: true }).click();
+  await selectText(); await page.getByRole('button', { name: '更多文本操作', exact: true }).click(); await page.getByRole('menuitem', { name: '发送选区给 Agent', exact: true }).click();
   await expect(chat.locator('.selection-ai-reply')).toContainText('选区回复');
   await chat.getByRole('button', { name: 'AI 提示词与发送设置' }).click();
   await chat.getByRole('textbox', { name: '前置提示词' }).fill('请翻译为英文：');
   await chat.getByRole('combobox', { name: 'AI 发送方式' }).selectOption('edit');
   await chat.getByRole('combobox', { name: 'AI 员工' }).selectOption(employee.id);
   await page.keyboard.press('Escape'); await expect(chat).toHaveCount(0);
-  await selectText(); await page.getByRole('button', { name: '发送选区给 Agent', exact: true }).click();
+  await selectText(); await page.getByRole('button', { name: '更多文本操作', exact: true }).click(); await page.getByRole('menuitem', { name: '发送选区给 Agent', exact: true }).click();
   await expect(chat.getByRole('textbox', { name: 'AI 消息', exact: true })).toHaveValue('请翻译为英文：\n\n' + selectedText);
   assert.equal((await cli('session', 'transcript', '--employee', employee.id)).items.filter(item => item.role === 'user').length, 2);
   await chat.getByRole('textbox', { name: 'AI 消息', exact: true }).fill('手动编辑的消息');
@@ -157,7 +157,7 @@ try {
   await page.keyboard.press('Escape'); pass('editable prompt and two-click mode persist; manual messages send without losing the mini chat on focus');
   await page.reload(); await expect(page.getByRole('textbox', { name: '页面标题', exact: true })).toHaveValue(note.title);
   await slash(); assert.equal(await tabs.getByRole('tab').nth(1).textContent(), '数据库'); await dismissSlash();
-  await selectText(); await page.getByRole('button', { name: '发送选区给 Agent', exact: true }).click();
+  await selectText(); await page.getByRole('button', { name: '更多文本操作', exact: true }).click(); await page.getByRole('menuitem', { name: '发送选区给 Agent', exact: true }).click();
   await expect(chat.getByRole('textbox', { name: 'AI 消息', exact: true })).toHaveValue('请翻译为英文：\n\n' + selectedText);
   await page.keyboard.press('Escape'); pass('classification order, AI prefix and send mode survive renderer reload');
   await api('settings.set', { theme: 'dark' });
@@ -166,7 +166,7 @@ try {
   await expect(menu.locator('[data-test="text-color-red"] .bn-color-icon')).toBeVisible();
   assert.ok((await menu.locator('.bn-color-icon').evaluateAll(nodes => nodes.map(el => getComputedStyle(el).fontSize))).every(size => size === '0px'));
   await page.screenshot({ animations: 'disabled', path: path.join(out, 'colors-dark.png') }); await page.keyboard.press('Escape');
-  await selectText(); await page.getByRole('button', { name: '发送选区给 Agent', exact: true }).click();
+  await selectText(); await page.getByRole('button', { name: '更多文本操作', exact: true }).click(); await page.getByRole('menuitem', { name: '发送选区给 Agent', exact: true }).click();
   const sendButton = chat.getByRole('button', { name: '发送 AI 消息', exact: true });
   await expect(sendButton).toBeVisible();
   assert.notEqual(await sendButton.evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)');
@@ -181,12 +181,12 @@ try {
   assert.equal((await call(employeeEnv, 'plugin', 'call', 'mininotion', 'page.get', '--employee', probe.id, '--params', JSON.stringify({ pageId: probeNote.id }))).id, probeNote.id);
   await assert.rejects(call(employeeEnv, 'plugin', 'call', 'mininotion', 'assistant.send', '--employee', probe.id, '--params', JSON.stringify({ employeeId: probe.id, text: 'should reject', clientMessageId: 'denied' })), error => error.stdout?.includes('Plugin command requires user or global management authority'));
   pass('ordinary employee plugin access cannot bypass the host assistant application boundary');
-  browser = await chromium.launch({ headless: true, ...(process.env.AGENTS_BROWSER_CHANNEL ? { channel: process.env.AGENTS_BROWSER_CHANNEL } : {}) });
+  browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH, ...(process.env.AGENTS_BROWSER_CHANNEL ? { channel: process.env.AGENTS_BROWSER_CHANNEL } : {}) });
   const web = await browser.newPage({ viewport: { width: 980, height: 760 } }); web.on('pageerror', e => errors.push(e.message));
   await web.goto(view.url); await web.getByRole('textbox', { name: '页面标题', exact: true }).waitFor();
   await selectText(web); await web.locator('[data-test="colors"]').click();
   await expect(web.locator('.bn-color-picker-dropdown [data-test="text-color-blue"] .bn-color-icon')).toBeVisible();
-  await web.keyboard.press('Escape'); await selectText(web); await web.getByRole('button', { name: '发送选区给 Agent', exact: true }).click();
+  await web.keyboard.press('Escape'); await selectText(web); await web.getByRole('button', { name: '更多文本操作', exact: true }).click(); await web.getByRole('menuitem', { name: '发送选区给 Agent', exact: true }).click();
   await expect(web.getByRole('dialog', { name: '选区 AI 聊天' })).toBeVisible();
   await web.getByRole('textbox', { name: '页面标题', exact: true }).click(); await expect(web.getByRole('dialog', { name: '选区 AI 聊天' })).toHaveCount(0);
   await web.screenshot({ animations: 'disabled', path: path.join(out, 'browser-render.png') });

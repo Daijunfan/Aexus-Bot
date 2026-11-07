@@ -23,7 +23,7 @@ export function MessageImageViewer({items:initialItems,initialIndex,initialSrc,h
  const cache=useRef(new Map<string,Promise<string>>(initialSrc?[[galleryKey(initialItems[initialIndex]),Promise.resolve(initialSrc)]]:[])),[images,setImages]=useState<Record<string,string>>(initialSrc?{[galleryKey(initialItems[initialIndex])]:initialSrc}:{}),[errors,setErrors]=useState<Record<string,boolean>>({})
  const wheelLast=useRef(0),pointers=useRef(new Map<number,Point>()),gesture=useRef<Gesture|null>(null)
  const item=items[index],key=galleryKey(item),src=images[key],name=item.path.split(/[\\/]/).at(-1)??'Photo',first=Math.max(0,Math.min(index-3,items.length-7)),nearby=items.slice(first,first+7).map((item,offset)=>({item,index:first+offset}))
- useDialogFocus('.message-image-dialog',true,()=>origin(items[index]))
+ useDialogFocus('.message-image-overlay:not([data-message-image-exit]) .message-image-dialog',true,()=>origin(items[index]))
  const play=(el:Element,frames:Keyframe[],duration:number,done?:()=>void)=>{let animation:Animation|undefined;animation=playMessageMotion(el,frames,duration,()=>{if(animation)animations.current.delete(animation);done?.()});if(animation)animations.current.add(animation)}
  const settle=()=>{for(const animation of animations.current)if(animation.playState==='running')animation.finish()}
  useEffect(()=>{
@@ -36,16 +36,22 @@ export function MessageImageViewer({items:initialItems,initialIndex,initialSrc,h
  const pageScale=()=>{const area=viewport.current;return area?area.getBoundingClientRect().width/area.offsetWidth:1}
  const thumbnailTransform=()=>{
   const el=photo.current,area=viewport.current,source=origin(item)?.getBoundingClientRect()
-  if(!el||!area||!source||source.bottom<=0||source.top>=innerHeight||source.right<=0||source.left>=innerWidth)return null
+  if(!el?.offsetWidth||!el.offsetHeight||!area?.offsetWidth||!source||source.bottom<=0||source.top>=innerHeight||source.right<=0||source.left>=innerWidth)return null
   const box=area.getBoundingClientRect(),factor=pageScale(),x=(source.left+source.width/2-box.left-box.width/2)/factor,y=(source.top+source.height/2-box.top-box.height/2)/factor
   return `translate(${x}px,${y}px) scale(${source.width/el.offsetWidth/factor},${source.height/el.offsetHeight/factor})`
  }
  const close=async(after?:()=>void)=>{
-  if(closing.current)return;closing.current=true;gallery.cancel();settle();if(!after)await prepareClose?.(item).catch(()=>{});if(!overlay.current)return;const target=origin(item);target?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});const finish=()=>{onClose();after?.()}
-  if(!motionAllowed()){finish();return}
-  const el=photo.current,transform=thumbnailTransform()
-  if(el)play(el,[{transform:getComputedStyle(el).transform,opacity:1},{transform:transform??`translate(${offset.x}px,${offset.y}px) scale(${zoom*.96})`,opacity:transform?1:0}],250)
-  if(overlay.current)play(overlay.current,[{opacity:1},{opacity:0}],250,finish);else finish()
+  if(closing.current)return;closing.current=true;gallery.cancel();settle();if(!after)await prepareClose?.(item).catch(()=>{})
+  const node=overlay.current;if(!node)return
+  try{
+   origin(item)?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'})
+   if(!motionAllowed())return
+   // Closing releases the real dialog immediately. Only an inert snapshot animates.
+   const transform=thumbnailTransform(),copy=node.cloneNode(true) as HTMLDivElement,copyPhoto=copy.querySelector<HTMLImageElement>('.message-image-viewport>img:not([data-gallery-exit])')
+   copy.inert=true;copy.setAttribute('aria-hidden','true');copy.dataset.messageImageExit='true';copy.style.pointerEvents='none';document.body.append(copy)
+   if(copyPhoto)playMessageMotion(copyPhoto,[{transform:photo.current?getComputedStyle(photo.current).transform:'none',opacity:1},{transform:transform??`translate(${offset.x}px,${offset.y}px) scale(${zoom*.96})`,opacity:transform?1:0}],250)
+   playMessageMotion(copy,[{opacity:1},{opacity:0}],250,()=>copy.remove())
+  }finally{onClose();after?.()}
  }
  const enter=()=>{
   const el=photo.current;if(!el||entered.current||closing.current)return;entered.current=true;setDimensions(`${el.naturalWidth} × ${el.naturalHeight}`)

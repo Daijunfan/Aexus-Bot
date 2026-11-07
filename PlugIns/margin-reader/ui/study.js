@@ -1,4 +1,7 @@
 import {StudySplit} from './study-split.js';
+import {StudyBoards} from './study-boards.js';
+import {ReaderDictionary} from './reader-dictionary.js';
+import {LibraryPreviews} from './library-previews.js';
 import { StudyLibrary } from './study-library.js';
 import { StudyDocuments } from './study-documents.js';
 import {MindmapStudio} from './mindmap-studio.js';
@@ -23,7 +26,7 @@ import { StudyInk } from './study-ink.js';
 import { StudyExcerpts } from './study-excerpts.js';
 export class StudyController {
   get busy(){return Boolean(this._busy);}
-  set busy(value){this._busy=Boolean(value);if(this.map?.board){this.map.board.inert=this._busy;this.map.board.setAttribute('aria-busy',String(this._busy));}}
+  set busy(value){this._busy=Boolean(value);if(this.map?.board){this.map.board.inert=this._busy;this.map.board.setAttribute('aria-busy',String(this._busy));}for(const id of ['study-boards','workspace-card-box'])if($(id))$(id).disabled=this._busy;}
   constructor(options) {
     Object.assign(this,options);this.current=null;this.list=[];this.busy=false;
     this.colors=[['yellow','黄色'],['green','绿色'],['blue','蓝色'],['purple','紫色'],['pink','粉色'],['orange','橙色'],['red','红色'],['teal','青绿'],['cyan','青色'],['indigo','靛蓝'],['lime','黄绿'],['brown','棕色'],['gray','灰色'],['rose','玫瑰'],['olive','橄榄'],['slate','灰蓝']];
@@ -35,8 +38,8 @@ export class StudyController {
     this.inkTools=new InkTools(this);this.map=new StudyMap(this);this.av=new AVStudy(this);this.excerpts=new StudyExcerpts(this);this.ink=new StudyInk(this);this.advanced=new StudyAdvanced(this);this.cardInk=new CardInk(this);this.organization=new StudyOrganization(this);this.content=new StudyContent(this);this.exporter=new StudyExport(this);this.tools=new StudyTools(this);this.mapTools=new MapTools(this);
     $('study-create').onclick=()=>this.create();$('study-deleted').onclick=run(()=>this.deleted());
     $('study-add-documents').onclick=run(()=>this.addDocuments());$('study-edit-set').onclick=()=>this.edit();$('study-remove-set').onclick=()=>this.remove();$('study-export-set').onclick=()=>this.export();
-    $('study-back-set').onclick=run(()=>this.home(this.current.id));$('study-current-document').onchange=run(()=>this.member($('study-current-document').value));
-    $('study-region').onclick=()=>{this.ink.setMode('off');this.excerpts.setRegion(!this.excerpts.region);};
+    $('study-back-set').onclick=run(()=>this.home(this.current.id,{preferHome:true}));$('study-current-document').onchange=run(()=>this.member($('study-current-document').value));
+    $('study-region').onclick=run(()=>{this.excerpts.setRegion(!this.excerpts.region);this.ink.setMode('off');});
     $('study-toggle-map').onclick=()=>{this.outline=!this.outline;this.mount(true);};
     const notes = document.createElement('button'); notes.id = 'document-notes'; notes.textContent = '批注';
     notes.title = '直接为当前文档做摘录、手写和笔记，无需先建学习集';
@@ -53,19 +56,29 @@ export class StudyController {
     this.documentGallery=new StudyDocuments(this);
     const tabs=document.createElement('nav');tabs.id='study-view-tabs';tabs.className='study-primary-tabs';tabs.setAttribute('aria-label','工作区视图');
     tabs.innerHTML='<button data-study-view="documents" aria-pressed="false">文档</button><button data-study-view="map" aria-pressed="true">脑图</button>';
-    for(const b of tabs.children)b.onclick=run(()=>this.surface(b.dataset.studyView));this.tabs=tabs;$('study-home').querySelector('header').append(tabs);
+    for(const b of tabs.children)b.onclick=run(()=>this.toggleSurface(b.dataset.studyView));this.tabs=tabs;$('study-home').querySelector('header').append(tabs);
     $('study-toggle-map').textContent='脑图';$('study-toggle-map').onclick=run(()=>this.surface('map'));
     organizeStudyToolbar(this);
     const annotations=document.createElement('details');annotations.id='reader-annotations';annotations.innerHTML='<summary>标注</summary><div class="reader-annotation-actions"></div>';$('study-reading-bar').append(annotations);
     const actions=annotations.lastElementChild;for(const id of ['study-region','document-textbox','study-excerpt-lasso','study-ink-tools'])if($(id))actions.append($(id));
     actions.addEventListener('click',e=>{if(e.target.closest('button'))annotations.open=false;});document.addEventListener('pointerdown',e=>{if(!annotations.contains(e.target))annotations.open=false;});
-    this.splitView=new StudySplit(this);
+    this.splitView=new StudySplit(this);this.boards=new StudyBoards(this);
+    const database=document.createElement('button');database.id='study-boards';database.type='button';database.textContent='数据库';database.title='当前学习集的摘录与笔记表格';database.onclick=run(()=>this.boards.open());this.splitView.controls.append(database);
+    this.dictionary=new ReaderDictionary(this);$('document-notes').after($('study-dictionary'));
     document.body.dataset.product='read-map';
   }
   async prepare(set){
     if(set.map?.mindmap?.enabled===false)set=await api('study.mindmap.configure',{setId:set.id,expectedRevision:set.revision,patch:{enabled:true}});
     if(!['map','documents','split'].includes(set.view))set=await api('study.view.set',{setId:set.id,expectedRevision:set.revision,view:'map'});
     return set;
+  }
+  async toggleSurface(tab){
+    // Reading can be active while the persisted study view is still 'map'.
+    // Match the effective pressed state used by StudySplit.render.
+    const current=this.current?.view==='split'?'split':this.getDocument()?'documents':this.current?.view||'map';
+    if(current==='split')return this.surface(tab==='documents'?'map':'documents');
+    if(current===tab)return;
+    return this.surface('split');
   }
   async surface(view){
     if(!this.current)return;const id=this.current.id,ticket=this.activationEpoch=(this.activationEpoch||0)+1;this.busy=true;
@@ -87,7 +100,7 @@ export class StudyController {
     $('study-set-list').querySelectorAll('button').forEach(b=>b.onclick=run(()=>this.home(b.dataset.setId)));
   }
   create(){showDialog({title:'新建学习集',html:field('title','名称','',{required:true,help:'同一份文档可以加入多个学习集。摘录和脑图按学习集独立保存。'})+'',submit:'创建',onSubmit:async values=>{const set=await api('study.create',{title:values.title,mapMode:'topics',folderId:this.collection?.folderId||null});await this.home(set.id);}});}
-  async home(id){const ticket=this.activationEpoch=(this.activationEpoch||0)+1;this.busy=true;try{await this.beforeNavigate();if(ticket!==this.activationEpoch)return;const set=await this.prepare(await api('study.open',{setId:id}));if(ticket!==this.activationEpoch)return;this.current=set;this.outline=false;this.excerpts.hide();const settings=set.view==='split'?await api('settings.get'):null;if(ticket!==this.activationEpoch)return;const doc=set.documents.find(d=>d.id===settings?.lastDocument&&d.available);if(doc)await this.openDocument(doc.path,{studySetId:id});else await this.showHome();if(ticket!==this.activationEpoch)return;this.render(set);await this.refreshList();}finally{this.busy=false;}}
+  async home(id,{preferHome=false}={}){const ticket=this.activationEpoch=(this.activationEpoch||0)+1;this.busy=true;try{await this.beforeNavigate();if(ticket!==this.activationEpoch)return;let set=await this.prepare(await api('study.open',{setId:id}));if(ticket!==this.activationEpoch)return;if(preferHome&&set.view!=='map'){set=await api('study.view.set',{setId:id,expectedRevision:set.revision,view:'map'});if(ticket!==this.activationEpoch)return;}this.current=set;this.outline=false;this.excerpts.hide();const settings=set.view==='split'?await api('settings.get'):null;if(ticket!==this.activationEpoch)return;const doc=!preferHome&&set.documents.find(d=>d.id===settings?.lastDocument&&d.available);if(doc)await this.openDocument(doc.path,{studySetId:id});else await this.showHome();if(ticket!==this.activationEpoch)return;this.render(set);await this.refreshList();}finally{this.busy=false;}}
   async restore(settings){
     if(!settings.activeStudySet)return false;const ticket=this.activationEpoch=(this.activationEpoch||0)+1;this.busy=true;
     try{const current=await this.prepare(await api('study.get',{setId:settings.activeStudySet}));if(ticket!==this.activationEpoch)return false;this.current=current;this.renderList();const doc=this.current.documents.find(d=>d.id===settings.lastDocument&&d.available);
@@ -140,10 +153,10 @@ export class StudyController {
     const existing = this.list.find(set => set.documentNotesFor === id);
     if (existing) { this.current = await this.prepare(await api('study.document.ensure', { id })); this.render(this.current); }
   }
-  async leave(persist=true){if(!this.current)return;this.inspector?.guard();this.activationEpoch=(this.activationEpoch||0)+1;$('presentation-screen').hidden=true;this.current=null;this.inkTools.toolbar.hide();this.inkTools.rulers.render();this.excerpts.setRegion(false);if(persist)await api('settings.set',{activeStudySet:null});this.mount(false);this.renderList();}
+  async leave(persist=true){this.excerpts.guard();this.boards?.guard();if(this.boards?.active)this.boards.close();if(!this.current)return;this.inspector?.guard();this.activationEpoch=(this.activationEpoch||0)+1;$('presentation-screen').hidden=true;this.current=null;this.inkTools.toolbar.hide();this.inkTools.rulers.render();this.excerpts.setRegion(false);if(persist)await api('settings.set',{activeStudySet:null});this.mount(false);this.renderList();}
   async refresh(focusId){await this.refreshList();if(!this.current)return;const id=this.current.id;try{const set=await api('study.get',{setId:id});if(this.current?.id!==id)return;this.render(set,focusId);}catch(e){if(e.code==='NOT_FOUND'){await this.leave(false);await this.openFolder('.');return;}throw e;}}
   async change(method,params,revision=this.current?.revision){const id=this.current?.id;if(!id)return;try{const set=await api(method,{setId:id,expectedRevision:revision,...params});if(this.current?.id===id)this.render(set,params.cardId);await this.refreshList();return set;}catch(e){await this.refresh();throw e;}}
-  mount(reading){const active=!!this.current;$('workspace').classList.toggle('study-active',active);$('workspace').classList.toggle('study-show-outline',!!this.outline);$('study-home').hidden=!active||reading;$('study-reading-bar').hidden=!active||!reading;$('study-pane').hidden=true;if(active){$('library-view').hidden=true;$('study-region').hidden=this.getDocument()?.kind!=='pdf';$('study-excerpt-lasso').hidden=this.getDocument()?.kind!=='pdf';}else{$('study-home').hidden=true;$('study-pane').hidden=true;}this.splitView?.render(reading);this.excerpts?.scheduleMarks();this.ink?.render();document.dispatchEvent(new Event('study-view-mounted'));}
+  mount(reading){const active=!!this.current;$('study-dictionary').hidden=!active;$('workspace').classList.toggle('study-active',active);$('workspace').classList.toggle('study-show-outline',!!this.outline);$('study-home').hidden=!active||reading;$('study-reading-bar').hidden=!active||!reading;$('study-pane').hidden=true;if(active){$('library-view').hidden=true;$('study-region').hidden=this.getDocument()?.kind!=='pdf';$('study-excerpt-lasso').hidden=this.getDocument()?.kind!=='pdf';}else{$('study-home').hidden=true;$('study-pane').hidden=true;}this.splitView?.render(reading);this.excerpts?.scheduleMarks();this.ink?.render();document.dispatchEvent(new Event('study-view-mounted'));}
   render(set,focusId){
     if(this.current?.id===set.id && this.current.revision>set.revision)return;
     set={...set,view:['documents','split'].includes(set.view)?set.view:'map',map:{...set.map,mindmap:{...set.map?.mindmap,enabled:true}}};
@@ -162,9 +175,47 @@ export class StudyController {
   async addDocuments(){
     const set=this.current,listing=await api('fs.tree',{depth:100}),files=[];const walk=entries=>{for(const e of entries){if(e.kind==='file'&&e.readable)files.push(e);else if(e.children)walk(e.children);}};walk(listing.entries);
     const existing=new Set(set.documents.map(d=>d.path)),chosen=new Set();
-    showDialog({title:'添加文件到学习集',html:`<p class="dialog-note">添加引用，不复制或移动文件。已加入的文档会显示勾选。</p><label class="dialog-field"><input id="study-file-search" placeholder="搜索文库文件" aria-label="搜索可添加文件"></label><div class="study-file-picker">${files.map(e=>`<label class="study-file-choice" data-path="${escape(e.path)}"><input type="checkbox" value="${escape(e.path)}" ${existing.has(e.path)?'checked disabled':''}><span>${escape(e.name)}<small>${escape(e.path)}</small></span></label>`).join('')||'<p>文库暂无可阅读文件。请先导入文档。</p>'}</div>`,submit:'添加所选文件',onSubmit:async()=>{if(!chosen.size)throw new Error('请至少选择一个尚未加入的文件。');activity(`正在添加 ${chosen.size} 份文档…`);try{await this.change('study.documents.add',{paths:[...chosen]},set.revision);}finally{activity('');}},afterOpen:()=>{
-      $('study-file-search').oninput=()=>{const q=$('study-file-search').value.trim().toLocaleLowerCase();$('dialog-fields').querySelectorAll('.study-file-choice').forEach(el=>el.hidden=!el.dataset.path.toLocaleLowerCase().includes(q));};
-      $('dialog-fields').querySelectorAll('.study-file-choice input:not(:disabled)').forEach(input=>input.onchange=()=>{input.checked?chosen.add(input.value):chosen.delete(input.value);$('dialog-submit').textContent=`添加 ${chosen.size} 份文件`;});
+    showDialog({title:'添加文件到学习集',html:`<p class="dialog-note">添加引用，不复制或移动文件。已加入的文档会显示勾选。</p><label class="dialog-field"><input id="study-file-search" placeholder="搜索文库文件" aria-label="搜索可添加文件"></label><div class="study-file-picker"></div>`,submit:'添加所选文件',onSubmit:async()=>{if(!chosen.size)throw new Error('请至少选择一个尚未加入的文件。');activity(`正在添加 ${chosen.size} 份文档…`);try{await this.change('study.documents.add',{paths:[...chosen]},set.revision);}finally{activity('');}},afterOpen:()=>{
+      const root=$('dialog-fields'),picker=root.querySelector('.study-file-picker'),search=$('study-file-search');
+      const count=document.createElement('p');count.className='study-file-picker-count';count.setAttribute('role','status');
+      picker.after(count);
+      const row=e=>{
+        const checked=chosen.has(e.path)||existing.has(e.path);
+        const checkbox='<input type="checkbox" value="'+escape(e.path)+'"'+(checked?' checked':'')+(existing.has(e.path)?' disabled':'')+'>';
+        return '<label class="study-file-choice" data-path="'+escape(e.path)+'" data-preview="pending">'+checkbox+
+          '<span class="file-art"><span class="document-cover-sheet">'+icon('file')+
+          '<span class="document-cover-fallback">'+escape((e.format||'file').toUpperCase())+
+          '</span></span></span><span class="study-file-meta"><strong>'+escape(e.name)+
+          '</strong><small>'+escape(e.path)+'</small></span></label>';
+      };
+      this.pickerPreviews??=new LibraryPreviews();
+      let visible=files,shown=0,debounce;
+      const append=()=>{
+        if(!picker.isConnected||shown>=visible.length)return;
+        const next=visible.slice(shown,shown+96);
+        picker.insertAdjacentHTML('beforeend',next.map(row).join(''));
+        shown+=next.length;
+        count.textContent='已显示 '+shown+' / '+visible.length+' 份文件'+(visible.length>shown?' · 向下滚动查看更多':'');
+        this.pickerPreviews.attach(next,{root,selector:'.study-file-choice',incremental:shown>96});
+      };
+      const reload=()=>{
+        const query=search.value.trim().toLocaleLowerCase();
+        visible=query?files.filter(e=>e.path.toLocaleLowerCase().includes(query)||e.name.toLocaleLowerCase().includes(query)):files;
+        picker.replaceChildren();shown=0;
+        if(!visible.length)count.textContent='没有匹配文件';
+        else append();
+      };
+      picker.addEventListener('scroll',()=>{
+        if(picker.scrollTop+picker.clientHeight>=picker.scrollHeight-350)append();
+      },{passive:true});
+      picker.addEventListener('change',e=>{
+        const input=e.target.closest('.study-file-choice input');
+        if(!input||input.disabled)return;
+        if(input.checked)chosen.add(input.value);else chosen.delete(input.value);
+        $('dialog-submit').textContent='添加 '+chosen.size+' 份文件';
+      });
+      search.oninput=()=>{clearTimeout(debounce);debounce=setTimeout(reload,85);};
+      reload();
     }});
   }
   removeDocument(doc){const revision=this.current.revision;showDialog({title:'从学习集移除文件',html:`<p class="dialog-note">移除「${escape(doc.title)}」的关联？原件、其他学习集及已经生成的摘录卡片均会保留。</p>`,submit:'移除关联',onSubmit:async()=>{await this.change('study.documents.remove',{documentIds:[doc.id]},revision);if(this.getDocument()?.id===doc.id)await this.home(this.current.id);}});}

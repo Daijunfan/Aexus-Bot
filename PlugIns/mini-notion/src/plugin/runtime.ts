@@ -24,6 +24,11 @@ export function createPlugin(context:{workspace:string;workspaceBase?:string;plu
       }
       return toWireResponse(await client.request(request.method,request.params,request.id,request.stateMode));
     },
+    resources:async()=>{const reply=await client.request('host.resources',{},undefined,'none');if(reply.error)throw Error(reply.error.message);return reply.result;},
+    requestScoped:async(request:any,scope:any)=>{
+      const reply=await client.request('host.execute',{scope,method:request.method,params:request.params??{}},request.id,'none');
+      return reply.error?{jsonrpc:'2.0',id:request.id,error:reply.error}:{jsonrpc:'2.0',id:request.id,result:reply.result.data,createdResources:reply.result.created};
+    },
     subscribe:(listener:(event:any)=>void,options?:{stateMode?:'full'|'delta';initialState?:boolean})=>client.subscribe(listener,undefined,{delta:options?.stateMode==='delta',initialState:options?.initialState}),
     readAsset:async(value:string)=>{
       const file=value.startsWith('asset/')?assetPath(client.directory,`asset://local/${value.slice(6)}`,client.workspaceRoot):value.startsWith('workspace/')?withinFolder(client.workspaceRoot!,value.slice(10)):undefined;

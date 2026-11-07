@@ -8,7 +8,7 @@ export type CliSpec={
   booleanValues?:string[]
   rawPositionals?:boolean
 }|string[]
-export type CliField=[name:string,source:string|number,type:'text'|'number'|'boolean'|'boolean-value'|'json',required:boolean,truthy:boolean]
+export type CliField=[name:string,source:string|number,type:'text'|'number'|'number-or-text'|'boolean'|'boolean-value'|'json',required:boolean,truthy:boolean]
 export type CliInput={fields:CliField[];defaults?:Record<string,unknown>;rawPositionals?:boolean}
 export function compileCliInputs(commands:readonly {name:string;cli?:CliSpec;inputSchema?:Record<string,any>}[]):Record<string,CliInput>{
   return Object.fromEntries(commands.filter(command=>command.cli).map(command=>{
@@ -24,7 +24,8 @@ export function compileCliInputs(commands:readonly {name:string;cli?:CliSpec;inp
       const schema=raw as Record<string,any>,position=cli.positionals?.indexOf(name)??-1
       const source=position<0?cli.aliases?.[name]??name.replace(/[A-Z]/g,letter=>'-'+letter.toLowerCase()):position
       const types=Array.isArray(schema.type)?schema.type:[schema.type]
-      const type=cli.booleanValues?.includes(name)?'boolean-value':types.includes('object')||types.includes('array')||schema.oneOf||schema.anyOf?'json':types.includes('integer')||types.includes('number')?'number':types.includes('boolean')||typeof schema.const==='boolean'?'boolean':'text'
+      const union=(schema.oneOf??schema.anyOf)?.map((value:Record<string,unknown>)=>value.type),numberOrText=union?.includes('string')&&union.some((value:string)=>['integer','number'].includes(value))&&union.every((value:string)=>['integer','number','string'].includes(value))
+      const type=cli.booleanValues?.includes(name)?'boolean-value':numberOrText?'number-or-text':types.includes('object')||types.includes('array')||schema.oneOf||schema.anyOf?'json':types.includes('integer')||types.includes('number')?'number':types.includes('boolean')||typeof schema.const==='boolean'?'boolean':'text'
       return [name,source,type,!!cli.required?.includes(name),!!cli.truthy?.includes(name)]
     })
     return [command.name,{fields,...(cli.defaults?{defaults:cli.defaults}:{}),...(cli.rawPositionals?{rawPositionals:true}:{})}]

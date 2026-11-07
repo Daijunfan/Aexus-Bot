@@ -1,22 +1,27 @@
 /** Public engine IDs are stable; provider/model selection is independent. */
 export const ENGINE_DEFINITIONS={
   codex:{label:'Codex',description:'Codex App Server',protocol:'app-server',capabilities:{streaming:true,images:true,approvals:true,resume:true,steer:true,plan:true,thinking:false,effort:true,background:true,clone:true}},
-  cline:{label:'Cline',description:'Cline ACP · DeepSeek',protocol:'acp',capabilities:{streaming:true,images:true,approvals:true,resume:true,steer:false,plan:true,thinking:false,effort:false,background:false,clone:false}},
-  pi:{label:'Pi',description:'Pi RPC · DeepSeek',protocol:'rpc',capabilities:{streaming:true,images:false,approvals:true,resume:true,steer:true,plan:false,thinking:false,effort:false,background:false,clone:false}},
+  cline:{label:'Cline',description:'Cline ACP · Native configuration',protocol:'acp',capabilities:{streaming:true,images:true,approvals:true,resume:true,steer:false,plan:true,thinking:false,effort:false,background:false,clone:false}},
+  pi:{label:'Pi',description:'Pi RPC · Native configuration',protocol:'rpc',capabilities:{streaming:true,images:false,approvals:true,resume:true,steer:true,plan:false,thinking:false,effort:false,background:false,clone:false}},
+  opencode:{label:'OpenCode',description:'OpenCode ACP · Native configuration',protocol:'acp',capabilities:{streaming:true,images:true,approvals:true,resume:true,steer:false,plan:true,thinking:false,effort:true,background:false,clone:false}},
+  kilo:{label:'Kilo Code',description:'Kilo Code ACP · Native configuration',protocol:'acp',capabilities:{streaming:true,images:true,approvals:true,resume:true,steer:false,plan:true,thinking:false,effort:true,background:false,clone:false}},
   claude:{label:'Claude Agent',description:'Claude Agent SDK',protocol:'agent-sdk',capabilities:{streaming:true,images:true,approvals:true,resume:true,steer:true,plan:true,thinking:true,effort:true,background:true,clone:true}}
 } as const
 export type EngineId=keyof typeof ENGINE_DEFINITIONS
+export const isNativeAcp=(engine:unknown):engine is 'opencode'|'kilo'=>engine==='opencode'||engine==='kilo'
 export function isEngine(value:unknown):value is EngineId{return typeof value==='string'&&Object.hasOwn(ENGINE_DEFINITIONS,value)}
 export function engineDefinition(value:string){if(!isEngine(value))throw Error('Unsupported Coding Agent engine: '+value);return ENGINE_DEFINITIONS[value]}
 export type EngineHealth={engine:EngineId;label:string;target:string;installed:boolean;path?:string;version?:string;protocol:'unchecked'|'compatible'|'incompatible';authentication:'configured'|'not-signed-in'|'unknown';ready:boolean;checkedAt:number;error?:string;managed:boolean;hasApiKey:boolean;capabilities:Record<string,boolean>}
 
 /** Creation-time discovery contains no paths, credentials or inference. */
 export function engineCapabilities(engine:EngineId){
-  const definition=engineDefinition(engine),processAdapter=engine==='cline'||engine==='pi'
-  return {engine,...definition,workspaceModes:['build','cloud','work'],employeeKinds:processAdapter?['worker']:['worker','cloud-native-worker'],cloudWorkerTransport:engine==='codex'?'remote-exec':'mcp-tunnel'}
+  const definition=engineDefinition(engine),processAdapter=engine!=='codex'&&engine!=='claude'
+  return {engine,...definition,workspaceModes:isNativeAcp(engine)?['build','work']:['build','cloud','work'],employeeKinds:processAdapter?['worker']:['worker','cloud-native-worker'],cloudWorkerTransport:isNativeAcp(engine)?null:engine==='codex'?'remote-exec':'mcp-tunnel'}
 }
 export function assertEngineWorkspace(engine:EngineId,mode:'build'|'cloud'|'work',kind='worker'){
-  if(engine==='cline'||engine==='pi'){
+  if(isNativeAcp(engine)&&mode==='cloud')throw Error(`${ENGINE_DEFINITIONS[engine].label} currently requires a Core-local workspace; select Local workspace in this cloud Team`)
+  if(isNativeAcp(engine)&&kind!=='worker')throw Error(`${ENGINE_DEFINITIONS[engine].label} currently supports kind:worker on the Core host only`)
+  if(engine!=='codex'&&engine!=='claude'){
     if(kind!=='worker')throw Error(`${ENGINE_DEFINITIONS[engine].label} supports kind:worker only; use the Core-local engine with Tunnel for cloud workspaces`)
   }
 }

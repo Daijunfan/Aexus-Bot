@@ -1,7 +1,7 @@
 ---
 schema: agents-company.cli/v1
 plugin: margin-reader
-version: '0.9.4'
+version: '0.11.0'
 workspace: required
 ---
 
@@ -9,19 +9,20 @@ workspace: required
 
 ## Purpose
 
+选文工具栏提供高亮、摘录到脑图、内联批注和复制；单次 inMap、annotationStyle、note、tags 覆盖在同一次摘录事务中保存，不改默认预设。数据库以独立表格工作区呈现当前学习集或整个授权文库，支持两级分组、保存筛选与排序方向、跨页选择、原子批量编辑和回源定位。标题、标签、批注与显示转录可直接编辑；摘录原文和 PNG 保持不变，版本冲突保留草稿而不覆盖新数据。
+
 0.9.4统一移动、选择与父子关系工具的主题拖放预览；拖到目标主体修改父主题，拖出脑图松开取消，重叠旧位置不再挡住目标。保留完整资料封面、并排阅读与原文定位。公开接口和员工权限不变，见 docs/DRAG_COVER_FINISH.md。
 
 0.9.3修复 Ctrl/Cmd+S 与退出，增加原文拖入、可撤销的所选节点删除、区域、大纲和主题任务时间图。新命令为 study.cards.remove、study.mindmap.tasks.plan/export、study.mindmap.zone.move；全部复用当前授权工作区的 Core，独立主题不要求原文来源。见 docs/MINDMAP_USABILITY.md。
 
-0.9.2增加完整资料封面与统一主题拖放：主题A拖到B后B成为父主题，后代跟随；总览缩略节点也可直接操作。study.cards.move的expandParent可在同一次撤销操作中展开目标。界面提供文档阅读与无限脑图，可单独查看或并排阅读，并自由交换左右和调整分栏宽度；卡片盒、学习大纲和复习面板已退休，旧数据与API保留兼容。CLI-first、本地优先的文档阅读器。PDF 原页阅读，DOC/DOCX、EPUB、MOBI/KF8 和常见文本/图片读取；公开网页正文与图片离线保存；真实文件树、大文件夹视图；原文目录提取、自定义章节、缩进、退级、排序、全文搜索和阅读位置保存。
+0.9.2增加完整资料封面与统一主题拖放：主题A拖到B后B成为父主题，后代跟随；总览缩略节点也可直接操作。study.cards.move的expandParent可在同一次撤销操作中展开目标。界面提供文档阅读与无限脑图，可单独查看或并排阅读，并自由交换左右和调整分栏宽度；旧卡片盒、学习大纲和复习面板在此版本退休，旧数据与API保留兼容；当前数据库入口提供新的表格整理工作区。CLI-first、本地优先的文档阅读器。PDF 原页阅读，DOC/DOCX、EPUB、MOBI/KF8 和常见文本/图片读取；公开网页正文与图片离线保存；真实文件树、大文件夹视图；原文目录提取、自定义章节、缩进、退级、排序、全文搜索和阅读位置保存。
 v0.7.0 提供图层/压感/套索、脑图手写、文档对照、笔记本/页面组合、留白、复合卡片、牌组/遮挡/挖空/参数训练，并保留学习集、摘录与独立笔记卡、标签检索、关联、大纲/卡片/脑图视图、撤销重做、离线 FSRS 复习、PDF 手写与文档书签；不含 OCR 或 DRM 解密。
 
 ## Workspace
 
 独立运行时必须提供已有目录：`node cli.cjs --workspace /absolute/library ...`，也可使用 AGENTS_WORKSPACE。所有 API 路径均相对此目录，使用 / 分隔。根目录用 . 表示。
-宿主 createPlugin 传入的 workspace 就是完整授权范围。不会读取父目录、同级员工或全局文库。路径穿越、绝对路径、软链接、硬链接、.git、.agents-company 和 .margin-reader 业务访问均被拒绝。保留目录名同时防止大小写、Unicode 兼容写法、尾随点/空格和元数据流别名绕过；公开列表、递归目录操作、备份清单与变更监听使用同一规则。
-Work Team 的实际根目录由宿主提供；开发环境与打包环境的位置可能不同，不要自行拼接或假定固定路径。员工入口固定到其获授权的子目录，能够操作此范围内全部已声明功能，但不会因此取得 Team 根目录、同级员工或其他 Team 的内容。员工 mailbox 使用宿主授予的身份，不回退到用户全局凭据，也不回退到独立运行时或另一个工作区。
-用户查看员工成果时，使用 agents plugin open margin-reader --employee EMPLOYEE_ID 打开同一授权文库；省略作用范围的侧栏入口、Team 根目录和员工目录不是同一份学习集状态。
+宿主 workspace 是文库边界，员工还必须获得具体文档或学习集的阅读、修改、新增权限。用户或 Secretary 在插件“授权人员”管理；Secretary 默认全权。普通员工使用 agents plugin resources --id margin-reader 发现内容，再通过 agents plugin call margin-reader METHOD --params JSON 调用。无需插件团队，不回退到用户凭据或其他工作区。
+阅读不能修改；文档新增允许添加书签和目录，学习集新增允许添加卡片；顶层新增允许上传新文档或创建学习集，不开放已有未授权原件。新资源自动向创建者授权。全库设置、备份、历史和全局删除等仍由用户或 Secretary 操作。旧 Work 目录与 mailbox 保持原位兼容。路径穿越、软链接、硬链接及 .git、.agents-company、.margin-reader 等私有元数据访问继续拒绝。
 `import FILE --to relative/path` 在调用者已经有权限的 CLI 进程内读取 FILE，随后使用 import.begin/chunk/finish API 上传；运行时没有任意外部文件读取 API。原始来源文件不会移动或删除。
 
 ## Quick start
@@ -49,12 +50,11 @@ serve 只输出本机令牌 URL，不自动打开浏览器。关闭时 Ctrl+C。
 ```sh
 agents plugin install /absolute/path/to/margin-reader/dist-plugin
 agents plugin describe margin-reader
-agents plugin call margin-reader fs.list --team 'Reader Team' --params '{"path":"."}'
+agents plugin resources --id margin-reader
+agents plugin call margin-reader fs.list --params '{"path":"."}'
 agents plugin open margin-reader
-# 员工使用自身的固定作用范围入口：
-margin-reader help study.card.create
-margin-reader schema study.search
-margin-reader api fs.tree --data '{}' 
+# 员工使用自身认证身份和获授权的原生文档 ID：
+agents plugin call margin-reader document.content --params '{"id":"AUTHORIZED_DOCUMENT_ID"}'
 ```
 
 API 返回完整 JSON-RPC 2.0：`{"jsonrpc":"2.0","id":"request-id","result":{...}}`。CLI 失败返回 error 且退出码非零。`--data @file.json` 或 `--data -` 可读取 JSON 文件/标准输入。`--text` 仅把 document.content 的正文输出为纯文本。
@@ -525,6 +525,7 @@ Persist preferences through the same API used by the renderer.
 | lineHeight | number | 否 | Flow line height. |
 | sidebarWidth | number | 否 | Explorer width. |
 | outlineWidth | number | 否 | Outline width. |
+| outlineSide | string | 否 | Place the non-overlapping contents pane to the left or right of the document. 可选：left, right |
 | pdfMode | string | 否 | PDF layout: continuous vertical scroll or single-page navigation. 可选：continuous, paged |
 | pdfTurnEffect | string | 否 | Paged reading animation; book uses a bounded 3D paper transition; reduced-motion overrides it. 可选：book, none |
 | homeSection | string | 否 | Default browser section, independent of the selected reading document. 可选：library, studies |
@@ -1747,6 +1748,10 @@ Create a colored excerpt and durable PNG snapshot in the shared headless Core.
 | locator | object | 是 | PDF {page,pageOffset?}; flow {section,anchor?}. |
 | selection | object | 否 | PDF {rects:[{page,x,y,width,height}]} normalized to the rendered page, or {polygon:{page,points:[[x,y],...]}} for lasso capture. Flow {start,end} UTF-16 offsets in sanitized article textContent. Omit for text-only CLI cards. |
 | color | string | 是 | Highlight color. |
+| inMap | boolean | 否 | Override automatic map placement for this capture without changing the saved preset. |
+| annotationStyle | string | 否 | Annotation style for this capture. 可选：highlight, underline, strike, box |
+| note | string | 否 | Initial excerpt note, at most 20000 characters. |
+| tags | array | 否 | At most 30 unique text tags, each 1–60 characters. |
 | title | string | 否 | Optional card title. |
 | parentId | string / null | 否 | Optional parent card UUID; explicit null creates a root and bypasses preset grouping. An explicit parent expands in the same undo step. |
 | x | number | 否 | Optional floating world x; requires y and parentId:null. |
@@ -2075,6 +2080,7 @@ Create/update a named durable smart card board.
 | filter | object | 否 | Same filter as study.board.query. |
 | groupBy | array | 否 | Up to two grouping fields. |
 | sort | string | 否 | Sort criterion. |
+| direction | string | 否 | Saved sort direction; default asc. 可选：asc, desc |
 
 ### study.board.remove
 
@@ -2624,13 +2630,14 @@ Create a note card from selected document/canvas handwriting, preserving source 
 
 ### study.map.geometry
 
-Read deterministic card positions, branch connections and map dimensions without opening a GUI.
+Read deterministic card positions, branch connections and map dimensions without opening a GUI. JSON DTO: topics is a plain array of {cardId,...topicStyle,box,prefix,lines}, fixing the former Map serialized as {}. Internal layoutStudy topics remains a Map. positions contains {cardId,x,y,width,height,imageBounds,viewVisible,placementReason}; scope,total,positioned report coverage. placementReason is view, expanded-projection, depth-continuation or overflow-placement. all may reflow visible cards; viewVisible means membership in the original view, never permission to unhide model objects. Supplemental parent links carry projection:true and placementReason:parent-continuation; all links report viewVisible in all scope and existing hidden flags remain. Geometry links are layout branches, not study.get().links business relationships. Card identity, source and parent data remain in study.get at the matching revision, without duplicated content. all is opt-in and can cost substantially more for large hidden maps.
 
 性质：读取；员工访问：workspace。
 
 | 参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | setId | string | 是 | Study UUID. |
+| scope | string | 否 | Read-only scope; default view preserves current focus, collapse and ink visibility. all expands a temporary projection and positions every model card without saving expansion or changing revision. 可选：view, all |
 
 ### document.region.list
 
@@ -3407,6 +3414,7 @@ Move selected branches together with stable IDs, cycle prevention and one revers
 | index | number | 否 | Sibling insertion index. |
 | positions | array | 否 | Optional {cardId,x,y} for each selected root in world coordinates. |
 | expandParent | boolean | 否 | Expand the destination parent in the same undo transaction, so a dropped branch remains visible. |
+| rotateDescendant | boolean | 否 | When dropping an ancestor onto a descendant, promote that descendant to the old parent in the same transaction, preventing cycles. |
 | side | string | 否 | Optional mind-map branch side, committed with the move and undone in the same step. 可选：auto, left, right |
 
 ### study.card.insert
@@ -3869,7 +3877,7 @@ study.cards.group 创建带原始卡片 ID 的摘要父节点；study.cards.merg
 study.search 在当前工作区的活动学习集中按标题、正文、笔记和标签查找卡片；query 须为 1–1000 字符的非空文本。limit 默认为 500（1–500），offset 默认为 0；返回 cards、total、offset、limit、hasMore、truncated 和 nextOffset。继续传 nextOffset，直到 null，可读取超过 500 条的全部结果，不会静默截断。分页不修改状态，也不是跨请求的锁定快照；并发编辑期间应按 cardId 去重并重新查询。study.card.reference 保留目标 set/card UUID，通过来源跳转可回到对应子脑图。study.card.render 返回 Markdown/公式的消毒 HTML，并给出文字中命中其他卡片标题的 titleLinks；重复标题返回候选，不擅自选择。文本和公式渲染不执行脚本或下载外部图片。
 标题词典支持以中文或英文分号分隔关键词别名；相同卡片的重复别名不产生虚假的多候选。study.card.render 会检查全部候选词条，不按标题长度只取前 1000 个。单次卡片正文、笔记和评论合计最多生成 200 处自动链接；linkStatus 返回 complete、rendered、limit 和 dictionaryTerms。达到上限保留完整文字并显示提示，剩余词条可由 study.catalog / library.search 检索。大小写不敏感匹配仍按原始 UTF-16 文本位置链接，不因 İ 等扩展小写字符偏移。
 document.search 的流式结果除章节、锚点外，返回精确 textOffset；跳转可以直接使用 locator。snippet 的 matchOffset、matchLength 对应返回的原始文字。library.search 的定位只使用未被否定的正文搜索项。
-大文库脑图保留完整布局，只挂载近视口节点；卡片盒与大纲每页 100 张，可跳页或全量检索。CLI 数据、导出、批量操作和稳定 ID 不因界面分页而截断。
+大文库脑图保留完整布局，只挂载近视口节点；数据库每页 100 张，可跨页选择或选择全部筛选结果。保存视图保留 filter、groupBy、sort 和 direction；CLI 数据、导出、批量操作和稳定 ID 不因界面分页而截断。
 
 study.deck.* 管理本地牌组及可恢复归档。review.configure 可指定 deckId、cloze（用 {{答案}} 标记）、occlusions（图片上的归一化矩形）；普通摘录图在翻面前隐藏，遮挡题只显示带遮罩的图片。review.stats 返回当前活动卡片的历史次数、每日计数和观察到的回忆成功率。review.settings 设置目标记忆保持率、最长间隔和当前牌组。review.optimize 使用固定版本 @open-spaced-repetition/binding 0.5.0 离线训练，至少需要 50 个跨日观察；训练期间出现其他编辑会拒绝保存并保留原参数。训练结果也可撤销。
 
@@ -4035,11 +4043,13 @@ ready 后调用 library.backup.job.publish 发布为标准 margin-reader.backup/
 
 学习集、我的文库使用相同的独行分类按钮，各自下方仅保留目录树。两个区域按可见内容自然排列，不预留半屏高度；收起学习集文件夹时文库立即上移，展开或增加条目时自然下移。两棵树共用一个滚动区域，顶部标题和底部回收站固定。进入新学习集时展开其父目录，后续刷新尊重手动收起的状态。
 
-学习集的新建、文件夹新建、导入及学习集回收站在右侧学习集主页面；全库卡片盒和工具查找移至窗口右上角工具区。
+**侧栏只负责展开/收起和打开文件**：直接单击任何文件夹的名称、图标或箭头都会切换该分支，第二次单击收起；正在阅读 PDF、文章或学习集时不离开当前内容。文件条目单击打开；重复单击正在阅读的文件不会重新解析。若要进入文件夹的完整主页，请在侧栏文件夹右键/更多菜单选择“在主页中浏览”，或直接在主页面点击文件夹卡片。方向键与 Enter/空格键支持键盘操作，展开后维持焦点和滚动位置；后台阅读位置更新不强行展开手动收起的目录。
+
+学习集的新建、文件夹新建、导入及学习集回收站在右侧学习集主页面；右上角保留工具查找。旧版全库卡片盒入口已随文档/脑图双视图产品界面退休，旧数据和 CLI 功能保留兼容。
 
 文库文件名与路径搜索在右侧文库页面，支持已载入目录中的子文件夹结果；输入不会筛掉侧栏条目。搜索结果可打开、生成原文缩略图或批量选择；清空／Escape 返回当前文件夹，进入搜索到的文件夹会清空查询。文库与学习集主页中 Cmd/Ctrl F 聚焦各自搜索；Cmd/Ctrl O 仍用于导入文件，Cmd/Ctrl K 仍用于查找工具。
 
-复现专项：`npm run test:sidebar`。原生窗口检查包含在 `test:book-library:native`；完整入口为 `test:deep-audit` 与 `test:agent-acceptance`。
+复现专项：`npm run test:sidebar`（包括阅读中保持状态的回归测试）。原生窗口检查包含在 `test:book-library:native`；完整入口为 `test:deep-audit` 与 `test:agent-acceptance`。
 
 
 # 思维导图工作台

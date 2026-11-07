@@ -7,6 +7,13 @@ test('quick outline appends stable nested topics; malformed indentation fails at
  await f.error('study.mindmap.outline.import',{setId:set.id,expectedRevision:set.revision,text:'Root\n      Jump'},'INVALID_PARAMS');assert.equal((await f.refresh()).cards.length,6);
  await f.change('study.mindmap.outline.import',{parentId:set.cards[1].id,text:'# Added\n## Nested\n### Leaf'});assert.equal(f.set.cards.find(c=>c.title==='Added').parentId,set.cards[1].id);assert.equal(f.set.lastMindmapOutline.count,3);await f.change('study.undo');assert.deepEqual(f.set.cards.map(c=>c.id),set.cards.map(c=>c.id));
 });
+test('Markdown headings import their body text without manufacturing extra topics',async t=>{
+ const f=await build(t),existing=f.set.cards.length;
+ await f.change('study.mindmap.outline.import',{text:'# Chapter A\n\nText under chapter A.\n\n## Section B\n- Supporting point\n\n## Section C\nAnother paragraph'});
+ const imported=f.set.cards.slice(existing);assert.equal(imported.length,3);
+ assert.equal(imported[0].text,'Text under chapter A.');assert.equal(imported[1].parentId,imported[0].id);
+ assert.match(imported[1].text,/Supporting point/);assert.equal(imported[2].text,'Another paragraph');
+});
 test('topic filters search the complete hidden graph with pagination, markers and due dates without changing state',async t=>{
  const f=await build(t),id=f.set.cards[2].id;await f.change('study.mindmap.topics.update',{cardIds:[id],patch:{priority:2,progress:75,status:'doing',symbol:'idea',task:{due:'2026-10-09'}}});await f.change('study.card.update',{cardId:id,note:'Need review'});await f.change('study.card.update',{cardId:f.set.cards[0].id,collapsed:true});
  const before=await fs.readFile(path.join(f.workspace,'.margin-reader/state.json'));const result=await f.api('study.mindmap.query',{setId:f.set.id,filter:{priority:2,progressMin:70,progressMax:80,status:'doing',hasNote:true,dueBefore:'2026-10-10'},limit:1});assert.equal(result.total,1);assert.equal(result.cards[0].id,id);assert.equal(result.nextOffset,null);

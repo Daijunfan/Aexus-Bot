@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calendarWeeks, moveScheduledRecord, parseDay } from '../src/database/dates.ts';
+import { calendarWeeks, moveScheduledRecord, parseDay, planProjection } from '../src/database/dates.ts';
 import { makePage } from '../src/model.ts';
 import { createWorkspace } from '../src/seed.ts';
 import { executeWorkspaceCommand } from '../src/core/commands.ts';
@@ -59,6 +59,85 @@ test('calendar ranges split across weeks, occupy non-overlapping slots and query
   assert.equal(rendered.count, 1);
   assert.equal(rendered.records[0].id, 'a');
   assert.deepEqual(rendered.days.find((day: any) => day.date === '2026-09-14').records, ['a']);
+});
+
+test('crowded calendar preserves first-free lanes and complete hidden-day projection', () => {
+  const db = makePage({
+    id: 'dense-calendar',
+    database: {
+      view: 'calendar',
+      columns: [
+        { id: 'start', name: '开始', type: 'date' },
+        { id: 'end', name: '结束', type: 'date' },
+      ],
+    },
+  });
+  const view: DatabaseView = {
+    id: 'dense-view', name: '密集日历', type: 'calendar',
+    calendarBy: 'start', timelineEnd: 'end', dateAnchor: '2026-10-15',
+  };
+  const rows = Array.from({ length: 1200 }, (_, index) => {
+    const start = 12 + index % 7;
+    const end = start + index % 4;
+    return makePage({
+      id: `dense-${index}`, parentId: db.id,
+      values: { start: `2026-10-${start}`, end: `2026-10-${end}` },
+    });
+  });
+  const week = calendarWeeks(db, view, rows).find(item => item.dates[0] === '2026-10-12')!;
+  assert.equal(week.events.length, 1200);
+  const occupied: boolean[][] = [];
+  for (const event of week.events) {
+    let slot = occupied.findIndex(row => row.slice(event.startColumn, event.startColumn + event.span).every(value => !value));
+    if (slot === -1) {
+      slot = occupied.length;
+      occupied.push(Array(7).fill(false));
+    }
+    assert.equal(event.slot, slot, `first available slot for ${event.id}`);
+    for (let day = event.startColumn; day < event.startColumn + event.span; day++) occupied[slot][day] = true;
+  }
+  assert.equal(week.totalSlotCount, occupied.length);
+  for (const [column, date] of week.dates.entries())
+    assert.deepEqual(week.hiddenByDate[date], week.events.filter(event =>
+      event.slot >= 4 && event.startColumn <= column && column < event.startColumn + event.span,
+    ).map(event => event.id));
+});
+
+test('plan projection reuses each range for all lanes without changing visible order or backlog', () => {
+  const db = makePage({
+    id: 'plan-db',
+    database: {
+      view: 'plan',
+      columns: [
+        { id: 'start', name: '开始', type: 'date' },
+        { id: 'end', name: '结束', type: 'date' },
+        { id: 'done', name: '完成', type: 'checkbox' },
+      ],
+    },
+  });
+  const view: DatabaseView = {
+    id: 'plan', name: '周计划', type: 'plan', planMode: 'week',
+    dateAnchor: '2026-10-15', calendarBy: 'start', timelineEnd: 'end', planDoneBy: 'done',
+  };
+  const records = [
+    makePage({ id: 'span', parentId: db.id, values: { start: '2026-10-11', end: '2026-10-14', done: false } }),
+    makePage({ id: 'single', parentId: db.id, values: { start: '2026-10-13', done: false } }),
+    makePage({ id: 'overdue', parentId: db.id, values: { start: '2026-10-03', end: '2026-10-04', done: false } }),
+    makePage({ id: 'undated', parentId: db.id, values: { start: '', done: false } }),
+    makePage({ id: 'complete', parentId: db.id, values: { start: '2026-10-13', done: true } }),
+  ];
+  const now = new Date('2026-10-15T12:00:00');
+  const projection = planProjection(db, view, records, now);
+  assert.equal(projection.from, '2026-10-12');
+  assert.deepEqual(projection.days.find(day => day.date === '2026-10-12')?.records, ['span']);
+  assert.deepEqual(projection.days.find(day => day.date === '2026-10-13')?.records, ['span', 'single', 'complete']);
+  assert.deepEqual(projection.days.find(day => day.date === '2026-10-14')?.records, ['span']);
+  assert.deepEqual(projection.unscheduled, ['undated']);
+  assert.deepEqual(projection.overdue, ['overdue']);
+  assert.equal(projection.completed, 1);
+  const hidden = planProjection(db, { ...view, planHideCompleted: true }, records, now);
+  assert.deepEqual(hidden.days.find(day => day.date === '2026-10-13')?.records, ['span', 'single']);
+  assert.equal(hidden.completed, 1);
 });
 
 test('dragging a range retains its duration, grabbed-day offset and stored time components', () => {

@@ -17,7 +17,7 @@ try{
   await call('group.add',{name:'Release Studio'});await call('group.add',{name:'Operations'})
   const a=await call('card.create',{title:'Alex',group:'Release Studio',engine:'codex',model:'gpt-6-luna',avatar:'byte'}),b=await call('card.create',{title:'Alex',group:'Operations',engine:'codex',model:'gpt-6-luna',avatar:'marmalade'})
   await expect.poll(async()=>(await call('session.status')).every(card=>card.initialization?.status==='ready')).toBe(true)
-  await page.getByRole('button',{name:'Plan',exact:true}).click()
+  await page.getByRole('button',{name:'Mission',exact:true}).click()
   await expect(page.locator('.plan-view-tabs [role=tab]')).toHaveText(['Table','Board','Timeline','Calendar','Planner','List','Gallery','Chart','Feed','Form'])
   await tab('Form').click();const form=page.locator('.plan-inline-form')
   await form.locator('[name=plan-name]').fill('Review / 发布说明');await form.locator('[name=plan-prompt]').fill('Review the release notes.\nDo not publish without approval.')

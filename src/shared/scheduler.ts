@@ -1,3 +1,4 @@
+export type ScheduleEvent={id:string;type:'signal'|'channel.posted'|'message.received'|'session.completed'|'monitor.output'|'monitor.exited';channelId?:string;conversation?:string;employeeId?:string;monitorId?:string;messageId?:string;sequence?:number;data?:unknown}
 import type {Delegation} from './management'
 /** Host-owned scheduling contract. No renderer or plugin dependencies. */
 export type ScheduleRule =
@@ -5,7 +6,7 @@ export type ScheduleRule =
   | { kind: 'interval'; everySeconds: number; anchor: string }
   | { kind: 'weekly'; time: string; days: number[]; timezone: string }
   | { kind: 'monthly'; time: string; day: number | 'last'; timezone: string }
-  | { kind: 'event'; event: 'signal' | 'channel.posted'; channelId?: string; cooldownSeconds: number }
+  | { kind: 'event'; event: ScheduleEvent['type']; channelId?: string; conversation?:string; employeeId?:string; monitorId?:string; cooldownSeconds: number }
 export type ScheduleWindow = { start: string; end: string; timezone: string; days?: number[] }
 export type ScheduledAction = {
   type: 'agent'
@@ -37,7 +38,7 @@ export type ScheduleSpec = {
   /** Maximum scheduled occurrences, including skipped ones. Manual runs do not consume this limit. */
   maxOccurrences?: number | null
 }
-export type ScheduledJob = ScheduleSpec & { delegation?:Delegation; id: string; createdAt: string; updatedAt: string; nextAt: string | null; disabledReason?: string; revision?:number; occurrences?:number; clientRequestId?:string; requestFingerprint?:string; createdBy?:import('./management').PrincipalRef; eventClaims?:Array<{id:string;at:string}> }
+export type ScheduledJob = ScheduleSpec & { delegation?:Delegation; id: string; createdAt: string; updatedAt: string; nextAt: string | null; disabledReason?: string; revision?:number; occurrences?:number; clientRequestId?:string; requestFingerprint?:string; createdBy?:import('./management').PrincipalRef; pendingEvents?:ScheduleEvent[];eventClaims?:Array<{id:string;at:string}> }
 export type ScheduleRun = {
   delegation?:Delegation
   id: string
@@ -45,7 +46,8 @@ export type ScheduleRun = {
   jobName: string
   action: ScheduledAction
   trigger: 'scheduled' | 'manual' | 'event'
-  event?: {id:string;type:'signal'|'channel.posted';channelId?:string}
+  event?: ScheduleEvent
+  events?:ScheduleEvent[]
   scheduledAt: string
   startedAt: string
   finishedAt?: string

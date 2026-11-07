@@ -1,10 +1,12 @@
 """Run one Coding Agent CLI over the existing SSH policy, with raw stdio and no PTY."""
+import sys
+# Runtime imports must not change a signed application bundle.
+sys.dont_write_bytecode = True
 import base64
 import json
 import os
 import re
 import shlex
-import sys
 import subprocess
 import zlib
 from pathlib import Path

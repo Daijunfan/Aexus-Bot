@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makePage } from '../src/model.ts';
+import { moveManualRecord } from '../src/database/manualOrdering.ts';
+import { validateViewFields } from '../src/core/viewSchema.ts';
 import {
   activeView,
   aggregateRows,
@@ -13,8 +15,10 @@ import {
   updateView,
   valueForGroup,
   visibleColumns,
+  conditionalColor,
+  removeViewProperty,
 } from '../src/database/model.ts';
-import type { Database, FilterGroup } from '../src/types.ts';
+import type { Database, DatabaseView, FilterGroup } from '../src/types.ts';
 
 const db: Database = {
   view: 'table',
@@ -124,6 +128,28 @@ test('sort priorities use option order and numeric comparison', () => {
     ['a'],
   );
 });
+test('manual card order is independent per view, survives filtering, and yields to explicit sorts', () => {
+  const all = newView('board');
+  const shifted = moveManualRecord(undefined, rows.map(row => row.id), 'c', 'b');
+  assert.deepEqual(shifted, ['a', 'c', 'b']);
+  assert.deepEqual(moveManualRecord(shifted, ['a', 'b'], 'a', 'b', true), ['c', 'b', 'a']);
+  assert.deepEqual(moveManualRecord(shifted, ['a', 'b', 'c'], 'a', 'a'), shifted);
+  assert.deepEqual(queryRows(root, { ...all, manualOrder: shifted }, rows).map(row => row.id), shifted);
+  assert.deepEqual(queryRows(root, { ...all, manualOrder: shifted }, rows, '乙').map(row => row.id), ['b']);
+  // Hidden/removed records may precede a ranked row; new rows still go last.
+  assert.deepEqual(queryRows(root, { ...all, manualOrder: ['gone-1', 'gone-2', 'c'] },
+    [rows[1], rows[2]]).map(row => row.id), ['c', 'b']);
+  assert.deepEqual(queryRows(root, all, rows).map(row => row.id), ['a', 'b', 'c']);
+  assert.doesNotThrow(() => validateViewFields({ manualOrder: ['a', 'b'] }));
+  assert.throws(() => validateViewFields({ manualOrder: ['a', 'a'] }));
+  assert.throws(() => validateViewFields({ manualOrder: { a: 1 } }));
+  assert.doesNotThrow(() => validateViewFields({ colorColumns: true }));
+  assert.doesNotThrow(() => validateViewFields({ colorColumns: false }));
+  assert.throws(() => validateViewFields({ colorColumns: 'false' }), /只能使用 true 或 false/);
+  const sorted = { ...all, manualOrder: shifted, sorts: [{ id: 's', property: 'amount', direction: 'asc' as const }] };
+  assert.deepEqual(queryRows(root, sorted, rows).map(row => row.id), ['b', 'a', 'c']);
+});
+
 test('group visibility and property ordering do not delete underlying data', () => {
   const view = {
     ...newView('board'),
@@ -143,6 +169,33 @@ test('group visibility and property ordering do not delete underlying data', () 
   );
   assert.equal(rows[0].values.amount, 20);
 });
+test('a new empty category stays visible while the view still hides unrelated empty groups', () => {
+  const database: Database = {
+    ...db,
+    columns: db.columns.map(column => column.id === 'status'
+      ? { ...column, options: [...(column.options || []), '待评审', '备用'] }
+      : column),
+  };
+  const view: DatabaseView = {
+    ...newView('board'),
+    groupBy: 'status',
+    hideEmptyGroups: true,
+    revealedGroups: ['待评审'],
+  };
+  const grouped = groupRows(rows, 'status', database, rows, view);
+  assert.deepEqual(grouped.map(group => group.key), ['进行中', '完成', '待评审']);
+  assert.equal(view.hideEmptyGroups, true);
+  assert.deepEqual(
+    groupRows(rows, 'status', database, rows, { ...view, hiddenGroups: ['待评审'] })
+      .map(group => group.key),
+    ['进行中', '完成'],
+  );
+  assert.deepEqual(
+    groupRows(rows, 'amount', database, rows, view).map(group => group.key),
+    ['20', '8', '100'],
+  );
+});
+
 test('aggregates use the actual filtered record set', () => {
   assert.equal(aggregateRows(rows, 'amount', 'sum', db, rows), 128);
   assert.equal(aggregateRows(rows.slice(0, 2), 'amount', 'average', db, rows), 14);
@@ -156,4 +209,94 @@ test('group moves preserve property types and other multi-select memberships', (
     'B',
     'C',
   ]);
+});
+
+test('formula sorts read each row once and recompute on the next query', () => {
+  const database: Database = {
+    view: 'table',
+    columns: [
+      { id: 'n', name: 'Number', type: 'number' },
+      {
+        id: 'formula',
+        name: 'Twice',
+        type: 'formula',
+        formula: 'prop("Number") * 2',
+      },
+    ],
+  };
+  const parent = makePage({ id: 'sorting', database });
+  let reads = 0;
+  const records = Array.from({ length: 200 }, (_, index) => {
+    const row = makePage({ parentId: parent.id });
+    Object.defineProperty(row.values, 'n', {
+      configurable: true,
+      get: () => {
+        reads++;
+        return (index * 71) % 200;
+      },
+    });
+    return row;
+  });
+  const pages = [parent, ...records];
+  const view = { ...newView('table'), sorts: [{ id: 's', property: 'formula', direction: 'asc' as const }] };
+  assert.equal(queryRows(parent, view, pages)[0], records[0]);
+  assert.equal(reads, records.length);
+  Object.defineProperty(records[0].values, 'n', { value: 1000 });
+  assert.equal(queryRows(parent, view, pages).at(-1), records[0]);
+  assert.equal(aggregateRows(records, 'formula', 'count', database, pages), records.length);
+  assert.equal(reads, records.length * 2 - 1);
+});
+
+test('column calculations include median, range and empty percentage', () => {
+  assert.equal(aggregateRows(rows, 'amount', 'median', db, rows), 20);
+  assert.equal(aggregateRows(rows.slice(0, 2), 'amount', 'median', db, rows), 14);
+  assert.equal(aggregateRows(rows, 'amount', 'range', db, rows), 92);
+  const empty = makePage({ values: { amount: '' } });
+  assert.equal(aggregateRows([...rows, empty], 'amount', 'percent_empty', db, rows), 25);
+  assert.equal(aggregateRows([], 'amount', 'median', db, []), 0);
+});
+
+test('conditional colors reuse nested filters, honor priority and keep cell targets local to tables', () => {
+  const filter: FilterGroup = {
+    id: 'color-filter',
+    conjunction: 'and',
+    rules: [
+      { id: 'amount', property: 'amount', operator: 'gte', value: '20' },
+      {
+        id: 'status',
+        conjunction: 'or',
+        rules: [
+          { id: 'completed', property: 'status', operator: 'is', value: '完成' },
+          { id: 'done', property: 'done', operator: 'is', value: 'true' },
+        ],
+      },
+    ],
+  };
+  const view: DatabaseView = {
+    ...newView('table'),
+    conditionalColors: [
+      {
+        id: 'empty-draft',
+        color: 'yellow',
+        filter: { id: 'draft', conjunction: 'and', rules: [{ id: 'nested', conjunction: 'or', rules: [] }] },
+      },
+      { id: 'first', color: 'red', filter },
+      { id: 'second', color: 'blue', filter },
+      { id: 'cell', color: 'green', filter, targetProperty: 'amount' },
+    ],
+  };
+  assert.equal(conditionalColor(rows[0], view, db, rows), 'red');
+  assert.equal(conditionalColor(rows[1], view, db, rows), undefined);
+  assert.equal(conditionalColor(rows[2], view, db, rows), undefined);
+  assert.equal(conditionalColor(rows[0], view, db, rows, 'amount'), 'green');
+  assert.equal(conditionalColor(rows[0], view, db, rows, 'status'), undefined);
+  assert.equal(conditionalColor(rows[0], { ...view, type: 'board' }, db, rows), 'red');
+  assert.equal(conditionalColor(rows[0], { ...view, type: 'board' }, db, rows, 'amount'), undefined);
+  assert.equal(conditionalColor(rows[0], { ...view, type: 'chart' }, db, rows), undefined);
+  assert.equal(
+    conditionalColor(rows[0], { ...view, conditionalColors: view.conditionalColors!.toReversed() }, db, rows),
+    'blue',
+  );
+  assert.equal(removeViewProperty(view, 'amount').conditionalColors!.length, 1);
+  assert.equal(conditionalColor(rows[0], removeViewProperty(view, 'status'), db, rows), undefined);
 });

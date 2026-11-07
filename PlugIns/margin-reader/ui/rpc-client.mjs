@@ -4,7 +4,7 @@ export async function requestRpc(url,method,params={},options={}){
  if(!Number.isFinite(timeout)||timeout<=0||timeout>300000)throw error('INVALID_PARAMS','Invalid request timeout.');
  const controller=new AbortController(),details={requestId:id,method,mayHaveCompleted:true};let timer;
  const work=(async()=>{
-  const response=await fetcher(url,{method:'POST',credentials:'same-origin',signal:controller.signal,headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id,method,params})});
+  const response=await fetcher(url,{method:'POST',credentials:'same-origin',signal:controller.signal,headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id,method,params,...(options.origin?{origin:options.origin}:{})})});
   if(!response.ok)throw error('TRANSPORT_ERROR',`阅读器连接失败（HTTP ${response.status}）。`,details);
   let reply;try{reply=await response.json();}catch{throw error('INVALID_RESPONSE','阅读器返回了无法解析的响应，请检查操作状态后再重试。',details);}
   const valid=reply&&typeof reply==='object'&&!Array.isArray(reply)&&reply.jsonrpc==='2.0'&&reply.id===id&&Object.hasOwn(reply,'result')!==Object.hasOwn(reply,'error');

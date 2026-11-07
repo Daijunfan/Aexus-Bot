@@ -5,6 +5,7 @@ import {create as tar} from 'tar'
 import {APP_HOME} from '../shared/protocol'
 import type {ChannelPost} from '../shared/channels'
 import {channelFileEndpoint,channelRequest} from './channels'
+import {loadChannelAsset} from './channel-content'
 
 const root=path.join(APP_HOME,'channel-exports'),lifetime=3600000
 const safeName=(value:string)=>value.replace(/[\x00-\x1f\x7f/\\:*?"<>|]/g,'_').trim().slice(0,100)||'news'
@@ -22,7 +23,7 @@ export async function exportChannelPost(id:string){
   if(post.media.length)await fs.mkdir(path.join(folder,'images'))
   for(const [index,media] of post.media.entries()){
    const file=channelFileEndpoint({channelId:post.channelId,postId:post.id,mediaId:media.id}),name=String(index+1).padStart(2,'0')+'-'+safeName(media.name)
-   await fs.copyFile(path.resolve(file.root,file.path),path.join(folder,'images',name));images.push('images/'+name)
+   await fs.writeFile(path.join(folder,'images',name),(await loadChannelAsset(media.id)).data);images.push('images/'+name)
   }
   const markdown=['# '+post.title.replace(/\s+/g,' ').trim(),post.sourceName+' · '+new Date(post.publishedAt).toISOString(),post.url?'[Original source]('+post.url+')':'',post.body,...images.map((file,index)=>'!['+post.media[index].name.replace(/[\[\]\r\n]/g,' ')+'](<'+file.split('/').map(encodeURIComponent).join('/')+'>)')].filter(Boolean).join('\n\n')+'\n'
   await fs.writeFile(path.join(folder,'story.md'),markdown,{mode:0o600})

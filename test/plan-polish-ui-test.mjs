@@ -30,7 +30,7 @@ try{
  await expect.poll(async()=>(await call('schedule.history',{id:finished.id}))[0]?.status).toBe('succeeded')
  const timeoutJob=await make('Timeout diagnostic',b.id,{kind:'interval',everySeconds:3600},{priority:'urgent',tags:['operations']},{timeoutSeconds:1})
  fs.writeFileSync(path.join(control,b.id+'.hold-user'),'');await call('schedule.run',{id:timeoutJob.id});await expect.poll(async()=>(await call('schedule.history',{id:timeoutJob.id}))[0]?.status).toBe('timed_out');fs.unlinkSync(path.join(control,b.id+'.hold-user'))
- await page.getByRole('button',{name:'Plan',exact:true}).click();await expect(page.locator('.plan-table [data-plan-id]')).toHaveCount(8)
+ await page.getByRole('button',{name:'Mission',exact:true}).click();await expect(page.locator('.plan-table [data-plan-id]')).toHaveCount(8)
  await expect(page.locator(`[data-plan-id="${finished.id}"] .plan-run-outcome`)).toHaveText('succeeded');await expect(page.locator(`[data-plan-id="${timeoutJob.id}"] .plan-run-outcome`)).toHaveText('timed out')
  pass('Eight practical scenarios: one-off, daily, weekly, monthly, overnight, paused, succeeded and timed-out tasks')
  await page.getByRole('button',{name:'Sunday US review',exact:true}).click();await editor.locator('[name=plan-notes]').fill('Reviewed in the UI without changing its clock.');await editor.getByRole('button',{name:'Save changes',exact:true}).click();await expect(editor).toHaveCount(0)

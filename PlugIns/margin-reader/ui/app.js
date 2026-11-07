@@ -54,7 +54,7 @@ const study = new StudyController({
     setReading(true);updateDocumentHeader();outline.render();await renderDocument();
   },
   setSettings,showCollection,redrawDocument:renderDocument, getDocument: () => state.document, getRenderer: () => renderer, getPassword: () => password, openDocument, openFolder, navigate: navigateLocator,
-  beforeNavigate: async () => { study.splitView?.guard();study.inspector?.guard();study.mindmapStudio?.guard(); if((study.ink?.dirty||study.cardInk?.dirty))throw new Error('请先保存或放弃尚未保存的笔画。'); await savePosition(); cancelPageTurns(); ++openGeneration; },
+  beforeNavigate: async () => { study.excerpts?.guard();study.boards?.guard();if(study.boards?.active)study.boards.close();study.splitView?.guard();study.inspector?.guard();study.mindmapStudio?.guard(); if((study.ink?.dirty||study.cardInk?.dirty))throw new Error('请先保存或放弃尚未保存的笔画。'); await savePosition(); cancelPageTurns(); ++openGeneration; },
   showHome: async () => { const generation=openGeneration;state.document = null; state.opening = false; password = undefined; await renderer.clear(); const settings = await api('settings.get');if(generation!==openGeneration)return;state.settings=settings;setReading(false);applySettings(); }
 });
 library.collection=study.collection;
@@ -87,8 +87,9 @@ function syncPdfControls() {
   $('reader-view').classList.toggle('pdf-document', pdf);
   $('workspace').classList.toggle('focus-reading', pdf && Boolean(settings.pdfFocus) && !study.current);
   $('pdf-controls').hidden = !pdf;
-  $('pdf-progress').hidden = !pdf || settings.pdfMode !== 'paged';
-  $('pdf-vertical-progress').hidden = !pdf || settings.pdfMode === 'paged';
+  // Every reading format and mode uses the same horizontal progress track.
+  $('pdf-progress').hidden = !state.document;
+  $('pdf-vertical-progress').hidden = true;
   $('pdf-continuous').setAttribute('aria-pressed', settings.pdfMode !== 'paged');
   $('pdf-paged').setAttribute('aria-pressed', settings.pdfMode === 'paged');
   $('pdf-focus').hidden = Boolean(study.current);
@@ -107,15 +108,14 @@ function updatePageIndicators() {
   if (document.activeElement !== $('page-number')) $('page-number').value = page;
   $('page-number').max = total; $('page-total').textContent = `/ ${total}`;
   $('previous-page').disabled = page <= 1; $('next-page').disabled = page >= total;
-  if (doc.kind === 'pdf') {
-    const slider = $('pdf-page-progress'); slider.max = total;
-    if (!progressScrubbing) slider.value = page;
-    slider.setAttribute('aria-valuetext', `第 ${page} 页，共 ${total} 页`);
-    $('pdf-progress-value').value = `${page} / ${total}`;
-    const vertical = $('pdf-document-progress'), scroll = $('reader-scroll');
-    vertical.value = Math.round(scroll.scrollTop / Math.max(1, scroll.scrollHeight - scroll.clientHeight) * 100000);
-    vertical.setAttribute('aria-valuetext', `第 ${page} 页，共 ${total} 页`);
-  }
+  const slider=$('pdf-page-progress'),scroll=$('reader-scroll');
+  const scrollFraction=Math.max(0,Math.min(1,scroll.scrollTop/Math.max(1,scroll.scrollHeight-scroll.clientHeight)));
+  const paged=doc.kind==='pdf'&&state.settings.pdfMode==='paged';
+  const fraction=paged?(page-1)/Math.max(1,total-1):doc.kind==='pdf'?scrollFraction:(Math.max(0,page-1)+scrollFraction)/Math.max(1,total);
+  slider.min=paged?'1':'0';slider.max=paged?String(total):'100000';slider.step='1';
+  if(!progressScrubbing)slider.value=paged?String(page):String(Math.round(fraction*100000));
+  slider.setAttribute('aria-valuetext', `已阅读 ${Math.round(fraction*100)}%，第 ${page} / ${total} ${doc.kind==='pdf'?'页':'节'}`);
+  $('pdf-progress-value').value=Math.round(fraction*100)+'%';
   $('reading-position').textContent = doc.kind==='media'?`${doc.position.time?.toFixed(1)||0} / ${doc.media.duration.toFixed(1)} 秒`:doc.kind === 'pdf' ? `第 ${page} / ${total} 页${doc.pageLabels?.[page - 1] ? ` · ${doc.pageLabels[page - 1]}` : ''}` : `第 ${page} / ${total} 节 · ${doc.sections[page - 1]?.title || ''}`;
 }
 function setReading(reading) {
@@ -157,7 +157,7 @@ $('reader-scroll').addEventListener('scroll', positionChanged, { passive: true }
 $('reader-save-status').addEventListener('click', run(savePosition));
 async function flush() {
   await flushRequests();
-  study.splitView?.guard();study.mindmapStudio?.guard();
+  study.excerpts?.guard();study.boards?.guard();study.splitView?.guard();study.mindmapStudio?.guard();
   if(study.backups?.jobs?.busy)throw new Error('备份批次仍在处理，请先暂停并等待当前请求结束。');
   if(study.devices?.dirty)throw new Error('相机 / 录音仍在使用或有未保存的媒体，请先保存或明确取消。');
   if(study.exporter?.busy)throw new Error("学习集导入或导出尚未完成，请稍候再关闭。");
@@ -170,6 +170,8 @@ async function flush() {
 }
 async function saveChanges(){
   await flushRequests();
+  if(study.excerpts?.dirty)await study.excerpts.save(study.excerpts.color);
+  if(study.boards?.editor)await study.boards.saveEditor();
   const before=study.current;
   await study.mindmapStudio?.saveDraft();
   if(before&&study.current?.id===before.id&&study.current.revision!==before.revision)study.inspector?.adoptOwnRevision(study.current,before.revision);
@@ -183,6 +185,7 @@ async function showCollection(folderId=null){
   if(generation!==openGeneration)return;setReading(false);await study.refreshList();
 }
 async function openFolder(folder = '.') {
+  study.excerpts?.guard();study.boards?.guard();if(study.boards?.active)study.boards.close();
   study.inspector?.guard();study.mindmapStudio?.guard();
   if((study.ink?.dirty||study.cardInk?.dirty))throw new Error('请先保存或放弃尚未保存的笔画。');
   if (study.current) await study.leave();
@@ -192,6 +195,10 @@ async function openFolder(folder = '.') {
   setReading(false); await renderer.clear(); await readerTools.refresh(); await library.refresh();
 }
 async function openDocument(path, options = {}) {
+  // Clicking the already-open file in the explorer keeps the current page,
+  // study context and position. Explicit refresh/member navigation still runs.
+  if (!options.studySetId && !options.refresh && state.document?.path === path && !$('reader-view').hidden && !study.boards?.active) return;
+  study.excerpts?.guard();study.boards?.guard();if(study.boards?.active)study.boards.close();
   study.inspector?.guard();study.mindmapStudio?.guard();
   if((study.ink?.dirty||study.cardInk?.dirty))throw new Error('请先保存或放弃尚未保存的笔画。');
   if (study.current && options.studySetId !== study.current.id) await study.leave();
@@ -261,7 +268,7 @@ async function refreshFromEvent() {
   const freshSettings = await api('settings.get');
   if(superseded())return;
   const moving=(freshSettings.activeStudySet||null)!==(study.current?.id||null)||(freshSettings.lastDocument||null)!==(state.document?.id||null),toolbar=study.inkTools.toolbar;
-  if(moving&&(study.splitView?.dirty||study.mindmapStudio?.dirty||study.inspector?.dirty||study.ink?.dirty||study.cardInk?.dirty||$('dialog').open||toolbar.drag||toolbar.busy||!toolbar.panel.hidden||study.inkTools.rulers.drag||study.inkTools.rulers.busy)){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>refreshFromEvent().catch(error=>toast(describeError(error),true)),200);return;}
+  if(moving&&(study.excerpts?.dirty||study.boards?.dirty||study.splitView?.dirty||study.mindmapStudio?.dirty||study.inspector?.dirty||study.ink?.dirty||study.cardInk?.dirty||$('dialog').open||toolbar.drag||toolbar.busy||!toolbar.panel.hidden||study.inkTools.rulers.drag||study.inkTools.rulers.busy)){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>refreshFromEvent().catch(error=>toast(describeError(error),true)),200);return;}
   const old = state.settings;
   state.settings = freshSettings; applySettings(); await readerTools.refresh();
   if(superseded())return;
@@ -312,7 +319,8 @@ pageTurns = new PageTurnQueue({
   read:()=>state.document?{key:state.document.id+':'+openGeneration,page:state.document.kind==='pdf'?state.document.position.page:state.document.position.section+1,total:state.document.kind==='pdf'?state.document.pageCount:state.document.sectionCount}:null,
   move:async(target,{from,isCurrent})=>{
     if(study.ink?.dirty||study.cardInk?.dirty||document.querySelector('.pdf-note[data-editing]'))throw Error('请先完成或保存当前笔画与笔记，再翻页。');
-    if(study.excerpts?.draft){if(study.excerpts.busy)throw Error('摘录正在保存，请稍候翻页。');study.excerpts.hide();window.getSelection()?.removeAllRanges();}
+    study.excerpts?.guard();
+    if(study.excerpts?.draft){study.excerpts.hide();window.getSelection()?.removeAllRanges();}
     // Let a tap finish before replacing any page nodes. A held drawing is
     // guarded above; paper navigation cannot leave renderDocument deferred.
     if(readerGesture)await new Promise(resolve=>setTimeout(resolve,0));
@@ -352,13 +360,89 @@ $('pdf-fit').addEventListener('change', run(() => pdfPreference({ pdfFit: $('pdf
 $('pdf-turn-effect').addEventListener('change',run(()=>{bookTurn.cancel();return setSettings({pdfTurnEffect:$('pdf-turn-effect').value});}));
 $('pdf-speed').addEventListener('input', () => { $('pdf-speed-value').value = `${$('pdf-speed').value}×`; });
 $('pdf-speed').addEventListener('change', run(() => setSettings({ pdfScrollSpeed: Number($('pdf-speed').value) })));
-$('pdf-document-progress').addEventListener('input', () => {
-  const scroll = $('reader-scroll');
-  scroll.scrollTop = Number($('pdf-document-progress').value) / 100000 * (scroll.scrollHeight - scroll.clientHeight);
-  positionChanged();
+const progressSlider=$('pdf-page-progress');
+async function scrubProgress(value,commit){
+  const doc=state.document;if(!doc)return;
+  const scroll=$('reader-scroll'),maximum=Math.max(0,scroll.scrollHeight-scroll.clientHeight);
+  if(doc.kind==='pdf'&&state.settings.pdfMode==='paged'){
+    if(commit)await pageBy(0,Number(value));
+    return;
+  }
+  const fraction=Math.max(0,Math.min(1,Number(value)/100000));
+  if(doc.kind==='pdf'){scroll.scrollTop=fraction*maximum;positionChanged();return;}
+  const sections=Math.max(1,doc.sectionCount||1),scaled=Math.min(sections-0.000001,fraction*sections);
+  const section=Math.floor(scaled),within=scaled-section;
+  if(doc.position.section===section){scroll.scrollTop=within*maximum;positionChanged();}
+  else if(commit){await navigateLocator({section});scroll.scrollTop=within*Math.max(0,scroll.scrollHeight-scroll.clientHeight);positionChanged();}
+}
+progressSlider.setAttribute('aria-label','文档阅读进度');
+progressSlider.addEventListener('input',()=>{
+  progressScrubbing=true;
+  const value=Number(progressSlider.value),max=Number(progressSlider.max),min=Number(progressSlider.min);
+  $('pdf-progress-value').value=Math.round((value-min)/Math.max(1,max-min)*100)+'%';
+  if(state.document?.kind==='pdf'&&state.settings.pdfMode==='paged')return;
+  scrubProgress(value,false).catch(error=>toast(describeError(error),true));
 });
-$('pdf-page-progress').addEventListener('input', () => { progressScrubbing = true; $('pdf-progress-value').value = `${$('pdf-page-progress').value} / ${state.document?.pageCount}`; });
-$('pdf-page-progress').addEventListener('change', run(() => { const page = Number($('pdf-page-progress').value); progressScrubbing = false; return pageBy(0, page); }));
+progressSlider.addEventListener('change',run(async()=>{
+  const value=Number(progressSlider.value);
+  try{await scrubProgress(value,true);}finally{progressScrubbing=false;updatePageIndicators();}
+}));
+progressSlider.addEventListener('pointercancel',()=>{progressScrubbing=false;updatePageIndicators();});
+// WKWebView can report Mac trackpad pinches through GestureEvent or Ctrl+wheel.
+// Preview immediately on the compositor, but coalesce expensive PDF reflows.
+let magnify=null,magnifyTimer=null,lastGestureScale=1;
+function magnifyReader(factor,clientX,clientY){
+  const doc=state.document;if(!doc||!Number.isFinite(factor)||factor<=0||$('dialog').open)return;
+  const pdf=doc.kind==='pdf',property=pdf?'pdfZoom':'fontSize',base=state.settings[property]|| (pdf?1:18);
+  if(!magnify||magnify.docId!==doc.id){
+    const viewport=$('reader-scroll'),box=viewport.getBoundingClientRect();
+    magnify={docId:doc.id,property,base,value:base,offsetX:Math.max(0,clientX-box.left),offsetY:Math.max(0,clientY-box.top),initialTop:viewport.scrollTop,initialHeight:viewport.scrollHeight,initialViewportHeight:viewport.clientHeight};
+  }
+  magnify.value=Math.min(pdf?3:32,Math.max(pdf?.5:12,magnify.value*factor));
+  const ratio=magnify.value/base,scroll=$('reader-scroll'),surface=$('reading-surface'),box=surface.getBoundingClientRect();
+  surface.style.transformOrigin=`${clientX-box.left}px ${clientY-box.top}px`;
+  surface.style.transform=`scale(${ratio})`;
+  if(pdf)$('pdf-reset-zoom').textContent=Math.round(magnify.value*100)+'%';
+  clearTimeout(magnifyTimer);magnifyTimer=setTimeout(()=>run(commitMagnify)(),240);
+}
+async function commitMagnify(){
+  clearTimeout(magnifyTimer);magnifyTimer=null;
+  const gesture=magnify;magnify=null;
+  const surface=$('reading-surface');
+  try{
+    if(!gesture||state.document?.id!==gesture.docId)return;
+    const value=Math.round(gesture.value*1000)/1000;
+    if(Math.abs(value-gesture.base)<.001)return;
+    await pdfPreferenceOrFlowZoom(gesture.property,value);
+    if(state.document?.id!==gesture.docId)return;
+    const viewport=$('reader-scroll');
+    if(gesture.property==='pdfZoom'&&state.settings.pdfMode==='continuous'){
+      // Preserve the paper point underneath the fingers after PDF reflow.
+      const extra=value/gesture.base-1;
+      viewport.scrollLeft+=gesture.offsetX*extra;
+      viewport.scrollTop+=gesture.offsetY*extra;
+      positionChanged();
+    }else if(gesture.property==='fontSize'){
+      // Text reflows across lines; preserve progress within its section.
+      const previous=Math.max(1,gesture.initialHeight-gesture.initialViewportHeight);
+      viewport.scrollTop=Math.max(0,Math.min(1,gesture.initialTop/previous))*Math.max(0,viewport.scrollHeight-viewport.clientHeight);
+      positionChanged();
+    }
+  }finally{surface.style.transform='';surface.style.transformOrigin='';}
+}
+async function pdfPreferenceOrFlowZoom(property,value){
+  if(property==='pdfZoom')return pdfPreference({pdfZoom:value});
+  await savePosition();await setSettings({fontSize:value});await renderDocument();
+}
+const readerScroll=$('reader-scroll');
+readerScroll.addEventListener('gesturestart',event=>{if(!state.document)return;event.preventDefault();lastGestureScale=1;},{passive:false});
+readerScroll.addEventListener('gesturechange',event=>{if(!state.document)return;event.preventDefault();const factor=event.scale/lastGestureScale;lastGestureScale=event.scale;magnifyReader(factor,event.clientX,event.clientY);},{passive:false});
+readerScroll.addEventListener('gestureend',event=>{if(!state.document)return;event.preventDefault();run(commitMagnify)();},{passive:false});
+readerScroll.addEventListener('wheel',event=>{
+  if(!state.document||!event.ctrlKey||!event.cancelable||$('dialog').open)return;
+  event.preventDefault();event.stopImmediatePropagation();
+  magnifyReader(Math.exp(-Math.max(-120,Math.min(120,event.deltaY))*.008),event.clientX,event.clientY);
+},{passive:false,capture:true});
 $('reader-scroll').addEventListener('wheel', event => {
   if (state.document?.kind !== 'pdf' || $('dialog').open || !event.cancelable) return;
   const scroller = $('reader-scroll');
@@ -400,18 +484,16 @@ bind('export-document', () => {
 });
 function divider(id, property, minimum, maximum, direction = 1) {
   const el = $(id);
-  const split=()=>id==='outline-divider'&&study.current&&!study.outline;
-  const ratio=value=>Math.max(.3,Math.min(.7,value));
-  const paint=value=>{document.documentElement.style.setProperty('--study-document',`${value}fr`);document.documentElement.style.setProperty('--study-map',`${1-value}fr`);};
+  // The document/map ratio is owned only by StudySplit's dedicated splitter.
   el.addEventListener('pointerdown', event => {
-    if(split()){const rows=state.settings.studyLayout==='rows',axis=rows?'clientY':'clientX',size=rows?'clientHeight':'clientWidth',sign=state.settings.studyOrder==='map-first'?-1:1,start=event[axis],initial=state.settings.studyRatio||.53,width=$('reader-view')[size]+$('study-pane')[size];let value=initial;el.setPointerCapture(event.pointerId);const move=e=>{value=ratio(initial+sign*(e[axis]-start)/width);paint(value);};const stop=run(async()=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',stop);el.removeEventListener('pointercancel',stop);await setSettings({studyRatio:value});});el.addEventListener('pointermove',move);el.addEventListener('pointerup',stop,{once:true});el.addEventListener('pointercancel',stop,{once:true});return;}
-    const start = event.clientX, initial = state.settings[property]; el.setPointerCapture(event.pointerId);
+    if(event.button!==0)return;
+    const start = event.clientX, initial = state.settings[property]; if(property==='outlineWidth')direction=state.settings.outlineSide==='left'?1:-1; el.setPointerCapture(event.pointerId);
     let value = initial;
     const move = current => { value = Math.round(Math.min(maximum, Math.max(minimum, initial + direction * (current.clientX - start)))); document.documentElement.style.setProperty(property === 'sidebarWidth' ? '--explorer' : '--outline', `${value}px`); };
     const stop = run(async () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', stop); await setSettings({ [property]: value }); if (state.document?.kind === 'pdf') await renderDocument(); });
     el.addEventListener('pointermove', move); el.addEventListener('pointerup', stop, { once: true });
   });
-  el.addEventListener('keydown', run(async event => { if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return; event.preventDefault(); if(split()){await setSettings({studyRatio:ratio((state.settings.studyRatio||.53)+(['ArrowRight','ArrowDown'].includes(event.key)?.02:-.02)*(state.settings.studyOrder==='map-first'?-1:1))});return;} await setSettings({ [property]: Math.min(maximum, Math.max(minimum, state.settings[property] + (event.key === 'ArrowRight' ? 10 : -10) * direction)) }); }));
+  el.addEventListener('keydown', run(async event => { if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return; event.preventDefault(); await setSettings({ [property]: Math.min(maximum, Math.max(minimum, state.settings[property] + (event.key === 'ArrowRight' ? 10 : -10) * direction)) }); }));
 }
 divider('explorer-divider', 'sidebarWidth', 180, 480); divider('outline-divider', 'outlineWidth', 200, 480, -1);
 // LibraryDrag owns synchronous drag/drop cancellation and destination feedback.
@@ -424,7 +506,7 @@ document.addEventListener('keydown',event=>{
 document.addEventListener('keydown', run(async event => {
   if(event.defaultPrevented)return;
   if(event.target.closest('#study-board')&&!event.metaKey&&!event.ctrlKey)return;
-  if (state.document?.kind === 'pdf' && !$('dialog').open && !event.metaKey && !event.ctrlKey && !event.altKey && !event.target.closest('input,textarea,select,[contenteditable],[role=treeitem]')) {
+  if (state.document?.kind === 'pdf' && !$('dialog').open && !event.metaKey && !event.ctrlKey && !event.altKey && !event.target.closest('button,input,textarea,select,summary,[contenteditable],[role=button],[role=slider],[role=treeitem],[role=menuitem]')) {
     if (['ArrowRight','ArrowLeft','PageDown','PageUp',' '].includes(event.key)) {
       event.preventDefault();
       await pageBy(['ArrowLeft','PageUp'].includes(event.key) || event.key === ' ' && event.shiftKey ? -1 : 1);
@@ -442,7 +524,7 @@ window.addEventListener('message', async event => {
   try { await flush(); notifyHost('flushed', { id: event.data.id }); }
   catch (error) { notifyHost('flushed', { id: event.data.id, error: describeError(error) }); }
 });
-window.addEventListener('beforeunload',event=>{if(study.inspector?.dirty||study.mindmapStudio?.dirty||study.ink?.dirty||study.cardInk?.dirty||modalDirty()){event.preventDefault();event.returnValue='';}});
+window.addEventListener('beforeunload',event=>{if(study.excerpts?.dirty||study.boards?.dirty||study.inspector?.dirty||study.mindmapStudio?.dirty||study.ink?.dirty||study.cardInk?.dirty||modalDirty()){event.preventDefault();event.returnValue='';}});
 window.addEventListener('error', event => { if (event.error) toast(describeError(event.error), true); });
 async function initialize() {
   state.settings = await api('settings.get'); applySettings(); library.folder = state.settings.currentFolder;

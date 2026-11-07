@@ -39,7 +39,9 @@ function locator(v) { object(v); S.assert(Number.isInteger(v.page) && v.page > 0
 function card(c) {
   object(c); id(c.id); if(c.parentId)id(c.parentId); M.title(c.title); text(c.text || ''); text(c.note || ''); if(c.editedText!==undefined)text(c.editedText); M.tags(c.tags || []); M.color(c.color);
   if(c.style)require('./study-organize.cjs').checkedStyle(c.style);
-  if(c.position)S.assert(['x','y'].every(k=>Number.isFinite(c.position[k])&&c.position[k]>=0&&c.position[k]<=100000),'INVALID_PACKAGE','Invalid card position.');
+  // Match the public world-coordinate contract used by card positioning,
+  // multi-branch moves and arrangement, including negative canvas positions.
+  if(c.position)S.assert(['x','y'].every(k=>Number.isFinite(c.position[k])&&Math.abs(c.position[k])<=1000000000),'INVALID_PACKAGE','Invalid card position.');
   for(const key of ['reference'])if(c[key]){id(c[key].setId);id(c[key].cardId);}
   if(c.source){id(c.source.documentId);S.relative(c.source.path);text(c.source.title||'',500);S.assert(/^[a-f0-9]{64}$/.test(c.source.hash),'INVALID_PACKAGE','Invalid source hash.');locator(c.source.locator);
     const selection=c.source.selection||{};if(selection.rects){array(selection.rects,2000,'excerpt rectangles');for(const r of selection.rects)S.assert(Number.isInteger(r.page)&&r.page>0&&['x','y','width','height'].every(k=>Number.isFinite(r[k]))&&r.x>=0&&r.y>=0&&r.width>0&&r.height>0&&r.x+r.width<=1.000001&&r.y+r.height<=1.000001,'INVALID_PACKAGE','Invalid excerpt rectangle.');}
@@ -83,7 +85,14 @@ function validateSet(set, snapshots = true) {
   for(const l of set.links||[]){id(l.id);id(l.from);id(l.to);if(l.toSetId)id(l.toSetId);text(l.label||'',200);if(l.curve)require('./study-content.cjs').validateCurve(l.curve);}
   for(const d of set.decks||[]){id(d.id);M.title(d.title);}
   for(const b of set.boards||[]){id(b.id);M.title(b.title);require('./study-organize.cjs').checkedFilter(b.filter||{});}
-  if(set.appearance){const {paper,background,...style}=set.appearance;require('./study-organize.cjs').checkedStyle({...style,...(background?{background}:{})});if(paper)S.assert(['plain','grid','dots','lined'].includes(paper),'INVALID_PACKAGE','Invalid map paper.');}
+  if(set.appearance){
+    object(set.appearance);
+    const {paper,mapBackground,inkBehind,...style}=set.appearance;
+    require('./study-organize.cjs').checkedStyle(style);
+    if(mapBackground!==undefined)S.assert(typeof mapBackground==='string'&&/^#[0-9a-f]{6}$/i.test(mapBackground),'INVALID_PACKAGE','Invalid map background.');
+    if(inkBehind!==undefined)S.assert(typeof inkBehind==='boolean','INVALID_PACKAGE','Invalid canvas handwriting order.');
+    if(paper!==undefined)S.assert(['plain','grid','dots','lined'].includes(paper),'INVALID_PACKAGE','Invalid map paper.');
+  }
   if(set.map){if(set.map.focusId)id(set.map.focusId);if(set.map.submapId)id(set.map.submapId);}
   if(set.linkSettings?.sources!==undefined)require('./study-dictionary.cjs').validateSources(set.linkSettings.sources);
   const checkedSettings=(value,kind)=>{object(value);require('../runtime.cjs').validate(kind==='ink'?'study.ink.settings':'study.capture.settings',{...value,setId:set.id||'snapshot',expectedRevision:1});if(value.color)M.color(value.color);if(kind==='ink'&&value.brush!=='laser')require('./study-ink-tools.cjs').attributes(value);};

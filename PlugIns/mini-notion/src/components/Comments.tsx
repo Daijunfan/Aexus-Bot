@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { Check, MessageSquare, Pencil, RotateCcw, Send, Smile, Trash2, X } from 'lucide-react';
 import { useWorkspace } from '../store';
 import { flattenBlocks } from '../core/blocks';
-import { IconButton, relativeDate } from '../ui';
+import { IconButton, PageIcon, relativeDate } from '../ui';
+import { EmojiPicker } from './Pickers';
 import type { CommentMessage, CommentThread } from '../types';
 
 export function Comments() {
@@ -13,7 +14,7 @@ export function Comments() {
   const [draft, setDraft] = useState('');
   const [replies, setReplies] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<{ thread: string; id: string; text: string } | null>(null);
-  const [reaction, setReaction] = useState<string | null>(null);
+  const [reaction, setReaction] = useState<{ id: string; x: number; y: number; full?: boolean } | null>(null);
   useEffect(() => {
     setDraft('');
     setStatus('open');
@@ -198,7 +199,8 @@ export function Comments() {
                       <>
                         <IconButton
                           label="添加表情反馈"
-                          onClick={() => setReaction(reaction === message.id ? null : message.id)}
+                          onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect();
+                            setReaction(reaction?.id === message.id ? null : { id: message.id, x: rect.left, y: rect.bottom }); }}
                         >
                           <Smile size={13} />
                         </IconButton>
@@ -219,6 +221,7 @@ export function Comments() {
                             <button
                               className="comment-reaction"
                               key={emoji}
+                              aria-label={`${workspace!.settings.customEmojis?.find((item) => item.url === emoji)?.name || emoji} 1`}
                               onClick={() =>
                                 execute('comment.react', {
                                   threadId: thread.id,
@@ -227,25 +230,21 @@ export function Comments() {
                                 })
                               }
                             >
-                              {emoji} 1
+                              <PageIcon icon={emoji} size={16} /> 1
                             </button>
                           ))}
                       </>
                     )}
                   </div>
-                  {!thread.deletedAt && reaction === message.id && (
+                  {!thread.deletedAt && reaction?.id === message.id && (
+                    reaction.full ? <EmojiPicker {...reaction} emojiOnly value="" onClose={() => setReaction(null)}
+                      onChange={(emoji) => execute('comment.react', { threadId: thread.id, commentId: message.id, emoji })} /> :
                     <div className="comment-reactions">
-                      {['👍', '❤️', '✅', '👀', '💡', '🎉'].map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => {
-                            execute('comment.react', { threadId: thread.id, commentId: message.id, emoji });
-                            setReaction(null);
-                          }}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
+                      {['👍', '❤️', '✅', '👀', '💡', '🎉'].map((emoji) => <button key={emoji} aria-label={emoji}
+                        onClick={() => { execute('comment.react', { threadId: thread.id, commentId: message.id, emoji }); setReaction(null); }}>
+                        <PageIcon icon={emoji} size={18} />
+                      </button>)}
+                      <button aria-label="更多表情" title="更多表情" onClick={() => setReaction({ ...reaction, full: true })}><Smile size={18} /></button>
                     </div>
                   )}
                 </div>

@@ -23,7 +23,7 @@ try{
  else{browser=await chromium.launch({headless:true,...(process.platform==='darwin'?{channel:'chrome'}:{})});page=await browser.newPage({viewport:{width:1440,height:1000}});await page.goto('http://127.0.0.1:'+port);await page.locator('.web-login input').fill(fs.readFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim());await page.getByRole('button',{name:'Enter workspace',exact:true}).click()}
  page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));await expect(page.locator('.infinite-canvas')).toBeVisible();await page.getByRole('button',{name:'Messages',exact:true}).click()
  const rows=()=>page.locator('.message-contacts > .message-contact-wrap'),row=key=>page.locator('[data-conversation-key="'+key+'"]'),tabs=page.getByRole('tablist',{name:'Conversation categories'}),dialog=()=>page.getByRole('dialog',{name:/^(Create|Edit) category$/}),shot=async name=>{await page.screenshot({path:path.join(out,name+'.png'),animations:'disabled'});screens.push(name)}
- await expect(rows()).toHaveCount(10);await expect(tabs.getByRole('tab',{name:'All',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Archived chats',exact:true})).toHaveCount(0)
+ await expect(rows()).toHaveCount(8);await expect(tabs.getByRole('tab',{name:'All',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Archived chats',exact:true})).toHaveCount(0)
  metrics.firstRowOffset=await rows().first().evaluate(el=>el.getBoundingClientRect().top-document.querySelector('.message-sidebar').getBoundingClientRect().top);assert.ok(metrics.firstRowOffset<225,JSON.stringify(metrics));await shot('01-compact-inbox')
  const create=async(preset,name,platform)=>{await page.getByRole('button',{name:'Create category',exact:true}).click();await dialog().getByRole('button',{name:preset,exact:true}).click();if(platform)await dialog().getByRole('combobox',{name:'Social platform',exact:true}).selectOption(platform);await dialog().locator('[name=conversation-folder-name]').fill(name)}
  const save=async()=>{await dialog().getByRole('button',{name:'Create category',exact:true}).click();await expect(dialog()).toHaveCount(0)}
@@ -57,7 +57,7 @@ try{
  await create('Social platform','All X','x');await save();await expect(rows()).toHaveCount(2)
  const x3=await rpc('channel.source-add',{plugin:'x',locator:'@categorygamma',name:'New author'});await expect(rows()).toHaveCount(3)
  await page.getByRole('textbox',{name:'Search conversations',exact:true}).fill('@categorybeta');await expect(rows()).toHaveCount(1);await expect(row('source:'+beta.id)).toBeVisible();await page.getByRole('button',{name:'Clear search',exact:true}).click();await expect(rows()).toHaveCount(3)
- await create('Social platform','Videos','youtube');await expect(dialog().locator('input[type=checkbox]')).toHaveCount(1);await save();await expect(row('source:'+video.id)).toBeVisible()
+ await create('Social platform','Videos','youtube');await expect(dialog().locator('input[type=checkbox]')).toHaveCount(1);await save();await expect(row('channel:'+video.channelId)).toBeVisible()
  await create('Social platform','Telegram notes','telegram');await expect(dialog().locator('input[type=checkbox]')).toHaveCount(1);await save();await expect(row('source:'+telegram.id)).toBeVisible()
  await create('Custom selection','Mixed desk');await dialog().locator('.folder-conversation-options label').filter({hasText:'Alex'}).first().getByRole('checkbox').check();await dialog().locator('.folder-conversation-options label').filter({hasText:'Release room'}).getByRole('checkbox').check();await dialog().locator('.folder-conversation-options label').filter({hasText:'@categorybeta'}).getByRole('checkbox').check();await save();await expect(rows()).toHaveCount(3)
  const mixed=(await rpc('messenger.state')).folders.find(c=>c.name==='Mixed desk');await rows().nth(1).locator('[data-sort-start]').focus();await page.keyboard.press('Alt+ArrowUp');await expect.poll(async()=>(await rpc('messenger.state')).orders?.[mixed.id]?.length??0).toBe(3)
@@ -68,13 +68,13 @@ try{
  await page.getByRole('button',{name:'Archived chats',exact:true}).click();await expect(rows()).toHaveCount(4);await shot('06-unified-archive')
  for(let i=0;i<4;i++)await page.locator('.message-restore-conversation').first().click()
  await expect(page.locator('.message-archive-entry,.message-archive-heading')).toHaveCount(0);assert.equal(Object.values((await rpc('messenger.state')).conversations).filter(p=>p.archived).length,0)
- checks.push('All three platforms list separate social elements; custom mixes and keyboard ordering persist; private/group/channel/source archive and Restore use one location, disappearing after the final restore')
+ checks.push('YouTube stays merged while Telegram/X retain source entries; custom mixes and keyboard ordering persist; private/group/channel/source archive and Restore use one location, disappearing after the final restore')
  // User-created tabs, including the last, are deletable without destroying content.
  let folders=(await rpc('messenger.state')).folders
  for(const folder of folders){const tab=tabs.locator('#message-folder-'+folder.id);await tab.click({button:'right'});await page.getByRole('menuitem',{name:'Delete category',exact:true}).click();await expect(tab).toHaveCount(0)}
- assert.equal((await rpc('messenger.state')).folders.length,0);await expect(rows()).toHaveCount(13);await expect(tabs.getByRole('tab')).toHaveCount(0)
+ assert.equal((await rpc('messenger.state')).folders.length,0);await expect(rows()).toHaveCount(11);await expect(tabs.getByRole('tab')).toHaveCount(0)
  assert.equal((await rpc('channel.post',{id:peer.id})).id,peer.id);assert.equal((await rpc('session.list')).sessions.length,3)
- await page.reload();await expect(rows()).toHaveCount(13);await expect(tabs.getByRole('tab')).toHaveCount(0)
+ await page.reload();await expect(rows()).toHaveCount(11);await expect(tabs.getByRole('tab')).toHaveCount(0)
  await create('Social platform','X','x');await save();await expect(rows()).toHaveCount(3)
  for(const theme of ['black','violet']){await rpc('settings.set',{theme});await expect(page.locator('html')).toHaveAttribute('data-theme',theme);await shot('07-'+theme)}
  await page.setViewportSize({width:420,height:850});await page.getByRole('button',{name:'Back to conversations',exact:true}).click();await expect(page.locator('.message-sidebar')).toBeVisible();await expect(rows()).toHaveCount(3)

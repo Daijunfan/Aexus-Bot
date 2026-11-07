@@ -1,7 +1,8 @@
+import {isAppAdministrator} from './application-authority'
 import {channelOffices,saveChannelOffices} from './channel-members'
 import {catalog,indexFile} from './chat-group-store'
 import {atomicJson} from './atomic-file'
-import {one,all,run,changed,transaction} from './channel-store'
+import {one,all,run,changed,transaction,canonicalChannelId} from './channel-store'
 import {readStore} from './store'
 import {requestContext} from './request-context'
 import type {PrincipalRef} from '../shared/management'
@@ -14,7 +15,7 @@ export const setConversationPolicyEmitter=(callback:typeof notify)=>{notify=call
 export function controlChanged(conversation:string){notify(conversation)}
 export function conversationIdentity(value:unknown){
  if(typeof value!=='string'||!/^(group|channel):[a-zA-Z0-9_-]+$/.test(value))throw Error('Choose a group:ID or channel:ID conversation')
- const [kind,id]=value.split(':')
+ const [kind,originalId]=value.split(':');const id=kind==='channel'?canonicalChannelId(originalId):originalId;value=kind+':'+id
  const group=kind==='group'?catalog().groups.find(group=>group.id===id):undefined
  const channel=kind==='channel'?one('SELECT id,name,admin_ids,revision FROM channels WHERE id=?',id):undefined
  if(!group&&!channel)throw Error('Conversation no longer exists')
@@ -23,11 +24,12 @@ export function conversationIdentity(value:unknown){
  const members=offices.memberIds.filter(id=>existing.has(id)),ownerId=offices.ownerId&&members.includes(offices.ownerId)?offices.ownerId:null
  const controls=channel?one('SELECT * FROM channel_conversation_controls WHERE channel_id=?',id):undefined
  const role=(employeeId:string):ConversationRole|undefined=>!members.includes(employeeId)?undefined:groupRole({...offices,memberIds:members},employeeId)
- return {conversation:value,kind:kind as 'group'|'channel',id,ownerId,name:group?.name??String(channel!.name),group,members,role,revision:group?.revision??Number(channel!.revision),mutes:group?.mutes??(controls?JSON.parse(controls.mutes):{}) as Record<string,number|null>,silent:group?.silent??!!controls?.silent}
+ return {conversation:String(value),kind:kind as 'group'|'channel',id,ownerId,name:group?.name??String(channel!.name),group,members,role,revision:group?.revision??Number(channel!.revision),mutes:group?.mutes??(controls?JSON.parse(controls.mutes):{}) as Record<string,number|null>,silent:group?.silent??!!controls?.silent}
 }
 export function requireConversation(value:unknown,capability:'read'|'admin'|'owner'='read',principal:PrincipalRef=requestContext().principal){
  const current=conversationIdentity(value)
- if(principal.kind==='operator')return current
+ if(current.group?.bot&&capability!=='read')throw Error('External Worker access uses bot.access; native Bot governance is not a local employee group operation')
+ if(principal.kind==='operator'||isAppAdministrator(principal))return current
  const role=current.role(principal.employeeId)
  if(!role)throw Error('Forbidden: not a member of this conversation')
  if(capability==='owner'&&role!=='owner'||capability==='admin'&&role!=='admin'&&role!=='owner')throw Error('Forbidden: conversation '+(capability==='owner'?'Owner':'Owner/Admin')+' required; Company rank does not grant this office')
@@ -54,9 +56,9 @@ function revise(value:ReturnType<typeof conversationIdentity>,expected:unknown,u
 }
 export function conversationPolicy(value:unknown):ConversationPolicy{return projectPolicy(requireConversation(value))}
 function projectPolicy(current:ReturnType<typeof conversationIdentity>):ConversationPolicy{
- const principal=requestContext().principal,role=principal.kind==='operator'?'operator':current.role(principal.employeeId)??null,admin=['operator','owner','admin'].includes(role??'')
+ const principal=requestContext().principal,role=principal.kind==='operator'?'operator':current.role(principal.employeeId)??null,admin=isAppAdministrator(principal)||['operator','owner','admin'].includes(role??'')
  const cards=readStore().sessions
- return {conversation:current.conversation,name:current.name,kind:current.kind,revision:current.revision,ownerId:current.ownerId,silent:current.silent,mutes:current.mutes,actorRole:role,members:current.members.map(id=>({id,name:cards.find(card=>card.id===id)!.title,role:current.role(id)!,mutedUntil:conversationMuted(current.conversation,id)})),allowedActions:[...(admin?['members','roles','mute','silence','notices','audit']:[]),...((role==='operator'||role==='owner')?['transfer-owner',...(current.kind==='group'?['delete-group']:[])]:[])]}
+ return {conversation:current.conversation,name:current.name,kind:current.kind,revision:current.revision,ownerId:current.ownerId,silent:current.silent,mutes:current.mutes,actorRole:role,members:current.members.map(id=>({id,name:cards.find(card=>card.id===id)!.title,role:current.role(id)!,mutedUntil:conversationMuted(current.conversation,id)})),allowedActions:current.kind==='channel'||current.group?.bot?[]:[...(admin?['members','roles','mute','silence','notices','audit']:[]),...((isAppAdministrator(principal)||role==='owner')?['transfer-owner',...(current.kind==='group'?['delete-group']:[])]:[])]}
 }
 export function changeConversationRole(args:Record<string,any>){
  const current=requireConversation(args.conversation,'admin'),principal=requestContext().principal,id=args.employee,role=args.role

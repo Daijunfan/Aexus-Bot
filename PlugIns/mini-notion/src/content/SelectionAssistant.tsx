@@ -15,6 +15,8 @@ export type SelectionAIRequest = { context: AgentContext; x: number; y: number; 
 export function SelectionAssistant({ request, pageId }: { request: SelectionAIRequest | null; pageId: string }) {
   const { workspace, api, setting, retrySave: flush } = useWorkspace();
   const options = workspace!.settings.selectionAI || defaultSettings;
+  const hostAssistant = !!window.native?.hostAssistant;
+  const standaloneFolder = !!window.native?.folderMode && !hostAssistant;
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [employeeError, setEmployeeError] = useState('');
   const [chat, setChat] = useState<Chat | null>(null);
@@ -24,7 +26,7 @@ export function SelectionAssistant({ request, pageId }: { request: SelectionAIRe
   const pending = useRef(false);
   const [employeeId, setEmployeeId] = useState(options.employeeId || '');
   useEffect(() => {
-    if (!window.native?.folderMode) return;
+    if (!hostAssistant) return;
     let active = true;
     Promise.all([api('assistant.list'), api('fs.path', { pageId })]).then(([list, location]) => {
       if (!active) return;
@@ -53,7 +55,7 @@ export function SelectionAssistant({ request, pageId }: { request: SelectionAIRe
     try {
       // Use the same persistence barrier as the normal Agent composer.
       if (!await flush()) throw new Error('页面更改尚未保存，请重试');
-      if (window.native?.folderMode) {
+      if (hostAssistant) {
         const result = await api('assistant.send', { employeeId, text: draft.text, clientMessageId: crypto.randomUUID() });
         if (!result.messageId) throw new Error('发送未获得消息编号，请在员工会话中核对');
         while (generation.current === run) {
@@ -87,18 +89,19 @@ export function SelectionAssistant({ request, pageId }: { request: SelectionAIRe
   useEffect(() => {
     if (!request || pending.current) return;
     const draft: Chat = { context: request.context, text: `${options.prompt.trim()}\n\n${request.context.quote || ''}`.trim(), x: request.x, y: request.y, reply: '', busy: false };
-    generation.current++; setChat(draft); setConfigure(!employeeId && !!window.native?.folderMode);
-    if (options.mode === 'send' && (!window.native?.folderMode || employeeId)) void send(draft);
+    generation.current++; setChat(draft); setConfigure(hostAssistant && !employeeId);
+    if (options.mode === 'send' && !standaloneFolder && (!hostAssistant || employeeId)) void send(draft);
   }, [request]);
+  const panelTop = chat && `min(${chat.y}px, max(8px, calc(100vh - 420px)))`;
   return <>
-    {chat && createPortal(<div ref={panel} role="dialog" aria-label="选区 AI 聊天" className="selection-ai-chat" style={{ left: chat.x, top: chat.y, maxHeight: `calc(100vh - ${chat.y + 8}px)` }}>
-      <header><Bot size={17} /><strong>选区 AI</strong><span>{employees.find(e => e.id === employeeId)?.title || (window.native?.folderMode ? '选择员工' : '空间 Agent')}</span>
+    {chat && createPortal(<div ref={panel} role="dialog" aria-label="选区 AI 聊天" className="selection-ai-chat" style={{ left: `min(${chat.x}px, max(8px, calc(100vw - 388px)))`, top: panelTop!, maxHeight: `calc(100vh - ${panelTop} - 8px)` }}>
+      <header><Bot size={17} /><strong>选区 AI</strong><span>{employees.find(e => e.id === employeeId)?.title || (hostAssistant ? '选择员工' : standaloneFolder ? '选区草稿' : '空间 Agent')}</span>
         <button aria-label="AI 提示词与发送设置" onClick={() => setConfigure(!configure)}><Settings2 size={16} /></button>
         <button aria-label="关闭选区 AI" onClick={close}><X size={16} /></button></header>
       {configure && <div className="selection-ai-settings">
-        {window.native?.folderMode && <label>AI 员工<select aria-label="AI 员工" disabled={chat.busy} value={employeeId} onChange={e => { setEmployeeId(e.target.value); setting({ selectionAI: { ...options, employeeId: e.target.value } }); }}>
+        {hostAssistant && <label>AI 员工<select aria-label="AI 员工" disabled={chat.busy} value={employeeId} onChange={e => { setEmployeeId(e.target.value); setting({ selectionAI: { ...options, employeeId: e.target.value } }); }}>
           <option value="">选择员工</option>{employees.map(e => <option key={e.id} value={e.id} disabled={!e.ready}>{e.title} · {e.engine}{!e.ready ? '（未就绪）' : e.busy ? '（忙碌）' : ''}</option>)}</select></label>}
-        {window.native?.folderMode && !employeeId && <p>{employeeError || '请选择已有的就绪员工；没有员工时，请先在 Agents Company 中创建。'}</p>}
+        {hostAssistant && !employeeId && <p>{employeeError || '请选择已有的就绪员工；没有员工时，请先在 Agents Company 中创建。'}</p>}
         <label>前置提示词<textarea aria-label="前置提示词" rows={3} value={options.prompt} onChange={e => {
           const prompt = e.target.value; setting({ selectionAI: { ...options, prompt } });
           if (!chat.sent) setChat({ ...chat, text: `${prompt.trim()}\n\n${chat.context.quote || ''}`.trim() });
@@ -111,12 +114,12 @@ export function SelectionAssistant({ request, pageId }: { request: SelectionAIRe
         {chat.reply && <div className="selection-ai-reply"><Markdown remarkPlugins={[remarkGfm]} components={{ a: ({ href, children }) => <a href={href} onClick={event => { event.preventDefault(); if (href) { if (window.native) void window.native.openExternal(href); else window.open(href, '_blank', 'noopener,noreferrer'); } }}>{children}</a> }}>{chat.reply}</Markdown></div>}
         {chat.busy && <p className="selection-ai-status"><LoaderCircle size={15} />正在等待回复…</p>}
         {chat.error && <p role="alert">{chat.error}</p>}
-        {!chat.sent && <p className="selection-ai-status">可编辑消息后发送</p>}
+        {!chat.sent && <p className="selection-ai-status">{standaloneFolder ? '独立应用的文件夹模式尚未连接 AI 员工。可编辑并复制此消息，在 Agents Company 中打开同一工作区后选择已有员工发送。' : '可编辑消息后发送'}</p>}
       </div>
       <form onSubmit={event => { event.preventDefault(); void send(chat); }}>
         <textarea aria-label="AI 消息" placeholder="编辑消息或继续提问…" value={chat.text} disabled={chat.busy}
           onChange={e => setChat({ ...chat, text: e.target.value })} />
-        <button aria-label="发送 AI 消息" type="submit" disabled={chat.busy || !chat.text.trim() || (!!window.native?.folderMode && !employeeId)}><Send size={17} /></button>
+        <button aria-label="发送 AI 消息" type="submit" disabled={chat.busy || !chat.text.trim() || standaloneFolder || (hostAssistant && !employeeId)}><Send size={17} /></button>
       </form>
     </div>, document.body)}
   </>;

@@ -489,6 +489,8 @@ export const commands: CommandDefinition[] = [
     options: {
       changes: json('定义变更'),
       optionRenames: json('选项重命名映射：旧名称到新名称'),
+      optionEdit: json('分类原子操作 {kind:create/update/delete, value?:原名, name?:新名, color?:颜色, bucket?:todo/doing/done}；基于最新属性合并，不覆盖其他选项'),
+      revealViewId: string('新增分类时在指定的源视图内展示新空分组；与属性更新同一次提交；不影响隐藏空组设置'),
       name: string('名称'),
       type: string('类型'),
       formula: string('公式'),

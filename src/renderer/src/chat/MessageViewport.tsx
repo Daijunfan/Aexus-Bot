@@ -27,8 +27,8 @@ export function useMessageRowState<T,>(slot:string,initial:T):[T,Dispatch<SetSta
  return [value,update]
 }
 
-export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,renderItem,enabled=true,following,onProgrammaticScroll}:{
- items:readonly T[];scrollRef:RefObject<HTMLDivElement|null>;apiRef:RefObject<MessageViewportHandle|null>;renderItem:(item:T,index:number)=>ReactNode;enabled?:boolean;following:()=>boolean;onProgrammaticScroll:(top:number)=>void
+export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,renderItem,enabled=true,renderAllBelow=200,following,onProgrammaticScroll}:{
+ items:readonly T[];scrollRef:RefObject<HTMLDivElement|null>;apiRef:RefObject<MessageViewportHandle|null>;renderItem:(item:T,index:number)=>ReactNode;enabled?:boolean;renderAllBelow?:number;following:()=>boolean;onProgrammaticScroll:(top:number)=>void
 }){
  const root=useRef<HTMLDivElement>(null),rows=useRef(new Map<string,HTMLDivElement>()),owners=useRef(new Map<string,number>()),rowState=useRef(new Map<string,Map<string,unknown>>()),detailsDefaults=useRef(new WeakMap<HTMLDetailsElement,boolean>()),alive=useRef(true),pendingEnd=useRef(false),navigation=useRef<{cancel:()=>void}|null>(null)
  const rowRefs=useRef(new Map<string,(node:HTMLDivElement|null)=>void>())
@@ -49,12 +49,12 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
   if(values.size)rowState.current.set(id,values);else rowState.current.delete(id)
  },[])
  const rangeExtractor=useCallback((range:Range)=>{
-  if(items.length<=200)return items.map((_,index)=>index)
+  if(items.length<=renderAllBelow)return items.map((_,index)=>index)
   const result=new Set(defaultRangeExtractor(range))
   for(const id of [...owners.current.keys(),...activeOwners]){const index=indices.get(id);if(index!==undefined)result.add(index)}
   if(callbacks.current.following())for(let index=Math.max(0,items.length-6);index<items.length;index++)result.add(index)
   return [...result].sort((a,b)=>a-b)
- },[items,indices,ownerVersion,activeOwners])
+ },[items,indices,ownerVersion,activeOwners,renderAllBelow])
  const virtual=useVirtualizer<HTMLDivElement,HTMLDivElement>({
   count:items.length,getScrollElement:()=>scrollElement,getItemKey:useCallback((index:number)=>items[index].id,[items]),estimateSize:()=>180,
   enabled,overscan:8,rangeExtractor,scrollMargin:margin,anchorTo:'end',followOnAppend:callbacks.current.following(),useFlushSync:false,
@@ -135,5 +135,5 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
   children.push(<Fragment key={item.id}>{gap>0&&<div className="message-viewport-spacer" aria-hidden="true" style={{height:gap}}/>}<RowContext.Provider value={item.id}><div className="message-viewport-row" data-message-owner={item.id} data-message-last={row.index===items.length-1||undefined} data-index={row.index} ref={refFor(item.id)}>{renderItem(item,row.index)}</div></RowContext.Provider></Fragment>)
  }
  const total=virtual.getTotalSize(),tail=Math.max(0,total-(end-margin))
- return <ViewportContext.Provider value={context}><div ref={root} className="message-viewport" style={{height:total}}>{children}{tail>0&&<div className="message-viewport-spacer" aria-hidden="true" style={{height:tail}}/>}</div></ViewportContext.Provider>
+ return <ViewportContext.Provider value={context}><div ref={root} className="message-viewport" data-message-count={items.length} style={{height:total}}>{children}{tail>0&&<div className="message-viewport-spacer" aria-hidden="true" style={{height:tail}}/>}</div></ViewportContext.Provider>
 }

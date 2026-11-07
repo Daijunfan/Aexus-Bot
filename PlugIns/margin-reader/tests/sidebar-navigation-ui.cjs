@@ -47,7 +47,8 @@ const {create,expect}=require('./ui-session.cjs');
   await page.locator('#files .file-open').click();await expect(page.locator('#document-path')).toHaveText('横向移动/横向移动.html');await expect(page.locator('.flow-document')).toContainText('横向移动原文');
   f.pass('Main-page file search finds nested originals without filtering or rebuilding the sidebar; selection targets only matching files and opening uses the original path');
 
-  await page.click('#library-root');await expect(search).toHaveValue('');await search.fill('nonexistent 🙂');await expect(page.locator('#library-no-matches')).toBeVisible();await expect(page.locator('#empty-library')).toBeHidden();
+  await page.click('#library-root');await expect(page.locator('#reader-view')).toBeVisible();await expect(page.locator('#document-path')).toHaveText('横向移动/横向移动.html');
+  await page.click('#back-library');await expect(search).toHaveValue('');await search.fill('nonexistent 🙂');await expect(page.locator('#library-no-matches')).toBeVisible();await expect(page.locator('#empty-library')).toBeHidden();
   await page.keyboard.press('Escape');await expect(search).toHaveValue('');await expect(page.locator('#library-no-matches')).toBeHidden();await expect(page.locator('#files .file-card')).toHaveCount(2);
   await search.fill('参考资料');await expect(page.locator('#files .file-card')).toHaveCount(1);await page.click('#clear-file-filter');await expect(search).toBeFocused();await expect(page.locator('#files .file-card')).toHaveCount(2);
   await search.fill('新增资料');await expect(page.locator('#library-no-matches')).toBeVisible();await api('fs.write',{path:'横向移动/新增资料.md',content:'# 新增资料'});await expect(page.locator('#files .file-card')).toHaveCount(1);await expect(page.locator('#library-no-matches')).toBeHidden();
@@ -56,9 +57,15 @@ const {create,expect}=require('./ui-session.cjs');
 
   await page.click('#tool-finder-open');await expect(page.locator('#tool-finder')).toBeVisible();await page.keyboard.press('Escape');
   await page.keyboard.press('ControlOrMeta+k');await expect(page.locator('#tool-finder')).toBeVisible();await page.keyboard.press('Escape');
-  await page.click('#workspace-card-box');await expect(page.locator('#dialog')).toBeVisible();await expect(page.locator('#board-search')).toBeVisible();await page.click('#dialog-cancel');
-  assert.equal(await page.locator('.top-actions #workspace-card-box').count(),1);assert.equal(await page.locator('.top-actions #tool-finder-open').count(),1);
-  f.pass('Global tool discovery, its keyboard shortcut and the all-library card box remain available in the right-hand toolbar, with no duplicate sidebar controls');
+  // Current read-map workspace retires the legacy global card box; check it
+  // cannot reappear while preserving the active tool finder and two view tabs.
+  assert.equal(await page.locator('#workspace-card-box').count(),0,'The retired global card box must not return');
+  assert.equal(await page.locator('.top-actions #tool-finder-open').count(),1);
+  await page.click('#studies-root');
+  await page.locator('#study-library-items .collection-tile.is-study').first().locator('.collection-open').click();
+  await expect(page.locator('#study-view-tabs [data-study-view=documents]')).toBeVisible();
+  await expect(page.locator('#study-view-tabs [data-study-view=map]')).toBeVisible();
+  f.pass('Global tool finder and keyboard shortcut remain available; document/map views replace retired card-box UI');
 
   for(const theme of ['light','dark','sepia']){
    await api('settings.set',{theme});await expect(page.locator('body')).toHaveAttribute('data-theme',theme);

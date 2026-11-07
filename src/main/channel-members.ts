@@ -1,8 +1,9 @@
-import {one,run} from './channel-store'
+import {one,run,canonicalChannelId} from './channel-store'
 import {readStore} from './store'
 
 /** A missing membership row is a legacy channel: its existing publishers remain Admins. */
 export function channelOffices(id:string){
+ id=canonicalChannelId(id)
  const channel=one('SELECT admin_ids FROM channels WHERE id=?',id)
  if(!channel)throw Error('Unknown news channel')
  const saved=one('SELECT owner_id,member_ids FROM channel_membership WHERE channel_id=?',id)
@@ -14,6 +15,7 @@ export function channelOffices(id:string){
 }
 export const channelMemberIds=(id:string)=>channelOffices(id).memberIds
 export function saveChannelOffices(id:string,value:{memberIds:string[];adminIds:string[];ownerId:string|null}){
+ id=canonicalChannelId(id)
  run('INSERT INTO channel_membership VALUES(?,?,?) ON CONFLICT(channel_id) DO UPDATE SET owner_id=excluded.owner_id,member_ids=excluded.member_ids',id,value.ownerId,JSON.stringify(value.memberIds))
  run('UPDATE channels SET admin_ids=? WHERE id=?',JSON.stringify(value.adminIds.filter(id=>value.memberIds.includes(id))),id)
 }

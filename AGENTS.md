@@ -37,3 +37,7 @@ Keep changes small and preserve the existing CLI-first boundaries. Read `CONTRIB
 ## Release
 
 `npm run release:check -- --technical` checks engineering prerequisites. Full `release:check` also enforces unresolved redistribution reviews. Candidate archives are private artifacts until those reviews are complete. Every validation report must separate passed, failed, skipped and untested platforms.
+
+## Plugin content access
+
+新团队仅为本地或云端项目，不新增 Work/plugin 团队。插件独立打开，按具体内容授予员工 read/write/create；Secretary 始终拥有用户级插件能力。保留旧 Work 目录与原生会话，禁止改名迁移或复制数据来绕过授权。更新资源适配器、Core/CLI、原生工具与插件宿主界面时一起验证数据投影、修改/新增隔离、撤销及多项原子保存。

@@ -1,5 +1,12 @@
 # Conversation roles, moderation and notifications
 
+Current scope: group chat only. Channels are read-only news feeds: member/role,
+moderation, notice and post-count writes are rejected; legacy records remain
+readable for compatibility and active count rules are paused. Old channel examples
+below describe retained compatibility records, not supported channel workflows.
+Employees use [channel fetch/search](CHANNELS.md#read-only-employee-channel-api)
+without joining or saving.
+
 This is the Messages conversation contract. Read `conversation.policy` before acting. Conversation IDs are `group:cg_…` or `channel:nc_…`. Employee names, Team names and the current UI do not identify a destination.
 
 ## Three separate domains

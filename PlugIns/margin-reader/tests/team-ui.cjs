@@ -5,7 +5,7 @@ const os = require('node:os');
 const assert = require('node:assert/strict');
 const { promisify } = require('node:util');
 const run = promisify(require('node:child_process').execFile);
-const root = path.resolve(__dirname, '..'), host = path.resolve(root, '../..');
+const root = path.resolve(__dirname, '..'), host = path.resolve(process.env.AEXUS_HOST_ROOT || path.join(root, '../..'));
 const { _electron: electron, expect } = require(path.join(host, 'node_modules/@playwright/test'));
 
 async function main() {
@@ -42,6 +42,7 @@ async function main() {
     await page.locator('.employee-form input[name="title"]').fill('文献助理');
     await page.locator('.employee-form select[name="group"]').selectOption('阅读验收 Team', { force: true });
     await page.locator('.employee-form [data-engine="codex"]').click();
+    await page.locator('.employee-advanced-settings summary').click();
     await page.locator('.employee-form select[name="model"]').selectOption('gpt-6-luna', { force: true });
     await page.locator('.save-employee').click(); await expect(page.locator('.employee-form')).toHaveCount(0);
     const employee = (await cli('session', 'list')).sessions.find(card => card.title === '文献助理');

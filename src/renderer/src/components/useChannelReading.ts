@@ -9,7 +9,7 @@ export function useChannelReading(id:string,root:RefObject<HTMLDivElement|null>,
  if(cache.current.id!==id)cache.current={id,entries:new Map()}
  const key=entryIds.join('\n'),refreshRef=useRef<()=>void>(()=>{}),entries=snapshot.id===id?snapshot.entries:cache.current.entries
  useEffect(()=>{
-  let alive=true;const wanted=new Set(entryIds)
+  let alive=true,retry:ReturnType<typeof setTimeout>|undefined;const wanted=new Set(entryIds)
   if([...cache.current.entries.keys()].some(entry=>!wanted.has(entry))){cache.current={id,entries:new Map([...cache.current.entries].filter(([entry])=>wanted.has(entry)))};setSnapshot(cache.current)}
   const pending=new Set(entryIds.filter(entry=>!cache.current.entries.has(entry)))
   const refresh=createRefreshQueue(async()=>{
@@ -20,12 +20,12 @@ export function useChannelReading(id:string,root:RefObject<HTMLDivElement|null>,
     const next=new Map(cache.current.entries),found=new Map(value.entries.map(entry=>[entry.id,entry]))
     for(const entry of batch){const incoming=found.get(entry)??null;if(next.get(entry)?.state!=='read'||!incoming||incoming.state==='read')next.set(entry,incoming)}
     cache.current={id,entries:next};setSnapshot(cache.current)
-   }if(alive)setError('')}catch(cause){if(alive)setError((cause as Error).message)}
+   }if(alive)setError('')}catch(cause){if(alive){for(const entry of ids)pending.add(entry);setError((cause as Error).message);clearTimeout(retry);retry=setTimeout(()=>void refresh(),2000)}}
   })
   refreshRef.current=()=>{for(const entry of wanted)pending.add(entry);void refresh()}
   if(pending.size)void refresh()
   const off=api.onEvent(event=>{if(event.channel!=='channel:changed'||event.payload.kind!=='reads'||!event.payload.channelIds?.includes(id))return;for(const entry of event.payload.entryIds??wanted)if(wanted.has(entry))pending.add(entry);if(pending.size)void refresh()})
-  return()=>{alive=false;off()}
+  return()=>{alive=false;clearTimeout(retry);off()}
  },[id,key])
  const ready=entryIds.every(entry=>entries.has(entry))
  useEffect(()=>{
@@ -51,10 +51,11 @@ export function useChannelReading(id:string,root:RefObject<HTMLDivElement|null>,
     void api.call<ChannelAcknowledgment>('channel.acknowledge',{id,entryIds:batch}).then(value=>{
      if(disposed)return
      if(!value.acknowledged){for(const entry of batch)since.delete(entry);return}
+     setError('')
      const accepted=new Set(value.entryIds??[]),next=new Map(cache.current.entries)
      for(const entry of batch){next.set(entry,accepted.has(entry)?{id:entry,state:'read'}:null);since.delete(entry)}
      cache.current={id,entries:next};setSnapshot(cache.current)
-    }).catch(()=>{}).finally(()=>{sending=false;if(!disposed)timer=setTimeout(check,1000)})
+    }).catch(cause=>{if(!disposed)setError((cause as Error).message)}).finally(()=>{sending=false;if(!disposed)timer=setTimeout(check,1000)})
    }else if(Number.isFinite(delay))timer=setTimeout(check,delay)
   }
   const schedule=()=>{if(!frame&&!disposed)frame=requestAnimationFrame(()=>{frame=0;check()})}

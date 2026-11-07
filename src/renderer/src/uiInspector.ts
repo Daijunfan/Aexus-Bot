@@ -73,7 +73,9 @@ function query(selector: string): UiElement[] {
     tag: el.tagName.toLowerCase(),
     cls: el.getAttribute('class') ?? '',
     text: textOf(el),
-    visible: isVisible(el)
+    visible: isVisible(el),
+    rect: (()=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})(),
+    ...(el instanceof HTMLImageElement?{image:{complete:el.complete,naturalWidth:el.naturalWidth,naturalHeight:el.naturalHeight}}:{})
   }))
 }
 

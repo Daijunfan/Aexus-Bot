@@ -2,7 +2,7 @@ const {clickTool,selectTool}=require('./read-map-actions.cjs');
 'use strict';
 const fs=require('node:fs/promises'),path=require('node:path'),assert=require('node:assert/strict');
 const {create,expect}=require('./ui-session.cjs'),F=require('./xmind-fixture.cjs');
-(async()=>{const f=await create('mindmap-manipulation');let failure;const out=(await fs.readFile(path.join(__dirname,'../artifacts/completion-current.txt'),'utf8')).trim();try{
+(async()=>{const f=await create('mindmap-manipulation');let failure;const out=f.output;try{
  const {page,api}=f;let set=await api('study.create',{title:'直接操作验收'});set=await api('study.mindmap.outline.import',{setId:set.id,expectedRevision:set.revision,text:'中心主题\n  调研资料\n    文献摘录\n    用户访谈\n  设计实现\n    页面结构\n    交互验收'});await api('study.open',{setId:set.id});await api('settings.set',{uiMotion:'full'});await page.goto(f.server.url);await page.locator('body[data-ready=true]').waitFor();
  const get=async()=>set=await api('study.get',{setId:set.id}),sync=async()=>{await get();await expect(page.locator('#study-board')).toHaveAttribute('data-rendered-study-revision',String(set.revision));await expect(page.locator('#study-board')).not.toHaveAttribute('data-map-animating','true');};
  const id=title=>set.cards.find(c=>c.title===title).id,node=title=>page.locator(`#study-map-world>.mindmap-topic[data-card-id="${id(title)}"]`),change=async(m,p={})=>{await get();set=await api(m,{setId:set.id,expectedRevision:set.revision,...p});await sync();return set;};

@@ -1,3 +1,4 @@
+import {isAppAdministrator} from './application-authority'
 import fs from 'node:fs'
 import path from 'node:path'
 import {randomUUID,createHash} from 'node:crypto'
@@ -16,7 +17,7 @@ const plans=new Map<string,NamingPlan>()
 type Remote=(mount:AssetMount,operation:string,args:any)=>Promise<any>
 const fingerprint=(mounts:AssetMount[])=>JSON.stringify(mounts.map(({id,root,remote})=>({id,root,remote})))
 export async function assetNaming(args:{id?:string;apply?:boolean},close:(ids:string[])=>Promise<void>,remote:Remote){
- if(requestContext().principal.kind!=='operator')throw Error('Only the user may migrate directory names')
+ if(!isAppAdministrator())throw Error('Only the user or Secretary may migrate directory names')
  const mounts=assetCatalog().mounts
  if(!args.apply){
   const local=await planDirectoryNames(mounts.filter(mount=>!mount.remote).map(mount=>mount.root)),remotes:NamingPlan['remote']=[]

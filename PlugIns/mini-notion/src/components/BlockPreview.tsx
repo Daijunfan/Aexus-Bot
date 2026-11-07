@@ -1,6 +1,6 @@
 import { useId, type CSSProperties, type ReactNode } from 'react';
 import { useWorkspace } from '../store';
-import { MathValue } from '../content/Math';
+import { MathValue } from '../content/MathValue';
 import { PageIcon } from '../ui';
 import { plainText } from '../model';
 import type { JsonBlock } from '../types';
@@ -31,6 +31,7 @@ export function BlockPreview({
     return value.map((item, index) => {
       if (typeof item === 'string') return item;
       if (item.type === 'inlineMath') return <MathValue key={index} expression={item.props?.expression || ''} />;
+      if (item.type === 'customEmoji') return <img key={index} className="inline-custom-emoji" src={item.props.url} alt={`:${item.props.name}:`} title={item.props.name} width={20} height={20} />;
       if (item.type === 'pageMention') {
         const page = workspace!.pages.find((p) => p.id === item.props.pageId && !p.trashedAt);
         return (

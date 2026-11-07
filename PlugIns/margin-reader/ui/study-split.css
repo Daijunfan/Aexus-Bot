@@ -78,3 +78,43 @@ body[data-product=read-map] #workspace.study-split.reader-immersive>.study-split
  body[data-product=read-map] #workspace.study-split>.study-split-divider{grid-column:2}
 }
 @media(max-width:900px){.study-view-controls{gap:3px}#study-home .study-home-header .study-primary-tabs button{min-width:43px;padding:6px 8px!important}#study-home .study-home-header .study-view-controls>#study-split-toggle{padding:6px}}
+
+
+/* UX audit 2026-10-11: compact reading space without hiding features. */
+@container read-pane (max-width:650px){
+  #workspace.study-split #study-reading-bar{min-height:54px;padding:3px 7px;gap:3px;align-content:center}
+  #workspace.study-split #study-reading-bar>.study-view-controls{padding:0;border-bottom:0;min-height:24px}
+  #workspace.study-split #study-reading-bar .study-primary-tabs button{min-width:46px;min-height:23px;padding:2px 7px!important;font-size:11px!important}
+  #workspace.study-split #study-reading-bar #study-swap-panes{min-height:24px;height:24px;width:27px;font-size:16px;padding:0}
+  #workspace.study-split #study-reading-bar #study-back-set,
+  #workspace.study-split #study-reading-bar #study-current-document{min-height:25px;height:25px;padding:2px 6px}
+  #workspace.study-split .document-heading{min-height:49px;padding:5px 9px;gap:5px}
+  #workspace.study-split .document-heading h1{font-size:13px;line-height:1.25}
+  #workspace.study-split .document-heading small{font-size:10px}
+  #workspace.study-split #reader-view .reader-toolbar,
+  #workspace.study-split #reader-view .pdf-controls{display:flex;flex-wrap:nowrap!important;white-space:nowrap;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain;scrollbar-width:thin;min-width:0;gap:4px;padding:3px 7px}
+  #workspace.study-split #reader-view .reader-toolbar{min-height:34px}
+  #workspace.study-split #reader-view .pdf-controls{min-height:32px}
+  #workspace.study-split .reader-tools{flex:0 0 auto;min-width:max-content;justify-content:flex-start}
+  #workspace.study-split .pdf-controls>*{flex-shrink:0}
+  #workspace.study-split .pdf-controls #pdf-reset-zoom{margin-left:0}
+  #workspace.study-split .reader-tools .icon-button{min-width:29px;width:29px;height:29px}
+}
+@media(max-height:650px){
+  #workspace.study-split #reader-view .document-heading{min-height:42px;padding-block:4px}
+  #workspace.study-split #study-reading-bar{min-height:50px}
+}
+
+/* Small reading pane: one compact header row instead of two toolbars. */
+@container read-pane (max-width:650px){
+  #workspace.study-split #study-reading-bar{flex-wrap:nowrap!important;min-height:38px;padding:3px 7px;gap:4px}
+  #workspace.study-split #study-reading-bar>#study-back-set{flex:0 1 88px;max-width:88px!important;min-width:0}
+  #workspace.study-split #study-reading-bar>#study-current-document{flex:1 1 92px;min-width:72px;max-width:none!important}
+  #workspace.study-split #study-reading-bar>.study-view-controls{order:0!important;flex:0 0 auto!important;flex-basis:auto!important;margin-left:0!important;padding:0}
+  #workspace.study-split #study-reading-bar>#reader-annotations{flex:0 0 auto}
+  #workspace.study-split #study-reading-bar .study-primary-tabs button{min-width:40px}
+}
+@container read-pane (max-width:450px){
+  #workspace.study-split #study-reading-bar{flex-wrap:wrap!important}
+  #workspace.study-split #study-reading-bar>.study-view-controls{order:-1!important;flex:1 0 100%!important;justify-content:flex-end}
+}

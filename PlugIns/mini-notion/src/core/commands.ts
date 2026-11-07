@@ -6,8 +6,10 @@ import {
   defaultDatabase,
   descendants,
   duplicatePage,
+  internalPageIds,
   makePage,
   movePage,
+  pageIndex,
   plainText,
   readProperty,
   restorePage,
@@ -22,6 +24,7 @@ import {
   groupRows,
   newView,
   queryRows,
+  conditionalColor,
   selectView,
   updateView,
   viewNames,
@@ -82,7 +85,6 @@ import type { CommandParams } from './protocol.ts';
 import { requirePage, requireDatabase, requireEditable } from './access.ts';
 export { requirePage, requireDatabase } from './access.ts';
 import { createTemplateRecord, executeTemplateCommand } from '../database/templatesModel.ts';
-import { isTemplatePage, isInternalPage } from '../model.ts';
 import { executeStructureCommand, configureDatabase, hierarchyRows } from '../database/structure.ts';
 import { applySystemValues } from '../database/relations.ts';
 import { appearanceSchema, validateAppearance, requiredPageColor, pageColorChanges } from './appearance.ts';
@@ -97,7 +99,8 @@ import { syncedReferences } from '../content/references.ts';
 import { finalizeProperties, updateOptionValues } from '../database/propertyData.ts';
 import { propertyTypes, normalizeProperty, statusGroupOrder } from '../database/propertySchema.ts';
 import { executePersonCommand } from '../database/people.ts';
-import { renameOptionReferences } from '../database/optionReferences.ts';
+import { renameOptionReferences, removeOptionGroupReferences } from '../database/optionReferences.ts';
+import { applyOptionEdit, type OptionEdit } from '../database/optionEdits.ts';
 export { propertyTypes } from '../database/propertySchema.ts';
 
 export type Execution = { workspace: Workspace | null; result: any; changed: boolean };
@@ -172,6 +175,15 @@ export function viewProjection(
   const columns = visibleColumns(page.database!, view);
   const records = rows.map((row) => ({
     ...pageSummary(row),
+    ...(view.conditionalColors?.length ? {
+      conditionalColor: conditionalColor(row, view, page.database!, workspace.pages),
+      conditionalPropertyColors: Object.fromEntries(
+        ['title', ...columns.map((column) => column.id)].flatMap((id) => {
+          const color = conditionalColor(row, view, page.database!, workspace.pages, id);
+          return color ? [[id, color]] : [];
+        }),
+      ),
+    } : {}),
     values: Object.fromEntries(
       columns.map((column) => [column.id, readProperty(row, column, workspace.pages)]),
     ),
@@ -312,9 +324,10 @@ export function executeWorkspaceCommand(
 ): Execution {
   const operation = executeCommand(input, method, params, context);
   if (!operation.changed || !operation.workspace) return operation;
+  const nextPages = pageIndex(operation.workspace.pages);
   if (!context.folderMode && !['workspace.replace', 'history.restore'].includes(method))
     for (const id of Object.keys(input?.spaces || {})) {
-      const page = operation.workspace.pages.find((page) => page.id === id);
+      const page = nextPages.get(id);
       if (page && !isSpaceRoot(page))
         throw new CommandError('IMMUTABLE_SPACE', '主页面固定绑定空间，不能移动为子页面或移除空间绑定');
       if (page && operation.workspace.spaces?.[id]?.engine !== input!.spaces![id].engine)
@@ -541,11 +554,12 @@ function executeCommand(input: Workspace | null, method: string, params: Command
     return result(page, true);
   }
   if (method === 'page.list') {
+    const internal = !params.internal && !params.templates ? internalPageIds(workspace.pages) : null;
     let pages = workspace.pages.filter(
       (page) =>
         (params.trash || !page.trashedAt) &&
         (params.internal ||
-          (!page.syncedSource && (params.templates || !isTemplatePage(page, workspace.pages)))),
+          (!page.syncedSource && !internal?.has(page.id))),
     );
     if (Object.hasOwn(params, 'parentId'))
       pages = pages.filter((page) => page.parentId === parentId(params.parentId));
@@ -556,7 +570,11 @@ function executeCommand(input: Workspace | null, method: string, params: Command
   if (method === 'page.audit') {
     const root = requirePage(workspace, params.pageId);
     const children = new Map<string, Page[]>();
-    for (const page of workspace.pages) if (page.parentId && !page.trashedAt) children.set(page.parentId, [...(children.get(page.parentId) || []), page]);
+    for (const page of workspace.pages) if (page.parentId && !page.trashedAt) {
+      const siblings = children.get(page.parentId) || [];
+      siblings.push(page);
+      children.set(page.parentId, siblings);
+    }
     const queue = [{ page: root, depth: 1 }], seen = new Set<string>();
     const pages: any[] = [], databases: any[] = [];
     for (let index = 0; index < queue.length; index++) {
@@ -571,18 +589,28 @@ function executeCommand(input: Workspace | null, method: string, params: Command
     return result({ rootId: root.id, pageCount: pages.length, maxDepth: pages.reduce((max, page) => Math.max(max, page.depth), 0), totalCharacters: pages.reduce((sum, page) => sum + page.characters, 0), emptyLeafPages: pages.filter(page => page.native && !page.database && !page.childCount && !page.characters).map(page => page.id), pages, databases });
   }
   if (method === 'page.tree') {
-    const visit = (id: string | null): any[] =>
-      workspace.pages
-        .filter(
-          (page) =>
-            (page.subItemOf || page.parentId) === id &&
-            (!context.folderMode || params.files || !page.sourceFile || page.sourceFile.kind === 'directory') &&
-            (params.trash || !page.trashedAt) &&
-            (params.internal ||
-              (!page.syncedSource && (params.templates || !isTemplatePage(page, workspace.pages)))),
-        )
-        .map((page) => ({ ...pageSummary(page), children: visit(page.id) }));
-    return result(visit(parentId(params.parentId)));
+    const internal = !params.internal && !params.templates ? internalPageIds(workspace.pages) : null;
+    const children = new Map<string | null, Page[]>();
+    for (const page of workspace.pages) {
+      if ((context.folderMode && !params.files && page.sourceFile && page.sourceFile.kind !== 'directory') ||
+          (!params.trash && page.trashedAt) ||
+          (!params.internal && (page.syncedSource || internal?.has(page.id)))) continue;
+      const parent = page.subItemOf || page.parentId;
+      const siblings = children.get(parent) || [];
+      siblings.push(page);
+      children.set(parent, siblings);
+    }
+    const tree: any[] = [];
+    const pending = [{ id: parentId(params.parentId), nodes: tree }];
+    while (pending.length) {
+      const { id, nodes } = pending.pop()!;
+      for (const page of children.get(id) || []) {
+        const node = { ...pageSummary(page), children: [] };
+        nodes.push(node);
+        pending.push({ id: page.id, nodes: node.children });
+      }
+    }
+    return result(tree);
   }
   if (method === 'database.embed') {
     const owner = requirePage(workspace, params.pageId);
@@ -1088,16 +1116,22 @@ function executeCommand(input: Workspace | null, method: string, params: Command
     } else if (method === 'property.update') {
       const old = database.columns.find((column) => column.id === params.propertyId);
       if (!old) throw new CommandError('PROPERTY_NOT_FOUND', '未找到属性');
+      if (params.optionEdit && (params.changes || params.optionRenames ||
+          ['name', 'type', 'formula', 'options'].some(key => Object.hasOwn(params, key))))
+        throw new CommandError('INVALID_OPTION_EDIT', '分类单项操作不能与整列属性修改同时提交');
+      const edit = params.optionEdit ? applyOptionEdit(old, params.optionEdit as OptionEdit) : null;
+      const changes = edit?.changes || params.changes;
+      const optionRenames = edit?.optionRenames || params.optionRenames;
       let column = {
         ...old,
-        ...params.changes,
+        ...changes,
         ...pick(params, ['name', 'type', 'formula', 'options']),
         id: old.id,
       };
       if (
         column.type === 'status' &&
-        (params.options || params.changes?.options) &&
-        !params.changes?.statusGroups
+        (params.options || changes?.options) &&
+        !changes?.statusGroups
       ) {
         const options = column.options || [],
           groups = old.statusGroups || { todo: [], doing: [], done: [] };
@@ -1147,14 +1181,33 @@ function executeCommand(input: Workspace | null, method: string, params: Command
             }
           : {}),
       };
-      workspace = updateOptionValues(workspace, page.id, column, params.optionRenames);
-      if (params.optionRenames) {
+      workspace = updateOptionValues(workspace, page.id, column, optionRenames);
+      const removedOptions = (old.options || []).filter((name) =>
+        !column.options?.includes(name) && !Object.hasOwn(optionRenames || {}, name));
+      if (optionRenames || removedOptions.length) {
         workspace = {
           ...workspace,
           pages: workspace.pages.map((value) => (value.id === page.id ? { ...value, database } : value)),
         };
-        workspace = renameOptionReferences(workspace, page.id, column.id, params.optionRenames);
+        if (optionRenames)
+          workspace = renameOptionReferences(workspace, page.id, column.id, optionRenames);
+        if (removedOptions.length)
+          workspace = removeOptionGroupReferences(workspace, page.id, column.id, removedOptions);
         database = requireDatabase(workspace, page.id).database;
+      }
+      // Reveal the newly added empty category in the requested source view in
+      // the SAME backend operation. This avoids racing a second GUI view patch
+      // with concurrent API/Agent edits to the database property definition.
+      if (params.optionEdit?.kind === 'create' && params.revealViewId) {
+        const target = getViews(database).find(view => view.id === params.revealViewId);
+        const groupedOnColumn = target?.groupBy === column.id ||
+          (target?.type === 'board' && !target.groupBy &&
+            database.columns.find(isSelectProperty)?.id === column.id);
+        const name = String(params.optionEdit.name).trim();
+        if (target && groupedOnColumn && !target.revealedGroups?.includes(name))
+          database = updateView(database, target.id, {
+            revealedGroups: [...(target.revealedGroups || []), name],
+          });
       }
       output = column;
     } else if (method === 'property.delete') {

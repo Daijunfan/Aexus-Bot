@@ -10,7 +10,7 @@ const root=path.resolve(__dirname,'..');
  const api=async(method,params={})=>{const r=await server.runtime.request({jsonrpc:'2.0',id:randomUUID(),method,params});assert(!r.error,JSON.stringify(r.error));return r.result;};
  const output=path.join(root,'artifacts/learning');await fs.mkdir(output,{recursive:true});
  try{
-  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||'/Users/djf/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell'});
+  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||chromium.executablePath()});
   const page=await browser.newPage({viewport:{width:1520,height:1000}});page.on('pageerror',e=>report.browserErrors.push(e.message));page.setDefaultTimeout(15000);
   await fs.writeFile(path.join(workspace,'recall.pdf'),require('./fixtures.cjs').pdfFixture());
   let s=await api('study.create',{mapMode:'cards',title:'Recall workflow'});

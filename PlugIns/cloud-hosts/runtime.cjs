@@ -12,7 +12,10 @@ function hostRequest(cmd,args){return new Promise((resolve,reject)=>{
  socket.on('close',()=>{if(!answered)reject(new Error('主机服务在返回结果前断开，请检查连接状态后重试'))})
  socket.on('data',chunk=>{data+=chunk;if(!data.includes('\n')||answered)return;answered=true;socket.end();try{const reply=JSON.parse(data.split('\n')[0]);if(!reply.ok)reject(new Error(reply.error));else resolve(reply.data)}catch(error){reject(error)}})
 })}
-exports.createPlugin=(context={})=>({async request({id,method,params={}}){
+exports.createPlugin=(context={})=>({
+async resources(){const hosts=await (context.requestHost?context.requestHost({cmd:'host.list',args:{}}):hostRequest('host.list',{}));return [{id:'@root',title:'新增云主机',kind:'root',capabilities:['create']},...hosts.map(h=>({id:'host:'+h.id,nativeId:h.id,title:h.name,kind:'host',parentId:'@root',capabilities:['read','write'],rights:h.access}))]},
+async requestScoped(request){return this.request(request)},
+async request({id,method,params={}}){
  try{
   if(!methods.has(method))return {jsonrpc:'2.0',id,error:{code:-32601,message:'Unknown Cloud Hosts method'}}
   if(!params||typeof params!=='object'||Array.isArray(params))throw Error('参数必须是 JSON 对象')

@@ -1,3 +1,4 @@
+import {isAppAdministrator} from '../application-authority'
 import {mediaResponse} from '../media-response'
 import {mediaAvailable,closeMedia} from '../media'
 import {Readable as NodeReadable} from 'node:stream'
@@ -17,7 +18,6 @@ import {managementActivity} from '../management-activity'
 import {pluginWindows,setPluginWindowDriver} from '../plugins/windows'
 import {runtimeInfo} from '../platform'
 import {createWebAuth,type WebSession} from './auth'
-import {createDesktopRelay} from './desktop-relay'
 import {pluginBridge} from './plugin-bridge'
 import {authenticate} from '../agent-access'
 import {APP_HOME,SOCKET_PATH,type Request} from '../../shared/protocol'
@@ -48,7 +48,6 @@ export async function startWebServer(options:Options={}){
   const peers=new Map<string,{socket:WebSocket;session:WebSession;context:RequestContext}>()
   const pending=new Map<string,{clientId:string;resolve:(value:any)=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout}>()
   const grants=new Map<string,{session:WebSession;url:URL;plugin:string;workspace:string;clientId?:string}>()
-  const desktops=createDesktopRelay(session=>auth.valid(session))
   const mediaSessions=new Map<string,{session:WebSession;context:RequestContext}>()
   const requests=new Map<string,{signature:string;reply:Promise<unknown>;at:number}>()
   const sockets=new Set<net.Socket>()
@@ -59,7 +58,7 @@ export async function startWebServer(options:Options={}){
     response.once('close',()=>{streams.delete(stream);close()})
     return stream
   }
-  function pruneStreams(){desktops.prune();for(const stream of streams)if(!stream.valid()){streams.delete(stream);stream.close()}}
+  function pruneStreams(){for(const stream of streams)if(!stream.valid()){streams.delete(stream);stream.close()}}
   function pipeAuthorized(source:Readable,response:http.ServerResponse,valid:()=>boolean){
     source.on('data',chunk=>{
       if(response.destroyed||response.writableEnded||!valid()){source.destroy();response.end();return}
@@ -119,12 +118,12 @@ export async function startWebServer(options:Options={}){
         res.setHeader('access-control-allow-headers','content-type')
         if(req.method==='OPTIONS'){res.writeHead(204);res.end();return}
         if(url.pathname===`/${pluginId}/_agents-bridge.js`){res.writeHead(200,{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'});res.end(pluginBridge(pluginId));return}
-        const bridgePage=req.method==='GET'&&url.pathname===grant.url.pathname
+        const outerPage=url.pathname===grant.url.pathname,childPage=url.pathname==='/'+pluginId+'/'+grant.url.searchParams.get('frame'),bridgePage=req.method==='GET'&&(outerPage||childPage)
         const proxy=http.request({hostname:'127.0.0.1',port:grant.url.port,path:url.pathname+url.search,method:req.method,headers:{'content-type':req.headers['content-type']??'application/json',...(req.headers.range?{range:req.headers.range}:{}),...(req.headers['content-length']?{'content-length':req.headers['content-length']}: {})}},upstream=>{
           res.statusCode=upstream.statusCode??502
           for(const key of ['content-type','content-length','content-range','accept-ranges','cache-control','content-disposition'])if(upstream.headers[key]&&!(bridgePage&&key==='content-length'))res.setHeader(key,upstream.headers[key]!)
           res.setHeader('x-content-type-options','nosniff')
-          res.setHeader('content-security-policy',"sandbox allow-scripts allow-forms allow-downloads; frame-ancestors 'self'")
+          res.setHeader('content-security-policy',"sandbox allow-scripts allow-forms allow-downloads"+(outerPage?" allow-same-origin":"")+"; frame-ancestors 'self'")
           if(bridgePage){
             const chunks:Buffer[]=[];let bytes=0
             upstream.on('data',chunk=>{bytes+=chunk.length;if(bytes>16*1024*1024||!auth.valid(grant.session)){upstream.destroy();res.destroy();return}chunks.push(Buffer.from(chunk))})
@@ -158,7 +157,7 @@ export async function startWebServer(options:Options={}){
           const source=NodeReadable.fromWeb(response.body as any);trackStream(res,valid,()=>{source.destroy();res.end()});pipeAuthorized(source,res,valid);return
         }
         if(url.pathname==='/api/download'&&req.method==='GET'){
-          if(current.context.principal.kind!=='operator')throw failure('Only the user may download a file',403)
+          if(!isAppAdministrator(current.context.principal))throw failure('Only the user may download a file',403)
           let from:any;try{from=JSON.parse(url.searchParams.get('from')??'null')}catch{throw failure('Invalid download source')}
           const info=await handleRequest({cmd:'transfer.download-info',args:{from}},current.context)
           const name=info.name??(String(from?.path??'download').split(/[\\/]/).pop()||'download')
@@ -206,10 +205,10 @@ export async function startWebServer(options:Options={}){
         if(!coreReceipt&&!previous&&requests.size>=512)throw failure('Too many pending requests',429)
         const reply=(!coreReceipt?previous?.reply:undefined)??handleRequest(request,current.context)
         if(!coreReceipt&&!previous){const item={signature,reply,at:0};requests.set(key,item);void reply.then(()=>{item.at=Date.now()},()=>{item.at=Date.now()})}
-        try{const result=await reply;if(request.cmd==='messenger.media-open'&&current.session)mediaSessions.set(result.id,{session:current.session,context:current.context});if(request.cmd==='messenger.media-close')mediaSessions.delete(String(request.args?.id));const projected=pluginView?.plugin==='cloud-hosts'?desktops.project(result,String(request.args!.viewId),pluginView.session,origin):result;json(res,{ok:true,data:['plugin.open','plugin.windows','plugin.place','plugin.mode','plugin.view'].includes(request.cmd)?projectPluginView(projected,current.session??peers.get(current.context.clientId??'')?.session):projected})}finally{
+        try{const result=await reply;if(request.cmd==='messenger.media-open'&&current.session)mediaSessions.set(result.id,{session:current.session,context:current.context});if(request.cmd==='messenger.media-close')mediaSessions.delete(String(request.args?.id));json(res,{ok:true,data:['plugin.open','plugin.windows','plugin.place','plugin.mode','plugin.view'].includes(request.cmd)?projectPluginView(result,current.session??peers.get(current.context.clientId??'')?.session):result})}finally{
           // Only mutation responses need replay protection; large transcript reads are not retained.
           if(/\.(list|get|posts|post|sources|collectors|info|snapshot|transcript|layout|read|read-state|timeline|context|image|status|forward-status|activity|models|describe|docs|roles|view|queue|history|gallery|search|media-info|media-read|download-chunk)$/.test(request.cmd))requests.delete(key)
-          if(['plugin.dismiss','plugin.close'].includes(request.cmd)){const id=String(request.args?.id);grants.delete(id);desktops.revokeView(id)}
+          if(['plugin.dismiss','plugin.close'].includes(request.cmd)){const id=String(request.args?.id);grants.delete(id);}
         }
         return
       }
@@ -228,7 +227,6 @@ export async function startWebServer(options:Options={}){
   const wss=new WebSocketServer({noServer:true,maxPayload:2*1024*1024})
   server.on('upgrade',(req,socket,head)=>{
     try{
-      if(desktops.upgrade(req,socket,head,origin))return
       checkOrigin(req,true);const url=new URL(req.url??'/',origin)
       if(url.pathname!=='/api/events')throw failure('Unknown stream',404)
       const session=auth.session(req),client=String(url.searchParams.get('client')??'')
@@ -257,5 +255,5 @@ export async function startWebServer(options:Options={}){
   const bound=(server.address() as net.AddressInfo).port
   origin=configured?.origin??`http://${host==='::1'?'[::1]':host}:${bound}`
   const heartbeat=setInterval(()=>{pruneStreams();for(const [id,grant] of mediaSessions)if(!auth.valid(grant.session)||!mediaAvailable(id)){withCaller(grant.context,()=>{try{closeMedia(id)}catch{}});mediaSessions.delete(id)};for(const [id,grant] of grants)if(!auth.valid(grant.session))grants.delete(id);for(const peer of peers.values()){if(!auth.valid(peer.session))peer.socket.close(4001,'Session expired');else peer.socket.ping()}},30000);heartbeat.unref()
-  return {url:origin,port:bound,async close(){clearInterval(heartbeat);auth.clear();desktops.close();for(const peer of peers.values())peer.socket.terminate();wss.close();for(const socket of sockets)socket.destroy();await new Promise<void>(resolve=>server.close(()=>resolve()))}}
+  return {url:origin,port:bound,async close(){clearInterval(heartbeat);auth.clear();for(const peer of peers.values())peer.socket.terminate();wss.close();for(const socket of sockets)socket.destroy();await new Promise<void>(resolve=>server.close(()=>resolve()))}}
 }

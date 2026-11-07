@@ -1253,5 +1253,26 @@
       "ok": false,
       "error": "--source-view requires company, messages or plan"
     }
+  },
+  {
+    "args": [
+      "channel",
+      "acknowledge",
+      "nc_fixture",
+      "--all",
+      "--source-ids",
+      "[\"ns_alpha\",\"ns_beta\"]"
+    ],
+    "expected": {
+      "cmd": "channel.acknowledge",
+      "args": {
+        "id": "nc_fixture",
+        "all": true,
+        "sourceIds": [
+          "ns_alpha",
+          "ns_beta"
+        ]
+      }
+    }
   }
 ]

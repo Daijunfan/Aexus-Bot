@@ -1,4 +1,4 @@
-import {AppSelect} from '../components/AppSelect';
+import { AppSelect } from '../components/AppSelect';
 import { isSelectProperty, isDateProperty } from './propertySchema';
 import { useState } from 'react';
 import {
@@ -18,6 +18,7 @@ import {
   ChevronRight,
   GitBranch,
   Palette,
+  Pencil,
 } from 'lucide-react';
 import type {
   Database,
@@ -28,16 +29,18 @@ import type {
   Property,
   SortRule,
   ViewType,
+  ConditionalColorRule,
 } from '../types';
 import { IconButton, MenuItem, Modal } from '../ui';
-import { emptyFilters, newView } from './model';
-import { PropertyIcon } from './Properties';
+import { emptyFilters, newView, conditionalColorViews } from './model';
+import { PropertyIcon, Tag } from './Properties';
 import { viewTypes } from './viewTypes';
 import { useWorkspace } from '../store';
 import { workspacePeople } from './propertySchema';
-import { ViewAppearanceControls } from '../components/AppearanceControls';
+import { AppearanceColorField, ViewAppearanceControls } from '../components/AppearanceControls';
 
-export type SettingsSection = 'main' | 'layout' | 'properties' | 'filter' | 'sort' | 'group' | 'appearance';
+export type SettingsSection =
+  'main' | 'layout' | 'properties' | 'edit-properties' | 'filter' | 'sort' | 'group' | 'appearance' | 'conditional';
 const operatorLabels: Record<FilterOperator, string> = {
   is: '等于',
   is_not: '不等于',
@@ -230,27 +233,134 @@ export function FilterEditor({
   );
 }
 
+function ConditionalColorEditor({
+  view,
+  database,
+  onChange,
+}: {
+  view: DatabaseView;
+  database: Database;
+  onChange: (changes: Partial<DatabaseView>) => void;
+}) {
+  const rules = view.conditionalColors || [];
+  const change = (id: string, changes: Partial<ConditionalColorRule>) =>
+    onChange({ conditionalColors: rules.map((rule) => (rule.id === id ? { ...rule, ...changes } : rule)) });
+  const move = (index: number, offset: number) => {
+    const next = [...rules];
+    [next[index], next[index + offset]] = [next[index + offset], next[index]];
+    onChange({ conditionalColors: next });
+  };
+  return (
+    <div className="view-settings-body">
+      <p className="view-settings-description">
+        每个目标按顺序使用第一条命中的规则。单元格颜色覆盖整行颜色；尚未添加条件的规则不生效。
+      </p>
+      {rules.map((rule, index) => (
+        <section key={rule.id} aria-label={`颜色规则 ${index + 1}`}>
+          <div className="sort-rule">
+            <strong>规则 {index + 1}</strong>
+            <IconButton label="上移颜色规则" disabled={index === 0} onClick={() => move(index, -1)}>
+              <ArrowUp size={14} />
+            </IconButton>
+            <IconButton
+              label="下移颜色规则"
+              disabled={index === rules.length - 1}
+              onClick={() => move(index, 1)}
+            >
+              <ArrowDown size={14} />
+            </IconButton>
+            <IconButton
+              label="删除颜色规则"
+              onClick={() => onChange({ conditionalColors: rules.filter((item) => item.id !== rule.id) })}
+            >
+              <Trash2 size={14} />
+            </IconButton>
+          </div>
+          <FilterEditor
+            group={rule.filter}
+            database={database}
+            onChange={(filter) => change(rule.id, { filter })}
+          />
+          <AppearanceColorField
+            label="背景颜色"
+            value={rule.color}
+            allowDefault={false}
+            onChange={(color) => change(rule.id, { color })}
+          />
+          {view.type === 'table' ? (
+            <label className="field-label">
+              应用到
+              <AppSelect
+                aria-label="颜色应用到"
+                value={rule.targetProperty || ''}
+                onChange={(event) => change(rule.id, { targetProperty: event.target.value || undefined })}
+              >
+                <option value="">整行</option>
+                <option value="title">名称单元格</option>
+                {database.columns.map((column) => (
+                  <option key={column.id} value={column.id}>
+                    {column.name}单元格
+                  </option>
+                ))}
+              </AppSelect>
+            </label>
+          ) : rule.targetProperty ? (
+            <button className="text-button" onClick={() => change(rule.id, { targetProperty: undefined })}>
+              将表格单元格规则应用到整张卡片
+            </button>
+          ) : null}
+          <div className="menu-divider" />
+        </section>
+      ))}
+      <MenuItem
+        icon={<Plus size={15} />}
+        onClick={() =>
+          onChange({
+            conditionalColors: [...rules, { id: crypto.randomUUID(), filter: emptyFilters(), color: 'red' }],
+          })
+        }
+      >
+        添加颜色规则
+      </MenuItem>
+    </div>
+  );
+}
+
 export function ViewSettings({
   view,
   database,
   section: initialSection = 'main',
   onChange,
   onAddProperty,
+  onEditProperty,
   onStructure,
+  onSectionChange,
+  onManageGroup,
+  locked = false,
 }: {
   view: DatabaseView;
   database: Database;
   section?: SettingsSection;
   onChange: (changes: Partial<DatabaseView>) => void;
   onAddProperty: () => void;
+  onEditProperty?: (column: Property) => void;
+  onManageGroup?: (column: Property, value?: string, trigger?: HTMLElement) => void;
+  locked?: boolean;
   onStructure?: () => void;
+  onSectionChange?: (section: SettingsSection) => void;
 }) {
   const [section, setSection] = useState<SettingsSection>(initialSection);
+  const showSection = (section: SettingsSection) => {
+    setSection(section);
+    onSectionChange?.(section);
+  };
   const names = {
     main: '视图设置',
     appearance: '外观',
+    conditional: '条件颜色',
     layout: '布局',
-    properties: '属性',
+    properties: '属性可见性',
+    'edit-properties': '编辑属性',
     filter: '筛选',
     sort: '排序',
     group: '分组',
@@ -258,13 +368,16 @@ export function ViewSettings({
   const columns = [...database.columns].sort(
     (a, b) => (view.propertyOrder || []).indexOf(a.id) - (view.propertyOrder || []).indexOf(b.id),
   );
+  const groupingColumn = database.columns.find((column) => column.id === view.groupBy) ||
+    (view.type === 'board' ? database.columns.find(isSelectProperty) : undefined);
+  const editableGroupOptions = !!groupingColumn && ['status', 'select', 'multiSelect'].includes(groupingColumn.type);
   const sort = (id: string, changes: Partial<SortRule>) =>
     onChange({ sorts: view.sorts?.map((rule) => (rule.id === id ? { ...rule, ...changes } : rule)) });
   return (
     <div className="view-settings">
       <div className="view-settings-heading">
         {section !== 'main' && (
-          <IconButton label="返回视图设置" onClick={() => setSection('main')}>
+          <IconButton label="返回视图设置" onClick={() => showSection('main')}>
             <ArrowLeft size={16} />
           </IconButton>
         )}
@@ -286,6 +399,12 @@ export function ViewSettings({
             [
               { id: 'appearance', label: '外观', icon: Palette, value: '背景与卡片配色' },
               {
+                id: 'conditional',
+                label: '条件颜色',
+                icon: Palette,
+                value: `${view.conditionalColors?.length || 0} 个规则`,
+              },
+              {
                 id: 'layout',
                 label: '布局',
                 icon: LayoutGrid,
@@ -293,10 +412,11 @@ export function ViewSettings({
               },
               {
                 id: 'properties',
-                label: '属性',
+                label: '属性可见性',
                 icon: SlidersHorizontal,
                 value: `${database.columns.length - (view.hiddenProperties?.length || 0)} 个显示`,
               },
+              { id: 'edit-properties', label: '编辑属性', icon: Pencil, value: '名称、类型与选项' },
               {
                 id: 'filter',
                 label: '筛选',
@@ -314,6 +434,8 @@ export function ViewSettings({
           )
             .filter(
               (item) =>
+                !(item.id === 'edit-properties' && !onEditProperty) &&
+                !(item.id === 'conditional' && !conditionalColorViews.includes(view.type)) &&
                 !(item.id === 'properties' && ['chart', 'timeline'].includes(view.type)) &&
                 !(item.id === 'group' && ['chart', 'calendar', 'form'].includes(view.type)) &&
                 !(item.id === 'sort' && ['chart', 'form'].includes(view.type)) &&
@@ -323,7 +445,7 @@ export function ViewSettings({
               <MenuItem
                 key={item.id}
                 icon={<item.icon size={16} />}
-                onClick={() => setSection(item.id)}
+                onClick={() => showSection(item.id)}
                 submenu
               >
                 <span className="settings-item-label">
@@ -342,7 +464,23 @@ export function ViewSettings({
           )}
         </>
       )}
-      {section === 'appearance' && <ViewAppearanceControls value={view.appearance} onChange={(appearance) => onChange({ appearance })} />}
+      {section === 'appearance' && (
+        <ViewAppearanceControls value={view.appearance} onChange={(appearance) => onChange({ appearance })} />
+      )}
+      {section === 'conditional' && (
+        <ConditionalColorEditor view={view} database={database} onChange={onChange} />
+      )}
+      {section === 'edit-properties' && (
+        <div className="view-settings-body">
+          {database.columns.map((column) => (
+            <MenuItem key={column.id} icon={<PropertyIcon type={column.type} />} onClick={() => onEditProperty?.(column)}>
+              {column.name}
+            </MenuItem>
+          ))}
+          <div className="menu-divider" />
+          <MenuItem icon={<Plus size={15} />} onClick={onAddProperty}>新建属性</MenuItem>
+        </div>
+      )}
       {section === 'layout' && (
         <div className="view-settings-body">
           <div className="view-type-options">
@@ -573,25 +711,55 @@ export function ViewSettings({
             />
             隐藏空分组
           </label>
-          {database.columns
-            .find((c) => c.id === view.groupBy)
-            ?.options?.map((group) => (
-              <div className="property-visibility-row" key={group}>
-                <span>{group}</span>
-                <IconButton
-                  label={`${view.hiddenGroups?.includes(group) ? '显示' : '隐藏'}分组 ${group}`}
-                  onClick={() =>
-                    onChange({
+          {view.type === 'board' && (
+            <label className="setting-checkbox">
+              <input
+                type="checkbox"
+                aria-label="显示分组列颜色"
+                disabled={locked}
+                checked={view.colorColumns !== false}
+                onChange={(e) => onChange({ colorColumns: e.target.checked })}
+              />
+              显示分组列颜色
+            </label>
+          )}
+          {editableGroupOptions && groupingColumn && (
+            <div className="group-settings-options">
+              <div className="group-settings-section-title">分类选项 <small>会同步到使用该属性的全部视图</small></div>
+              {groupingColumn.options?.map((group) => (
+                <div className="property-visibility-row group-settings-option" key={group}>
+                  <button type="button" className="group-settings-rename"
+                    disabled={locked || !onManageGroup}
+                    aria-label={`重命名分类 ${group}`}
+                    onClick={event => onManageGroup?.(groupingColumn, group, event.currentTarget)}>
+                    <Tag value={group} column={groupingColumn} />
+                    <Pencil size={13} aria-hidden="true" />
+                  </button>
+                  <IconButton
+                    label={`${view.hiddenGroups?.includes(group) ? '显示' : '隐藏'}分组 ${group}`}
+                    onClick={() => onChange({
                       hiddenGroups: view.hiddenGroups?.includes(group)
                         ? view.hiddenGroups.filter((g) => g !== group)
                         : [...(view.hiddenGroups || []), group],
-                    })
-                  }
-                >
-                  {view.hiddenGroups?.includes(group) ? <EyeOff size={15} /> : <Eye size={15} />}
-                </IconButton>
-              </div>
-            ))}
+                    })}>
+                    {view.hiddenGroups?.includes(group) ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </IconButton>
+                </div>
+              ))}
+              <button type="button" className="group-settings-add" disabled={locked || !onManageGroup}
+                onClick={event => onManageGroup?.(groupingColumn, undefined, event.currentTarget)}>
+                <Plus size={15} /> 新增分类
+              </button>
+            </div>
+          )}
+          {groupingColumn && !editableGroupOptions && (
+            <p className="view-settings-description">
+              当前按「{groupingColumn.name}」分组。此属性的分组由记录值决定；要自定义分类名称，请将分组依据改为「选择」或「状态」属性。
+            </p>
+          )}
+          {!groupingColumn && (
+            <p className="view-settings-description">选择分组依据后，即可在这里管理分类。</p>
+          )}
         </div>
       )}
     </div>

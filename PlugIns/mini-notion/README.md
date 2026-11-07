@@ -1,10 +1,9 @@
 # Mini Notion
 
-1.17.1 修复异常会话结束、冲突草稿关闭与存储失败反馈。完整默认测试已恢复为 152 项 Core/API + 46 项桌面流程全部通过；运行 `npm test` 和 `npm run test:e2e` 可复现。
-
-1.17.0 完善多块编辑、搜索定位、数学公式、书签/面包屑与持久化标签页；UI 和 CLI 继续共用 Core。可运行 `test:domain`、`test:local`、`test:editing-ui` 复现本轮验收。
-
-1.16.0 完善本地图标、提示块、块菜单与宿主快捷键：1,703 个可配色矢量图标、3,781 个离线 emoji、中英文搜索及图片上传；详见 [本地体验验收](LOCAL_NOTION_ACCEPTANCE.md)。
+1.24.0 重点打磨大工作空间与常用本地功能，保持 GUI、CLI/API 共用同一个数据内核。
+侧栏和数据库表格按可见区域渲染，完整记录仍参与筛选、排序、汇总、全选与 PDF 导出；深层页面树、全文搜索、公式及关联汇总改为索引和缓存计算。
+离线目录包含 1,703 个可配色矢量图标、Unicode 17.0 的 3,953 个 emoji，并支持可命名的本地自定义表情库、行内图片表情和评论反馈。数据库增加中位数、极差、空值比例等汇总与按视图保存的条件颜色。
+功能范围与仍存在的差异见 [本地能力对照](PARITY.md)，不以逐项复制 Notion 为验收目标。
 
 一个以 Notion 页面和视图为基础的本地多 Agent 操作系统，面向 macOS。每个空间固定拥有一个主页面和一个 Agent，子页面与数据库视图在空间内组织工作。页面、附件和会话记录保存在本机；Agent 使用官方 Claude Agent SDK 配套引擎或本机 Codex，并继承已有服务配置。GUI 与 CLI 共用一个自动启动的本地数据服务，UI 能力是 CLI/API 的子集。
 
@@ -46,11 +45,11 @@ npm start
 npm run package
 ```
 
-打包输出在 `release.noindex/`，暂存应用位于 `release.noindex/mac-arm64/Mini Notion.app`；此目录不参与 Spotlight 搜索。正式安装统一保留在 `~/Applications/Mini Notion.app`，安装后移除暂存应用，避免出现重复入口。应用使用本地临时签名，未使用 Apple Developer ID 签名或公证。
+打包输出在 `release.noindex/`，暂存应用位于 `release.noindex/mac-arm64/Mini Notion.app`；此目录不参与 Spotlight 搜索。Toolbox 正式安装统一保留在 `/Applications/Mini Notion.app`，安装后移除暂存应用，避免出现重复入口。应用使用本地临时签名，未使用 Apple Developer ID 签名或公证。
 
 ## 当前推进状态
 
-当前版本为 1.13.1。默认浅色主题与白色空白页，提供 30 种预设色和自定义颜色。页面和所有日历事件共用 color 与 textColor，创建接口要求明确传入颜色。提供 14 个可搜索、可预览的模板，并保留内容块、视图与 Agent 面板配色。外观配置与模板创建通过 CLI/API 和 UI 共用同一数据模型，详见 [APPEARANCE.md](APPEARANCE.md)。其他功能范围记录在 [PARITY.md](PARITY.md)。
+当前版本为 1.24.0。默认浅色主题与白色空白页，提供 30 种预设色和自定义颜色。页面和所有日历事件共用 color 与 textColor，创建接口要求明确传入颜色。提供 14 个可搜索、可预览的模板，并保留内容块、视图与 Agent 面板配色。外观配置与模板创建通过 CLI/API 和 UI 共用同一数据模型，详见 [APPEARANCE.md](APPEARANCE.md)。其他功能范围记录在 [PARITY.md](PARITY.md)。
 
 当前支持 10 种数据库视图，包括日/周计划与议程、日历、时间线、图表、动态和表单。新增独立 CLI 与 JSON API，共享数据内核、实时同步、并发冲突草稿、操作记录与撤销/重做；页面、块、数据库、关联视图、导入导出、附件、历史、备份和窗口控制都有命令入口。命令用法见 [CLI.md](CLI.md)。1.3 加入数据库自定义模板、子项目、依赖连线与自动排期、跨日和跨周安排。1.4 加入本地评论与同步块；1.5 加入单属性日期范围、具体时间、时区；1.6 加入小时级日/周时间表；1.7 加入循环模板、本地提醒与收件箱；1.8 加入文档按钮、数据库按钮属性、条件与定时自动化；1.9 加入状态分组、人员、文件、邮箱/电话、唯一编号及创建/编辑时间与作者属性；1.10 加入空间、空间文件、可拖动 Agent 会话、多附件与纯附件发送、页面和文件联动，以及真实引擎验收。
 
@@ -91,7 +90,7 @@ npm run package
 
 ## 本地数据
 
-正式应用默认使用 `~/Library/Application Support/Mini Notion/`。实际路径可在「设置 → 数据与备份」查看并用 Finder 打开。
+Toolbox 版本默认使用 `~/Library/Application Support/Toolbox/MiniNotion/Workspace/` 文件夹，界面状态位于其中的 `.mininotion/desktop/`；应用升级不会替换该数据文件夹。实际路径可在「设置 → 数据与备份」查看并用 Finder 打开。以下为原生数据模式的结构；文件夹模式的页面和元数据布局见 [工作区布局验收](WORKSPACE_LAYOUT_ACCEPTANCE.md)。
 
 ```text
 workspace.json     页面、块、属性、层级、偏好、调度进度、收件箱与空间配置
@@ -119,6 +118,9 @@ npm test          # 页面树、回收站、CSV、原子存储、附件和损坏
 npm run build    # TypeScript 与生产构建
 npm run test:e2e # 真正启动 Electron，验证主操作流程与重启持久化
 npm run test:agent:live # 使用本机真实引擎与模型，验证页面编辑、资料整理、多视图和图片理解
+node scripts/benchmark-core.mjs   # 独立合成数据：深树、搜索和层级校验
+node scripts/profile-large-workspace.mjs # 隐藏窗口、临时数据：大工作区
+node scripts/profile-large-table.mjs     # 隐藏窗口、临时数据：大数据库
 ```
 
 Agent 桌面验收默认在隐藏窗口运行；其他桌面测试可使用 `MINI_NOTION_BACKGROUND_TEST=1`，生命周期可见性测试仍需普通模式。验收范围、证据与复现方式见 [AGENT_ACCEPTANCE.md](AGENT_ACCEPTANCE.md)。

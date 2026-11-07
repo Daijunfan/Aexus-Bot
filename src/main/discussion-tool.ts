@@ -7,8 +7,8 @@ import type {Live} from './sessions'
 
 export const DISCUSSION_TOOL={
  name:'agents_company_discussion_post',
- description:'Publish a nonempty reply to the current shared task using its exact conversation and message IDs. Available during the response stage.',
- inputSchema:{type:'object',additionalProperties:false,required:['conversationType','conversationId','messageId','text'],properties:{conversationType:{type:'string',enum:['group','channel']},conversationId:{type:'string',minLength:1},messageId:{type:'string',minLength:1},text:{type:'string',minLength:1,maxLength:2000,description:'Public reply text.'}}}
+ description:'Explicitly publish a nonempty GROUP reply using the current group/message IDs. Native ordinary output appears only in Company. For a private answer to the user call direct.post through the Core API, not this group tool. Unmentioned awareness turns are silent.',
+ inputSchema:{type:'object',additionalProperties:false,required:['conversationType','conversationId','messageId','text'],properties:{conversationType:{type:'string',enum:['group']},conversationId:{type:'string',minLength:1},messageId:{type:'string',minLength:1},text:{type:'string',minLength:1,maxLength:2000,description:'Public reply text.'}}}
 } as const
 
 type Scope={context:SharedTaskContext;taskId:string;credential:string;clientMessageId:string;decision?:{text:string;result:unknown}}
@@ -28,6 +28,7 @@ export async function invokeDiscussionTool(state:Live,input:unknown,callId:strin
  if(state.acknowledging||state.privateInitialization||!state.running||!scope||!task||task.messageId!==scope.taskId||!task.chat||JSON.stringify(task.chat)!==JSON.stringify(scope.context))throw Error('Publication is unavailable outside the active shared response stage')
  if(!callId||!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!['conversationType','conversationId','messageId','text'].includes(key)))throw Error('Provide conversationType, conversationId, messageId and nonempty public text')
  const value=input as {conversationType?:unknown;conversationId?:unknown;messageId?:unknown;text?:unknown},target=discussionTarget(scope.context)
+ if(target.conversationType!=='group')throw Error('Channels are read-only feeds')
  if(value.conversationType!==target.conversationType||value.conversationId!==target.conversationId||value.messageId!==target.messageId)throw Error('Publication target does not match the current shared request')
  if(emptyAgentPost(value.text))throw Error('Public text must be nonempty')
  validateDelegation(task.delegation,state.cardId)

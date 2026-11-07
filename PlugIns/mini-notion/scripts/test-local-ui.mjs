@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url),
   { _electron: electron, expect } = require('@playwright/test');
 const root = path.resolve(import.meta.dirname, '../../..');
 const temp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ac-notion-local-')));
-const artifacts = process.env.AGENTS_COMPANY_TEST_ARTIFACTS || path.join(root, 'artifacts/mininotion-local');
+const artifacts = process.env.AGENTS_COMPANY_TEST_ARTIFACTS || path.join(root, '.aexus/artifacts/mininotion-local');
 fs.mkdirSync(artifacts, { recursive: true });
 fs.mkdirSync(path.join(temp, 'fixture'));
 fs.writeFileSync(path.join(temp, 'fixture/release-all'), '');
@@ -36,7 +36,7 @@ for (const key of Object.keys(env))
   )
     delete env[key];
 const app = await electron.launch({
-  executablePath: process.env.AGENTS_COMPANY_TEST_APP || require('electron'),
+  executablePath: process.env.AGENTS_COMPANY_TEST_APP || require('../electron/runtime.cjs').electronRuntime().executable,
   args: process.env.AGENTS_COMPANY_TEST_APP ? [] : [root],
   env,
 });
@@ -193,16 +193,13 @@ try {
   ok('local image upload uses the asset CLI and renders through the scoped host URL');
   await page.locator('.page-cover').hover();
   await page.getByRole('button', { name: '更换封面', exact: true }).click();
-  await page.locator('.popover input[type=file]').setInputFiles(image);
+  await page.getByRole('dialog', { name: '选择封面' }).getByRole('tab', { name: '上传', exact: true }).click();
+  await page.getByRole('dialog', { name: '选择封面' }).locator('input[type=file]').setInputFiles(image);
   await expect
     .poll(async () => (await api('page.get', { pageId: note.id })).cover.startsWith('asset://local/'))
     .toBe(true);
   await expect(page.locator('.page-cover')).toHaveClass(/cover-custom/);
-  assert.ok(
-    (await page.locator('.page-cover').evaluate((el) => getComputedStyle(el).backgroundImage)).includes(
-      '/data/asset/',
-    ),
-  );
+  await expect.poll(() => page.locator('.page-cover img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
   ok('local cover upload remains visible after bridge URL translation');
   picker = await openPicker();
   await picker.getByRole('menuitem', { name: '移除图标' }).click();

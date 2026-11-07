@@ -1,6 +1,7 @@
 import {$,escape,icon,field,showDialog,run,toast} from './dom.js';
 import {api} from './transport.js';
 import {PALETTES,avatarTone} from './visual-theme.mjs';
+import {toggleSidebarBranch} from './sidebar-disclosure.js';
 
 // Study folders organize references to study IDs. They are separate from the
 // physical document tree; a move never relocates source PDFs or card assets.
@@ -9,7 +10,7 @@ export class StudyLibrary {
     this.study=study;this.data={revision:0,folders:[],sets:[]};this.expanded=new Set();this.settings={};this.page=0;this.size=100;this.query='';
     const sidebar=document.querySelector('.study-sidebar');sidebar.id='study-library-sidebar';sidebar.classList.add('library-section');sidebar.setAttribute('aria-label','学习集');
     const heading=sidebar.querySelector('.study-sidebar-heading'),create=$('study-create'),deleted=$('study-deleted'),importPackage=$('study-import-package');
-    const root=document.createElement('button');root.id='studies-root';root.className='root-row section-root';root.type='button';root.innerHTML=icon('book')+'<span>学习集</span>';root.onclick=run(()=>this.open(null));sidebar.prepend(root);
+    const root=document.createElement('button');root.id='studies-root';root.className='root-row section-root';root.type='button';root.innerHTML=icon('book')+'<span>学习集</span>';root.onclick=run(()=>{if(!$('reader-view').hidden){this.rootCollapsed=!this.rootCollapsed;$('study-set-list').hidden=this.rootCollapsed;root.setAttribute('aria-expanded',String(!this.rootCollapsed));return;}return this.open(null);});root.setAttribute('aria-expanded','true');sidebar.prepend(root);
     const separator=document.createElement('hr');separator.className='sidebar-section-divider';separator.setAttribute('aria-label','学习集与我的文库分隔线');
     const files=document.createElement('section');files.id='file-library-sidebar';files.className='library-section';files.setAttribute('aria-label','我的文库');
     const explorer=document.querySelector('.explorer');
@@ -45,6 +46,13 @@ export class StudyLibrary {
   }
   folder(id){return this.data.folders.find(f=>f.id===id&&!f.deletedAt);}
   expandParents(id){let f=this.folder(id),steps=0;while(f&&steps++<64){this.expanded.add(f.id);f=this.folder(f.parentId);}}
+  toggleFolder(id,sets=this.data.sets){
+    toggleSidebarBranch({
+      expanded:this.expanded,id,defaultFocus:'.folder-open',
+      findRow:()=>[...$('study-set-list').querySelectorAll('.study-folder-row')].find(row=>row.dataset.folderId===id),
+      render:()=>this.renderTree(sets)
+    });
+  }
   path(id){const parts=[];let f=this.folder(id),steps=0;while(f&&steps++<64){parts.unshift(f);f=this.folder(f.parentId);}return parts;}
   renderTree(sets=this.data.sets){
     const selected=this.study.current?.id,owner=sets.find(s=>s.id===selected),revealKey=JSON.stringify([selected,owner?.folderId]);
@@ -56,13 +64,20 @@ export class StudyLibrary {
     const grouped=new Map();for(const s of sets){const parent=this.folder(s.folderId)?.id||null;if(!grouped.has(parent))grouped.set(parent,[]);grouped.get(parent).push(s);}
     const walk=(parent,depth=0)=>{
       if(depth>=64)return '';
-      return (children.get(parent)||[]).map(f=>`<div class="study-folder-row ${this.folderId===f.id?'active':''}" data-folder-id="${f.id}" role="treeitem" aria-expanded="${this.expanded.has(f.id)}" aria-level="${depth+1}" style="--folder-depth:${depth}"><button class="folder-toggle" aria-label="展开或折叠学习集文件夹">${icon(this.expanded.has(f.id)?'chevron-down':'chevron-right')}</button><button class="folder-open" title="${escape(f.title)}">${icon('folder')}<span>${escape(f.title)}</span><small>${f.studyCount||0}</small></button><button data-collection-more="folder" aria-label="文件夹操作：${escape(f.title)}">${icon('more')}</button></div>${this.expanded.has(f.id)?walk(f.id,depth+1):''}`).join('')+
+      return (children.get(parent)||[]).map(f=>`<div class="study-folder-row ${this.folderId===f.id?'active':''} ${this.expanded.has(f.id)?'expanded':''}" data-folder-id="${f.id}" role="treeitem" aria-expanded="${this.expanded.has(f.id)}" aria-level="${depth+1}" style="--folder-depth:${depth}"><button type="button" class="folder-toggle" aria-label="${this.expanded.has(f.id)?'收起':'展开'} ${escape(f.title)}">${icon(this.expanded.has(f.id)?'chevron-down':'chevron-right')}</button><button type="button" class="folder-open" aria-expanded="${this.expanded.has(f.id)}" title="${escape(f.title)} · 单击展开或收起">${icon('folder')}<span>${escape(f.title)}</span><small>${f.studyCount||0}</small></button><button type="button" data-collection-more="folder" aria-label="文件夹操作：${escape(f.title)}" title="更多操作">${icon('more')}</button></div>${this.expanded.has(f.id)?walk(f.id,depth+1):''}`).join('')+
       (grouped.get(parent)||[]).map(s=>{const p=PALETTES[avatarTone(s.id)];return `<button class="study-set-row ${s.id===selected?'active':''}" data-set-id="${s.id}" role="treeitem" aria-level="${depth+1}" draggable="true" style="--folder-depth:${depth}" title="${escape(s.title)}"><span class="study-set-avatar" aria-hidden="true" style="--avatar-color:${p.fill};--avatar-end:${p.end}">${escape(Array.from(s.title)[0]||'学')}</span><span class="study-set-copy"><strong>${escape(s.title)}</strong><small>${s.documentCount} 份文档</small></span><small class="study-set-count">${s.cardCount}</small></button>`;}).join('');
     };
     $('study-set-list').innerHTML=walk(null)||'<span class="study-sidebar-empty">创建学习集，集中整理一个主题</span>';
     for(const row of $('study-set-list').querySelectorAll('.study-folder-row')){
-      const id=row.dataset.folderId;row.querySelector('.folder-toggle').onclick=()=>{this.expanded.has(id)?this.expanded.delete(id):this.expanded.add(id);this.renderTree(sets);};
-      row.querySelector('.folder-open').onclick=run(()=>this.open(id));row.querySelector('[data-collection-more]').onclick=e=>this.menuFor('folder',id,e.currentTarget);
+      const id=row.dataset.folderId,toggle=()=>this.toggleFolder(id,sets);
+      row.querySelector('.folder-toggle').onclick=toggle;
+      row.querySelector('.folder-open').onclick=toggle;
+      row.addEventListener('click',e=>{if(!e.target.closest('button'))toggle();});
+      row.addEventListener('keydown',e=>{
+        if(!['ArrowLeft','ArrowRight'].includes(e.key)||e.target.closest('[data-collection-more]'))return;
+        e.preventDefault();if(this.expanded.has(id)!==(e.key==='ArrowRight'))toggle();
+      });
+      row.querySelector('[data-collection-more]').onclick=e=>this.menuFor('folder',id,e.currentTarget);
       row.oncontextmenu=e=>{e.preventDefault();this.menuFor('folder',id,row,e);};this.bindDrop(row,id);this.bindDrag(row,'folder',id);
     }
     for(const row of $('study-set-list').querySelectorAll('.study-set-row')){row.onclick=run(()=>this.study.home(row.dataset.setId));row.oncontextmenu=e=>{e.preventDefault();this.menuFor('set',row.dataset.setId,row,e);};this.bindDrag(row,'set',row.dataset.setId);}
@@ -98,7 +113,7 @@ export class StudyLibrary {
   menuFor(kind,id,anchor,event){
     this.closeMenu();const item=kind==='folder'?this.folder(id):this.data.sets.find(s=>s.id===id);if(!item)return;
     const menu=document.createElement('div');menu.className='context-menu collection-menu';menu.setAttribute('role','menu');
-    menu.innerHTML=[['open','打开'],['rename','重命名'],['move','移动到文件夹'],...(kind==='folder'?[['remove','移入文件夹回收站']]:[['remove','移入学习集回收站']])].map(([a,t])=>`<button role="menuitem" data-action="${a}">${t}</button>`).join('');document.body.append(menu);this.menu=menu;
+    menu.innerHTML=[['open',kind==='folder'?'在主页中浏览':'打开学习集'],['rename','重命名'],['move','移动到文件夹'],...(kind==='folder'?[['remove','移入文件夹回收站']]:[['remove','移入学习集回收站']])].map(([a,t])=>`<button role="menuitem" data-action="${a}">${t}</button>`).join('');document.body.append(menu);this.menu=menu;
     const b=anchor.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(innerWidth-menu.offsetWidth-8,event?.clientX??b.left))+'px';menu.style.top=Math.max(8,Math.min(innerHeight-menu.offsetHeight-8,event?.clientY??b.bottom))+'px';
     for(const button of menu.querySelectorAll('button'))button.onclick=run(async()=>{this.closeMenu();const action=button.dataset.action,revision=this.data.revision;
       if(action==='open')return kind==='folder'?this.open(id):this.study.home(id);

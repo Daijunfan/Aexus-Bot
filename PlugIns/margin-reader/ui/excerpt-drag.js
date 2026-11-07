@@ -5,9 +5,10 @@ import {api} from './transport.js';
 export class ExcerptDrag{
  constructor(excerpts){
   this.excerpts=excerpts;this.study=excerpts.study;
-  excerpts.palette.insertAdjacentHTML('beforeend','<button id="excerpt-drag-handle" type="button" draggable="true" title="拖到脑图主题上成为子主题，拖到空白处成为自由主题；保留原文链接">拖到脑图 ↗</button>');
+  $('study-palette-options').insertAdjacentHTML('beforeend','<button id="excerpt-drag-handle" type="button" draggable="true" title="拖到脑图主题上成为子主题，拖到空白处成为自由主题；保留原文链接">拖到脑图 ↗</button>');
+  $('selection-map').draggable=true;
   document.addEventListener('dragstart',e=>{
-   if(e.target.closest?.('#excerpt-drag-handle'))this.start(e,excerpts.draft);
+   if(e.target.closest?.('#excerpt-drag-handle,#selection-map'))this.start(e,excerpts.draft);
    else if(e.composedPath().includes($('reader-scroll'))){excerpts.readSelection();this.start(e,excerpts.draft);}
   },true);
   const viewport=$('study-map-viewport');
@@ -28,7 +29,7 @@ export class ExcerptDrag{
     this.excerpts.busy=true;
     try{
      const result=await api('study.card.create',{...draft,...placement,color:this.study.current.captureSettings?.color||'yellow',...(this.study.getPassword?.()?{password:this.study.getPassword()}: {})});
-     this.excerpts.busy=false;this.excerpts.hide();window.getSelection()?.removeAllRanges();this.study.getRenderer().shadow?.getSelection?.()?.removeAllRanges();
+     this.excerpts.busy=false;this.excerpts.hide(true);window.getSelection()?.removeAllRanges();this.study.getRenderer().shadow?.getSelection?.()?.removeAllRanges();
      if(this.study.current?.id===draft.setId){await this.study.refresh(result.card.id);this.study.map.center(result.card.id);}
      toast('摘录已加入脑图，原文链接与图片已保存');
     }finally{this.excerpts.busy=false;}
@@ -39,7 +40,7 @@ export class ExcerptDrag{
  }
  start(event,draft){
   if(!draft?.setId||this.excerpts.busy||this.study.current?.id!==draft.setId)return;
-  this.active=structuredClone(draft);event.dataTransfer.setData('application/x-margin-reader-excerpt',draft.captureId);event.dataTransfer.effectAllowed='copy';
+  this.active={...structuredClone(draft),note:$('selection-note-text').value,annotationStyle:$('selection-style').value};event.dataTransfer.setData('application/x-margin-reader-excerpt',draft.captureId);event.dataTransfer.effectAllowed='copy';
  }
  clear(){if(this.active){this.active=null;this.study.map.clearDrop();}}
 }

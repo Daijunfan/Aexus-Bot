@@ -1,10 +1,13 @@
+import { CoverImage } from './CoverImage';
 import { coverPresentation } from '../presentation';
 import { blockSource } from '../content/blockCache';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { LoadingSurface } from './LoadingSurface';
 import { ImagePlus, SmilePlus, Plus, LockKeyhole, Link2, ArrowUpRight } from 'lucide-react';
-import { Editor } from './Editor';
-import { CoverPicker, EmojiPicker } from './Pickers';
-import { Database } from './Database';
+import { loadEditor, loadedContent } from './loadContent';
+const DeferredEditor = lazy(loadEditor);
+import { CoverPicker, EmojiPicker } from './LazyPickers';
+const Database = lazy(() => import('./Database').then(module => ({ default: module.Database })));
 import { PropertyIcon, PropertyValue } from '../database/Properties';
 import { useWorkspace } from '../store';
 import { PageIcon } from '../ui';
@@ -23,6 +26,7 @@ export function PageView({
   theme: 'light' | 'dark';
   peek?: boolean;
 }) {
+  const [Editor] = useState(() => loadedContent.Editor || DeferredEditor);
   const { workspace, patch, navigate, create, setModal, command, notify, setPeekId, setSpacePanel } =
     useWorkspace();
   const [picker, setPicker] = useState<{ type: 'icon' | 'cover'; x: number; y: number } | null>(null);
@@ -40,9 +44,23 @@ export function PageView({
     (p) => p.parentId === page.id && !p.trashedAt && (!p.sourceFile || p.sourceFile.kind === 'directory') && !blockSource(page.blocks).includes(p.id),
   );
   const directoryFiles = workspace!.pages.filter(p => p.parentId === page.id && !p.trashedAt && p.sourceFile && p.sourceFile.kind !== 'directory');
-  const backlinks = workspace!.pages.filter(
-    (p) => p.id !== page.id && !p.trashedAt && blockSource(p.blocks).includes(page.id),
-  );
+  const linkCache = useRef<{target: string; pages: Page[]; ids: Set<string>} | null>(null);
+  const backlinks = useMemo(() => {
+    const pages = workspace!.pages, previous = linkCache.current;
+    let ids: Set<string>;
+    if (previous?.target === page.id && previous.pages.length === pages.length &&
+        pages.every((p,i) => p.id === previous.pages[i].id)) {
+      ids = new Set(previous.ids);
+      for (let i = 0; i < pages.length; i++) {
+        const p = pages[i], before = previous.pages[i];
+        if (p.blocks === before.blocks && p.trashedAt === before.trashedAt) continue;
+        if (p.id !== page.id && !p.trashedAt && blockSource(p.blocks).includes(page.id)) ids.add(p.id);
+        else ids.delete(p.id);
+      }
+    } else ids = new Set(pages.filter(p => p.id !== page.id && !p.trashedAt && blockSource(p.blocks).includes(page.id)).map(p => p.id));
+    linkCache.current = {target:page.id,pages,ids};
+    return pages.filter(p => ids.has(p.id));
+  }, [workspace!.pages,page.id]);
   useLayoutEffect(() => {
     const input = title.current;
     if (!input) return;
@@ -66,7 +84,7 @@ export function PageView({
     const r = element.getBoundingClientRect();
     setPicker({ type, x: r.left, y: r.bottom + 5 });
   };
-  const cover = coverPresentation(page.cover, page.coverPosition);
+  const cover = coverPresentation(page.cover, page.coverPosition, true);
   const linkedFiles = (page.files || []).filter((file) => !file.name.startsWith('.'));
   return (
     <div ref={container} className={`page-scroll ${peek ? 'peek-scroll' : ''} page-title-${page.appearance?.titleAlign || 'left'}`} data-page={page.id}
@@ -89,6 +107,20 @@ export function PageView({
         <div
           className={`page-cover ${cover.className} ${reposition ? 'repositioning' : ''}`}
           style={cover.style}
+          tabIndex={reposition ? 0 : undefined}
+          role={reposition ? 'slider' : undefined}
+          aria-label={reposition ? '封面垂直位置' : undefined}
+          aria-valuemin={reposition ? 0 : undefined}
+          aria-valuemax={reposition ? 100 : undefined}
+          aria-valuenow={reposition ? page.coverPosition : undefined}
+          onKeyDown={event => {
+            if (!reposition || event.target !== event.currentTarget) return;
+            const step = event.shiftKey ? 10 : 2;
+            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+              event.preventDefault();
+              patch(page.id, { coverPosition: Math.max(0, Math.min(100, page.coverPosition + (event.key === 'ArrowUp' ? -step : step))) });
+            } else if (event.key === 'Escape' || event.key === 'Enter') setReposition(false);
+          }}
           onPointerDown={(e) => {
             if (!reposition || (e.target as HTMLElement).closest('button')) return;
             const start = e.clientY;
@@ -98,16 +130,20 @@ export function PageView({
             const drag = (event: PointerEvent) => {
               position = Math.max(0, Math.min(100, initial - (event.clientY - start) / 2));
               cover.style.backgroundPosition = `center ${position}%`;
+              cover.style.setProperty('--cover-position', `${position}%`);
             };
             const end = () => {
               document.removeEventListener('pointermove', drag);
               document.removeEventListener('pointerup', end);
+              document.removeEventListener('pointercancel', end);
               patch(page.id, { coverPosition: position });
             };
             document.addEventListener('pointermove', drag);
             document.addEventListener('pointerup', end);
+            document.addEventListener('pointercancel', end);
           }}
         >
+          <CoverImage url={page.cover} eager retry />
           {!page.locked && (
             <div className="cover-actions">
               {reposition ? (
@@ -231,12 +267,12 @@ export function PageView({
             添加描述
           </button>
         ) : (
-          <Editor
+          <Suspense fallback={<LoadingSurface compact label="正在准备编辑器…" />}><Editor
             key={page.id}
             page={page}
             theme={theme}
             autoFocus={!!page.database && !!page.showDescription && blankBody}
-          />
+          /></Suspense>
         )}
         {parent?.database?.subItems && (
           <section className="subitems-panel">
@@ -295,7 +331,7 @@ export function PageView({
             </div>
           )}
         {page.database ? (
-          <Database page={page} />
+          <Suspense fallback={<LoadingSurface compact label="正在加载数据库…" />}><Database page={page} /></Suspense>
         ) : (
           children.length > 0 && (
             <div className="child-pages">

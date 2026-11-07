@@ -114,3 +114,5 @@
 ## 2026-09-30 深度审计增量
 
 [性能、界面、数据与互操作审计](DEEP_AUDIT.md) 记录了本轮具体修复、样本结果和未关闭缺口；[运行清单](deep-audit-results.json) 记录最终真实退出码。万张卡片、120 页标注、UTF-16 定位、字典尾部/分号别名、工具区响应式和真实员工绑定新增覆盖，不构成以上 77 项全部完成的证明。
+
+2026-10-11 原生选区专项：定位并修复 WebKit 里 Shadow DOM 的 window.getSelection() 被重定向到宿主节点、isCollapsed 误报的问题，现先解析 getComposedRanges 获取真实文字节点和偏移；选区离开阅读区域后松开、键盘选区/颜色、弹窗边界定位与学习集 16 色条已纳入本机回归。学习集 PDF、HTML、EPUB 和文库独立 PDF 的选区标注及生成来源绑定的脑图卡已通过 Chromium/WebKit 端到端用例 tests/study-excerpt-parity-ui.cjs。颜色条与学习集命名自定义配置复用同一渲染组件；Core 的源版本与 revision 冲突保护未放松。此证明仅适用于覆盖的流程；没有原版 MarginNote 4 的完整视觉/硬件对照，仍不将 MN4-01/30/48 或全部 77 项宣告完成。

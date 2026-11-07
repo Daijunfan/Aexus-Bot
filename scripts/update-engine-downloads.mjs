@@ -20,6 +20,16 @@ for(const arch of ['x64','arm64']){
   const metadata=await response.json();if(!metadata.dist?.integrity?.startsWith('sha512-')||new URL(metadata.dist.tarball).hostname!=='registry.npmjs.org')throw Error('Invalid package metadata')
   entries.push({engine:'claude',platform:'linux',arch,libc:'musl',package:name,version,url:metadata.dist.tarball,integrity:metadata.dist.integrity,executable:'claude'})
 }
+// ACP engines publish platform binaries separately from their npm launchers.
+for(const [platform,arch] of platforms){
+ for(const engine of ['opencode','kilo']){
+  const name=(engine==='opencode'?'opencode-':'@kilocode/cli-')+(platform==='win32'?'windows':platform)+'-'+arch,version=engine==='opencode'?'1.19.0':'7.8.18'
+  const response=await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}/${version}`)
+  if(!response.ok)throw Error('Cannot verify '+name+'@'+version)
+  const metadata=await response.json();if(new URL(metadata.dist.tarball).hostname!=='registry.npmjs.org'||!metadata.dist.integrity.startsWith('sha512-'))throw Error('Invalid ACP engine package')
+  entries.push({engine,platform,arch,package:name,version,url:metadata.dist.tarball,integrity:metadata.dist.integrity,executable:'bin/'+engine+(platform==='win32'?'.exe':'')})
+ }
+}
 const file=path.join(root,'engine-downloads.json')
 const sdkPackage='@anthropic-ai/claude-agent-sdk',sdkVersion='0.3.272'
 const sdkResponse=await fetch(`https://registry.npmjs.org/${encodeURIComponent(sdkPackage)}/${sdkVersion}`)

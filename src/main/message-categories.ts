@@ -1,5 +1,5 @@
-import {all,one} from './channel-store'
-import {requireAppAdministrator} from './authorization'
+import {all,one,archiveSources,archiveAvatars} from './channel-store'
+import {requestContext,requireAppAdministrator} from './authorization'
 import {CATEGORY_INCLUDES,type SocialElement} from '../shared/message-categories'
 /** One grouped query for all sources; no bodies, history copies or read acknowledgements. */
 export function socialElements(args:{platform?:string;includeDisabled?:boolean}={}):SocialElement[]{
@@ -17,7 +17,8 @@ export function socialElements(args:{platform?:string;includeDisabled?:boolean}=
  LEFT JOIN counts c ON c.source_id=s.id LEFT JOIN live p ON p.source_id=s.id AND p.rank=1
  LEFT JOIN firsts f ON f.source_id=s.id AND f.rank=1 LEFT JOIN source_avatars a ON a.source_id=s.id
  WHERE s.plugin IN ('telegram','x','youtube') ORDER BY s.created_at,s.id`,now)
- return rows.filter(row=>(args.includeDisabled||row.enabled)&&(!args.platform||row.plugin===args.platform)).map(row=>({id:row.id,key:'source:'+row.id,channelId:row.channel_id,platform:row.plugin,name:row.name,locator:row.locator,enabled:!!row.enabled,createdAt:row.created_at,unreadCount:Number(row.unread??0),postCount:Number(row.total??0),...(row.first_id?{firstUnread:{id:row.first_id,kind:'news' as const}}:{}),...(row.last_id?{lastPost:{id:row.last_id,title:row.last_title,publishedAt:row.last_at,sourceName:row.name}}:{}),...(row.sha256?{avatar:{sourceId:row.id,sha256:row.sha256}}:{})}))
+ for(const row of rows){const summary=archiveSources.get(row.id);if(summary){row.total=summary.total;row.unread=summary.unread;row.first_id=summary.firstUnread?.id;row.last_id=summary.last?.id;row.last_title=summary.last?.title;row.last_at=summary.last?.published_at}row.sha256=archiveAvatars.get(row.id)?.sha256??row.sha256}
+ return rows.filter(row=>(args.includeDisabled||row.enabled)&&(!args.platform||row.plugin===args.platform)).map(row=>({id:row.id,key:'source:'+row.id,channelId:row.channel_id,platform:row.plugin,name:row.name,locator:row.locator,enabled:!!row.enabled,createdAt:row.created_at,unreadCount:Number(row.unread??0),postCount:Number(row.total??0),...(row.first_id?{firstUnread:{id:row.first_id,kind:'news' as const}}:{}),...(row.last_id?{lastPost:{id:row.last_id,title:requestContext().principal.kind==='operator'?row.last_title:'',publishedAt:row.last_at,sourceName:row.name}}:{}),...(row.sha256?{avatar:{sourceId:row.id,sha256:row.sha256}}:{})}))
 }
 export function socialIdentity(key:unknown){
  requireAppAdministrator()

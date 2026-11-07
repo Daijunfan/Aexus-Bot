@@ -29,8 +29,9 @@ import { runScheduledAutomations } from '../actions/scheduled';
 import { diffWorkspace, mergeChanges } from '../core/patch';
 import { applyDependencyShifts } from '../database/dependencies';
 import { finalizeProperties } from '../database/propertyData';
-import { descendants } from '../model';
+import { descendants, pageIndex } from '../model';
 import { executeScoped } from './agent/scope';
+import {pageResources,pageProjection,pageRights,checkPageChanges,executePageAccess,type PageScope} from './pluginAccess';
 import { AgentRuntime } from './agent/runtime';
 import { conversations, conversationLog, selectConversation, closeConversation } from './agent/conversations';
 import { projectAgentDiff, filterAgentDiff } from '../core/agentDiff';
@@ -57,8 +58,22 @@ export class DataService {
   private automationSignals: TriggerMemory = {};
   private lastSchedulerCheck = 0;
   startScheduler() {
+    // The single writer sees every committed workspace revision. Recalculate
+    // whether background work exists only when that revision changes; a normal
+    // notebook without scheduled tasks should cost nothing on idle ticks.
+    let checked: Workspace | null = null, hasScheduledWork = false;
     const tick = async () => {
-      if (this.ticking || !this.workspace) return;
+      const workspace = this.workspace;
+      if (this.ticking || !workspace) return;
+      if (workspace !== checked) {
+        checked = workspace;
+        hasScheduledWork = workspace.pages.some(page => !page.trashedAt && (
+          (page.templateFor && page.repeat?.enabled) ||
+          page.reminders?.some(reminder => reminder.enabled && !reminder.deletedAt) ||
+          page.database?.automations?.some(rule => rule.enabled && rule.schedule?.enabled)
+        ));
+      }
+      if (!hasScheduledWork) { this.lastSchedulerCheck = Date.now(); return; }
       this.ticking = true;
       try {
         const result = await this.request({
@@ -73,9 +88,11 @@ export class DataService {
         this.ticking = false;
       }
     };
+    // First allow the GUI to receive its verified notebook snapshot. The first
+    // scheduled check runs within one second; explicit scheduler.run is still
+    // available immediately for CLI and tests.
     this.schedulerTimer = setInterval(() => void tick(), 1000);
     this.schedulerTimer.unref();
-    void tick();
   }
   stopScheduler() {
     clearInterval(this.schedulerTimer);
@@ -189,10 +206,12 @@ export class DataService {
             params: { pageId: effect.pageId, mode: effect.mode },
           });
   }
-  private commit(workspace: Workspace, request: ApiRequest) {
+  private commit(workspace: Workspace, request: ApiRequest,checkAccess?:(next:Workspace)=>void) {
+    const previousPages = this.workspace ? pageIndex(this.workspace.pages) : undefined;
     // A duplicated main Page gets independent file bytes and a fresh Agent session.
     for (const page of workspace.pages) {
-      if (page.space) fs.mkdirSync(this.storage.spaceRoot(page.id), { recursive: true, mode: 0o700 });
+      if (page.space && page !== previousPages?.get(page.id))
+        fs.mkdirSync(this.storage.spaceRoot(page.id), { recursive: true, mode: 0o700 });
       if (!page.space || this.workspace?.spaces?.[page.id] || !page.files?.length) continue;
       const replacements = new Map<string, string>();
       const files = page.files.map((file) => {
@@ -287,18 +306,22 @@ export class DataService {
     validateDomain(workspace, this.workspace);
     const next = { ...workspace, revision: this.revision + 1 };
     const previous = this.workspace;
+    const recordChange = previous ? this.changes.prepare(previous, next, request) : undefined;
+    checkAccess?.(next);
     if (this.folder) this.folder.save(next, previous, () => this.storage.save(next));
     else this.storage.save(next);
     this.workspace = next;
+    const nextPages = pageIndex(next.pages);
     for (const id of Object.keys(previous?.spaces || {})) {
-      if (!next.pages.some((page) => page.id === id && !page.trashedAt)) this.agents.stop(id);
-      if (!next.pages.some((page) => page.id === id)) {
+      const page = nextPages.get(id);
+      if (!page || page.trashedAt) this.agents.stop(id);
+      if (!page) {
         this.storage.removeSpace(id);
         this.storage.removeAgentLog(id);
       }
     }
     this.automationSignals = signals;
-    if (previous) this.changes.record(previous, next, request);
+    recordChange?.();
     this.broadcast({
       type: 'state',
       workspace: next,
@@ -345,12 +368,25 @@ export class DataService {
         : {}),
     });
     try {
+      if(request.method==='host.resources')return response(pageResources(this.workspace));
+      if(request.method==='host.execute'){
+        if(!this.workspace)throw new CommandError('NOT_INITIALIZED','请先初始化工作空间');
+        const {scope,method,params:input={}}=params as {scope:PageScope;method:string;params:Record<string,any>};scope.rootId=this.folder?.index.files['index.mininotion.json']?.id;
+        if(['fs.read','fs.write'].includes(method)){
+          const page=this.workspace.pages.find(p=>p.sourceFile?.path===input.path),rights=page&&pageRights(this.workspace,scope,page.id);
+          if(!this.folder||!page||String(input.path).endsWith('.mininotion.json')||String(input.path).split('/').includes('.mininotion')||!(method==='fs.read'?rights?.read:rights?.write))throw new CommandError('PAGE_ACCESS_DENIED','文件不属于已授权页面');
+          if(method==='fs.read')return response({data:this.folder.read(input.path),created:[]});
+          this.folder.write(input.path,String(input.content??''),input.hash);const scanned=this.folder.scan(this.workspace);if(scanned)this.commit(scanned,request);return response({data:this.folder.read(input.path),created:[]});
+        }
+        const before=this.workspace,value=await executePageAccess(before,scope,method,input,(workspace,name,data)=>runFileCommand({workspace} as DataService,name,data));
+        if(value.workspace!==before)this.commit(value.workspace,{...request,method,params:input,client:'employee:'+scope.employeeId},next=>checkPageChanges(before,next,scope));
+        return response({data:value.result,created:value.created});
+      }
       if(request.method.startsWith('fs.')&&!this.folder)throw new CommandError('WORKSPACE_REQUIRED','此接口需要 --workspace 工作文件夹');
       if(this.folder) {
         const folder=this.folder;
         if(request.method.startsWith('agent.'))throw new CommandError('HOST_MANAGED_AGENT','文件夹模式由宿主提供 Agent；此服务只处理文档和文件');
         if(['workspace.replace','backup.restore','backup.export'].includes(request.method))throw new CommandError('FOLDER_OPERATION_UNSUPPORTED','文件夹模式请通过文件和页面 API 修改数据；备份或迁移请复制整个 Workspace');
-        if(request.method==='file.export'&&params.type==='pdf')throw new CommandError('FOLDER_OPERATION_UNSUPPORTED','文件夹模式支持 Markdown、HTML、JSON 和 CSV 导出');
         if(request.method==='fs.asset-upload')return response(this.storage.saveAsset(params.name||path.basename(params.path||'asset'),params.path?fs.readFileSync(withinFolder(folder.root,params.path)):Buffer.from(String(params.contentBase64||''),'base64')));
         if(['fs.draft-read','fs.draft-write'].includes(request.method)){
           const file=params.key?path.join(folder.directory,'drafts',createHash('sha256').update(String(params.key)).digest('hex')+'.json'):path.join(folder.directory,'hosted-draft.json');

@@ -97,15 +97,22 @@ export function hierarchyRows(rows: Page[], view: DatabaseView, enabled = true):
   if (!enabled || subItemDisplay(view) !== 'nested')
     return rows.map((page) => ({ page, depth: 0, childCount: 0, expanded: true }));
   const ids = new Set(rows.map((row) => row.id));
-  const visit = (page: Page, depth: number): HierarchyRow[] => {
-    const children = rows.filter((row) => row.subItemOf === page.id),
-      expanded = !view.collapsedItems?.includes(page.id);
-    return [
-      { page, depth, childCount: children.length, expanded },
-      ...(expanded ? children.flatMap((child) => visit(child, depth + 1)) : []),
-    ];
-  };
-  return rows.filter((page) => !page.subItemOf || !ids.has(page.subItemOf)).flatMap((page) => visit(page, 0));
+  const children = new Map<string, Page[]>();
+  for (const page of rows) if (page.subItemOf) {
+    const siblings = children.get(page.subItemOf) || [];
+    siblings.push(page); children.set(page.subItemOf, siblings);
+  }
+  const collapsed = new Set(view.collapsedItems);
+  const pending = rows.filter(page => !page.subItemOf || !ids.has(page.subItemOf)).reverse().map(page => ({ page, depth: 0 }));
+  const result: HierarchyRow[] = [];
+  while (pending.length) {
+    const { page, depth } = pending.pop()!;
+    const nested = children.get(page.id) || [], expanded = !collapsed.has(page.id);
+    result.push({ page, depth, childCount: nested.length, expanded });
+    if (expanded)
+      for (let index = nested.length - 1; index >= 0; index--) pending.push({ page: nested[index], depth: depth + 1 });
+  }
+  return result;
 }
 
 export function executeStructureCommand(workspace: Workspace, method: string, params: CommandParams) {

@@ -45,7 +45,15 @@ export function MessageFile({conversation,file,onRemove,messageId}:{messageId?:s
  useI18n()
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),name='name' in file?file.name:file.path.split(/[\\/]/).at(-1)!,extension=name.split('.').at(-1)?.toUpperCase()??'FILE'
  const [size,setSize]=useState<number|undefined>('bytes' in file?file.bytes:undefined)
- useEffect(()=>{if('bytes' in file){setSize(file.bytes);return}let alive=true;void api.call<{bytes:number}>('transfer.download-info',{from:{...scope(conversation),path:file.path}}).then(info=>{if(alive)setSize(info.bytes)}).catch(()=>{});return()=>{alive=false}},[conversation,file.path])
+ const sharedWorkspace=file.path.startsWith('@workspace/')&&(conversation.startsWith('group:')||conversation.startsWith('channel:'))
+ useEffect(()=>{
+  let alive=true
+  const read=()=>{void api.call<{bytes:number}>('transfer.download-info',{from:{...scope(conversation),path:file.path}}).then(info=>{if(alive)setSize(info.bytes)}).catch(()=>{})}
+  if('bytes' in file){setSize(file.bytes);if(!sharedWorkspace)return}
+  read()
+  const off=sharedWorkspace?api.onEvent(event=>{if(event.channel==='conversation:files-changed'&&event.payload?.conversation===conversation)read()}):undefined
+  return()=>{alive=false;off?.()}
+ },[conversation,file.path,'bytes' in file?file.bytes:undefined])
  const kind=mediaKind('mimeType' in file?file.mimeType:fileMime(file.path))
  const download=async()=>{setBusy(true);setError('');try{const from={...scope(conversation),path:file.path};if(api.mode==='web')downloadBrowserFile(from);else await api.call('transfer.download-save',{from})}catch(cause){setError((cause as Error).message)}finally{setBusy(false)}}
  return <div className={'message-file-wrap'+(kind?' has-media':'')}>{kind&&<MessageMedia key={conversation+'/'+file.path} conversation={conversation} messageId={messageId} path={file.path} name={name} kind={kind}/>}<div className="message-file" data-file-kind={extension.toLowerCase()}><span className="attachment-file-icon"><Icon name="file"/><small>{extension.slice(0,5)}</small></span><span className="message-file-info"><strong title={name}>{name}</strong><small>{size!==undefined?attachmentSize(size)+' · ':''}{extension}</small></span><button disabled={busy} aria-label={onRemove?uiText('Remove attachment {0}',[name]):uiText('Download {0}',[name])} title={onRemove?uiText('Remove attachment'):uiText('Download file')} onClick={onRemove??(()=>void download())}>{busy?<span className="spinner"/>:<Icon name={onRemove?'close':'cloud-download'}/>}</button></div>{error&&<small className="message-file-error" role="alert">{error}</small>}</div>

@@ -122,3 +122,37 @@ test('a failed debounced patch retains its ID when later edits arrive for confli
  sync.update({...sync.workspace,name:'later'});assert.equal(sync.pending[0].id,id);assert.equal(sync.pending.length,2);
  await sync.flush();
 });
+
+test('delta mutation receipts acknowledge a local edit without copying unrelated pages',async()=>{
+  const before=fixture();
+  let server=before, receipts=0;
+  const sync=new WorkspaceSync(before,async(method,params,id)=>{
+    assert.equal(method,'workspace.patch');
+    receipts++;
+    const updated=applyWorkspacePatch(server,params.patch);
+    server={...updated,revision:(server.revision||0)+1};
+    return {jsonrpc:'2.0',id:id!,result:{},revision:server.revision!,delta:workspaceDelta(before,server)};
+  },{debounceMs:10000});
+  const edited={...before.pages[0],title:'Delta notebook'};
+  sync.update({...before,pages:[edited,...before.pages.slice(1)]});
+  await sync.flush();
+  assert.equal(receipts,1);
+  assert.equal(sync.pending.length,0);
+  assert.equal(sync.workspace.pages[0].title,'Delta notebook');
+  assert.equal(sync.workspace.pages[1],before.pages[1]);
+  assert.equal(sync.workspace.pages[1].blocks,before.pages[1].blocks);
+});
+
+test('delta stream repairs a missed revision using the canonical state',async()=>{
+  const before=fixture();
+  const next={...before,revision:2,pages:[{...before.pages[0],title:'External update'},...before.pages.slice(1)]};
+  let fetches=0;
+  const sync=new WorkspaceSync(before,async method=>{
+    assert.equal(method,'workspace.get');fetches++;
+    return {jsonrpc:'2.0',id:'resync',revision:2,result:next};
+  });
+  sync.receive({type:'delta',revision:2,delta:{...workspaceDelta(before,next),baseRevision:99}});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(fetches,1);
+  assert.equal(sync.workspace.pages[0].title,'External update');
+});

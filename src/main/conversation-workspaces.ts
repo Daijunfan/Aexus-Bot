@@ -1,3 +1,4 @@
+import {isAppAdministrator} from './application-authority'
 import {channelMemberIds} from './channel-members'
 import {directoryName} from '../shared/directory-names'
 import {directoryPath} from './directory-aliases'
@@ -15,12 +16,15 @@ import {all,one} from './channel-store'
 import {atomicJson,readJson} from './atomic-file'
 import {workspaceFiles,workspacePath} from './files'
 import {startTransfer,getTransfer,cancelTransfer,type FileEndpoint} from './transfers'
+import {fileVersion} from './read-cache'
 
 type Identity={conversation:string;kind:'group'|'channel';id:string;name:string;memberIds:string[]}
 type Directory={version:1;folderName:string;members:Record<string,string>}
 const copies=new Map<string,string>()
-const secretary=()=>{const p=requestContext().principal;return p.kind==='agent'&&readStore().sessions.some(card=>card.id===p.employeeId&&!card.deleting&&card.managementRole==='secretary')}
 const owner=()=>JSON.stringify([requestContext().principal,requestContext().credentialHash])
+let filesChanged:(conversation:string)=>void=()=>{}
+export function setConversationFilesEmitter(handler:typeof filesChanged){filesChanged=handler}
+export const sharedFilesChanged=(conversation:string)=>filesChanged(conversation)
 const safeName=(value:string)=>{const name=Array.from(value.replace(/[<>:"/\\|?*\x00-\x1f]/g,'-').replace(/[. ]+$/,'').trim()).slice(0,90).join('');return !name||/^\.+$/.test(name)?'Untitled':/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)?'_'+name:name}
 function identity(value:unknown):Identity{
  if(typeof value!=='string'||!/^(group|channel):[a-zA-Z0-9_-]+$/.test(value))throw Error('Choose a group or channel conversation')
@@ -33,7 +37,7 @@ function identity(value:unknown):Identity{
 }
 function allowed(value:unknown){
  authorize('conversation.workspace');const info=identity(value),principal=requestContext().principal
- if(principal.kind==='agent'&&!info.memberIds.includes(principal.employeeId))throw Error('Shared files require current conversation membership')
+ if(!isAppAdministrator(principal)&&principal.kind==='agent'&&!info.memberIds.includes(principal.employeeId))throw Error('Shared files require current conversation membership')
  return info
 }
 function directory(root:string,create=true){
@@ -67,7 +71,7 @@ export function workspaceForMember(conversation:string,employeeId?:string,create
  const info=identity(conversation)
  if(employeeId&&!info.memberIds.includes(employeeId))throw Error('Employee is not a current conversation member')
  const {root,data}=layout(info,create),cards=readStore().sessions,card=cards.find(card=>card.id===employeeId),memberDirectory=employeeId?data.members[employeeId]:undefined
- return {conversation,name:info.name,root,folderName:data.folderName,members:info.memberIds.map(id=>({employeeId:id,name:cards.find(card=>card.id===id)!.title,directory:data.members[id]})),...(memberDirectory?{memberDirectory,memberPath:path.join(root,memberDirectory)}:{}),...(card?{personalWorkspace:card.cwd}:{}),nativeAccess:!card||employeeSettings(readStore(),card).mode!=='cloud'&&card.kind!=='cloud-native-worker',policy:'Current members read shared files and edit their own named subfolder. Only the human user or a member whose Company role is Secretary can edit direct root files. Peer member folders remain read-only to Agents. This workspace is on the Core host; nativeAccess states whether this employee can use it directly. Names and paths remain stable after display renames.'}
+ return {conversation,name:info.name,root,folderName:data.folderName,members:info.memberIds.map(id=>({employeeId:id,name:cards.find(card=>card.id===id)!.title,directory:data.members[id]})),...(memberDirectory?{memberDirectory,memberPath:path.join(root,memberDirectory)}:{}),...(card?{personalWorkspace:card.cwd}:{}),nativeAccess:!card||employeeSettings(readStore(),card).mode!=='cloud'&&card.kind!=='cloud-native-worker',policy:info.kind==='group'?'Every current group member has equal read/create/upload/edit/delete rights over shared content, including root files and peer folders. User and Secretary administer it without joining. Named member folder identities and host-managed metadata remain protected. Work on a personal Company copy, then upload the updated file.':'Authorized channel members read shared files and edit their own named subfolder; user and Secretary administer all content. Existing paths remain stable.'}
 }
 function relative(value:unknown='.'){
  if(typeof value!=='string'||!value||value.includes('\0')||value.includes('\\')||path.isAbsolute(value))throw Error('Use a relative shared file path')
@@ -86,21 +90,13 @@ export function conversationFileEndpoint(conversation:string,value:string,destin
  noLinks(root,file)
  const writable=(candidate:string,operation='destination')=>{
   const parts=path.relative(root,workspacePath(root,candidate)).split(path.sep).filter(Boolean)
-  if(principal.kind!=='agent'||parts[0]===data.members[principal.employeeId])return
-  // The directory itself is a transfer destination, never an editable object.
-  if(secretary()){
-   if(!parts.length&&['destination','copy-info'].includes(operation))return
-   if(/^\.agents-transfer-[a-f0-9-]{36}$/.test(parts[0]??'')&&operation.startsWith('copy-')||parts.length===1&&/^\.agents-transfer-[a-f0-9-]{36}$/.test(parts[0])&&operation==='mkdir')return
-   if(parts.length===1&&!Object.values(data.members).includes(parts[0])&&operation!=='mkdir'){
-    const candidate=path.join(root,parts[0]);if(!fs.existsSync(candidate)||fs.lstatSync(candidate).isFile())return
-   }
-  }
-  throw Error('Only your named conversation subfolder is writable; only a member Secretary may maintain direct root files; peer folders are read-only')
+  if(info.kind==='group'||isAppAdministrator(principal)||principal.kind!=='agent'||parts[0]===data.members[principal.employeeId])return
+  throw Error('Only your named conversation subfolder is writable; user and Secretary manage shared files')
  }
  if(destination)writable(file)
- return {root,path:file,validate:(operation,args)=>withCaller(context,()=>{
+ return {root,path:file,changed:()=>sharedFilesChanged(conversation),validate:(operation,args)=>withCaller(context,()=>{
   allowed(conversation);noLinks(root,String(args.path??file));if(args.to!==undefined)noLinks(root,String(args.to))
-  if(destination){writable(String(args.path??file),operation);if(args.to!==undefined){writable(String(args.to),operation);if(principal.kind==='agent'&&secretary()&&String(args.to).split('/').length===1&&operation==='copy-commit'&&!fs.lstatSync(path.join(root,String(args.path))).isFile())throw Error('Only direct files may be imported at the conversation root')}}
+  if(destination){writable(String(args.path??file),operation);if(args.to!==undefined){writable(String(args.to),operation);if(operation==='copy-commit'&&Object.values(data.members).includes(String(args.to)))throw Error('Named member workspace identities cannot be replaced');if(info.kind!=='group'&&!isAppAdministrator(principal)&&principal.kind==='agent'&&String(args.to).split('/').length===1&&operation==='copy-commit'&&!fs.lstatSync(path.join(root,String(args.path))).isFile())throw Error('Only direct files may be imported at the conversation root')}}
  })}
 }
 export function conversationFile(args:Record<string,any>){
@@ -109,22 +105,24 @@ export function conversationFile(args:Record<string,any>){
  const operations={list:'list',read:'read',image:'read-image',info:'copy-info',chunk:'copy-read',write:'write',mkdir:'mkdir',move:'move',trash:'trash',restore:'restore'} as const
  if(!Object.hasOwn(operations,operation))throw Error('Choose a supported shared file operation')
  const writing=['write','mkdir','move','trash','restore'].includes(operation),rootRestore=operation==='restore'&&typeof args.id==='string'&&args.id.startsWith('root:'),file=directoryPath(root,relative(args.path??'.')),target=args.to===undefined?undefined:directoryPath(root,relative(args.to))
- if(operation==='mkdir'&&principal.kind==='agent'&&!file.startsWith(data.members[principal.employeeId]+'/'))throw Error('Create directories inside your own member workspace')
+ if(info.kind!=='group'&&operation==='mkdir'&&!isAppAdministrator(principal)&&principal.kind==='agent'&&!file.startsWith(data.members[principal.employeeId]+'/'))throw Error('Create directories inside your own member workspace')
  if(rootRestore){
-  if(principal.kind==='agent'&&!secretary())throw Error('Only a member Secretary may restore root files')
+  if(info.kind!=='group'&&!isAppAdministrator(principal))throw Error('Only the user or Secretary may restore root files')
   const id=args.id.slice(5);if(!/^[a-f0-9-]{36}$/.test(id))throw Error('Invalid trash identity')
   const manifest=noLinks(root,'.agents-company/trash/'+id+'.json'),original=JSON.parse(fs.readFileSync(manifest,'utf8')).path
-  if(typeof original!=='string'||relative(original).split('/').length!==1||Object.values(data.members).includes(original)||!fs.lstatSync(noLinks(root,'.agents-company/trash/'+id)).isFile())throw Error('Root restore is limited to direct files')
+  if(typeof original!=='string'||info.kind!=='group'&&relative(original).split('/').length!==1||Object.values(data.members).includes(original)||info.kind!=='group'&&!fs.lstatSync(noLinks(root,'.agents-company/trash/'+id)).isFile())throw Error('Cannot restore a managed workspace identity')
   conversationFileEndpoint(info.conversation,original,true)
  }
- conversationFileEndpoint(info.conversation,operation==='restore'&&principal.kind==='agent'&&!rootRestore?data.members[principal.employeeId]:file,writing)
+ conversationFileEndpoint(info.conversation,operation==='restore'&&info.kind!=='group'&&!isAppAdministrator(principal)&&principal.kind==='agent'&&!rootRestore?data.members[principal.employeeId]:file,writing)
  if(target!==undefined)conversationFileEndpoint(info.conversation,target,true)
  if(writing&&operation!=='restore'&&(Object.values(data.members).includes(file)||target!==undefined&&Object.values(data.members).includes(target)))throw Error('Named employee workspace folders cannot be replaced, renamed or removed')
  if(operation==='write'&&(typeof args.content!=='string'||Buffer.byteLength(args.content)>4*1024*1024))throw Error('Shared text writes must be at most 4 MiB')
- const own=principal.kind==='agent'?data.members[principal.employeeId]:undefined,rootWrite=!!own&&secretary()&&(rootRestore||operation!=='restore'&&(!file.startsWith(own+'/')||target!==undefined&&!target.startsWith(own+'/'))),useOwn=writing&&!!own&&!rootWrite,subroot=useOwn?path.join(root,own!):root
+ const own=!isAppAdministrator(principal)&&principal.kind==='agent'?data.members[principal.employeeId]:undefined,rootWrite=writing&&info.kind==='group',useOwn=writing&&!!own&&info.kind!=='group',subroot=useOwn?path.join(root,own!):root
  const strip=(value:string)=>useOwn?path.relative(subroot,path.join(root,value)):value
  const result=workspaceFiles(subroot,operations[operation as keyof typeof operations],{...args,...(rootRestore?{id:args.id.slice(5)}:{}),path:operation==='restore'?'.':strip(file),...(target?{to:strip(target)}:{}),offset:args.offset??0,length:262144})
- if(operation==='list')return {...result,path:(result.path??'').split(path.sep).join('/'),entries:result.entries!.filter((entry:{name:string})=>entry.name!=='.agents-company'&&!entry.name.startsWith('.agents-transfer-')).map((entry:{path:string})=>({...entry,path:entry.path.split(path.sep).join('/'),writable:principal.kind==='operator'||entry.path.split(path.sep)[0]===own||secretary()&&!('directory' in entry&&entry.directory)&&entry.path.split(path.sep).length===1}))}
+ if(writing)sharedFilesChanged(info.conversation)
+ if(operation==='info')return {...result,version:fileVersion(noLinks(root,file))}
+ if(operation==='list')return {...result,path:(result.path??'').split(path.sep).join('/'),entries:result.entries!.filter((entry:{name:string})=>entry.name!=='.agents-company'&&!entry.name.startsWith('.agents-transfer-')).map((entry:{path:string})=>({...entry,path:entry.path.split(path.sep).join('/'),managed:Object.values(data.members).includes(entry.path),writable:info.kind==='group'||isAppAdministrator(principal)||entry.path.split(path.sep)[0]===own}))}
  if(operation==='trash'&&rootWrite)return {...result,id:'root:'+result.id}
  return result.path?{...result,path:(useOwn?[own,result.path].join('/'):result.path).split(path.sep).join('/')}:result
 }
@@ -134,10 +132,10 @@ export function conversationWorkspaceRequest(command:string,args:Record<string,a
  for(const key of ['create','hidden','cancel'])if(args[key]!==undefined&&typeof args[key]!=='boolean')throw Error(key+' must be boolean')
  for(const key of Object.keys(args))if(args[key]!==undefined&&!Object.hasOwn(contract.inputSchema.properties,key))throw Error('Unknown shared workspace field: '+key)
  if(command==='conversation.file')return conversationFile(args)
- if(command==='conversation.workspace'){const info=allowed(args.conversation),employee=args.employee??(principal.kind==='agent'?principal.employeeId:undefined);if(principal.kind==='agent'&&employee!==principal.employeeId)throw Error('Choose your own employee identity');return workspaceForMember(info.conversation,employee)}
+ if(command==='conversation.workspace'){const info=allowed(args.conversation),employee=args.employee??(!isAppAdministrator(principal)&&principal.kind==='agent'?principal.employeeId:undefined);if(!isAppAdministrator(principal)&&principal.kind==='agent'&&employee!==principal.employeeId)throw Error('Choose your own employee identity');return workspaceForMember(info.conversation,employee)}
  if(command==='conversation.workspaces'){
-  const employee=args.employee??(principal.kind==='agent'?principal.employeeId:undefined)
-  if(principal.kind==='agent'&&employee!==principal.employeeId)throw Error('Choose your own employee identity')
+  const employee=args.employee??(!isAppAdministrator(principal)&&principal.kind==='agent'?principal.employeeId:undefined)
+  if(!isAppAdministrator(principal)&&principal.kind==='agent'&&employee!==principal.employeeId)throw Error('Choose your own employee identity')
   if(employee&&!readStore().sessions.some(card=>card.id===employee&&!card.deleting))throw Error('Unknown employee')
   const refs=[...catalog().groups.map(g=>'group:'+g.id),...all('SELECT id FROM channels').map(c=>'channel:'+c.id)]
   return refs.filter(ref=>!employee||identity(ref).memberIds.includes(employee)).map(ref=>workspaceForMember(allowed(ref).conversation,employee))
@@ -147,7 +145,7 @@ export function conversationWorkspaceRequest(command:string,args:Record<string,a
    if(!value||typeof value!=='object'||Object.keys(value).some(key=>!['conversation','employee','path'].includes(key))||!!value.conversation===!!value.employee)throw Error('A copy location needs conversation or employee, and path')
    if(value.conversation)return {ref:{conversation:value.conversation,path:relative(value.path)},endpoint:conversationFileEndpoint(value.conversation,value.path,destination)}
    const employee=value.employee==='self'&&principal.kind==='agent'?principal.employeeId:value.employee
-   if(typeof employee!=='string'||principal.kind==='agent'&&employee!==principal.employeeId)throw Error('Copies may use only your own personal workspace')
+   if(typeof employee!=='string'||!isAppAdministrator(principal)&&principal.kind==='agent'&&employee!==principal.employeeId)throw Error('Copies may use only your own personal workspace')
    const ref={employee,path:relative(value.path)},base=resolveEndpoint(ref,destination),context=requestContext()
    return {ref,endpoint:{...base,validate:()=>withCaller(context,()=>{authorize(command,args);const current=resolveEndpoint(ref,destination);if(current.root!==base.root||JSON.stringify(current.remote)!==JSON.stringify(base.remote))throw Error('Personal workspace changed during transfer')})}}
   }

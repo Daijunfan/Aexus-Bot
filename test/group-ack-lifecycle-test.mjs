@@ -28,9 +28,9 @@ try{
  const privateReply=(await status()).lastReply;assert.ok(privateReply&&!privateReply.readAt);assert.deepEqual(await rpc('session.queue',{id:sid}),[])
  checks.push('Held reading returns promptly, rejects Steer, permits queueing; native success precedes same-thread work and queued private reply')
  for(const note of ['null','{"text":null}','Any ordinary private note.','']){
-  fs.writeFileSync(file('.ack-output.txt'),note);const n=(await history()).length,req=await send('NOTE_'+n);await wait(req.id);await f.until(async()=>!(await status()).busy,'note idle');assert.equal((await history()).length,n+1);assert.ok((await delivery(req.id)).readAt);assert.deepEqual((await status()).lastReply,privateReply)
+  fs.writeFileSync(file('.ack-output.txt'),note);const n=(await history()).length,req=await send('NOTE_'+n);await wait(req.id);await f.until(async()=>!(await status()).busy,'note idle');assert.equal((await history()).length,n+1);assert.ok((await delivery(req.id)).readAt);assert.ok((await status()).lastReply&&!/PRIVATE_READING/.test((await status()).lastReply.text));assert.notEqual((await status()).lastReply.id,privateReply.id)
  }
- checks.push('No special response format or publication call is required to complete reading; private unread is retained')
+ checks.push('No special response format or publication call is required to complete reading; reading notes stay hidden and formal native work creates a private reply')
  const before=fs.readFileSync(file('-work.json'),'utf8');hold('.ack-fail');const failed=await send('NATIVE_READING_FAILED');assert.match((await wait(failed.id,'failed')).error,/fixture acknowledgment failure/i);assert.equal((await delivery(failed.id)).readAt,undefined);assert.equal(fs.readFileSync(file('-work.json'),'utf8'),before);release('.ack-fail')
  hold('.hold-ack');const stopped=await within(send('STOP_READING'),'send');await waitAck(stopped.id);await rpc('session.enqueue',{id:sid,text:'CANCELLED_QUEUED_TASK'});await within(rpc('session.interrupt',{id:sid}),'Stop');await wait(stopped.id,'interrupted');release('.hold-ack');await f.until(async()=>!(await status()).busy,'stopped idle')
  assert.equal((await delivery(stopped.id)).readAt,undefined);assert.deepEqual(await rpc('session.queue',{id:sid}),[]);assert.equal(fs.readFileSync(file('-work.json'),'utf8'),before)

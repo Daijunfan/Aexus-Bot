@@ -16,10 +16,18 @@ const { pathToFileURL } = require('node:url');
 const { randomUUID } = require('node:crypto');
 const { assetPath } = require('./storage.cjs');
 const { BackendClient } = require('../dist-cli/client.cjs');
+const { applyWorkspaceDelta } = require('../dist-cli/delta.cjs');
+const { startupContent } = require('./startup.cjs');
 
 const workspaceFlag=process.argv.indexOf('--workspace');
-const folderRoot=workspaceFlag>=0?process.argv[workspaceFlag+1]:process.env.MINI_NOTION_WORKSPACE;
+// Toolbox uses a stable user-owned folder, never data inside the replaceable .app.
+const defaultWorkspace = path.join(require('node:os').homedir(), 'Library', 'Application Support', 'Toolbox', 'MiniNotion', 'Workspace');
+// Explicit isolated E2E data directories must never be redirected to a user's
+// real Toolbox workspace. Production launches still use the stable folder.
+const isolatedTest = process.env.MINI_NOTION_TEST === '1' && !!process.env.MINI_NOTION_DATA_DIR;
+const folderRoot=workspaceFlag>=0?process.argv[workspaceFlag+1]:(process.env.MINI_NOTION_WORKSPACE||(isolatedTest?null:defaultWorkspace));
 if(folderRoot){
+  fs.mkdirSync(path.resolve(folderRoot), {recursive:true});
   process.env.MINI_NOTION_WORKSPACE=fs.realpathSync(path.resolve(folderRoot));
   const metadata=path.join(process.env.MINI_NOTION_WORKSPACE,'.mininotion');
   if(fs.existsSync(metadata)&&fs.lstatSync(metadata).isSymbolicLink())throw new Error('.mininotion 不能是软链接');
@@ -27,6 +35,14 @@ if(folderRoot){
 }
 app.setName('Mini Notion');
 if (process.env.MINI_NOTION_DATA_DIR) app.setPath('userData', process.env.MINI_NOTION_DATA_DIR);
+const startupClock = Date.now();
+function startupMark(step) {
+  if (process.env.MINI_NOTION_STARTUP_PROFILE !== '1') return;
+  try {
+    fs.appendFileSync(path.join(app.getPath('userData'), 'startup-main.jsonl'),
+      JSON.stringify({ step, at: Date.now(), sinceMs: Date.now() - startupClock }) + '\n');
+  } catch { /* Profiling must never prevent the app from starting. */ }
+}
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'asset',
@@ -37,6 +53,10 @@ let window;
 let storage;
 let client;
 let unsubscribe;
+let snapshotFresh = false;
+let bootstrapComplete = false;
+let bootSnapshot;
+let queuedStartupDeltas = [];
 let quitting = false;
 let preparingQuit = false;
 let servicePaused = false;
@@ -65,6 +85,16 @@ const notifications = new Set();
 const isTest = process.env.MINI_NOTION_TEST === '1';
 const backgroundTest = isTest && process.env.MINI_NOTION_BACKGROUND_TEST === '1';
 if(backgroundTest&&process.platform==='darwin')app.setActivationPolicy('prohibited');
+const dockPreferences = path.join(require('node:os').homedir(), 'Library', 'Application Support', 'Toolbox', 'dock.json');
+let dockVisible;
+function syncDock() {
+  let visible = false;
+  try { visible = JSON.parse(fs.readFileSync(dockPreferences, 'utf8')).includes('local.mininotion.desktop'); } catch {}
+  if (visible !== dockVisible) {
+    dockVisible = visible;
+    app.setActivationPolicy(visible ? 'regular' : 'accessory');
+  }
+}
 const background = backgroundTest || process.argv.includes('--background');
 if (!isTest && !app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', (_, argv) => {
@@ -95,7 +125,7 @@ function openLink(url) {
     background || window?.focus();
     return;
   }
-  if (/^(https?:|mailto:|tel:)/i.test(url)) return shell.openExternal(url);
+  if (!backgroundTest && /^(https?:|mailto:|tel:)/i.test(url)) return shell.openExternal(url);
 }
 app.on('open-url', (event, url) => {
   event.preventDefault();
@@ -184,6 +214,7 @@ function installMenu() {
           { role: 'pasteAndMatchStyle', label: '粘贴并匹配样式' },
           { label: '全选', accelerator: 'CmdOrCtrl+A', click: () => send('select-all') },
           { label: '评论所选内容', accelerator: 'CmdOrCtrl+Shift+M', click: () => send('comment-selection') },
+          { label: '发送选区给 Agent', accelerator: 'CmdOrCtrl+Shift+J', click: () => send('selection-agent') },
           { type: 'separator' },
           { label: '查找…', accelerator: 'CmdOrCtrl+F', click: () => send('find') },
           { role: 'startSpeaking', label: '开始朗读' },
@@ -227,6 +258,8 @@ function installMenu() {
 }
 
 function createWindow() {
+  startupMark('window-create');
+  const contentHint = startupContent(client.directory);
   window = new BrowserWindow({
     width: 1380,
     height: 920,
@@ -242,7 +275,10 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      additionalArguments: folderRoot?['--mini-notion-folder-mode']:[],
+      additionalArguments: [
+        ...(folderRoot ? ['--mini-notion-folder-mode'] : []),
+        ...(contentHint ? ['--mini-notion-startup-content=' + contentHint] : []),
+      ],
       spellcheck: true,
       backgroundThrottling: !background,
     },
@@ -252,6 +288,7 @@ function createWindow() {
     return { action: 'deny' };
   });
   window.webContents.on('did-finish-load', () => {
+    startupMark('renderer-html-loaded');
     void client.call('ui.register');
   });
   window.webContents.on('will-navigate', (event, url) => {
@@ -283,7 +320,16 @@ function createWindow() {
 app
   .whenReady()
   .then(async () => {
+    startupMark('electron-ready');
     if (backgroundTest) app.dock?.hide();
+    if (process.platform === 'darwin' && !isTest) {
+      syncDock();
+      fs.mkdirSync(path.dirname(dockPreferences), { recursive: true });
+      const watcher = fs.watch(path.dirname(dockPreferences), (_, file) => {
+        if (!file || file === 'dock.json') syncDock();
+      });
+      app.once('will-quit', () => watcher.close());
+    }
     client = new BackendClient({ workspace: process.env.MINI_NOTION_WORKSPACE, directory: app.getPath('userData'), clientId: `gui-${process.pid}` });
     storage = {
       directory: client.directory,
@@ -300,18 +346,41 @@ app
     const subscribe = async () => {
       if (quitting) return;
       servicePaused = false;
+      snapshotFresh = false;
       try {
         let firstEvent = true;
         unsubscribe = await client.subscribe(
           (event) => {
-            if (event.type === 'state') {
+            if (event.type === 'state' || event.type === 'delta') {
               if (firstEvent && window) {
                 firstEvent = false;
                 void client.call('ui.register');
               }
-              storage.current = event.workspace;
+              // The first snapshot is being fetched once over RPC. Changes
+              // arriving before it finishes are replayed by revision afterwards.
+              if (event.type === 'delta' && !storage.current) {
+                queuedStartupDeltas.push(event);
+                return;
+              }
+              const current = event.type === 'state'
+                ? event.workspace
+                : applyWorkspaceDelta(storage.current, event.delta);
+              if (event.type === 'delta' && !current) {
+                // A missed revision must be recovered from a full snapshot.
+                void client.call('workspace.get').then(workspace => {
+                  if (storage.current && (storage.current.revision || 0) > (workspace?.revision || 0)) return;
+                  storage.current = workspace;
+                  window?.webContents.send('workspace:state', {type:'state',workspace,revision:workspace?.revision || 0});
+                }).catch(error => console.error('Workspace resync:',error));
+                return;
+              }
+              storage.current = current;
+              if (event.type === 'state' && current) {
+                snapshotFresh = true;
+                bootstrapComplete = true;
+              }
               window?.webContents.send('workspace:state', event);
-              if (event.workspace) nativeTheme.themeSource = event.workspace.settings.theme;
+              if (current && nativeTheme.themeSource !== current.settings.theme) nativeTheme.themeSource = current.settings.theme;
             } else if (event.type === 'notification') showReminder(event.item);
             else if (event.type === 'agent') window?.webContents.send('agent:event', event);
             else if (event.type === 'shutdown') servicePaused = true;
@@ -336,15 +405,19 @@ app
             }
           },
           () => {
+            snapshotFresh = false;
             if (!quitting && !servicePaused) setTimeout(() => void subscribe(), 1000);
           },
+          { delta:true, initialState: bootstrapComplete },
         );
       } catch {
         if (!quitting) setTimeout(() => void subscribe(), 2000);
       }
     };
     resumeService = subscribe;
-    await client.ensure();
+    // Register handlers before loading the renderer. The connection starts in
+    // parallel with the first window, so a cold folder scan cannot hold back
+    // the visible loading state.
     protocol.handle('asset', (request) => {
       try {
         return net.fetch(pathToFileURL(storage.assetPath(request.url)).toString());
@@ -354,10 +427,19 @@ app
     });
     ipcMain.handle('api:request', async (_, method, params, id) => {
       if (servicePaused) await subscribe();
-      return client.request(method, params, id);
+      // Only changed pages and metadata cross the Electron IPC boundary.
+      return client.request(method, params, id, 'delta');
     });
-    ipcMain.handle('workspace:load', async () => {
-      let workspace = await client.call('workspace.get');
+    const loadWorkspace = async () => {
+      startupMark('workspace-load-begin');
+      // The initial backend RPC snapshot is shared with the first renderer.
+      // A reconnect later reuses the current event-stream snapshot.
+      const cached = snapshotFresh && !!storage.current;
+      // Once startup has completed, a subsequent service restart must fetch a
+      // new snapshot rather than reuse the already-resolved boot promise.
+      let workspace = cached ? storage.current
+        : await (!bootstrapComplete && bootSnapshot ? bootSnapshot : client.call('workspace.get'));
+      startupMark(cached ? 'workspace-load-cached' : 'workspace-load-shared');
       if (workspace && pendingPageId && workspace.pages.some((p) => p.id === pendingPageId && !p.trashedAt)) {
         const expanded = new Set(workspace.expanded);
         let parent = workspace.pages.find((page) => page.id === pendingPageId)?.parentId;
@@ -390,8 +472,14 @@ app
         workspace = response.workspace;
       }
       pendingPageId = undefined;
+      startupMark('workspace-load-return');
       return { workspace, dataPath: client.directory, version: app.getVersion() };
-    });
+    };
+    ipcMain.handle('workspace:load', loadWorkspace);
+    // Large workspace snapshots travel as one UTF-8 string to the renderer,
+    // where JSON.parse reconstructs them once. This avoids multiple deep
+    // structured clones through the Electron isolation boundary.
+    ipcMain.handle('workspace:load-json', async () => JSON.stringify(await loadWorkspace()));
     ipcMain.handle('workspace:save', async (_, workspace) => {
       await client.call('workspace.replace', { workspace, revision: workspace.revision || 0, confirm: true });
       return Date.now();
@@ -495,17 +583,45 @@ app
       await client.call('file.export', { pageId: workspace.activePageId, output: filePath, type: 'pdf' });
       return true;
     });
-    await subscribe();
-    if (!isTest && storage.current?.settings.desktopNotifications && Notification.isSupported()) {
-      try {
-        for (const notification of await Notification.getHistory()) {
-          const item = storage.current.inbox?.find((item) => item.id === notification.id);
-          if (item) bindNotification(notification, item);
+    // Start the only local writer immediately but let Electron create its window
+    // while the server opens, verifies and scans the notebook. Renderer load()
+    // still waits for an authoritative RPC snapshot before enabling editing.
+    startupMark('connection-start');
+    bootSnapshot = (async () => {
+      await subscribe();
+      // A single authoritative snapshot serves both the main process and the
+      // first renderer load. The initial SSE subscription contains no 20+ MB
+      // duplicate snapshot, only incremental updates after this point.
+      const snapshot = await client.call('workspace.get');
+      if (!snapshotFresh) {
+        storage.current = snapshot;
+        const deltas = queuedStartupDeltas.splice(0).sort((a, b) => a.revision - b.revision);
+        for (const event of deltas) {
+          if (event.revision <= (storage.current?.revision || 0)) continue;
+          const next = applyWorkspaceDelta(storage.current, event.delta);
+          if (!next) {
+            storage.current = await client.call('workspace.get');
+            break;
+          }
+          storage.current = next;
         }
-      } catch (error) {
-        console.error('Notification history:', error.message);
+        snapshotFresh = true;
+        bootstrapComplete = true;
       }
-    }
+      return storage.current;
+    })();
+    void bootSnapshot.then(async () => {
+      if (!isTest && storage.current?.settings.desktopNotifications && Notification.isSupported()) {
+        try {
+          for (const notification of await Notification.getHistory()) {
+            const item = storage.current.inbox?.find((item) => item.id === notification.id);
+            if (item) bindNotification(notification, item);
+          }
+        } catch (error) {
+          console.error('Notification history:', error.message);
+        }
+      }
+    }).catch(error => console.error('Mini Notion 连接恢复:', error));
     installMenu();
     // Both isolated and native-lifecycle tests must leave the system URL handler alone.
     if (app.isPackaged && process.env.MINI_NOTION_TEST === undefined)

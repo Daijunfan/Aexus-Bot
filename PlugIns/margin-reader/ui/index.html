@@ -33,7 +33,6 @@
   <header class="app-bar">
     <button class="brand" id="home" title="返回文库"><img src="./icon.svg" alt=""><span>Margin Reader<small>你的本地阅读空间</small></span></button>
     <div class="top-actions">
-      <button id="new-folder" title="新建文件夹"><span data-icon="folder-plus"></span><span>新建文件夹</span></button>
       <button id="import-url"><span data-icon="link"></span><span>保存网页</span></button>
       <button class="primary" id="import-files"><span data-icon="upload"></span><span>导入文档</span></button>
       <button class="icon-button" id="theme" title="切换主题" aria-label="切换主题"><span data-icon="sun"></span></button>
@@ -49,7 +48,7 @@
     <div class="divider" id="explorer-divider" role="separator" tabindex="0" aria-label="调整文件树宽度" aria-orientation="vertical"></div>
     <main class="main-pane">
       <section id="library-view" class="library-view">
-        <div class="library-top"><div><nav id="breadcrumbs" class="breadcrumbs" aria-label="文件路径"></nav><h1 id="folder-title">我的文库</h1><p id="folder-count" class="muted">正在读取文库…</p></div><div class="view-switch" aria-label="文件视图"><button id="grid-view" class="icon-button" aria-label="大文件夹视图" title="大文件夹视图"><span data-icon="grid"></span></button><button id="list-view" class="icon-button" aria-label="列表视图" title="列表视图"><span data-icon="list"></span></button></div></div>
+        <div class="library-top"><div><nav id="breadcrumbs" class="breadcrumbs" aria-label="文件路径"></nav><h1 id="folder-title">我的文库</h1><p id="folder-count" class="muted">正在读取文库…</p></div><div class="library-top-actions"><button id="new-folder" type="button" title="在当前文件夹中新建文件夹" aria-label="在当前文件夹中新建文件夹"><span data-icon="folder-plus"></span><span>新建文件夹</span></button><div class="view-switch" aria-label="文件视图"><button id="grid-view" class="icon-button" aria-label="大文件夹视图" title="大文件夹视图"><span data-icon="grid"></span></button><button id="list-view" class="icon-button" aria-label="列表视图" title="列表视图"><span data-icon="list"></span></button></div></div></div>
         <div class="library-controls"><div class="library-search" role="search" aria-label="搜索文库"><span data-icon="search"></span><input id="file-filter" type="search" placeholder="搜索文库文件与文件夹…" aria-label="搜索文库文件与文件夹" aria-controls="files" autocomplete="off"><button id="clear-file-filter" type="button" class="icon-button" title="清除搜索" aria-label="清除文件搜索" hidden>×</button><kbd>⌘ F</kbd></div></div>
         <div id="library-no-matches" class="library-no-matches" role="status" hidden><span data-icon="search"></span><h2>没有匹配的文件或文件夹</h2><p>试试文件名或路径中的其他关键词。</p><button id="reset-file-filter" type="button">清除搜索</button></div>
         <div class="selection-bar" id="selection-bar"><span id="selected-name" class="muted" role="status" aria-live="polite">单击打开 · ⋯ 更多操作</span><div class="selection-controls"><div id="selection-tools" hidden><button id="select-all-files" type="button">全选</button></div><div id="selection-actions" hidden><button id="rename-file" type="button" hidden>重命名</button><button id="move-file" type="button">移动</button><button id="copy-file" type="button">复制</button><button id="trash-file" type="button" class="danger">移入回收站</button></div><button id="select-files" type="button" aria-pressed="false" aria-controls="files">选择</button></div></div>

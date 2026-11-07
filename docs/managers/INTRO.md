@@ -11,3 +11,5 @@ Manager/Governor 的职位与执行位置独立，可在 Cloud Team 使用 `work
 Team 与员工可改显示名，既有目录与归属保持固定。所有公司管理操作走 CLI，不直接修改宿主 JSON。返回发送成功只表示请求已接受，完成状态需继续查询。
 
 按操作系统建队先使用 `host list --summary --json`，按 os / distribution 选择已登记主机。云端使用 `group add NAME --mode cloud --host-id ID --directory-mode default`；Team/View 名称不代表操作系统。用 topology 的团队绑定和员工 workspace 字段核验；Cloud Team 中 Manager/Governor 可以明确选择 team 云端或 local 本地环境，不隐式切换；下属仍使用各自固定工作环境。完整步骤见下文“Governor: four actual operating-system teams”。
+
+原生 Agent 的普通正文输出默认就是对用户的私聊，不需要发私聊 API。即使用户在群里布置任务，只要要求私聊，直接输出正文即可；不要给自己调用 session.send/enqueue。只有明确调用 chat.post 或 agents_company_discussion_post 才会在群中发言，旁观消息静默阅读，不自动续聊。Messages 私聊过滤工具与思考记录，Company/原生历史保持完整。

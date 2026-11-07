@@ -7,6 +7,12 @@ const engineFixture=path.resolve('test/fixtures/process-adapter.cjs'),f=await fi
 const rpc=async(token,cmd,args={})=>{const result=await f.request(token,cmd,args);assert.ok(result.ok,result.error);return result.data}
 const deny=async(token,cmd,args)=>assert.equal((await f.request(token,cmd,args)).ok,false,cmd+' must reject')
 try{
+ const nativeWrite=(file,data)=>{fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,JSON.stringify(data),{mode:0o600})}
+ nativeWrite(path.join(f.env.CLINE_DATA_DIR,'settings/providers.json'),{version:1,lastUsedProvider:'deepseek',providers:{deepseek:{settings:{provider:'deepseek',model:'deepseek-flash',baseUrl:'https://fixture.invalid',apiKey:'isolated-not-real'}}}})
+ nativeWrite(path.join(f.env.CLINE_DATA_DIR,'settings/models.json'),{providers:{deepseek:{models:{'deepseek-flash':{id:'deepseek-flash'}}}}})
+ nativeWrite(path.join(f.env.PI_CODING_AGENT_DIR,'settings.json'),{defaultProvider:'fixture',defaultModel:'deepseek-flash'})
+ nativeWrite(path.join(f.env.PI_CODING_AGENT_DIR,'models.json'),{providers:{fixture:{baseUrl:'https://fixture.invalid/v1',api:'openai-completions',apiKey:'isolated-not-real',models:[{id:'deepseek-flash'}]}}})
+ nativeWrite(path.join(f.env.PI_CODING_AGENT_DIR,'auth.json'),{})
  await f.cli('group','add','Studio');await f.cli('group','add','Remote team')
  const a=await f.create('Aster','Studio'),b=await f.create('Byte','Studio'),outside=await f.create('Outside','Remote team'),manager=await f.create('Manager','Studio','manager'),governor=await f.create('Governor','Remote team','governor')
  const at=await f.token(a.id),mt=await f.token(manager.id),gt=await f.token(governor.id)
@@ -71,7 +77,7 @@ try{
  const after=(await f.cli('session','list')).sessions.map(card=>({id:card.id,cwd:card.cwd,engine:card.engine,group:card.group,avatar:card.avatar,createdBy:card.createdBy,role:card.managementRole}));assert.deepEqual(after,records)
  assert.deepEqual(await f.cli('terminal','list'),[])
  for(const engine of ['cline','pi']){
-  await rpc(null,'engine.configure',{engine,patch:{apiKey:'fixture-not-real'}})
+  // Deterministic native binaries use the isolated native-profile directories.
   const card=await f.cli('card','create','--title',engine+' self scheduler','--group','Studio','--engine',engine)
   await f.ready(card.id)
   const token=await f.token(card.id),job=await f.call(token,'schedule','create','--name',engine+' wake','--employee','self','--after-seconds','1','--prompt','Scheduled self work')

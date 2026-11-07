@@ -1,3 +1,4 @@
+import {nativeToolResult} from '../native-tool-result'
 import {engineState} from './state'
 import { z } from 'zod'
 import { DOCUMENTATION_TOOL,invokeDocumentationTool } from '../documentation-tool'
@@ -12,15 +13,17 @@ import { AsyncQueue,sandboxFor } from './session-support'
 import { buildOptions } from './claude-options'
 import { readStore,patchSession } from '../store'
 import { employeeInstructions } from '../plugins/documents'
-import { deepSeekModels } from '../claude-provider'
+import { claudeModelCatalog,claudeWireEffort } from '../claude-provider'
+import {nativeClaudeSettings} from './native-config'
 import { cloudToolAllowed } from '../scope'
 import { approvalHandler,elicitationHandler,cancelApprovals } from '../approvals'
 import { nativeSessionRefs } from '../../shared/types'
+import {validateDelegation} from '../authorization'
 export async function openClaude(context:EngineStart){
   const {args,card,kind,engine,cardId,sessionId,cwd,workRoot,permissionRoot,remote,nativeRemote,remoteLaunch,provider,permissionMode,host}=context
   const {register,isOpen,metadata,emit,rememberMeta,rememberTerminalCommands,isPrivateTurn,dispatchQueued}=host
   const input = new AsyncQueue<SDKUserMessage>(),inputTasks=new Map<string,string>(),idleWaiters=new Set<()=>void>()
-  const state=engineState(context,{nativeOrigin:card?.nativeOrigin,workRoot,permissionRoot,nativeRemote,fastMode:args.fastMode??false,remoteAdmin:args.remoteAdmin??false,effort:args.effort,input,provider,thinkingEnabled:args.thinking!==false})
+  const state=engineState(context,{nativeOrigin:card?.nativeOrigin,workRoot,permissionRoot,nativeRemote,fastMode:args.fastMode??false,remoteAdmin:args.remoteAdmin??false,effort:args.effort,input,provider,thinkingEnabled:args.thinking??(nativeRemote?undefined:nativeClaudeSettings().alwaysThinkingEnabled)??true})
 
   const discussionName='mcp__agents_company__'+DISCUSSION_TOOL.name,documentationName='mcp__agents_company__'+DOCUMENTATION_TOOL.name,apiName='mcp__agents_company__'+API_TOOL.name
   const coreToolAllowed=(name:string)=>!state.acknowledging&&(name===documentationName||!state.privateInitialization&&(name===apiName||!!state.currentTask?.chat&&name===discussionName))
@@ -32,11 +35,11 @@ export async function openClaude(context:EngineStart){
   }
   const {query,createSdkMcpServer,tool}=await loadClaudeSdk()
   const invoke=(handler:typeof invokeDocumentationTool)=>async(input:unknown,extra:unknown)=>{
-    try{const context=extra as {requestId?:string|number;signal?:AbortSignal};if(context.requestId===undefined)throw Error('Missing SDK tool call ID');const result=await handler(state,input,String(context.requestId),context.signal);return {content:[{type:'text' as const,text:JSON.stringify(result)}]}}
+    try{const context=extra as {requestId?:string|number;signal?:AbortSignal};if(context.requestId===undefined)throw Error('Missing SDK tool call ID');const result=await handler(state,input,String(context.requestId),context.signal);return nativeToolResult(result)}
     catch(error){return {isError:true,content:[{type:'text' as const,text:(error as Error).message}]}}
   }
   const discussion=createSdkMcpServer({name:'agents_company',tools:[
-    tool(DISCUSSION_TOOL.name,DISCUSSION_TOOL.description,{conversationType:z.enum(['group','channel']),conversationId:z.string(),messageId:z.string(),text:z.string().min(1).max(2000)},invoke(invokeDiscussionTool)),
+    tool(DISCUSSION_TOOL.name,DISCUSSION_TOOL.description,{conversationType:z.enum(['group']),conversationId:z.string(),messageId:z.string(),text:z.string().min(1).max(2000)},invoke(invokeDiscussionTool)),
     tool(DOCUMENTATION_TOOL.name,DOCUMENTATION_TOOL.description,{operation:z.enum(['identity','index','document','describe']),document:z.string().optional(),command:z.string().optional()},invoke(invokeDocumentationTool)),
     tool(API_TOOL.name,API_TOOL.description,{command:z.string().min(1),args:z.object({}).passthrough().optional()},invoke(invokeApiTool))
   ]})
@@ -57,7 +60,7 @@ export async function openClaude(context:EngineStart){
   void (async () => {
     try {
       const [commands, nativeModels] = await Promise.all([q.supportedCommands(), q.supportedModels()])
-      const models=provider?deepSeekModels:nativeModels
+      const models=claudeModelCatalog(nativeModels)
       if(!isOpen(sessionId))return
       rememberMeta(sessionId, {
         engine,
@@ -91,6 +94,8 @@ export async function openClaude(context:EngineStart){
   state.finished = (async () => {
     try {
       for await (const msg of q) {
+        const goalMessage=msg as unknown as {type:string;value?:import('../../shared/types').NativeGoal|null}
+        if(goalMessage.type==='active_goal'){if(isOpen(sessionId)){const goal=goalMessage.value??null;rememberMeta(sessionId,{goal});emit('session:meta',{sessionId,engine:'claude',goal});emit('session:message',{sessionId,message:msg})}continue}
         if (!state.sessionId && 'session_id' in msg && msg.session_id) {
           state.sessionId = msg.session_id
           patchSession(cardId, { claudeSessionId: msg.session_id })
@@ -98,6 +103,10 @@ export async function openClaude(context:EngineStart){
           emit('session:resolved', { sessionId, claudeSessionId: msg.session_id })
         }
         if (!isOpen(sessionId)) continue
+        if(!state.running&&state.nativeContinuation&&state.currentTask&&!state.privateInitialization&&!state.acknowledging&&(msg.type==='assistant'||msg.type==='stream_event'&&msg.event.type==='message_start')){
+          validateDelegation(state.currentTask.delegation,cardId)
+          state.running=true;rememberMeta(sessionId,{busy:true});emit('session:turn-start',{sessionId})
+        }
         if(!('parent_tool_use_id' in msg&&msg.parent_tool_use_id)){
           const echoed=msg as {user_message_uuid?:string;user_message_uuids?:string[]},ids=echoed.user_message_uuids??(echoed.user_message_uuid?[echoed.user_message_uuid]:[])
           if(msg.type==='user'&&'isReplay' in msg&&msg.isReplay&&msg.uuid){const taskId=inputTasks.get(msg.uuid);if(taskId)emit('session:receipt',{sessionId,taskId,stage:'delivered'})}
@@ -125,7 +134,7 @@ export async function openClaude(context:EngineStart){
         if (msg.type === 'result') {
           inputTasks.clear();state.running = false;for(const finish of idleWaiters)finish();idleWaiters.clear()
           rememberMeta(sessionId, { busy: false })
-          cancelApprovals(sessionId);emit('session:result',{sessionId,success:!msg.is_error&&msg.subtype==='success',error:msg.is_error||msg.subtype!=='success'?(('errors' in msg?msg.errors:[]) as string[]).join('; ')||msg.subtype:undefined});emit('session:turn-end', { sessionId });dispatchQueued(state,sessionId)
+          cancelApprovals(sessionId);emit('session:result',{sessionId,success:!msg.is_error&&msg.subtype==='success',error:msg.is_error||msg.subtype!=='success'?(('errors' in msg?msg.errors:[]) as string[]).join('; ')||('result' in msg?msg.result:undefined)||msg.subtype:undefined});emit('session:turn-end', { sessionId });dispatchQueued(state,sessionId)
         }
       }
       if (isOpen(sessionId)) emit('session:end', { sessionId })
@@ -143,6 +152,7 @@ export async function openClaude(context:EngineStart){
 function createClaudeDriver(s:Live,id:string,host:EngineStart['host'],inputTasks:Map<string,string>,idleWaiters:Set<()=>void>):EngineDriver{
   return {
     send(text,images,taskId){
+      s.nativeContinuation=!!s.currentTask&&!s.privateInitialization&&!s.acknowledging
       const uuid=taskId?randomUUID():undefined;if(uuid&&taskId)inputTasks.set(uuid,taskId)
       s.running=true;host.rememberMeta(id,{busy:true});host.emit('session:turn-start',{sessionId:id})
       s.input.push({type:'user',...(uuid?{uuid}:{}),message:{role:'user',content:images.length?[...(text?[{type:'text',text}]:[]),...images.map(image=>({type:'image',source:{type:'base64',media_type:image.mimeType,data:image.data}}))]:text},parent_tool_use_id:null,session_id:s.sessionId??''} as SDKUserMessage)
@@ -155,7 +165,7 @@ function createClaudeDriver(s:Live,id:string,host:EngineStart['host'],inputTasks
     async setPlan(enabled){await s.q.setPermissionMode(enabled?'plan':s.permissionMode)},
     async setPermission(mode){await s.q.setPermissionMode(s.remoteLaunch?'acceptEdits':mode)},
     async setThinking(enabled){await s.q.setMaxThinkingTokens(enabled?null:0,enabled?'summarized':null)},
-    async setEffort(effort){await s.q.applyFlagSettings({effortLevel:effort??(s.provider?'high':null)} as Parameters<typeof s.q.applyFlagSettings>[0])},
+    async setEffort(effort){await s.q.applyFlagSettings({effortLevel:claudeWireEffort(s.provider,s.model,effort)??null} as Parameters<typeof s.q.applyFlagSettings>[0])},
     async setFast(enabled){await s.q.applyFlagSettings({fastMode:enabled})},
     async background(processId,stop=false){
       if(stop)for(const task of processId?[processId]:Object.keys(s.nativeTasks??{})){if(!s.nativeTasks?.[task])throw Error('任务不属于当前员工');await s.q.stopTask(task);delete s.nativeTasks[task]}

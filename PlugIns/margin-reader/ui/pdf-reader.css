@@ -31,9 +31,14 @@
 .pdf-page[data-render-state=loading]::after{content:'正在渲染第 ' attr(data-page) ' 页…'}
 .pdf-page[data-render-state=error]::after{display:none}
 .pdf-retry{position:absolute;inset:30% 10%;white-space:normal;color:var(--danger);font-size:13px}
-.pdf-progress{display:flex;align-items:center;gap:10px;min-height:32px;padding:3px 12px;border-top:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:11px;flex-shrink:0}
-.pdf-progress input{flex:1;width:100%;padding:0;accent-color:var(--accent);cursor:pointer}
-.pdf-progress output{min-width:70px;text-align:right;font-variant-numeric:tabular-nums}
+.pdf-progress{display:flex;align-items:center;gap:10px;min-height:24px;padding:3px 14px;border-top:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:10px;flex-shrink:0}
+.pdf-progress>span{display:none}
+.pdf-progress input{flex:1;width:100%;min-width:0;height:14px;padding:0;border:0;border-radius:0;background:transparent;appearance:none;cursor:pointer}
+.pdf-progress input::-webkit-slider-runnable-track{height:2px;border-radius:2px;background:var(--line)}
+.pdf-progress input::-webkit-slider-thumb{appearance:none;height:13px;width:13px;margin-top:-5.5px;border:2px solid var(--surface);border-radius:50%;background:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.pdf-progress input::-moz-range-track{height:2px;border-radius:2px;background:var(--line)}
+.pdf-progress input::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--accent)}
+.pdf-progress output{min-width:35px;text-align:right;font-variant-numeric:tabular-nums}
 .reader-view.pdf-document .reading-footer{padding:4px 12px;min-height:27px;flex-shrink:0}
 .workspace.reading.focus-reading{grid-template-columns:minmax(0,1fr)}
 .workspace.reading.focus-reading>.explorer,.workspace.reading.focus-reading>.divider,.workspace.reading.focus-reading>#outline-pane{display:none!important}

@@ -36,6 +36,18 @@ export type FormulaContext = {
 type Scope = Record<string, FormulaValue>;
 type Expression = jsep.Expression;
 
+// A database evaluates the same expression for every row. Cache syntax only;
+// values, lambda scopes and clocks must remain local to each evaluation.
+const parsedFormulas = new Map<string, Expression>();
+function parseFormula(expression: string): Expression {
+  const cached = parsedFormulas.get(expression);
+  if (cached) return cached;
+  const tree = jsep(expression);
+  if (parsedFormulas.size >= 256) parsedFormulas.delete(parsedFormulas.keys().next().value!);
+  parsedFormulas.set(expression, tree);
+  return tree;
+}
+
 export function formulaText(value: FormulaValue, context?: FormulaContext): string {
   if (value === null) return '';
   if (value instanceof Date)
@@ -269,7 +281,7 @@ export const formulaFunctions = [
 export function validateFormula(expression: string): string | null {
   if (!expression.trim()) return null;
   try {
-    const tree = jsep(expression);
+    const tree = parseFormula(expression);
     const inspect = (node: Expression) => {
       if (['Compound', 'SequenceExpression', 'ThisExpression'].includes(node.type))
         throw new Error('公式只能包含一个结果表达式');
@@ -300,7 +312,7 @@ export function validateFormula(expression: string): string | null {
 
 export function evaluateFormula(expression: string, context: FormulaContext): FormulaValue {
   if (!expression.trim()) return null;
-  const tree = jsep(expression);
+  const tree = parseFormula(expression);
   const text = (value: FormulaValue) => formulaText(value, context);
   function run(node: Expression, scope: Scope = {}): FormulaValue {
     switch (node.type) {
@@ -417,10 +429,12 @@ export function evaluateFormula(expression: string, context: FormulaContext): Fo
       receiver = run(member.object, scope);
     } else throw new Error('不支持动态函数调用');
     if (!formulaFunctions.includes(name)) throw new Error(`未知函数：${name}`);
+    const evaluated: FormulaValue[] = [];
     const at = (index: number): FormulaValue => {
-      if (receiver !== undefined)
-        return index === 0 ? receiver : args[index - 1] ? run(args[index - 1], scope) : null;
-      return args[index] ? run(args[index], scope) : null;
+      if (Object.hasOwn(evaluated, index)) return evaluated[index];
+      const argument = args[index - (receiver !== undefined ? 1 : 0)];
+      return (evaluated[index] =
+        receiver !== undefined && index === 0 ? receiver : argument ? run(argument, scope) : null);
     };
     const n = (index: number) => number(at(index));
     const str = (index: number) => {
@@ -504,8 +518,8 @@ export function evaluateFormula(expression: string, context: FormulaContext): Fo
       };
       for (let i = 0; i < count; i++) collect(at(i));
       if (!values.length) return 0;
-      if (name === 'min') return Math.min(...values);
-      if (name === 'max') return Math.max(...values);
+      if (name === 'min') return values.reduce((a, b) => Math.min(a, b));
+      if (name === 'max') return values.reduce((a, b) => Math.max(a, b));
       if (name === 'median') {
         values.sort((a, b) => a - b);
         const middle = Math.floor(values.length / 2);
@@ -801,9 +815,15 @@ export function evaluateFormula(expression: string, context: FormulaContext): Fo
         return str(0).split(str(1));
       case 'unique':
         requireArgs(1);
-        return list(at(0)).filter(
-          (value, index, values) => values.findIndex((other) => equal(value, other)) === index,
-        );
+        {
+          const seen = new Set<string>();
+          return list(at(0)).filter((value) => {
+            const key = JSON.stringify(value);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        }
       case 'includes':
         requireArgs(2);
         return list(at(0)).some((value) => equal(value, at(1)));

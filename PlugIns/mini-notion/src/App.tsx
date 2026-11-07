@@ -1,12 +1,6 @@
-import { FolderDocument } from './components/FolderDocument';
-import { Automations } from './actions/Automations';
-import { ButtonEditor, ActionHistory } from './actions/Buttons';
-import { Inbox } from './scheduling/Inbox';
-import { SchedulerDialog } from './scheduling/SchedulerDialog';
-import { RepeatDialog } from './scheduling/RepeatDialog';
-import { ReminderDialog } from './scheduling/Reminders';
+import { LoadingSurface } from './components/LoadingSurface';
 import { Bell } from 'lucide-react';
-import { useEffect, useLayoutEffect, useState, Component, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useState, Component, lazy, Suspense, type ReactNode } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -31,29 +25,45 @@ import { ancestors } from './model';
 import { IconButton, PageIcon } from './ui';
 import { PageTabs } from './components/PageTabs';
 import { Sidebar } from './components/Sidebar';
-import { PageView } from './components/PageView';
-import { Home } from './components/Home';
+import { loadPageView, loadedContent, preloadNativePage } from './components/loadContent';
+import type { Page } from './types';
+const DeferredPageView = lazy(loadPageView);
+function PageView(props: { page: Page; theme: 'light' | 'dark'; peek?: boolean }) {
+  // A fulfilled import must render synchronously, without flashing a Suspense
+  // fallback. Keep the chosen component stable throughout this page's lifetime.
+  const [Surface] = useState(() => loadedContent.PageView || DeferredPageView);
+  return <Surface {...props} />;
+}
+const Home = lazy(() => import('./components/Home').then(module => ({ default: module.Home })));
+const FolderDocument = lazy(() => import('./components/FolderDocument').then(module => ({ default: module.FolderDocument })));
 import { PageMenu } from './components/PageMenu';
-import { Search } from './components/Search';
-import { Settings } from './components/Settings';
-import { PageAppearanceDialog } from './components/AppearanceControls';
 import { AppearanceTheme, appAppearanceStyle } from './appearance';
-import {
-  ExportDialog,
-  HelpDialog,
-  HistoryDialog,
-  ImportDialog,
-  MoveDialog,
-  Templates,
-  Trash,
-} from './components/Dialogs';
 import { FindBar } from './components/FindBar';
-import { Conflicts } from './components/Conflicts';
-import { Operations } from './components/Operations';
-import { Comments } from './components/Comments';
-import { SpacePanel } from './components/SpacePanel';
-import { AgentPanel } from './components/AgentPanel';
-import { SpaceCreate } from './components/SpaceCreate';
+// Off-screen dialogs, automation editors and Agent tooling are not part of the
+// startup path. Load them when opened without delaying the document or sidebar.
+const Automations = lazy(() => import('./actions/Automations').then(m => ({ default: m.Automations })));
+const ButtonEditor = lazy(() => import('./actions/Buttons').then(m => ({ default: m.ButtonEditor })));
+const ActionHistory = lazy(() => import('./actions/Buttons').then(m => ({ default: m.ActionHistory })));
+const Inbox = lazy(() => import('./scheduling/Inbox').then(m => ({ default: m.Inbox })));
+const SchedulerDialog = lazy(() => import('./scheduling/SchedulerDialog').then(m => ({ default: m.SchedulerDialog })));
+const RepeatDialog = lazy(() => import('./scheduling/RepeatDialog').then(m => ({ default: m.RepeatDialog })));
+const ReminderDialog = lazy(() => import('./scheduling/Reminders').then(m => ({ default: m.ReminderDialog })));
+const Search = lazy(() => import('./components/Search').then(m => ({ default: m.Search })));
+const Settings = lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
+const PageAppearanceDialog = lazy(() => import('./components/AppearanceControls').then(m => ({ default: m.PageAppearanceDialog })));
+const Templates = lazy(() => import('./components/Dialogs').then(m => ({ default: m.Templates })));
+const Trash = lazy(() => import('./components/Dialogs').then(m => ({ default: m.Trash })));
+const HelpDialog = lazy(() => import('./components/Dialogs').then(m => ({ default: m.HelpDialog })));
+const ImportDialog = lazy(() => import('./components/Dialogs').then(m => ({ default: m.ImportDialog })));
+const ExportDialog = lazy(() => import('./components/Dialogs').then(m => ({ default: m.ExportDialog })));
+const MoveDialog = lazy(() => import('./components/Dialogs').then(m => ({ default: m.MoveDialog })));
+const HistoryDialog = lazy(() => import('./components/Dialogs').then(m => ({ default: m.HistoryDialog })));
+const Conflicts = lazy(() => import('./components/Conflicts').then(m => ({ default: m.Conflicts })));
+const Operations = lazy(() => import('./components/Operations').then(m => ({ default: m.Operations })));
+const Comments = lazy(() => import('./components/Comments').then(m => ({ default: m.Comments })));
+const SpacePanel = lazy(() => import('./components/SpacePanel').then(m => ({ default: m.SpacePanel })));
+const AgentPanel = lazy(() => import('./components/AgentPanel').then(m => ({ default: m.AgentPanel })));
+const SpaceCreate = lazy(() => import('./components/SpaceCreate').then(m => ({ default: m.SpaceCreate })));
 
 export class ErrorBoundary extends Component<{ children: ReactNode }, { error: string }> {
   state = { error: '' };
@@ -106,11 +116,22 @@ export default function App() {
   } = store;
   const [systemDark, setSystemDark] = useState(matchMedia('(prefers-color-scheme: dark)').matches);
   const [find, setFind] = useState(false);
+  // Keep Agent drafts mounted after its first use, without loading the entire
+  // conversation/Markdown UI during every cold launch.
+  const [agentLoaded, setAgentLoaded] = useState(false);
+  useEffect(() => { if (store.agentPanel) setAgentLoaded(true); }, [!!store.agentPanel]);
   const theme =
     ws?.settings.theme === 'system' ? (systemDark ? 'dark' : 'light') : ws?.settings.theme || 'light';
   const appearanceSignature = JSON.stringify(ws?.settings.appearance || {});
   const page = ws?.pages.find((p) => p.id === ws.activePageId && !p.trashedAt);
   const peekPage = ws?.pages.find((p) => p.id === peekId && !p.trashedAt);
+  useEffect(() => {
+    if (page && !page.database && (!page.sourceFile || page.sourceFile.kind === 'directory')) preloadNativePage();
+  }, [page?.id]);
+  useLayoutEffect(() => {
+    if (ws && !performance.getEntriesByName('mini:shell-committed').length)
+      performance.mark('mini:shell-committed');
+  }, [!!ws]);
 
   useEffect(() => {
     const query = matchMedia('(prefers-color-scheme: dark)');
@@ -193,6 +214,9 @@ export default function App() {
         }
         case 'comment-selection':
           window.dispatchEvent(new Event('mini:comment-selection'));
+          break;
+        case 'selection-agent':
+          window.dispatchEvent(new Event('mini:selection-agent'));
           break;
         case 'sidebar':
           setting({ sidebarHidden: !ws.settings.sidebarHidden });
@@ -310,7 +334,7 @@ export default function App() {
         s: 'save',
       };
       const name = e.shiftKey
-        ? ({ l: 'theme', e: 'export', i: 'import', m: 'comment-selection' } as Record<string, string>)[
+        ? ({ l: 'theme', e: 'export', i: 'import', m: 'comment-selection', j: 'selection-agent' } as Record<string, string>)[
             e.key.toLowerCase()
           ]
         : commands[e.key.toLowerCase()];
@@ -355,7 +379,7 @@ export default function App() {
   };
 
   return (
-    <AppearanceTheme.Provider value={theme}><div className={`app-shell ${ws.settings.sidebarHidden ? 'sidebar-hidden' : ''} ${window.native?.folderMode ? 'hosted-folder' : ''}`}>
+    <AppearanceTheme.Provider value={theme}><div className={`app-shell ${ws.settings.sidebarHidden ? 'sidebar-hidden' : ''} ${window.native?.folderMode ? 'hosted-folder' : ''} ${new URLSearchParams(location.search).get('hosted') === '1' ? 'embedded-plugin' : ''}`}>
       {!ws.settings.sidebarHidden && <Sidebar />}
       <main className="main-pane">
         <PageTabs />
@@ -493,7 +517,9 @@ export default function App() {
             )}
           </div>
         </header>
-        {page?.sourceFile && page.sourceFile.kind !== 'directory' ? <FolderDocument key={page.id} page={page} /> : page ? <PageView key={page.id} page={page} theme={theme} /> : <Home />}
+        <Suspense fallback={<LoadingSurface />} key={page?.id || 'home'}>
+          {page?.sourceFile && page.sourceFile.kind !== 'directory' ? <FolderDocument key={page.id} page={page} /> : page ? <PageView key={page.id} page={page} theme={theme} /> : <Home />}
+        </Suspense>
       </main>
       {peekPage && (
         <div
@@ -515,12 +541,13 @@ export default function App() {
                 <MoreHorizontal size={20} />
               </IconButton>
             </div>
-            <PageView key={peekPage.id} page={peekPage} theme={theme} peek />
+            <Suspense fallback={<LoadingSurface />}><PageView key={peekPage.id} page={peekPage} theme={theme} peek /></Suspense>
           </div>
         </div>
       )}
       {find && <FindBar pageId={peekId || page?.id} onClose={() => setFind(false)} />}
       {pageMenu && <PageMenu />}
+      <Suspense fallback={null}>
       {modal?.type === 'automations' && <Automations />}
       {modal?.type === 'button' && <ButtonEditor />}
       {modal?.type === 'action-history' && <ActionHistory />}
@@ -542,11 +569,12 @@ export default function App() {
       {modal?.type === 'operations' && <Operations />}
       {store.commentPanel && <Comments />}
       {store.spacePanel && <SpacePanel />}
-      {!window.native?.folderMode && <AgentPanel />}
+      {!window.native?.folderMode && (agentLoaded || !!store.agentPanel) && <AgentPanel />}
       {modal?.type === 'space-create' && <SpaceCreate />}
+      </Suspense>
       {toast && (
-        <div className="toast" role="status">
-          <Check size={16} />
+        <div className={`toast${toast.kind === 'error' ? ' toast-error' : ''}`} role={toast.kind === 'error' ? 'alert' : 'status'}>
+          {toast.kind === 'error' ? <CircleAlert size={16} /> : <Check size={16} />}
           <span>{toast.message}</span>
           {toast.undo && (
             <button

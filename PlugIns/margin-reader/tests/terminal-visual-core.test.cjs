@@ -1,0 +1,22 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
+const {createPlugin}=require('../runtime.cjs'),{createTerminalVisuals}=require('../terminal-visuals/index.cjs');
+const {createCoreScene}=require('./terminal-visual-core-fixture.cjs');
+test('actual public Core scene, JSON transport, read-only rendering and current-view hidden counts',async t=>{
+  const workspace=await fs.mkdtemp(path.join(os.tmpdir(),'marginreader-d-core-')),runtime=await createPlugin({workspace});
+  t.after(async()=>{await runtime.close();await fs.rm(workspace,{recursive:true,force:true});});
+  const request=async(method,params)=>{const reply=await runtime.request({jsonrpc:'2.0',id:1,method,params});assert.equal(reply.error,undefined,JSON.stringify(reply.error));return JSON.parse(JSON.stringify(reply.result));};
+  const f=await createCoreScene(request),v=await createTerminalVisuals(),scene=v.prepare(f);
+  assert.equal(scene.cards.size,9);assert.equal(scene.boxes.size,9);assert.equal(scene.edges.filter(e=>e.kind==='relationship').length,2);assert.equal(f.geometry.links.length,8);
+  const vp={columns:100,rows:30},state=v.reduce(scene,v.initialState({selectedId:f.ids.root}),{type:'fit'},vp).state;
+  const before=await request('study.get',{setId:f.study.id});
+  const frame=v.render(scene,state,vp);assert.match(v.toPlainText(frame),/MarginReader/);assert.ok(frame.hits.some(h=>h.kind==='card'));assert.equal(frame.stats.totalCards,9);
+  assert.deepEqual(await request('study.get',{setId:f.study.id}),before);
+  await request('study.card.update',{setId:f.study.id,expectedRevision:f.study.revision,cardId:f.ids.read,collapsed:true});
+  const study=await request('study.get',{setId:f.study.id}),geometry=await request('study.map.geometry',{setId:f.study.id}),collapsed=v.prepare({study,geometry});
+  assert.equal(collapsed.cards.size,9);assert.ok(collapsed.boxes.size<9);
+  const hidden=v.reduce(collapsed,state,{type:'select',cardId:f.ids.excerpt},vp);assert.deepEqual(hidden.effects,[{type:'reveal-required',cardId:f.ids.excerpt}]);
+  assert.throws(()=>v.prepare({study,geometry:f.geometry}),{code:'STALE_SCENE'});
+  t.diagnostic('Actual Core scene: 9 editable notes, 8 hierarchy edges, 2 knowledge links; current-view collapse preserves 9 objects.');
+});

@@ -11,5 +11,19 @@
     "source": "https://pi.dev/logo-auto.svg",
     "license": "MIT",
     "sha256": "abd66e7868b2d24f0f0895f9237ee8a6dcb22337583b0dc54aeb595acecb4d6b"
+  },
+  {
+    "id": "opencode",
+    "source": "https://raw.githubusercontent.com/anomalyco/opencode/dev/packages/ui/src/assets/favicon/favicon.svg",
+    "repository": "https://github.com/anomalyco/opencode",
+    "license": "MIT",
+    "sha256": "e29bbe33380ad1c1ada9134b52f229d30e9776d60481512c9d81f2bb6f37def9"
+  },
+  {
+    "id": "kilo",
+    "source": "kilocode.kilo-code-7.8.18-darwin-arm64/assets/icons/logo-outline-black.png",
+    "repository": "https://github.com/Kilo-Org/kilocode",
+    "license": "MIT",
+    "sha256": "65f8a36a2c905afc8ac063fc1ceadd1cea396314310667b64d2e4a94d38ec87b"
   }
 ]

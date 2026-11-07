@@ -40,6 +40,9 @@ async function main() {
     pass('tree and large folder grid render the same real files');
     await fs.mkdir(path.join(root, 'artifacts/agent-acceptance'), { recursive: true });
     await page.screenshot({ path: path.join(root, 'artifacts/library.png') });
+    // Current release boots into the Study Sets home; choose the document library first.
+    await page.locator('#library-root').click();
+    await expect(page.locator('#library-view')).toBeVisible();
     await page.click('#new-folder'); await page.fill('#dialog [name="name"]', '新建文件夹'); await page.click('#dialog-submit'); await page.waitForSelector('#dialog', { state: 'hidden' });
     assert((await fs.stat(path.join(workspace, '新建文件夹'))).isDirectory()); pass('UI creates an actual folder using the shared Core');
     await page.locator('.file-card[data-path="阅读器使用指南.md"] .file-open').click();

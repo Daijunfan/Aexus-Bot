@@ -164,20 +164,21 @@ export function calendarWeeks(page: Page, view: DatabaseView, rows: Page[]) {
     );
   return Array.from({ length: period.dates.length / 7 }, (_, index) => {
     const dates = period.dates.slice(index * 7, index * 7 + 7);
-    const occupied: boolean[][] = [];
+    // Seven-day bit masks keep the first free lane for each span without
+    // rescanning every occupied lane when a day has thousands of events.
+    const occupied: number[] = [];
+    const nextFree = new Uint32Array(128);
     const events = ranges
       .filter((range) => range.start <= dates[6] && range.end >= dates[0])
       .map((range) => {
         const startColumn = range.start < dates[0] ? 0 : dates.indexOf(range.start);
         const endColumn = range.end > dates[6] ? 6 : dates.indexOf(range.end);
-        let slot = occupied.findIndex((row) =>
-          row.slice(startColumn, endColumn + 1).every((value) => !value),
-        );
-        if (slot === -1) {
-          slot = occupied.length;
-          occupied.push(Array(7).fill(false));
-        }
-        for (let day = startColumn; day <= endColumn; day++) occupied[slot][day] = true;
+        const mask = ((1 << (endColumn - startColumn + 1)) - 1) << startColumn;
+        let slot = nextFree[mask];
+        while (slot < occupied.length && (occupied[slot] & mask)) slot++;
+        if (slot === occupied.length) occupied.push(mask);
+        else occupied[slot] |= mask;
+        nextFree[mask] = slot + 1;
         return {
           id: range.id,
           startColumn,
@@ -260,8 +261,22 @@ export function planProjection(page: Page, view: DatabaseView, rows: Page[], tod
   const period = viewPeriod(view, today);
   const filtered = view.planHideCompleted ? rows.filter((row) => !isDone(row)) : rows;
   const zone = isHourlyPlan(view) ? view.timeZone || localTimeZone() : undefined;
-  const key = (row: Page) => scheduledRange(row, dateProperty, endProperty, zone).start;
-  const end = (row: Page) => scheduledRange(row, dateProperty, endProperty, zone).end;
+  const days = period.dates.map((date) => ({ date, records: [] as string[] }));
+  const unscheduled: string[] = [];
+  const overdue: string[] = [];
+  const currentDay = dateKey(today);
+  // Parse each record's date range once; a week of lanes shares the same endpoints.
+  for (const row of filtered) {
+    const { start, end } = scheduledRange(row, dateProperty, endProperty, zone);
+    if (!start) {
+      unscheduled.push(row.id);
+      continue;
+    }
+    for (const day of days) {
+      if (start <= day.date && end >= day.date) day.records.push(row.id);
+    }
+    if (end < period.from && end < currentDay && !isDone(row)) overdue.push(row.id);
+  }
   return {
     ...period,
     dateProperty,
@@ -270,16 +285,9 @@ export function planProjection(page: Page, view: DatabaseView, rows: Page[], tod
     doneValue,
     isDone,
     rows: filtered,
-    days: period.dates.map((date) => ({
-      date,
-      records: filtered
-        .filter((row) => key(row) && key(row) <= date && end(row) >= date)
-        .map((row) => row.id),
-    })),
-    unscheduled: filtered.filter((row) => !key(row)).map((row) => row.id),
-    overdue: filtered
-      .filter((row) => key(row) && end(row) < period.from && end(row) < dateKey(today) && !isDone(row))
-      .map((row) => row.id),
+    days,
+    unscheduled,
+    overdue,
     completed: rows.filter(isDone).length,
   };
 }

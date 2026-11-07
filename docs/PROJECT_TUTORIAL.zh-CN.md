@@ -652,7 +652,7 @@ node bin/agents engine capabilities --engine pi --json
 | `schedule` | 13 | `schema`、`status`、`list`、`get`、`create`、`update`、`pause`、`resume`、`delete`、`preview`、`run`、`history`、`cancel` |
 | `settings` | 2 | `get`、`set` |
 | `status` | 1 | `status` |
-| `host` | 21 | `fingerprints`、`trust`、`terminal-open`、`terminal-list`、`terminal-read`、`terminal-input`、`terminal-resize`、`terminal-close`、`desktop-list`、`desktop-open`、`desktop-launch`、`desktop-close`、`exec`、`list`、`get`、`create`、`update`、`remove`、`check`、`directories`、`credentials` |
+| `host` | 17 | `fingerprints`、`trust`、`terminal-open`、`terminal-list`、`terminal-read`、`terminal-input`、`terminal-resize`、`terminal-close`、`exec`、`list`、`get`、`create`、`update`、`remove`、`check`、`directories`、`credentials` |
 | `approval` | 2 | `list`、`respond` |
 | `config` | 8 | `engine`、`model`、`remote-admin`、`permission`、`thinking`、`effort`、`plan`、`fast` |
 | `external` | 1 | `open` |

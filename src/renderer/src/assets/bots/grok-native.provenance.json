@@ -1,0 +1,13 @@
+{
+  "source": "/Applications/Grok Bot.app/Contents/Resources/app.asar",
+  "module": "dist/renderer/assets/index.eager-common-DN47KHVY.js",
+  "moduleSha256": "2bdf541d641d2aa64c731a0ff66b207ea001edb32e6876151970d154e85694ef",
+  "exports": [
+    "createGrokAvatar",
+    "grokBody",
+    "grokColor",
+    "grokViewportScale"
+  ],
+  "changes": "Dependency closure only; original geometry and animation data are unchanged. The viewport layout follows the native platform component pM/mM.",
+  "redistribution": "Private local compatibility; public redistribution review remains pending."
+}

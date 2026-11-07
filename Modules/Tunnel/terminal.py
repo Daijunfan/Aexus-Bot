@@ -1,4 +1,7 @@
 """Interactive PTY broker. JSON lines in/out; the shell never sees protocol data."""
+import sys
+# Runtime imports must not change a signed application bundle.
+sys.dont_write_bytecode = True
 import base64
 import errno
 import fcntl
@@ -6,27 +9,56 @@ import json
 import os
 from pathlib import Path
 import pty
+import re
 import selectors
 import shlex
 import signal
 import struct
-import sys
 import termios
 import transport
 
 config = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
 target = config.get('remote')
+program = config.get('program')
+startup = None
+ready_marker = None
+startup_buffer = b''
+pending_input = []
 if target:
     args = transport.ssh_args(target)
     args[args.index('-T')] = '-tt'
-    if target['os'] == 'windows':
+    if program:
+        # A fixed Python bootstrap avoids shell interpolation of cwd or CLI arguments.
+        payload = base64.b64encode(json.dumps({'cwd': target['directory'], 'root': config['root'], 'program': program, 'cli_bin': target.get('cli_bin')}).encode()).decode()
+        bootstrap = "import base64,json,os; c=json.loads(base64.b64decode('" + payload + "')); r=os.path.realpath(c['root']); d=os.path.realpath(c['cwd']); "
+        bootstrap += "assert os.path.normcase(os.path.commonpath([r,d]))==os.path.normcase(r), 'Worker directory escapes owner workspace'; os.chdir(d); "
+        bootstrap += "[os.environ.pop(k,None) for k in list(os.environ) if k.startswith(('AGENTS_','AEXUS_')) or k in ('ELECTRON_RUN_AS_NODE','CLAUDECODE','CLAUDE_CODE_ENTRYPOINT','CODEX_THREAD_ID','CODEX_INTERNAL_ORIGINATOR_OVERRIDE')]; "
+        bootstrap += "os.environ['PATH']=os.pathsep.join(p for p in os.environ.get('PATH','').split(os.pathsep) if '.agents-company' not in p.lower() and 'agentscompany' not in p.lower()); "
+        bootstrap += "os.environ['PATH']=(c['cli_bin']+os.pathsep if c.get('cli_bin') else '')+os.environ['PATH']; "
+        if target['os'] == 'windows':
+            ready_marker = ('\x1b]777;' + os.urandom(12).hex() + '\x07').encode()
+            bootstrap += 'print(' + repr(ready_marker.decode()) + ',flush=True); '
+        bootstrap += "p=c['program']; os.execvpe(p[0],p,os.environ)" if target['os'] != 'windows' else "p=c['program']; shell=os.environ.get('COMSPEC','cmd.exe'); os.execvpe(shell,[shell,'/d','/s','/c',p[0]],os.environ)"
+        encoded = base64.b64encode(bootstrap.encode()).decode()
+        command = "exec(__import__('base64').b64decode('" + encoded + "'))"
+        python = target.get('python') or ('python' if target['os'] == 'windows' else 'python3')
+        if target['os'] == 'windows':
+            # Feed the command after the real console prompt: ConPTY's SSH exec
+            # path loses quoting/stdin for long startup commands. Hide shell setup.
+            quote = lambda value: "'" + value.replace("'", "''") + "'"
+            script = '& ' + quote(python) + ' -c ' + quote(bootstrap) + '; exit $LASTEXITCODE'
+            startup = (script + '\r').encode()
+            args += ['powershell.exe -NoLogo -NoProfile -NoExit']
+        else:
+            args += [shlex.quote(python) + ' -c ' + shlex.quote(command)]
+    elif target['os'] == 'windows':
         directory = target['directory'].replace("'", "''")
         script = "try { Set-Location -LiteralPath '" + directory + "' -ErrorAction Stop } catch { Write-Error $_; exit 1 }"
         args += ['powershell.exe -NoLogo -NoProfile -NoExit -EncodedCommand ' + base64.b64encode(script.encode('utf-16le')).decode()]
     else:
         args += ['cd -- ' + shlex.quote(target['directory']) + ' && exec "${SHELL:-/bin/bash}" -l']
 else:
-    args = [os.environ.get('SHELL', '/bin/bash'), '-l']
+    args = program or [os.environ.get('SHELL', '/bin/bash'), '-l']
 
 pid, master = pty.fork()
 if pid == 0:
@@ -49,6 +81,7 @@ selector = selectors.DefaultSelector()
 selector.register(master, selectors.EVENT_READ)
 selector.register(0, selectors.EVENT_READ)
 buffer = b''
+reaped = False
 try:
     while True:
         for key, _ in selector.select():
@@ -62,8 +95,26 @@ try:
                         raise
                 if not data:
                     _, status = os.waitpid(pid, 0)
-                    send({'exitCode': os.waitstatus_to_exitcode(status)})
+                    reaped = True
+                    if startup_buffer:
+                        send({'data': base64.b64encode(startup_buffer).decode()})
+                    exit_code = os.waitstatus_to_exitcode(status)
+                    # Windows SSH may report success when console startup failed.
+                    send({'exitCode': exit_code or (1 if ready_marker else 0)})
                     raise SystemExit(0)
+                if ready_marker:
+                    startup_buffer += data
+                    if startup and re.search(rb'PS [\s\S]*>', startup_buffer):
+                        os.write(master, startup)
+                        startup = None
+                    if ready_marker not in startup_buffer:
+                        continue
+                    data = startup_buffer.split(ready_marker, 1)[1]
+                    startup_buffer = b''
+                    ready_marker = None
+                    for pending in pending_input:
+                        os.write(master, pending)
+                    pending_input.clear()
                 send({'data': base64.b64encode(data).decode()})
             else:
                 data = os.read(0, 65536)
@@ -74,15 +125,20 @@ try:
                     line, buffer = buffer.split(b'\n', 1)
                     request = json.loads(line)
                     if request['op'] == 'input':
-                        os.write(master, request['data'].encode('utf-8'))
+                        data = request['data'].encode('utf-8')
+                        if ready_marker:
+                            pending_input.append(data)
+                        else:
+                            os.write(master, data)
                     elif request['op'] == 'resize':
                         resize(request['cols'], request['rows'])
                     elif request['op'] == 'close':
                         raise SystemExit(0)
 finally:
     selector.close()
-    try:
-        os.killpg(pid, signal.SIGHUP)
-    except ProcessLookupError:
-        pass
+    if not reaped:
+        try:
+            os.killpg(pid, signal.SIGHUP)
+        except ProcessLookupError:
+            pass
     os.close(master)

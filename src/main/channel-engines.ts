@@ -3,7 +3,7 @@ import {cloudHostTarget} from './cloud-hosts'
 import {createHash,randomUUID} from 'node:crypto'
 import {isIP} from 'node:net'
 import type {ChannelEngine,ChannelEngineInput,ChannelCollector,ChannelAvatarInput,ChannelConnection,ChannelSettings} from '../shared/channels'
-import {all,one,run,type Row} from './channel-store'
+import {all,one,run,canonicalChannelId,type Row} from './channel-store'
 import {readStore} from './store'
 import {requestContext,isAppAdministrator} from './authorization'
 import {validatedChannelImage} from './channel-avatars'
@@ -15,6 +15,7 @@ const members=(id:string)=>{const row=one('SELECT admin_ids FROM channels WHERE 
 
 /** Missing configuration is a legacy external connection, not a fabricated localhost deployment. */
 export function channelEngine(id:string):ChannelEngine{
+ id=canonicalChannelId(id)
  const stored=one('SELECT config FROM channel_engines WHERE channel_id=?',id)
  const engine=stored?JSON.parse(stored.config):{kind:'external',location:'unconfigured'}
  return engine.kind==='employees'?{kind:'employees',employeeIds:members(id)}:engine
@@ -22,13 +23,7 @@ export function channelEngine(id:string):ChannelEngine{
 export function validateChannelEngine(value:unknown):ChannelEngineInput{
  if(!value||typeof value!=='object'||Array.isArray(value))throw fail('Choose a channel publishing engine')
  const input=value as Record<string,any>
- if(input.kind==='employees'){
-  fields(input,['kind','employeeIds'])
-  if(!Array.isArray(input.employeeIds)||!input.employeeIds.length||input.employeeIds.length>200||input.employeeIds.some(id=>typeof id!=='string'))throw fail('Choose 1–200 existing publishing employees')
-  const ids=[...new Set<string>(input.employeeIds)],store=readStore()
-  for(const id of ids)if(!store.sessions.some(card=>card.id===id&&!card.deleting))throw fail('Unknown publishing employee: '+id)
-  return {kind:'employees',employeeIds:ids}
- }
+ if(input.kind==='employees')throw fail('Channels are read-only feeds; employees access them through channel.fetch-text, channel.fetch-images and channel.search','CHANNEL_READ_ONLY',403)
  fields(input,['kind','location','name','host','endpoint','collectorId','fileStorage'])
  if(input.kind!=='external'||!['local','remote'].includes(input.location))throw fail('Choose a local or remote external process')
  const name=text(input.name,'process name'),host=input.location==='local'?'127.0.0.1':text(input.host,'process IP address or hostname',253)

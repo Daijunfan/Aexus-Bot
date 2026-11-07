@@ -1,5 +1,5 @@
 import type { Page } from '../types.ts';
-import { ancestors, descendants, isInternalPage, plainText, readProperty } from '../model.ts';
+import { ancestors, descendants, internalPageIds, pageIndex, plainText, readProperty } from '../model.ts';
 import { materializeBlocks } from '../content/references.ts';
 import { flattenBlocks } from './blocks.ts';
 import { CommandError } from './errors.ts';
@@ -38,16 +38,26 @@ export function searchPages(pages: Page[], query: string, options: SearchOptions
   };
   const after = boundary(options.after, false),
     before = boundary(options.before, true);
-  const titleMatches = (page: Page) => words.every((word) => page.title.toLocaleLowerCase().includes(word));
+  const internal = internalPageIds(pages);
+  const byId = pageIndex(pages);
+  const titleRanks = new Map<Page, boolean>();
+  const titleMatches = (page: Page) => {
+    if (!titleRanks.has(page)) {
+      const title = page.title.toLocaleLowerCase();
+      titleRanks.set(page, words.every(word => title.includes(word)));
+    }
+    return titleRanks.get(page)!;
+  };
   return pages
     .filter((page) => {
-      if (page.trashedAt || isInternalPage(page, pages) || (scope && !scope.has(page.id))) return false;
+      if (page.trashedAt || internal.has(page.id) || (scope && !scope.has(page.id))) return false;
       if ((options.kind === 'database' && !page.database) || (options.kind === 'page' && page.database))
         return false;
       const time = options.dateField === 'created' ? page.createdAt : page.updatedAt;
       if (time < after || time > before) return false;
-      if (options.titleOnly) return titleMatches(page);
-      const columns = pages.find((owner) => owner.id === page.parentId)?.database?.columns || [];
+      if (!words.length || titleMatches(page)) return true;
+      if (options.titleOnly) return false;
+      const columns = byId.get(page.parentId || '')?.database?.columns || [];
       const text =
         `${page.title} ${plainText(materializeBlocks(page.blocks, { pages }))} ${Object.values(page.values).join(' ')} ${columns.map((column) => readProperty(page, column, pages)).join(' ')}`.toLocaleLowerCase();
       return words.every((word) => text.includes(word));

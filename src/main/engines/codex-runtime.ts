@@ -72,7 +72,7 @@ async function pumpCodex(s:Live,sessionId:string,host:EngineHost,discussionUrl:(
         resumeId: s.threadId,planMode:s.planMode,
         model: s.model,
         sandbox: s.sandbox,
-        effort: codexEffort(s.effort)??activeModel(sessionInfo(sessionId)?.models??[],s.model)?.defaultEffort,
+        effort: codexEffort(s.effort),
         serviceTier:s.fastMode?fastTier(activeModel(sessionInfo(sessionId)?.models??[],s.model))?.id:undefined,
         signal: abort.signal,
         approvalPolicy:s.workRoot||s.remote&&!s.nativeRemote||['dontAsk','bypassPermissions'].includes(s.permissionMode)?'never':'on-request',

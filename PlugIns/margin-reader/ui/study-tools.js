@@ -6,10 +6,10 @@ export class StudyTools {
     this.study=study;this.defaultColors=[...study.colors];this.defaultHex={...study.hex};
   }
   render(set){
-    const colorKey=JSON.stringify(set.palette);if(this.colorKey!==colorKey){
+    const colorKey=JSON.stringify([set.palette,set.colors]);if(this.colorKey!==colorKey){
       this.colorKey=colorKey;this.study.colors=set.palette?.length?set.palette.map(c=>[c.color,c.title]):this.defaultColors;
-      this.study.hex={...set.colors,...this.defaultHex,...Object.fromEntries(this.study.colors.filter(([c])=>c.startsWith('#')).map(([c])=>[c,c]))};
-      const swatches=this.study.excerpts.palette.querySelector('.study-swatches');swatches.innerHTML=this.study.colors.map(([color,label])=>`<button data-color="${escape(color)}" aria-label="标注${escape(label)}并保存" title="${escape(label)}" style="background:${this.study.hex[color]}"></button>`).join('');swatches.querySelectorAll('button').forEach(b=>b.onclick=()=>this.study.excerpts.save(b.dataset.color));
+      this.study.hex={...this.defaultHex,...set.colors,...Object.fromEntries(this.study.colors.filter(([c])=>c.startsWith('#')).map(([c])=>[c,c]))};
+      this.study.excerpts.rebuildSwatches(this.study.colors);
       for(const id of ['study-ink-color','card-ink-color','study-color-filter']){const select=$(id);if(!select)continue;const value=select.value;select.innerHTML=(id==='study-color-filter'?'<option value="">全部颜色</option>':'')+this.study.colors.map(([v,t])=>`<option value="${escape(v)}">${escape(t)}</option>`).join('');if(![...select.options].some(o=>o.value===value)&&value)select.add(new Option(value,value));select.value=value;}
     }
   }

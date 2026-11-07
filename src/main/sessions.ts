@@ -1,3 +1,4 @@
+import {isAppAdministrator} from './application-authority'
 import { attachmentPaths,attachmentInfo } from '../shared/message-attachments'
 import type { MessageReply } from '../shared/types'
 import type { MessageQuote } from '../shared/message-quotes'
@@ -42,6 +43,8 @@ import { type SandboxMode } from './codex'
 import { deepSeekProvider,deepSeekModel,deepSeekEffort,type DeepSeekProvider } from './claude-provider'
 import { prepareWorkspacePlugins } from './plugins/runtime'
 import { patchSession,readStore } from './store'
+import {catalog as chatCatalog} from './chat-group-store'
+import type {NativeInputContext} from '../shared/message-source'
 import { conversation,forget,restoreTranscript,saveTranscript,resolveMessageReply } from './transcripts'
 import { approvalsFor,cancelApprovals } from './approvals'
 import { teamSettings,employeeSettings,nativeSessionRefs,type Session,type StoredSession } from '../shared/types'
@@ -96,6 +99,7 @@ export type Live = {
   running: boolean
   queueDispatching?: boolean
   nativeTasks?:Record<string,{processId:string;command:string;cwd:string;status:string}>
+  nativeContinuation?:boolean
   pendingMessages?: {id:string;text:string;images?:string[];files?:string[];delegation?:Delegation;viewId?:string;sourceView?:MessageSourceView;chat?:ChatTaskContext;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
   queue: {text:string;images?:ImageInput[];taskId?:string}[]
   abort?: AbortController
@@ -106,11 +110,23 @@ export type Live = {
 export type Emitter = (channel: string, payload: unknown) => void
 
 const privateTurns=new Map<string,Emitter>()
+const nativeInputs=new Map<string,{text:string;images?:string[];files?:import('../shared/message-attachments').MessageAttachment[];author?:import('../shared/management').PrincipalRef;reply?:import('../shared/types').MessageReply;taskId?:string;sourceView?:MessageSourceView}>()
+function nativeInputContext(state:Live,prompt:string,directOverride?:string,sourceOverride?:MessageSourceView|null):NativeInputContext{
+ const task=state.currentTask,directId=sourceOverride!==undefined?directOverride:task?.directMessageId,source=sourceOverride!==undefined?sourceOverride:task?.sourceView
+ const sender=sourceOverride!==undefined?requestContext().principal:task?.delegation.requestedBy,name=sender?.kind==='agent'?readStore().sessions.find(c=>c.id===sender.employeeId)?.title??'Former teammate':'User'
+ let origin:NativeInputContext['origin']
+ if(directId)origin={kind:'direct',name,id:state.cardId,messageId:directId}
+ else if(sourceOverride===undefined&&task?.chat&&'groupId' in task.chat)origin={kind:'group',id:task.chat.groupId,messageId:task.chat.messageId,name:chatCatalog().groups.find(g=>g.id===(task.chat as any).groupId)?.name??'Former group'}
+ else if(sourceOverride===undefined&&task?.chat&&'channelId' in task.chat)origin={kind:'channel',id:task.chat.channelId,messageId:task.chat.entryId,name:'Channel'}
+ else origin={kind:source==='company'?'company':source==='plan'?'plan':'unknown',name:source==='messages'?'Messages':source==='company'?'Company':source==='plan'?'Plan':'Unknown source'}
+ return {origin,phase:state.acknowledging?'read':'work',prompt,...(state.remoteLaunch?.instructions?{executionInstructions:state.remoteLaunch.instructions}:{})}
+}
 let broadcast: Emitter = () => {}
 const observers = new Set<Emitter>()
 const emit: Emitter = (channel, payload) => {
   const hidden=privateTurns.get((payload as {sessionId?:string})?.sessionId??'')
   if(hidden)hidden(channel,payload)
+  if(hidden&&live.get((payload as {sessionId?:string})?.sessionId??'')?.acknowledging&&['session:message','session:agent','session:codex','session:turn-start','session:turn-end','session:error'].includes(channel))broadcast('session:context-event',{sessionId:(payload as any).sessionId,event:channel,payload})
   if((hidden||live.get((payload as {sessionId?:string})?.sessionId??'')?.privateInitialization)&&channel!=='session:changed'&&!(live.get((payload as {sessionId?:string})?.sessionId??'')?.acknowledging&&channel==='session:receipt'))return
   broadcast(channel, payload)
   for (const listener of observers) listener(channel, payload)
@@ -233,7 +249,7 @@ async function startSessionInner(args: StartArgs = {}, owner?: string): Promise<
   if (!isEngine(engine)) throw new Error(`Unknown engine: ${engine}`)
   if (engine === 'codex') args = { ...args, effort: card?args.effort:(args.effort??'low') }
   const provider=engine==='claude'&&!nativeRemote?deepSeekProvider(remote?undefined:cwd):undefined
-  if(provider)args={...args,model:deepSeekModel(provider,args.model||'deepseek-flash'),thinking:args.thinking??false,effort:deepSeekEffort(args.effort),fastMode:false}
+  if(provider)args={...args,model:deepSeekModel(provider,args.model||'deepseek-flash'),thinking:args.thinking??false,effort:provider.customPicker?args.effort:deepSeekEffort(args.effort),fastMode:false}
   const permissionMode = args.permissionMode ?? 'default'
   const cardId = card?.id ?? sessionId
   validateDelegation(openingDelegation,cardId)
@@ -249,6 +265,8 @@ async function startSessionInner(args: StartArgs = {}, owner?: string): Promise<
   restoreTranscript(sessionId, cardId, engine)
 
   const opened=await openEngine({args,card,kind,engine,cardId,sessionId,cwd,workRoot,permissionRoot,remote,nativeRemote,remoteLaunch,provider,permissionMode,host:{register:(id,state)=>live.set(id,state),isOpen:id=>live.has(id),metadata:id=>info.get(id),isPrivateTurn:id=>privateTurns.has(id),emit,rememberMeta,rememberTerminalCommands,sessionInfo,dispatchQueued}})
+  const state=require_(sessionId),send=state.driver.send.bind(state.driver)
+  state.driver.send=(prompt,images,taskId)=>{if(!state.privateInitialization)broadcast('session:input-context',{sessionId,context:nativeInputContext(state,prompt),body:nativeInputs.get(sessionId),taskId});send(prompt,images,taskId)}
   prepareDocumentationTool(require_(sessionId))
   prepareApiTool(require_(sessionId),sessionId,()=>emit('session:changed',{sessionId}))
   if(!card)(await import('./initialization')).queueEmployeeInitialization(cardId)
@@ -277,25 +295,25 @@ export function enqueueMessage(id:string,text:string,images:string[]=[],delegati
   if(!text.trim()&&!images.length&&!filePaths.length)throw new Error('Message cannot be empty')
   delegation??=delegationFor(s.cardId);validateDelegation(delegation,s.cardId)
   const notice=isGroupNotice(delegation,chat,s.cardId)
-  const nativeControl=s.engine==='codex'&&!chat&&/^\/(compact|review)(?:\s|$)/.test(text)
-  if(!notice)authorizeSlash(text,s.cardId,delegation)
+  const nativeControl=!chat&&!privateSend?.directMessageId&&(s.engine==='claude'&&text.startsWith('/')||s.engine==='codex'&&/^\/(compact|review)(?:\s|$)/.test(text))
+  if(!notice&&!privateSend?.directMessageId)authorizeSlash(text,s.cardId,delegation)
   sourceView=messageSourceView(sourceView)
   viewId=notice?undefined:taskViewId(s.cardId,viewId)
-  if(crossReply){if(delegation.requestedBy.kind!=='operator')throw Error('Only the user may quote another conversation')}else resolveMessageReply(id,replyTo,replyQuote)
+  if(crossReply){if(!isAppAdministrator(delegation.requestedBy))throw Error('Only the user or Secretary may quote another conversation')}else resolveMessageReply(id,replyTo,replyQuote)
   if(replyTo!==undefined&&text.startsWith('/'))throw Error('Replies require a regular message, not a slash command')
   const entry={id:newSessionId(),text,images,...(filePaths.length?{files:filePaths}:{}),delegation,viewId,...(sourceView?{sourceView}:{}),chat,...(replyTo!==undefined?{replyTo,replyQuote,...(crossReply?{crossReply}:{})}:{})}
   if(privateSend){privateSend.queued(entry.id);queuedPrivateSends.set(entry.id,privateSend)}
   ;(s.pendingMessages??=[]).push(entry)
   rememberMeta(id,{pendingMessages:[...s.pendingMessages]});dispatchQueued(s,id);return entry
 }
-export async function steerMessage(id:string,text:string,sourceView?:MessageSourceView){
+export async function steerMessage(id:string,text:string,sourceView?:MessageSourceView,directMessageId?:string){
   sourceView=messageSourceView(sourceView)
   const s=require_(id);assertEmployeeControl(s.cardId)
   if(s.acknowledging)throw Error('Wait for group acknowledgment, or queue this message instead.')
   if(!s.running||!text.trim())throw new Error('请在任务运行时追加非空指令')
   const engineText=taskViewPrompt(s.currentTask?.viewId,messageSourcePrompt(sourceView,text))
   await s.driver.steer(engineText)
-  emit('session:user',{sessionId:id,text,author:requestContext().principal,...(sourceView?{sourceView}:{})});return true
+  emit('session:user',{sessionId:id,text,author:requestContext().principal,...(sourceView?{sourceView}:{})});broadcast('session:input-context',{sessionId:id,context:nativeInputContext(s,engineText,directMessageId,sourceView??null)});return true
 }
 export async function backgroundProcesses(id:string,processId?:string,stop=false){
   const s=require_(id);if(stop)assertEmployeeControl(s.cardId)
@@ -381,8 +399,8 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
   assertEmployeeControl(s.cardId, owner)
   delegation??=delegationFor(s.cardId);validateDelegation(delegation,s.cardId)
   const notice=isGroupNotice(delegation,chat,s.cardId)
-  if(!notice)authorizeSlash(text,s.cardId,delegation)
-  const nativeControl=s.engine==='codex'&&!chat&&/^\/(compact|review)(?:\s|$)/.test(text)
+  if(!notice&&!privateSend?.directMessageId)authorizeSlash(text,s.cardId,delegation)
+  const nativeControl=!chat&&!privateSend?.directMessageId&&(s.engine==='claude'&&text.startsWith('/')||s.engine==='codex'&&/^\/(compact|review)(?:\s|$)/.test(text))
   sourceView=messageSourceView(sourceView)
   const store=readStore(), card=executionEmployee(store,store.sessions.find(c=>c.id===s.cardId)!)
   viewId=notice||nativeControl||privateTurns.has(sessionId)?undefined:taskViewId(card.id,viewId,!!owner)
@@ -396,11 +414,11 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
   if (!text.trim()&&!imagePaths.length&&!filePaths.length) throw new Error('Message cannot be empty')
   if (s.running||s.acknowledging) throw new Error('Session is busy; wait for completion or interrupt it first')
   if(!s.privateInitialization&&card.initialization?.nativeBindId)patchSession(card.id,{initialization:{...card.initialization,nativeBindId:undefined}})
-  if(replyTo!==undefined&&text.startsWith('/'))throw Error('Replies require a regular message, not a slash command')
-  if(crossReply&&delegation.requestedBy.kind!=='operator')throw Error('Only the user may quote another conversation')
+  if(!privateSend?.directMessageId&&replyTo!==undefined&&text.startsWith('/'))throw Error('Replies require a regular message, not a slash command')
+  if(crossReply&&!isAppAdministrator(delegation.requestedBy))throw Error('Only the user or Secretary may quote another conversation')
   const reply=crossReply??resolveMessageReply(sessionId,replyTo,replyQuote)
-  if(!notice&&(imagePaths.length||filePaths.length)&&text.startsWith('/'))throw new Error('请使用普通消息发送图片附件')
-  if(!chat&&text.startsWith('/')&&await runSessionCommand(sessionId,text,owner,delegation,viewId,sourceView)){s.currentTask={messageId:newSessionId(),delegation,startedAt:Date.now(),runId:owner,viewId,...(sourceView?{sourceView}:{}),chat};rememberMeta(sessionId,{currentTask:s.currentTask});return true}
+  if(!privateSend?.directMessageId&&!notice&&(imagePaths.length||filePaths.length)&&text.startsWith('/'))throw new Error('请使用普通消息发送图片附件')
+  if(!privateSend?.directMessageId&&!chat&&text.startsWith('/')&&await runSessionCommand(sessionId,text,owner,delegation,viewId,sourceView)){s.currentTask={messageId:newSessionId(),delegation,startedAt:Date.now(),runId:owner,viewId,...(sourceView?{sourceView}:{}),chat};rememberMeta(sessionId,{currentTask:s.currentTask});return true}
   if(privateSend)s.privateSend=privateSend
   try{
   let images:ImageInput[]=[]
@@ -426,8 +444,9 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
   const acceptedDelegation=delegation,prefix=s.engine!=='codex'&&bootstrap!==s.bootstrapInstructions?bootstrap+'\n\n[Current user request]\n':''
   // Validate before acknowledging, and rebuild this projection again at actual work dispatch.
   const acknowledgmentText=chatTaskPrompt(chat,s.cardId,acceptedDelegation,attachmentText,true)
-  if(!privateTurns.has(sessionId)){s.currentTask={messageId:newSessionId(),delegation,startedAt:Date.now(),runId:owner,viewId,...(sourceView?{sourceView}:{}),chat};rememberMeta(sessionId,{currentTask:s.currentTask})}
+  if(!privateTurns.has(sessionId)){s.currentTask={messageId:newSessionId(),delegation,startedAt:Date.now(),runId:owner,viewId,...(sourceView?{sourceView}:{}),...(privateSend?.directMessageId?{directMessageId:privateSend.directMessageId}:{}),chat};rememberMeta(sessionId,{currentTask:s.currentTask})}
   const taskId=privateTurns.has(sessionId)?undefined:s.currentTask?.messageId
+  nativeInputs.set(sessionId,{text,images:imagePaths,files,author:delegation.requestedBy,reply,taskId,sourceView})
   privateSend?.dispatching(taskId!)
   if(!notice)emit('session:user', { sessionId, taskId, text,images:imagePaths,...(files.length?{files}:{}),author:delegation.requestedBy,...(sourceView?{sourceView}:{}),...(reply?{reply}:{}) })
   const finishNotice=(status:'completed'|'failed'|'interrupted',error?:string)=>{
@@ -530,6 +549,7 @@ export async function setEffort(
 export async function interrupt(sessionId: string,preserveQueue=false): Promise<boolean> {
   const s = live.get(sessionId)
   if (!s) return true
+  s.nativeContinuation=false
   let receiptError:unknown;try{s.privateSend?.interrupted('Private message preparation was stopped. It was not replayed.')}catch(error){receiptError=error}
   const notice=!!(s.currentTask?.delegation.groupNotice||s.currentTask?.delegation.channelNotice)
   if(s.acknowledging)privateTurns.get(sessionId)?.('session:interrupted',{sessionId})
@@ -552,7 +572,7 @@ export async function closeSession(sessionId: string): Promise<boolean> {
   updateChatDelivery(s.cardId,s.currentTask?.chat,{status:'interrupted',error:'Employee session closed'})
   for(const message of s.pendingMessages??[]){const error=interruptQueuedPrivateSend(message.id,'The employee session closed with a queued private message. It was not replayed.');receiptError??=error;updateChatDelivery(s.cardId,message.chat,{status:'interrupted',error:'Employee session closed'})}
   forget(sessionId)
-  live.delete(sessionId)
+  live.delete(sessionId);nativeInputs.delete(sessionId)
   await s.driver.close()
   info.delete(sessionId)
   emit('session:closed', { sessionId,cardId:s.cardId })
@@ -568,6 +588,7 @@ export async function closeAll():Promise<void> {
 
 /** What a live session reported about itself, for the CLI to read back. */
 export type SessionInfo = {
+  goal?:import('../shared/types').NativeGoal|null
   acknowledging?:boolean
   lastReply?:Session['lastReply']
   initialization?: import('../shared/types').EmployeeInitialization
@@ -707,7 +728,7 @@ export async function runPrivateInitialization(employeeId:string,prompt:string,s
     try{
       if(channel==='session:message'){
         const message=payload.message
-        if(message.type==='result'&&(message.is_error||String(message.subtype).startsWith('error'))){reject(Error('引擎初始化失败：'+(message.errors?.join('; ')||message.subtype)));return}
+        if(message.type==='result'&&(message.is_error||String(message.subtype).startsWith('error'))){reject(Error('引擎初始化失败：'+(message.errors?.join('; ')||message.result||message.subtype)));return}
       }
       if(channel==='session:codex'||channel==='session:agent'){
         if(payload.event.kind==='notice'&&payload.event.level==='error'){reject(Error(payload.event.text));return}

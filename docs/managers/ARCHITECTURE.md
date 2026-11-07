@@ -240,12 +240,12 @@ before using a descriptor. Shared documentation rechecks both source and materia
 projection versions; changed, missing or corrupt resources are not hidden by cached data.
 
 Message search and gallery pagination use a lazy, owned worker with a rebuildable
-SQLite/FTS index at `APP_HOME/cache/message-index.sqlite`. Canonical transcripts and
+SQLite/FTS index in memory (`temp_store=MEMORY`). Canonical transcripts and
 chat records keep their existing formats. Only public text/media metadata is indexed;
 raw thinking/tool blocks, image bytes and external news bodies are excluded. The worker
 owns no credentials or execution authority. Core resolves current access and labels,
 and rechecks personal visibility after asynchronous IO. Cold indexing takes additional
-time and disk, while the main loop stays available. Shutdown drains accepted queries.
+time and memory, while the main loop stays available. Shutdown drains accepted queries.
 Both desktop and standalone server builds ship `message-index-worker.js`.
 
 Group/channel delivery now shares one recipient-dispatch lifecycle and monotonic receipt
@@ -263,3 +263,50 @@ See `docs/SLIMMING.md` for module ownership, invalidation, lifecycle and verific
 
 Action failures and background loading failures have separate owners in group conversations.
 A successful history refresh cannot clear an uncertain-send warning or silently retry work.
+
+## Native Worker
+
+`native-workers.ts` 独立保存直属关系与启动元数据，通过既有 PTY broker 直接启动原生 Coding Agent CLI。与员工的初始化、角色提示、消息路由、插件工具及原生会话绑定相互独立；仅原样传递明确输入。`native-worker-env.ts` 移除控制器身份和路由环境，保留用户原生配置认证。Worker 无 Core 身份，不加入 Company 消息/角色动画。员工资料的 Workers 面板只使用引擎图标和原生终端。
+
+## Channel content on Linux, Mac memory only
+
+`channel-persistence.ts` executes channel queries in an in-memory SQLite database.
+The compatibility database under `APP_HOME/channels` mirrors subscriptions,
+identities, read IDs, configuration and explicit saves; unsaved article/message
+bodies, original author avatars, image bytes and channel drafts stay in RAM.
+`channel-content.ts` loads authoritative indexed Linux pages on demand and flushes content
+deltas before acknowledging ingestion. Legacy local content is erased only after
+server row hashes and image hashes verify; saved items, downloads and private
+native histories are preserved. Rebuildable message search and Chromium HTTP
+caches do not write channel content to disk.
+
+`channel.storage-exchange/result` use the existing authenticated collector tunnel.
+Only the configured all-source collector may service issued, collector-bound
+requests; it gains no operator or employee identity. The independent Python
+worker owns a capacity-managed content store, original image assets and explicit
+Telegram document requests. Listing magazine metadata never fetches full files
+or generated previews. A download click fetches once on Linux, verifies SHA-256,
+transfers through existing SSH and retains that requested server copy.
+
+Every channel uses the same Channel/Board/Posts views. X and YouTube each appear
+as one aggregate conversation. Board reuses the masonry feed; Posts has a
+refresh-specific stable ranking and cursor, so refresh changes the first item
+without reshuffling already loaded pages. Platform author images remain distinct
+from configured channel icons.
+
+Persistent native employees can receive only explicitly saved channel entries.
+Unsaved automatic awareness and channel work fail before starting a native turn;
+quoting/forwarding requires saving first. This prevents native transcripts from
+becoming an automatic local copy of channel content. Private/group sessions and
+clean native Workers retain their existing behavior.
+
+The archive does not hydrate all history on startup. Indexed 24-item pages and
+small materialized source summaries are independent of archive size. Source
+read watermarks make mark-all proportional to subscriptions rather than messages.
+Incremental byte ledgers enforce three independent 1 TB platform budgets, with
+oldest-first pressure eviction and protected saves/downloads. Image registration
+keeps original ingestion bytes on Linux; eight RPC workers service foreground
+reads ahead of background writes. Server previews, request deduplication, bounded
+RAM caches, visible-image release and shared Posts virtualization reduce transfer
+and decoded-image memory. All main-app selects reuse AppSelect; its native proxy
+is inert and never opens a platform picker.

@@ -16,7 +16,7 @@ import { APP_HOME } from '../../shared/protocol'
 import { approvalHandler,cancelApprovals } from '../approvals'
 import { engineEnvironment,processProvider } from './configuration'
 import type { ModelInfo } from '../../shared/types'
-const modelsFrom=(models:any[],provider:ReturnType<typeof processProvider>):ModelInfo[]=>models.filter(m=>m.provider===provider.provider).map(m=>({value:m.id,displayName:m.name??m.id,description:provider.managedReasoning?'OpenAI-compatible · Provider-controlled reasoning':'DeepSeek · Thinking off',inputModalities:['text'],supportsEffort:false,supportedEffortLevels:[],supportsAdaptiveThinking:false,supportsFastMode:false,isDefault:m.id===provider.model}))
+const modelsFrom=(models:any[],provider:ReturnType<typeof processProvider>):ModelInfo[]=>models.filter(m=>m.provider===provider.provider).map(m=>({value:m.id,displayName:m.name??m.id,description:'Native configuration · Provider-managed reasoning',inputModalities:['text'],supportsEffort:false,supportedEffortLevels:[],supportsAdaptiveThinking:false,supportsFastMode:false,isDefault:m.id===provider.model}))
 export async function discoverPi(){
   const directory=fs.mkdtempSync(path.join(os.tmpdir(),'agents-pi-discovery-')),client=piClient({cwd:directory,directory,env:{DEEPSEEK_API_KEY:engineEnvironment('pi').DEEPSEEK_API_KEY||'discovery-only-no-inference'}})
   try{const result=await client.call('get_available_models');return {models:modelsFrom(result.models,client),version:undefined as string|undefined}}finally{await client.close();fs.rmSync(directory,{recursive:true,force:true})}
@@ -25,7 +25,7 @@ export async function openPi(context:EngineStart){
   const {args,card,cardId,sessionId,cwd,permissionMode,host}=context
   if(context.nativeRemote)throw Error('Pi requires a Core-local engine; cloud workspaces use Tunnel')
   if(context.remote&&!context.remoteLaunch)throw Error('Missing cloud Tunnel; local execution is disabled')
-  if(!engineEnvironment('pi').DEEPSEEK_API_KEY)throw Error('Configure the Pi API key in Coding Agent settings first')
+  if(!engineEnvironment('pi').DEEPSEEK_API_KEY&&!processProvider('pi').native)throw Error('Configure the Pi API key in Coding Agent settings first')
   if(args.planMode||permissionMode==='plan')throw Error('Pi does not support Plan mode')
   const provider=processProvider('pi')
   const directory=path.join(APP_HOME,'agent-access',cardId,'pi'),{register,isOpen,rememberMeta,emit,dispatchQueued}=host
@@ -76,8 +76,8 @@ export async function openPi(context:EngineStart){
   }})
   try{
     const current=await client.call('get_state'),catalog=await client.call('get_available_models')
-    await client.call('set_model',{provider:client.provider,modelId:state.model});await client.call('set_thinking_level',{level:'off'})
-    state.sessionId=current.sessionId;patchSession(cardId,{piSessionId:current.sessionId,piSessionFile:current.sessionFile,piConfigRoot:directory,model:state.model,thinking:false,effort:undefined})
+    await client.call('set_model',{provider:client.provider,modelId:state.model});if(provider.thinkingLevel)await client.call('set_thinking_level',{level:provider.thinkingLevel})
+    state.sessionId=current.sessionId;patchSession(cardId,{piSessionId:current.sessionId,piSessionFile:current.sessionFile,piConfigRoot:directory,model:state.model})
     const unsupported=(name:string)=>Promise.reject(Error('Pi adapter does not support '+name))
     state.driver={
       send(text,images,taskId){
@@ -94,13 +94,13 @@ export async function openPi(context:EngineStart){
       async interrupt(){if(state.running){failure='Interrupted';state.abort?.abort();await client.call('abort');await state.finished}},
       async close(){state.abort?.abort();tunnel?.close();finish?.();await client.close();await state.finished},
       async whenIdle(){await state.finished},
-      async setModel(model){await client.call('set_model',{provider:client.provider,modelId:model||client.model});await client.call('set_thinking_level',{level:'off'})},
+      async setModel(model){await client.call('set_model',{provider:client.provider,modelId:model||client.model});if(provider.thinkingLevel)await client.call('set_thinking_level',{level:provider.thinkingLevel})},
       setPlan(){return unsupported('Plan mode')},async setPermission(mode){if(mode==='auto')throw Error('This adapter does not provide a permission classifier')},
-      async setThinking(enabled){if(client.managedReasoning)throw Error('Reasoning is controlled by this Pi provider and cannot be toggled by the adapter');if(enabled)throw Error('Pi uses Thinking off');await client.call('set_thinking_level',{level:'off'})},
+      async setThinking(enabled){if(client.managedReasoning)throw Error('Reasoning is controlled by this Pi provider and cannot be toggled by the adapter');if(enabled)throw Error('Pi uses Thinking off');await client.call('set_thinking_level',{level:provider.thinkingLevel||'off'})},
       async setEffort(effort){if(effort)throw Error('Pi uses Thinking off')},
       async setFast(enabled){if(enabled)throw Error('Pi does not support Fast mode')},background(){return unsupported('background process control')}
     } satisfies EngineDriver
-    register(sessionId,state);rememberMeta(sessionId,{engine:'pi',cwd,model:state.model,permissionMode,thinking:false,thinkingSupported:false,thinkingManaged:client.managedReasoning,planMode:false,fastMode:false,commands:[],models:modelsFrom(catalog.models,client),piSessionId:state.sessionId!,busy:false})
+    register(sessionId,state);rememberMeta(sessionId,{engine:'pi',cwd,model:state.model,permissionMode,thinking:(provider.thinkingLevel??current.thinkingLevel??'off')!=='off',thinkingSupported:false,thinkingManaged:client.managedReasoning,planMode:false,fastMode:false,commands:[],models:modelsFrom(catalog.models,client),piSessionId:state.sessionId!,busy:false})
     return {sessionId,cwd,engine:'pi' as const}
   }catch(error){tunnel?.close();await client.close();throw error}
 }

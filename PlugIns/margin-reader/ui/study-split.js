@@ -8,8 +8,8 @@ export class StudySplit {
     this.study=study;this.settings={};this.lastDocuments=new Map();
     const controls=document.createElement('div');controls.id='study-view-controls';controls.className='study-view-controls';
     study.tabs.replaceWith(controls);controls.append(study.tabs);this.controls=controls;
-    controls.insertAdjacentHTML('beforeend','<button id="study-split-toggle" type="button" aria-pressed="false" title="同时查看文档与脑图"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M12 4v16"/></svg><span>并排</span></button><button id="study-swap-panes" type="button" title="交换文档与脑图的左右位置" aria-label="交换文档与脑图的左右位置" hidden>⇄</button>');
-    $('study-split-toggle').onclick=run(()=>study.surface(this.active?(study.getDocument()?'documents':'map'):'split'));
+    // Independently toggle the document and map; both selected means split view.
+    controls.insertAdjacentHTML('beforeend','<button id="study-swap-panes" type="button" title="交换文档与脑图的左右位置" aria-label="交换文档与脑图的左右位置" hidden>⇄</button>');
     $('study-swap-panes').onclick=run(async()=>{this.safeLayout();await study.setSettings({studyOrder:this.settings.studyOrder==='map-first'?'document-first':'map-first'});});
     const divider=document.createElement('div');divider.id='study-split-divider';divider.className='study-split-divider';divider.hidden=true;divider.tabIndex=0;
     divider.setAttribute('role','separator');divider.setAttribute('aria-orientation','vertical');divider.setAttribute('aria-label','调整文档与脑图宽度');divider.setAttribute('aria-controls','reader-view study-pane');divider.setAttribute('aria-valuemin','30');divider.setAttribute('aria-valuemax','70');
@@ -26,6 +26,35 @@ export class StudySplit {
     window.addEventListener('blur',()=>this.finish(false));
     this.toolSlots=[['mm-boundary',480],['mm-summary',480],['mm-relationship',480],['mm-export',480],['mm-format',320],['mm-delete-topic',320]].map(([id,minWidth])=>{const button=$(id),anchor=document.createComment(id);button.before(anchor);return {button,anchor,minWidth};});
     this.resize=new ResizeObserver(()=>this.compactTools());this.resize.observe($('study-pane'));
+    // Keep the existing tools; help users find an action in the crowded menu.
+    const menu=$('map-more').querySelector('.map-more-body');
+    this.menuSearch=document.createElement('input');
+    this.menuSearch.id='map-action-search';this.menuSearch.type='search';
+    this.menuSearch.placeholder='查找已有操作…';this.menuSearch.autocomplete='off';
+    this.menuSearch.setAttribute('aria-label','筛选脑图现有操作');
+    menu.prepend(this.menuSearch);
+    this.menuSearch.addEventListener('input',()=>this.filterMenu());
+    $('map-more').addEventListener('toggle',()=>{
+      if(!$('map-more').open){this.menuSearch.value='';this.filterMenu();}
+    });
+  }
+  filterMenu(){
+    const menu=$('map-more').querySelector('.map-more-body');
+    const query=this.menuSearch.value.trim().toLocaleLowerCase();
+    for(const node of menu.querySelectorAll('button,select')){
+      const label=(node.title||'')+' '+(node.getAttribute('aria-label')||'')+' '+node.textContent;
+      const matching=!query||label.toLocaleLowerCase().includes(query);
+      if(!matching&&!node.hidden){node.dataset.searchHidden='true';node.hidden=true;}
+      else if(matching&&node.dataset.searchHidden){node.hidden=false;delete node.dataset.searchHidden;}
+    }
+    for(const child of menu.children){
+      if(child===this.menuSearch||!child.querySelectorAll)continue;
+      const controls=[...child.querySelectorAll('button,select')];
+      if(!controls.length)continue;
+      const filtered=query&&controls.every(control=>control.hidden);
+      if(filtered&&!child.hidden){child.dataset.searchHidden='true';child.hidden=true;}
+      else if(!filtered&&child.dataset.searchHidden){child.hidden=false;delete child.dataset.searchHidden;}
+    }
   }
   compactTools(){
     const width=this.active?$('study-pane').clientWidth:Infinity,menu=$('map-more').querySelector('.map-more-body');
@@ -58,7 +87,7 @@ export class StudySplit {
     const host=reading?$('study-reading-bar'):$('study-home').querySelector('header');if(this.controls.parentNode!==host)host.append(this.controls);
     const view=split?'split':reading?'documents':set.view;
     for(const button of study.tabs.children)button.setAttribute('aria-pressed',String(split||button.dataset.studyView===view));
-    $('study-split-toggle').setAttribute('aria-pressed',String(split));$('study-split-toggle').title=split?'退出并排，保留当前阅读视图':'同时查看文档与脑图';
+    // The two pressed states in study.tabs are the complete view selector.
     $('study-swap-panes').hidden=!split;
     $('study-home-map').hidden=reading||view!=='map';$('study-documents').hidden=reading||!['documents','split'].includes(view);study.documentGallery.tools.hidden=$('study-documents').hidden;
     $('study-home').dataset.surface=view;$('reader-annotations').hidden=!reading||doc?.kind!=='pdf';

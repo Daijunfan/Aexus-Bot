@@ -155,3 +155,7 @@ Some detailed references are currently written in Chinese.
 Project code is licensed under **GNU GPL v3**. Third-party code and artwork retain their own licenses, notices, and review records. The project's GPL does not grant additional rights to third-party brand assets. Separately installed coding-agent runtimes and model services follow their respective terms.
 
 See [LICENSE](LICENSE), [licensing details](LICENSING.md), and [third-party notices](THIRD_PARTY_NOTICES.md).
+
+## Independent social-media collectors
+
+Telegram, X and YouTube collection is maintained in the separate open-source [xhs_publisher](https://github.com/Daijunfan/xhs_publisher) project. Aexus Bot is the client: it manages subscriptions and reads/searches content through scoped APIs, while collection and storage run on Linux.

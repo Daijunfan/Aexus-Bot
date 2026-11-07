@@ -3,6 +3,20 @@ const fs=require('node:fs/promises'),{randomUUID}=require('node:crypto');
 const S=require('./safety.cjs'),M=require('./study-model.cjs'),H=require('./study-history.cjs');
 const writes=new Set(['study.versions.create','study.versions.restore','study.versions.update','study.versions.policy']);
 const reads=new Set(['study.versions.list','study.versions.get']);
+function retainedCardIds(set){return [...(set.cards||[]),...(set.cardTrash||[]).flatMap(entry=>entry.cards||[])].map(card=>card.id);}
+function restoredAliases(state,set,snapshot){
+ const aliases={...snapshot.cardRedirects},owned=new Set(retainedCardIds(snapshot));
+ for(const id of owned)delete aliases[id];
+ for(const [id,target] of Object.entries(set.cardRedirects||{})){
+  if(owned.has(id)||JSON.stringify(aliases[id])===JSON.stringify(target))continue;
+  let found;
+  try{found=require('./card-location.cjs').locate(state,set.id,id);}catch{}
+  S.assert(found&&found.set.id!==set.id,'CONFLICT','The version would discard a relocated card address whose external owner is unavailable. Restore the destination study or card first; no study was overwritten.');
+  aliases[id]={setId:found.set.id,cardId:found.card.id};
+ }
+ S.assert(Object.keys(aliases).length<=100000,'TOO_LARGE','Relocation history capacity reached. No changes were applied.');
+ return aliases;
+}
 function candidate(set,now=Date.now()){
  const p=set.versionPolicy;if(!p?.enabled||set.deletedAt)return null;
  if(now-Date.parse(set.lastAutoVersionAt||0)<(p.intervalSeconds||600)*1000)return null;
@@ -39,7 +53,13 @@ async function request(store,method,p){
   const set=M.findSet(state,p.setId,true);M.revision(set,p.expectedRevision);
   if(method==='study.versions.create')await saveSnapshot(store,set,{revision:set.revision,snapshot:H.snapshot(set)},{title:p.title},rollback);
   else if(method==='study.versions.restore'){
-   const {value}=await readSnapshot(store,set,p.versionId);const otherIds=new Set(Object.values(state.studySets).filter(s=>s.id!==set.id&&!s.deletedAt).flatMap(s=>s.cards.map(c=>c.id)));S.assert(value.snapshot.cards.every(c=>!otherIds.has(c.id)),'CONFLICT','This version contains cards moved to another study. Use linked undo before restoring this snapshot.');H.checkpoint(set);Object.assign(set,structuredClone(value.snapshot));delete set.deletedAt;
+   const {value}=await readSnapshot(store,set,p.versionId);
+   // Trash remains recoverable ownership. Ignoring deleted studies or card
+   // trash lets a version duplicate moved IDs when either owner is restored.
+   const otherIds=new Set(Object.values(state.studySets).filter(s=>s.id!==set.id).flatMap(retainedCardIds));
+   S.assert(retainedCardIds(value.snapshot).every(id=>!otherIds.has(id)),'CONFLICT','This version contains cards retained by another study, including recoverable trash. Restore the owner or undo the linked move first; no study was overwritten.');
+   const aliases=restoredAliases(state,set,value.snapshot);
+   H.checkpoint(set);Object.assign(set,structuredClone(value.snapshot),{cardRedirects:aliases});delete set.deletedAt;
    if(state.settings.activeStudySet===set.id&&!set.documentIds.includes(state.settings.lastDocument))state.settings.lastDocument=null;
   }else if(method==='study.versions.update'){
    const record=set.versionRecords?.find(v=>v.id===p.versionId);S.assert(record,'NOT_FOUND','Version not found.');S.assert(p.title!==undefined||p.archived!==undefined,'INVALID_PARAMS','Supply title or archived.');if(p.title!==undefined)record.title=M.title(p.title);if(p.archived!==undefined)record.archived=p.archived;

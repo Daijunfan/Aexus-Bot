@@ -81,7 +81,7 @@ try{
   if(!baseline){assert.deepEqual(after,before,'hover must not move or truncate the label differently');await expect(row.locator('.tree-toggle')).toHaveCount(0);await noOverlap('.sidebar-page')}
   await shot('deep-tree');
   await api('page.update',{pageId:main.id,icon:imageUrl,cover:imageUrl});await page.locator('.sidebar-nav').getByRole('button',{name:'主页',exact:true}).click();
-  const home=page.locator('.recent-card').filter({hasText:main.title});if(!baseline){await expect(home.locator('.card-preview')).not.toHaveCSS('background-image','none');await expect.poll(()=>home.locator('img').evaluate(el=>el.naturalWidth)).toBeGreaterThan(0)}await shot('home-image-preview');
+  const home=page.locator('.recent-card').filter({hasText:main.title});if(!baseline){await expect(home.locator('.card-preview img')).toBeVisible();await expect.poll(()=>home.locator('.card-preview img').evaluate(el=>el.naturalWidth)).toBeGreaterThan(0)}await shot('home-image-preview');
   await api('page.update',{pageId:main.id,icon:'data:image/png;base64,broken'});await goto(main);
   if(!baseline){await expect(page.locator('.page-large-icon .page-default-icon')).toHaveCount(1);await expect(page.locator('.page-large-icon img')).toHaveCount(0)}
   await shot('image-fallback');

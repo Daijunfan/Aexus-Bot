@@ -13,6 +13,7 @@ exports.commandInput = (command, argv, parse, jsonArgument) => {
     if ((input === undefined && !required) || (truthy && !input)) continue
     if(type === 'boolean-value' && input !== true && input !== false && input !== 'true' && input !== 'false')throw Error('--'+source+' requires true or false')
     result[name] = type === 'boolean-value' ? input === true || input === 'true' : type === 'number' ? Number(input) : type === 'boolean' ? !!input
+      : type === 'number-or-text' ? (typeof input==='string'&&input.startsWith('"')?jsonArgument(input):/^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(String(input))?Number(input):input)
       : type === 'json' ? jsonArgument(input) : input
   }
   return result

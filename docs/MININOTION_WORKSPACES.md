@@ -51,20 +51,18 @@ mininotion fs audit
 
 `fs.audit` 是只读验收接口。valid 必须为 true，errors 必须为空；pages 给出逐页面路径及父页面。创建、移动、回收恢复后均应调用它，并用 fs.list 或实际文件树独立核对。
 
-## 创建插件团队与员工
+## 员工页面授权
 
-Work Team 的目录也是一个主页面；其子目录在全局显示为子页面。员工绑定哪个目录，就在该目录对应的页面中工作。
+新员工使用普通本地或云端团队，不创建插件团队、不绑定页面目录。用户或 Secretary 在 MiniNotion 的“授权人员”中选择一个或多个页面，分别授予阅读、修改、新增；Secretary 无需授权。员工的引擎会话、执行主机与工作目录不随页面权限改变。
 
 ```sh
-agents group add 项目甲 --mode work --plugin mininotion
-agents plugin call mininotion fs.bind --params '{"path":"项目甲","title":"项目甲"}'
-agents plugin call mininotion page.create --team 项目甲 --params '{"title":"架构","color":"white"}'
-# 用上一条返回的 id 查询实际目录，再绑定已有目录。
-agents plugin call mininotion fs.path --team 项目甲 --params '{"pageId":"PAGE_ID"}'
-agents card create --title 架构员工 --group 项目甲 --engine claude --directory-mode bind --cwd '/实际返回的架构目录'
+# 以下在员工自己的认证环境中调用，先由用户或 Secretary 授权页面。
+agents plugin resources --id mininotion
+agents plugin call mininotion page.get --params '{"pageId":"AUTHORIZED_PAGE_ID"}'
+agents plugin call mininotion page.create --params '{"parentId":"AUTHORIZED_PAGE_ID","title":"架构","color":"white"}'
 ```
 
-在员工绑定的目录内可用 `mininotion api fs.bind --data '{"path":"."}'` 获取其对应页面 ID，再传给 page.create.parentId。已存在的 index 不会被覆盖。已绑定目录含 index 时，省略 parentId 的新页面默认成为该页的子页面。全局工作区根仅是集合，不能用 fs.bind 把集合本身做成主页面。
+新增子页面要求父页面的新增权限，创建者自动获得新页面的后续读写权限；仅允许阅读时不能修改。旧 Work Team 和员工绑定目录继续原位兼容，其目录仍对应页面，不自动搬迁或改名。全局工作区根仅是集合，不能用 fs.bind 把集合本身做成主页面。
 
 ## 兼容与验收
 

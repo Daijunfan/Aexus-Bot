@@ -1,4 +1,11 @@
+import {startScriptMonitors,stopScriptMonitors} from './script-monitors'
+import {notifyScheduleEvent,notifySessionSchedule} from './scheduler/service'
+import {messages as chatStoredMessages} from './chat-group-store'
+import {startBotWorkers,stopBotWorkers} from './bot-workers'
+import {ensureChannelContent} from './channel-content'
+import {channelStorageSettings,closeChannelStorageTransport} from './channel-storage-transport'
 import {setConversationPolicyEmitter} from './conversation-policy'
+import {setConversationFilesEmitter} from './conversation-workspaces'
 import {startConversationNotices,stopConversationNotices,reconcileConversationNotices} from './conversation-notices'
 import {startPostTriggers,stopPostTriggers,reconcilePostTriggers} from './channel-post-triggers'
 import {closeAssetPreviews} from './asset-previews'
@@ -13,13 +20,14 @@ import {setPlanEmitter} from './plan'
 import {setChatEmitter,recoverChatDeliveries} from './chat-groups'
 import {recordDiscussionDelivery as updateChatDelivery} from './discussion-context'
 import {recoverChannelDeliveries} from './channel-discussion'
-import {closeHostConnections} from './host-connections'
 import {closeUploads} from './uploads'
 import {closeInstallations} from './engines/installer'
 import {closeEngineLogins} from './engines/login'
 import {exposeClaudeSdk} from './engines/claude-sdk'
 import {acquireRuntimeLock} from './runtime-lock'
-import {publishReply,repairSharedReplyReceipts} from './reply-receipts'
+import {publishReply,beginReplyTurn,endReplyTurn,recordDirectReply,acknowledgeDirectReply} from './reply-receipts'
+import {setDirectEmitter,setDirectReplyHandlers,recordDirectReceipt} from './direct-messages'
+import {recordNativeInput} from './transcripts'
 import {setManagementActivityEmitter,setManagementTask,clearManagementInteraction,pruneManagementActivity,resetManagementActivity} from './management-activity'
 import {startInitializations,stopInitializations} from './initialization'
 import {readStore,migrateEmployeePermissionDefaults} from './store'
@@ -48,13 +56,13 @@ export function startRuntime(notify: (channel: string, payload: any) => void = (
   refreshIngress()
   exposeClaudeSdk()
   setDesktopEvent(notify)
-  setChatEmitter((id,editedMessageId,messageId)=>publishEvent('chat:changed',{id,...(editedMessageId?{editedMessageId}:{}),...(messageId?{messageId}:{})}))
-  setConversationPolicyEmitter(conversation=>{reconcilePostTriggers();revokeInvalidDelegations();reconcileConversationNotices();publishEvent('conversation:controls',{conversation});if(conversation.startsWith('group:'))publishEvent('chat:changed',{id:conversation.slice(6)})})
+  setChatEmitter((id,editedMessageId,messageId)=>{publishEvent('chat:changed',{id,...(editedMessageId?{editedMessageId}:{}),...(messageId?{messageId}:{})});const entry=(messageId||editedMessageId)&&chatStoredMessages(id).find(m=>m.id===(messageId??editedMessageId));if(entry&&!entry.bot?.delivery)notifyScheduleEvent({type:'message.received',conversation:'group:'+id,id:entry.id+':'+(entry.editRevision??0),messageId:entry.id,sequence:entry.sequence},entry.author.kind==='agent'?entry.author.employeeId:undefined)})
+  setConversationFilesEmitter(conversation=>publishEvent('conversation:files-changed',{conversation}))
+  setConversationPolicyEmitter(conversation=>{reconcileSchedules();reconcilePostTriggers();revokeInvalidDelegations();reconcileConversationNotices();publishEvent('conversation:controls',{conversation});if(conversation.startsWith('group:'))publishEvent('chat:changed',{id:conversation.slice(6)})})
   setPlanEmitter(()=>publishEvent('plan:changed',{}))
   setMessengerEmitter(payload=>publishEvent('messenger:changed',payload))
   recoverChatDeliveries()
   recoverChannelDeliveries()
-  repairSharedReplyReceipts()
   setManagementActivityEmitter(state=>publishEvent('management:activity',state))
   migrateCloudTeams()
   migrateCloudHostBindings()
@@ -66,16 +74,28 @@ export function startRuntime(notify: (channel: string, payload: any) => void = (
     const id = payload?.sessionId
     if (id) {
       const state=getLive(id),cardId=payload.cardId??state?.cardId
+      if(cardId&&channel==='session:turn-start'&&state?.currentTask&&!state.privateInitialization&&!state.acknowledging)beginReplyTurn(cardId,state.currentTask.messageId)
       if(cardId&&channel==='session:turn-start'&&!state?.privateInitialization){setManagementTask(cardId,state?.currentTask);updateChatDelivery(cardId,state?.currentTask?.chat,{status:'running',sessionId:id,taskId:state?.currentTask?.messageId})}
       if(cardId&&state?.currentTask?.chat&&['session:turn-end','session:error','session:interrupted','session:closed'].includes(channel))updateChatDelivery(cardId,state.currentTask.chat,{status:channel==='session:turn-end'?'completed':channel==='session:error'?'failed':'interrupted',...(channel==='session:error'?{error:String(payload.message)}:{})})
+      if(cardId&&channel==='session:turn-end'&&!state?.privateInitialization&&!state?.acknowledging&&state?.currentTask)notifySessionSchedule(cardId,state.currentTask.messageId,id)
       if(cardId&&['session:turn-end','session:interrupted','session:error','session:closed','session:end'].includes(channel))setManagementTask(cardId)
       if(['session:interrupted','session:error','session:closed','session:end'].includes(channel)){const cardId=payload.cardId??getLive(id)?.cardId;if(cardId)clearManagementInteraction(cardId)}
       if (channel === 'session:message') recordClaude(id, payload.message)
+      if(channel==='session:input-context')recordNativeInput(id,payload.context,payload.body)
+      if(channel==='session:context-event'){
+        const value=payload.payload
+        if(payload.event==='session:message')recordClaude(id,value.message)
+        if(payload.event==='session:agent')recordAgent(id,value.event)
+        if(payload.event==='session:codex')recordCodex(id,value.event)
+        if(payload.event==='session:error')recordError(id,value.message)
+        if(['session:turn-end','session:error'].includes(payload.event))saveTranscript(id)
+      }
       if (channel === 'session:agent') recordAgent(id,payload.event)
       if (channel === 'session:codex') recordCodex(id, payload.event)
       if (channel === 'session:user') {const item=recordUser(id,payload.text,payload.images,payload.reply,payload.author,payload.files,payload.taskId,payload.sourceView);payload.itemId=item.id;payload.createdAt=item.createdAt}
       if (channel === 'session:receipt') {
         recordOutboundReceipt(id,payload.taskId,payload.stage)
+        if(cardId)recordDirectReceipt(cardId,payload.taskId,payload.stage)
         const task=state?.currentTask
         if(cardId&&task&&task.messageId===payload.taskId&&task.chat)updateChatDelivery(cardId,task.chat,{deliveredAt:Date.now()})
       }
@@ -83,15 +103,18 @@ export function startRuntime(notify: (channel: string, payload: any) => void = (
       if (channel === 'session:turn-end' || channel === 'session:interrupted') markTurnEnd(id)
       if (channel === 'session:error') recordError(id, payload.message)
       if (['session:user', 'session:turn-end', 'session:interrupted', 'session:error'].includes(channel)) saveTranscript(id)
-      if(channel==='session:turn-end'&&!conversation(id).error){const state=getLive(id);if(state&&!state.privateInitialization&&!state.currentTask?.chat)publishReply(state.cardId,transcriptItems(id),state.currentTask?.messageId)}
+      if(channel==='session:turn-end'&&!conversation(id).error){const state=getLive(id);if(state&&!state.privateInitialization&&!state.acknowledging)publishReply(state.cardId,transcriptItems(id),state.currentTask?.messageId)}
+      if(cardId&&['session:turn-end','session:interrupted','session:error','session:closed','session:end'].includes(channel))endReplyTurn(cardId,state?.currentTask?.messageId)
     }
     publishEvent(channel, payload)
   }
   setEmitter(broadcast)
+  setDirectEmitter(employee=>broadcast('direct:changed',{employee,cardId:employee}))
+  setDirectReplyHandlers((employee,reference)=>{recordDirectReply(employee,reference);notifyScheduleEvent({type:'message.received',id:reference.messageId,conversation:'employee:'+employee,messageId:reference.messageId,sequence:reference.sequence})},acknowledgeDirectReply)
   setTerminalEmitter(broadcast)
   const unsubscribe = onStoreChange((store,changes) => { if(changes.authority){reconcilePostTriggers();reconcileConversationNotices();reconcileSchedules();revokeInvalidDelegations();pruneManagementActivity()} broadcast('store:changed', {...store,changes}) })
   const unwindows=onPluginWindows(windows=>broadcast('plugin:windows',windows))
   const unview = onViewChange((state,clientId) => publishEvent('view:changed',state,clientId))
-  startServer(() => {startInitializations();startScheduler(broadcast);startConversationNotices(broadcast);startPostTriggers()})
-  return async () => {await stopPostTriggers();stopConversationNotices();setConversationPolicyEmitter(()=>{});await closeChannelIngress();stopExports();closeAllMedia();closeEngineLogins();await closeInstallations();await closeUploads();resetManagementActivity(); await closePluginWindows(); unwindows(); unsubscribe(); unview(); await stopInitializations(); await stopScheduler(); await closeAll(); await closeTransfers(); closeRemoteFiles(); await closeHostConnections(); await closeTerminals(); stopServer(); setDesktopEvent(()=>{}); await closePlugins();setChatEmitter(()=>{});setPlanEmitter(()=>{});setMessengerEmitter(()=>{});await closeChannels();await closeMessageIndex();await closeAssetPreviews();await assetIndex.close();setChannelsEmitter(()=>{});releaseLock() }
+  startServer(() => {if(channelStorageSettings())void ensureChannelContent().catch(error=>console.error('[Channel storage]',error.message));startInitializations();startScheduler(broadcast);startBotWorkers();startScriptMonitors(notifyScheduleEvent,()=>{reconcileSchedules(false);publishEvent('monitor:changed',{})});startConversationNotices(broadcast);startPostTriggers()})
+  return async () => {stopBotWorkers();await stopScriptMonitors();await stopPostTriggers();stopConversationNotices();setConversationPolicyEmitter(()=>{});setConversationFilesEmitter(()=>{});await closeChannelIngress();stopExports();closeAllMedia();closeEngineLogins();await closeInstallations();await closeUploads();resetManagementActivity(); await closePluginWindows(); unwindows(); unsubscribe(); unview(); await stopInitializations(); await stopScheduler(); await closeAll(); await closeTransfers(); closeRemoteFiles();  await closeTerminals(); stopServer(); setDesktopEvent(()=>{}); await closePlugins();setChatEmitter(()=>{});setPlanEmitter(()=>{});setMessengerEmitter(()=>{});closeChannelStorageTransport();await closeChannels();await closeMessageIndex();await closeAssetPreviews();await assetIndex.close();setChannelsEmitter(()=>{});releaseLock() }
 }

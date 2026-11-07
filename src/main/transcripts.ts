@@ -70,6 +70,17 @@ const empty = (id: string): Session =>
   }) as Session
 
 const conversations = new Map<string, Session>()
+/** Preserve the exact application input without replacing the original user text. */
+export function recordNativeInput(id:string,context:import('../shared/message-source').NativeInputContext,body?:{text:string;images?:string[];files?:MessageAttachment[];author?:PrincipalRef;reply?:MessageReply;taskId?:string;sourceView?:import('../shared/message-source').MessageSourceView}){
+ const s=conv(id),index=s.items.map(item=>item.role).lastIndexOf('user'),last=s.items[index]
+ if(last?.role==='user'&&!last.context&&(!body?.taskId||last.outbound?.taskId===body.taskId)){
+  const items=[...s.items];items[index]={...last,context};conversations.set(id,{...s,items})
+ }else{
+  const input=recordUser(id,body?.text??(context.phase==='read'?'Read shared context':context.prompt),body?.images,body?.reply,body?.author,body?.files,body?.taskId,body?.sourceView)
+  const next=conv(id);conversations.set(id,{...next,items:next.items.map(item=>item.id===input.id?{...input,context}:item)})
+ }
+ saveTranscript(id)
+}
 
 function conv(sessionId: string): Session {
   let s = conversations.get(sessionId)

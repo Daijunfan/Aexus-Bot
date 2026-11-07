@@ -26,7 +26,7 @@ export default defineConfig({
     plugins: [react()],
     build: {
       rollupOptions: {
-        input: { index: resolve(__dirname, 'src/renderer/index.html') }
+        input: { index: resolve(__dirname, 'src/renderer/index.html'), 'plugin-host':resolve(__dirname,'src/renderer/plugin-host.html') }
       }
     }
   }

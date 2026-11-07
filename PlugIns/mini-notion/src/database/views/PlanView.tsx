@@ -1,9 +1,12 @@
 import { EventSummary } from '../../components/EventSummary';
 import { eventPresenter, eventDescription, eventValue } from '../../scheduling/presentation';
-import {AppSelect} from '../../components/AppSelect';
-import { useContext, useEffect, useState } from 'react';
+import { AppSelect } from '../../components/AppSelect';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { AppearanceTheme, recordAppearanceStyle } from '../../appearance';
+import { conditionalColor } from '../model';
+import { conditionalColorStyle } from '../conditionalColors';
 import { TimeGrid } from './TimeGrid';
+import { WindowedCards } from './WindowedCards';
 import { DateInput } from '../DateInput';
 import { CalendarCheck, ChevronLeft, ChevronRight, Plus, SlidersHorizontal } from 'lucide-react';
 import { useWorkspace } from '../../store';
@@ -34,8 +37,9 @@ export function PlanView({ page, view, rows, updateView, openRow, addRow }: View
     const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
-  const plan = planProjection(page, view, rows, now);
-  const describe = eventPresenter(workspace!, page, view, now);
+  const plan = useMemo(() => planProjection(page, view, rows, now), [page, view, rows, now]);
+  const describe = useMemo(() => eventPresenter(workspace!, page, view, now),
+    [workspace, page, view, now]);
   const dates = page.database!.columns.filter(isDateProperty);
   const mode = view.planMode || 'week';
   const hasBacklog = view.planShowBacklog ?? (plan.unscheduled.length > 0 || plan.overdue.length > 0);
@@ -44,7 +48,15 @@ export function PlanView({ page, view, rows, updateView, openRow, addRow }: View
   const displayed = visibleColumns(page.database!, view).filter(
     (column) => ![plan.dateProperty?.id, plan.endProperty?.id, plan.doneProperty?.id].includes(column.id),
   );
-  const record = (id: string) => rows.find((row) => row.id === id)!;
+  const recordsById = useMemo(() => new Map(rows.map(row => [row.id, row])), [rows]);
+  const laneRows = useMemo(() => {
+    const mapped = new Map<string[], Page[]>();
+    for (const ids of [plan.unscheduled, ...plan.days.map(day => day.records)])
+      mapped.set(ids, ids.map(id => recordsById.get(id)!));
+    return mapped;
+  }, [plan, recordsById]);
+  const record = (id: string) => recordsById.get(id)!;
+  const cardLayoutKey = JSON.stringify([displayed, view.planMode, view.subItemDisplay, page.database!.subItems]);
   const readonlyDates =
     plan.dateProperty?.type !== 'date' || (!!plan.endProperty && plan.endProperty.type !== 'date');
   const setDate = (id: string, date: string, grabbedDate?: string) => {
@@ -82,7 +94,10 @@ export function PlanView({ page, view, rows, updateView, openRow, addRow }: View
   const card = (row: Page, date = '') => (
     <div
       className={`plan-card ${plan.isDone(row) ? 'completed' : ''}`}
-      style={recordAppearanceStyle(row, theme, workspace!.settings.appearance)}
+      style={{
+        ...recordAppearanceStyle(row, theme, workspace!.settings.appearance),
+        ...conditionalColorStyle(conditionalColor(row, view, page.database!, workspace!.pages), theme),
+      }}
       key={row.id}
       data-record-id={row.id}
       draggable={!readonlyDates && !page.locked && !row.locked}
@@ -101,7 +116,7 @@ export function PlanView({ page, view, rows, updateView, openRow, addRow }: View
             onChange={(event) => complete(row, event.target.checked)}
           />
         )}
-<button onClick={() => openRow(row.id)} title={eventDescription(describe(row))}>
+        <button onClick={() => openRow(row.id)} title={eventDescription(describe(row))}>
           <EventSummary info={describe(row)} showWhen={false} />
         </button>
       </div>
@@ -166,9 +181,10 @@ export function PlanView({ page, view, rows, updateView, openRow, addRow }: View
           <Plus size={14} />
         </IconButton>
       </header>
-      <div className="plan-lane-cards">
-        {ids.map((id) => card(record(id), date))}
-      </div>
+      <WindowedCards rows={laneRows.get(ids)!} enabled={ids.length > 60} className="plan-lane-cards"
+        layoutKey={cardLayoutKey} estimatedHeight={150} footer={null}>
+        {row => card(row, date)}
+      </WindowedCards>
       <button className="plan-add" disabled={readonlyDates || page.locked} onClick={() => add(date)}>
         <Plus size={13} />
         新建计划
@@ -208,35 +224,37 @@ export function PlanView({ page, view, rows, updateView, openRow, addRow }: View
           {!isDayPlan(view) && ` — ${plan.to}`}
         </strong>
         <details className="schedule-fields">
-          <summary><SlidersHorizontal size={14} /> 日期属性</summary>
+          <summary>
+            <SlidersHorizontal size={14} /> 日期属性
+          </summary>
           <div>
-        <AppSelect
-          aria-label="计划日期属性"
-          value={plan.dateProperty.id}
-          onChange={(event) => updateView({ calendarBy: event.target.value })}
-        >
-          {dates.map((column) => (
-            <option key={column.id} value={column.id}>
-              {column.name}
-            </option>
-          ))}
-        </AppSelect>
-        {dates.length > 1 && (
-          <AppSelect
-            aria-label="计划结束日期"
-            value={plan.endProperty?.id || ''}
-            onChange={(event) => updateView({ timelineEnd: event.target.value })}
-          >
-            <option value="">同一日期范围</option>
-            {dates
-              .filter((column) => column.id !== plan.dateProperty!.id)
-              .map((column) => (
+            <AppSelect
+              aria-label="计划日期属性"
+              value={plan.dateProperty.id}
+              onChange={(event) => updateView({ calendarBy: event.target.value })}
+            >
+              {dates.map((column) => (
                 <option key={column.id} value={column.id}>
                   {column.name}
                 </option>
               ))}
-          </AppSelect>
-        )}
+            </AppSelect>
+            {dates.length > 1 && (
+              <AppSelect
+                aria-label="计划结束日期"
+                value={plan.endProperty?.id || ''}
+                onChange={(event) => updateView({ timelineEnd: event.target.value })}
+              >
+                <option value="">同一日期范围</option>
+                {dates
+                  .filter((column) => column.id !== plan.dateProperty!.id)
+                  .map((column) => (
+                    <option key={column.id} value={column.id}>
+                      {column.name}
+                    </option>
+                  ))}
+              </AppSelect>
+            )}
           </div>
         </details>
         <AppSelect
@@ -274,22 +292,28 @@ export function PlanView({ page, view, rows, updateView, openRow, addRow }: View
           {rows.length} 项计划 · 已完成 {plan.completed} 项
         </span>
         {plan.overdue.length > 0 && <span className="plan-overdue-count">{plan.overdue.length} 项逾期</span>}
-        <button className="plan-backlog-toggle" aria-expanded={hasBacklog} onClick={() => updateView({ planShowBacklog: !hasBacklog })}>
+        <button
+          className="plan-backlog-toggle"
+          aria-expanded={hasBacklog}
+          onClick={() => updateView({ planShowBacklog: !hasBacklog })}
+        >
           未排期 {plan.unscheduled.length}
         </button>
       </div>
       <div className="plan-body">
-        {hasBacklog && <aside className="plan-backlog">
-          {lane('', '未排期', plan.unscheduled, 'unscheduled')}
-          {plan.overdue.length > 0 && (
-            <section className="plan-overdue">
-              <header>
-                逾期 <small>{plan.overdue.length}</small>
-              </header>
-              {plan.overdue.map((id) => card(record(id)))}
-            </section>
-          )}
-        </aside>}
+        {hasBacklog && (
+          <aside className="plan-backlog">
+            {lane('', '未排期', plan.unscheduled, 'unscheduled')}
+            {plan.overdue.length > 0 && (
+              <section className="plan-overdue">
+                <header>
+                  逾期 <small>{plan.overdue.length}</small>
+                </header>
+                {plan.overdue.map((id) => card(record(id)))}
+              </section>
+            )}
+          </aside>
+        )}
         {isHourlyPlan(view) ? (
           <TimeGrid
             now={now}
@@ -304,11 +328,19 @@ export function PlanView({ page, view, rows, updateView, openRow, addRow }: View
           />
         ) : (
           <div className="plan-schedule">
-            {!days.length && <div className="plan-agenda-empty">
-              <CalendarCheck size={22} />
-              <span>这一周期还没有计划</span>
-              <button className="text-button" onClick={() => add(plan.from)} disabled={readonlyDates || page.locked}><Plus size={14} /> 添加计划</button>
-            </div>}
+            {!days.length && (
+              <div className="plan-agenda-empty">
+                <CalendarCheck size={22} />
+                <span>这一周期还没有计划</span>
+                <button
+                  className="text-button"
+                  onClick={() => add(plan.from)}
+                  disabled={readonlyDates || page.locked}
+                >
+                  <Plus size={14} /> 添加计划
+                </button>
+              </div>
+            )}
             {days.map((day) => {
               const date = parseDay(day.date)!;
               const weekday = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()];

@@ -7,7 +7,7 @@ const { promisify } = require('node:util');
 const { pathToFileURL } = require('node:url');
 const { createHash } = require('node:crypto');
 const run = promisify(require('node:child_process').execFile);
-const root = path.resolve(__dirname, '..'), host = path.resolve(root, '../..');
+const root = path.resolve(__dirname, '..'), host = path.resolve(process.env.AEXUS_HOST_ROOT || path.join(root, '../..'));
 const reportFile = path.join(root, 'artifacts/agent-acceptance/employee-host.json');
 async function main() {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'mr-employee-home-'));

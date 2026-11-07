@@ -8,8 +8,9 @@ export type ViewProps = {
   updateView: (changes: Partial<DatabaseView>) => void;
   editProperty: (column: Property) => void;
   updateOptions: (column: Property, options: string[]) => void;
+  onCategoryCreated?: (viewId: string, columnId: string, name: string) => void;
   openRow: (id: string) => void;
   addRow: (values?: Page['values']) => void;
   selected: Set<string>;
-  selectRow: (id: string, selected: boolean) => void;
+  selectRow: (id: string | string[], selected: boolean) => void;
 };

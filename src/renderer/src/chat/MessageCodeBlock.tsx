@@ -2,7 +2,7 @@ import {memo,useEffect,useMemo,useState} from 'react'
 import type {HLJSApi} from 'highlight.js'
 import {Icon} from '../components/Icon'
 import {translate as uiText,useI18n} from '../i18n'
-import {useMessageCopy} from './MessageActionRail'
+import {useMessageCopy} from './useMessageCopy'
 import {useMessageRowState} from './MessageViewport'
 
 let syntaxLibrary:Promise<HLJSApi>|undefined

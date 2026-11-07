@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { CommandError } from '../core/errors';
-import { syncedReferences } from '../content/references';
+import { flattenBlocks } from '../core/blocks';
 import type { Page, Workspace } from '../types';
 
 export const ROOT_DOCUMENT = 'index.mininotion.json';
@@ -27,6 +27,25 @@ export function planPagePaths(root: string, workspace: Workspace, index: FolderI
   const known = new Map(Object.entries(index.files).filter(([, entry]) => entry.kind === 'native').map(([relative, entry]) => [entry.id, { relative, entry }]));
   const paths = new Map<string, string>();
   const visiting = new Set<string>();
+  // A notebook may contain hundreds of synced sources. Scan links once per
+  // planning pass instead of walking every block of every page for each source.
+  let references: Map<string, Page[]> | undefined;
+  const ownersFor = (sourceId: string): Page[] => {
+    if (!references) {
+      references = new Map();
+      for (const candidate of workspace.pages) {
+        if (candidate.syncedSource) continue;
+        for (const { block } of flattenBlocks(candidate.blocks)) {
+          const source = block.type === 'syncedBlock' ? block.props?.sourceId : null;
+          if (typeof source !== 'string' || !source) continue;
+          const owners = references.get(source) || [];
+          owners.push(candidate);
+          references.set(source,owners);
+        }
+      }
+    }
+    return references.get(sourceId) || [];
+  };
   const reserved = new Map<string, Set<string>>();
   const namesIn = (directory: string) => {
     if (!reserved.has(directory)) {
@@ -57,8 +76,7 @@ export function planPagePaths(root: string, workspace: Workspace, index: FolderI
     else if (saved && !organize && path.posix.basename(saved.relative) !== ROOT_DOCUMENT && (old?.subItemOf || old?.parentId) === parentId)
       relative = saved.relative;
     else if (page.syncedSource) {
-      const owners = syncedReferences(workspace, page.id, true)
-        .map(reference => pages.get(reference.pageId)).filter((candidate): candidate is Page => !!candidate && !candidate.syncedSource);
+      const owners = ownersFor(page.id);
       const owner = owners.find(candidate => saved && path.posix.dirname(resolve(candidate)) === path.posix.dirname(saved.relative)) || owners[0];
       relative = owner ? path.posix.join(path.posix.dirname(resolve(owner)), `${page.id}.mininotion.json`)
         : saved?.relative || path.posix.join('Shared content', `${page.id}.mininotion.json`);

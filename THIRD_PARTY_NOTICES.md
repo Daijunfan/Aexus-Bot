@@ -9,6 +9,14 @@ in `src/renderer/src/assets/channel-icons/sources.json` and
 do not imply endorsement. Their public redistribution review remains pending.
 Telegram channel photos are separately collected user data, not bundled artwork.
 
+## Telegram channel wallpaper
+
+Channel conversations use the unmodified pattern from Telegram Web A
+(`Ajaxy/telegram-tt`, `src/assets/pattern.svg`), licensed under GPL-3.0.
+The pinned source commit and SHA-256 are recorded in
+`src/renderer/src/assets/telegram-pattern-source.json`; the license is included
+in `licenses/telegram-web-a-GPL-3.0.txt`. The default light/dark palettes, twelve solid colors, pattern scale and the static gradient blending algorithm follow that client's wallpaper implementation. The renderer adapts `src/util/gradientBackground.ts` (GPL-3.0) to a fixed64px 2D canvas, without its animation loop. This does not imply Telegram endorsement.
+
 ## MiniNotion
 
 MiniNotion source and notices are in `PlugIns/mini-notion/`. The plugin carries its
@@ -44,6 +52,12 @@ Source: https://github.com/TanStack/virtual. Full notices are included in
 ## Native execution transport
 
 The `ws` package (MIT) provides the private loopback WebSocket endpoint. Native Codex execution uses the installed OpenAI CLI on each machine; no model credentials are copied to the execution host.
+
+## Native engine configuration
+
+`smol-toml` 1.9.1 (BSD-3-Clause, Squirrel Chat and contributors) reads native
+Codex provider configuration. Source: https://github.com/squirrelchat/smol-toml.
+The full notice ships in `licenses/smol-toml-1.9.1-BSD-3-Clause.txt`.
 
 ## Historical community pet artwork (MIT)
 
@@ -136,3 +150,8 @@ SOFTWARE.
 
 ### tiny-pinyin 1.3.2
 MIT-licensed directory-name romanization library by creeperyang. License: `licenses/tiny-pinyin-1.3.2-MIT.txt`. Source: https://github.com/creeperyang/pinyin.
+
+
+### Grok Bot native avatar renderer
+
+The private local build reuses the geometry, SVG shading and animation dependency closure from the user's installed Grok Bot renderer (`index.eager-common-DN47KHVY.js`). Its source and extraction metadata are recorded in `src/renderer/src/assets/bots/grok-native.provenance.json`. This does not approve public redistribution; the existing release review remains applicable.

@@ -8,8 +8,20 @@ export function titleHtml(card,topic){
  const fragments=line=>{const split=[line.start,...runs.flatMap(r=>[r.start,r.end]).filter(n=>n>line.start&&n<line.end),line.end].sort((a,b)=>a-b);return split.slice(1).map((end,i)=>{const start=split[i],r=runs.find(r=>r.start<=start&&r.end>=end);const style=r?`${r.bold?'font-weight:750;':''}${r.italic?'font-style:italic;':''}${r.underline?'text-decoration:underline;':''}${r.strike?'text-decoration:line-through;':''}${r.color?'color:'+r.color+';':''}`:'';return `<span${style?` style="${style}"`:''}>${E(title.slice(start,end))}</span>`;}).join('');};
  return topic.lines.map(line=>`<span class="mm-title-line">${fragments(line)||'&#8203;'}${line.ellipsis?'…':''}</span>`).join('');
 }
+// Reuse the parent lookup across visible topics; a dense map must not scan
+// 10,000 cards once per mounted card. The revision guards mutable array reuse.
+const parentIdsByCards=new WeakMap();
+function containsChildren(set,id){
+ if(set.revision==null)return set.cards.some(card=>card.parentId===id);
+ let cached=parentIdsByCards.get(set.cards);
+ if(!cached||cached.revision!==set.revision||cached.length!==set.cards.length){
+  cached={revision:set.revision,length:set.cards.length,ids:new Set(set.cards.map(card=>card.parentId))};
+  parentIdsByCards.set(set.cards,cached);
+ }
+ return cached.ids.has(id);
+}
 export function topicMarkup(card,p,t,set,base,moreIcon){
- const s=card.mindmap||{},b=t.box,source=card.source||card.anchor||card.reference,hasChildren=set.cards.some(c=>c.parentId===card.id),task=s.task;
+ const s=card.mindmap||{},b=t.box,source=card.source||card.anchor||card.reference,hasChildren=containsChildren(set,card.id),task=s.task;
  const markers=[s.priority?`<span class="mm-priority" title="优先级 ${s.priority}">${s.priority}</span>`:'',s.progress!==undefined?`<span class="mm-progress" style="--progress:${s.progress}%" title="进度 ${s.progress}%"><small>${s.progress}</small></span>`:'',s.status&&s.status!=='none'?`<span class="mm-status" data-status="${s.status}" title="${{todo:'待办',doing:'进行中',done:'完成',blocked:'阻塞'}[s.status]}">${symbolSvg(s.status==='done'?'check':s.status==='blocked'?'warning':'clock',16)}</span>`:'',s.symbol?`<span class="mm-symbol" title="${E(s.symbol)}">${symbolSvg(s.symbol)}</span>`:'',s.flagColor?`<span class="mm-flag" style="color:${s.flagColor}">⚑</span>`:''].join('');
  return `<article class="study-card mindmap-topic" data-card-id="${card.id}" data-topic-depth="${t.depth}" data-branch-side="${t.box.structure?.endsWith('left')?'left':t.box.structure==='org-up'?'top':t.box.structure==='org-down'||t.box.structure==='tree-table-down'?'bottom':'right'}" data-topic-shadow="${t.shadow}" data-topic-shape="${t.shape}" tabindex="0" draggable="false" aria-label="主题：${E(card.title)}" title="${E(card.title)}" style="left:${p.x}px;top:${p.y}px;width:${p.width}px;height:${p.height}px;padding-bottom:${b.padBottom||0}px!important;--mm-accent:${t.accent};--mm-topic-fill:${t.fill};--card-color:${t.accent};color:${t.textColor};font-family:${E(t.fontFamily)};font-size:${t.fontSize}px;--mm-shadow:${t.shadow?'0 4px 12px #23365814':'none'}">
  <svg class="mm-topic-shape" width="${p.width}" height="${p.height}" viewBox="0 0 ${p.width} ${p.height}" aria-hidden="true">${svgShape(t.shape,p.width,p.height,t,'node-'+card.id)}</svg>
@@ -38,10 +50,19 @@ export function decorationSvg(item,layout,{interactive=false}={}){
  const label=lines.slice(0,item.kind==='boundary'?1:20).map((l,i)=>`<text x="14" y="${21+i*(s.fontSize||13)*1.4}" font-size="${s.fontSize||13}" fill="${textColor}" font-family="system-ui">${E(l.text)}</text>`).join('');
  return `<g class="mm-${item.kind}" transform="translate(${item.x} ${item.y})"${attr}><g opacity="${item.kind==='boundary'?s.opacity??.7:1}">${svgShape(shape,item.width,item.height,style,id)}</g>${label}</g>`;
 }
-export function diagramPaths(layout,links,{interactive=false,filter=()=>true}={}){
+// Same conservative branch envelope as the unindexed paint path. The spatial
+// index is presentation-only; it never removes links from the layout or exports.
+export function branchPaintBounds(layout,link){
+ const a=layout.positions.get(link.from),b=layout.positions.get(link.to);
+ if(!a||!b)return null;
+ return {x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),width:Math.abs(a.x-b.x)+a.width+b.width,height:Math.abs(a.y-b.y)+a.height+b.height};
+}
+export function diagramPaths(layout,links,{interactive=false,filter=()=>true,branchCandidates=null}={}){
  let output=(layout.furniture||[]).filter(filter).map(f=>furnitureMarkup(f)||(f.kind==='matrix'?`<g class="mm-matrix-grid"><rect x="${f.x}" y="${f.y}" width="${f.width}" height="${f.height}" rx="8" fill="${mix(layout.config.paper,f.color,.045)}" stroke="${mix(layout.config.paper,f.color,.3)}" stroke-width="1"/>${f.columns.map(x=>`<path d="M${x},${f.y} V${f.y+f.height}" stroke="${mix(layout.config.paper,f.color,.22)}" fill="none"/>`).join('')}</g>`:f.kind==='brace'?`<path class="mm-brace" d="M${f.x+f.width},${f.y} Q${f.x+10},${f.y} ${f.x+10},${f.y+16} V${f.y+f.height/2-12} Q${f.x+10},${f.y+f.height/2} ${f.x},${f.y+f.height/2} Q${f.x+10},${f.y+f.height/2} ${f.x+10},${f.y+f.height/2+12} V${f.y+f.height-16} Q${f.x+10},${f.y+f.height} ${f.x+f.width},${f.y+f.height}" stroke="${f.color}" stroke-width="2" fill="none"/>`:'')).join('')+layout.decorations.filter(filter).map(i=>decorationSvg(i,layout,{interactive})).join('');
  const batched=layout.links.length>1000,groups=new Map();
- for(const l of layout.links){const a=layout.positions.get(l.from),b=layout.positions.get(l.to);if(!a||!b||!filter({x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),width:Math.abs(a.x-b.x)+a.width+b.width,height:Math.abs(a.y-b.y)+a.height+b.height}))continue;const d=mindmapBranchPath(l,layout.positions);if(!d)continue;const taper=l.line==='tapered'?taperedBranch(l,layout.positions):null;if(batched){const key=l.color+'|'+l.width;if(!groups.has(key))groups.set(key,{color:l.color,width:l.width,paths:[]});groups.get(key).paths.push(d);continue;}output+=`<path class="mm-branch" data-mm-branch="${l.to}" d="${taper||d}" fill="${taper?l.color:'none'}" stroke="${taper?'none':l.color}" stroke-width="${l.width}" stroke-linecap="round"/>`;
+ // Sort only nearby candidate indices to retain the original branch paint order.
+ const branches=branchCandidates?[...branchCandidates].sort((a,b)=>a-b).map(i=>layout.links[i]).filter(Boolean):layout.links;
+ for(const l of branches){const bounds=branchPaintBounds(layout,l);if(!bounds||!filter(bounds))continue;const d=mindmapBranchPath(l,layout.positions);if(!d)continue;const taper=l.line==='tapered'?taperedBranch(l,layout.positions):null;if(batched){const key=l.color+'|'+l.width;if(!groups.has(key))groups.set(key,{color:l.color,width:l.width,paths:[]});groups.get(key).paths.push(d);continue;}output+=`<path class="mm-branch" data-mm-branch="${l.to}" d="${taper||d}" fill="${taper?l.color:'none'}" stroke="${taper?'none':l.color}" stroke-width="${l.width}" stroke-linecap="round"/>`;
  }
  for(const group of groups.values())output+=`<path class="mm-branch-batch" d="${group.paths.join(' ')}" fill="none" stroke="${group.color}" stroke-width="${group.width}" stroke-linecap="round"/>`;
  for(const link of links||[]){if(link.toSetId&&link.toSetId!==layout.setId)continue;const route=relationshipRoute(link,layout.positions);if(!route||!filter(route.box))continue;const v=link.mindmap||{},t=layout.topics.get(link.from),color=v.followTopic?t.accent:v.color||layout.config.ink,start=v.start|| (link.bidirectional?'triangle':'none'),end=v.end||'triangle',width=v.width||1.8,dash=v.dash==='solid'?'':v.dash==='dot'?'2 5':'6 4';

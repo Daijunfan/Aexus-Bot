@@ -1,3 +1,8 @@
+import {botGroup} from './bot-workers'
+import {isAppAdministrator} from './application-authority'
+import {all as channelRows,canonicalChannelId} from './channel-store'
+import {saveChannelContent,saveChannelMessageContent,ensureChannelContent,loadChannelPost,loadChannelMessage} from './channel-content'
+import {requireSavedChannelEntry} from './channel-content-policy'
 import {socialElements,socialIdentity,categoryRule} from './message-categories'
 import {inCategory,matchesConversationType,matchesConversationQuery,uniqueConversations,CONVERSATION_TYPES,type CategoryEntry,type ConversationType} from '../shared/message-categories'
 import {resolveAvatar} from '../shared/avatars'
@@ -17,8 +22,8 @@ import {messageSourceView} from '../shared/message-source'
 import {atomicJson,readJson} from './atomic-file'
 import {authorize,requestContext,visibleEmployees,requireAppAdministrator} from './authorization'
 import {readChatMessages,chatMessagesVersion,listChatGroups,getChatGroup} from './chat-groups'
-import {transcriptItems,transcriptVersion,resolveMessageReply} from './transcripts'
-import {getChannel,getChannelPost,queryChannelPosts,channelRequest} from './channels'
+import {directItems,directVersion,directReply} from './direct-messages'
+import {getChannel,getChannelPost,queryChannelPosts,queryChannelPostPrefix,channelRequest} from './channels'
 import type {ChannelPost,ChannelMessage} from '../shared/channels'
 import {getChannelMessage,channelMessageSources} from './channel-discussion'
 let emit:(payload:{revision:number;conversation?:string})=>void=()=>{}
@@ -26,30 +31,55 @@ export function setMessengerEmitter(handler:typeof emit){emit=handler}
 
 const file=join(APP_HOME,'messenger.json')
 const profileImageFile=join(APP_HOME,'messenger-profile-image.json')
-function read(){return readJson<MessengerState>(file,()=>({...EMPTY_MESSENGER,conversations:{},messages:{},drafts:{}}),value=>!!value&&typeof value==='object'&&(value as MessengerState).version===1&&Number.isSafeInteger((value as MessengerState).revision)&&['conversations','messages','drafts'].every(key=>!!(value as any)[key]&&typeof (value as any)[key]==='object'&&!Array.isArray((value as any)[key]))&&((value as MessengerState).orders===undefined||!!(value as MessengerState).orders&&typeof (value as MessengerState).orders==='object'&&!Array.isArray((value as MessengerState).orders)&&Object.entries((value as MessengerState).orders!).every(([scope,order])=>orderScope(scope)&&validOrder(order))))}
-function write(state:MessengerState,conversation?:string){state.revision++;atomicJson(file,state,true);emit({revision:state.revision,conversation});return state}
-function resolve(value:unknown){
- if(typeof value!=='string'||!/^(employee|group|channel):[a-zA-Z0-9_-]+$/.test(value))throw Error('Choose a valid conversation')
- const [kind,id]=value.split(':')
- if(kind==='channel')return {key:value,kind,id,title:getChannel(id).name}
- if(kind==='group')return {key:value,kind,id,title:getChatGroup(id).name}
+function readDisk(){return readJson<MessengerState>(file,()=>({...EMPTY_MESSENGER,conversations:{},messages:{},drafts:{}}),value=>!!value&&typeof value==='object'&&(value as MessengerState).version===1&&Number.isSafeInteger((value as MessengerState).revision)&&['conversations','messages','drafts'].every(key=>!!(value as any)[key]&&typeof (value as any)[key]==='object'&&!Array.isArray((value as any)[key]))&&((value as MessengerState).orders===undefined||!!(value as MessengerState).orders&&typeof (value as MessengerState).orders==='object'&&!Array.isArray((value as MessengerState).orders)&&Object.entries((value as MessengerState).orders!).every(([scope,order])=>orderScope(scope)&&validOrder(order))))}
+function normalizeChannelReferences(state:MessengerState){
+ const aliases=channelRows('SELECT alias,channel_id FROM channel_aliases');if(!aliases.length)return state
+ const sources=new Map(channelRows("SELECT id,channel_id FROM sources WHERE plugin IN ('telegram','x','youtube')").map(row=>['source:'+row.id,'channel:'+canonicalChannelId(row.channel_id)]))
+ const reference=(key:string)=>sources.get(key)??(key.startsWith('channel:')?'channel:'+canonicalChannelId(key.slice(8)):key)
+ const conversations:MessengerState['conversations']={}
+ for(const [key,value] of Object.entries(state.conversations)){const target=reference(key);if(target===key&&!conversations[target]){conversations[target]={...value};continue}conversations[target]={...conversations[target],...value,pinned:!!conversations[target]?.pinned||!!value.pinned,favorite:!!conversations[target]?.favorite||!!value.favorite,unread:!!conversations[target]?.unread||!!value.unread}}
+ for(const target of new Set(aliases.map(row=>row.channel_id))){const refs=['channel:'+target,...aliases.filter(row=>row.channel_id===target).map(row=>'channel:'+row.alias)];if(refs.some(key=>state.conversations[key]))conversations['channel:'+target]={...conversations['channel:'+target],archived:refs.every(key=>!!state.conversations[key]?.archived)}}
+ return {...state,conversations,folders:state.folders?.map(folder=>({...folder,conversations:[...new Set(folder.conversations.map(reference))],...(folder.excluded?{excluded:[...new Set(folder.excluded.map(reference))]}:{})})),orders:state.orders?Object.fromEntries(Object.entries(state.orders).map(([key,values])=>[key,[...new Set(values.map(reference))]])):undefined}
+}
+let channelDrafts:MessengerState['drafts']={},draftsInitialized=false
+function read(){
+ const state=normalizeChannelReferences(readDisk())
+ if(!draftsInitialized){
+  draftsInitialized=true;channelDrafts=Object.fromEntries(Object.entries(state.drafts).filter(([key])=>key.startsWith('channel:')))
+  if(Object.keys(channelDrafts).length)atomicJson(file,{...state,drafts:Object.fromEntries(Object.entries(state.drafts).filter(([key])=>!key.startsWith('channel:')))})
+  const previous=readJson<MessengerState|undefined>(file+'.previous',()=>undefined);if(previous&&Object.keys(previous.drafts??{}).some(key=>key.startsWith('channel:')))atomicJson(file+'.previous',{...previous,drafts:Object.fromEntries(Object.entries(previous.drafts??{}).filter(([key])=>!key.startsWith('channel:')))})
+ }
+ return {...state,drafts:{...state.drafts,...channelDrafts}}
+}
+function write(state:MessengerState,conversation?:string){state.revision++;channelDrafts=Object.fromEntries(Object.entries(state.drafts).filter(([key])=>key.startsWith('channel:')));atomicJson(file,{...state,drafts:Object.fromEntries(Object.entries(state.drafts).filter(([key])=>!key.startsWith('channel:')))},true);emit({revision:state.revision,conversation});return state}
+function resolve(input:unknown){
+ if(typeof input!=='string'||!/^(employee|group|channel):[a-zA-Z0-9_-]+$/.test(input))throw Error('Choose a valid conversation')
+ let value=input
+ if(value.startsWith('employee:')&&botGroup(value.slice(9)))value='group:'+value.slice(9)
+ const [kind,id]=(value as string).split(':')
+ if(kind==='channel'){const channel=getChannel(id);return {key:'channel:'+channel.id,kind,id:channel.id,title:channel.name,platform:channel.kind}}
+ if(kind==='group'){const group=getChatGroup(id);return {key:value,kind,id,title:group.name,botKind:group.bot?.kind}}
  const card=visibleEmployees().find(card=>card.id===id);if(!card)throw Error('Unknown employee conversation')
  return {key:value,kind,id,title:card.title,card}
 }
-function listIdentity(value:unknown){return typeof value==='string'&&value.startsWith('source:')?socialIdentity(value):resolve(value)}
+function listIdentity(value:unknown){
+ if(typeof value!=='string'||!value.startsWith('source:'))return resolve(value)
+ const source=socialIdentity(value)
+ return ['youtube','x','telegram'].includes(source.platform)?resolve('channel:'+source.channelId):source
+}
 function newsMessage(post:ChannelPost):MessengerMessage{return {conversation:conversationKey('channel',post.channelId),conversationTitle:getChannel(post.channelId).name,id:post.id,author:post.authorName??post.sourceName,role:'assistant',text:[post.title,post.body,post.url].filter(Boolean).join('\n\n'),images:post.media.map(media=>post.id+'/'+media.id),createdAt:post.publishedAt,preferences:{saved:post.saved},news:post}}
 function discussionMessage(message:ChannelMessage,state:MessengerState):MessengerMessage{const conversation=conversationKey('channel',message.channelId);return {conversation,conversationTitle:getChannel(message.channelId).name,id:message.id,author:message.authorName,authorIdentity:message.author,role:message.author.kind==='operator'?'user':'assistant',text:message.text,images:message.attachments?.filter(file=>file.kind==='image').map(file=>file.path)??[],files:message.attachments?.filter(file=>file.kind==='file'),createdAt:message.createdAt,preferences:state.messages[messageKey(conversation,message.id)]??{}}}
 function channelMessage(channelId:string,id:string,state:MessengerState){if(id.startsWith('cm_'))return discussionMessage(getChannelMessage(channelId,id),state);const post=getChannelPost(id);if(post.channelId!==channelId)throw Error('News item belongs to another channel');return newsMessage(post)}
 const liveEpoch=randomUUID()
 function messageSource(ref:ReturnType<typeof resolve>):MessageSource{
  if(ref.kind==='channel')return channelMessageSources(ref.id)[0]
- const version=ref.kind==='group'?chatMessagesVersion(ref.id):transcriptVersion(ref.id)
- return {id:ref.key,version:JSON.stringify([typeof version==='number'?[liveEpoch,version]:version,ref.card?.lastReply?.id,ref.card?.lastReply?.createdAt,ref.card?.lastReply?.itemId]),read:()=>ref.kind==='group'?readChatMessages(ref.id).map(message=>({conversation:ref.key,id:message.id,author:message.authorName,authorIdentity:message.author,role:message.author.kind==='operator'?'user':'assistant',text:message.text,images:message.attachments?.filter(file=>file.kind==='image').map(file=>file.path)??[],files:message.attachments?.filter(file=>file.kind==='file'),createdAt:message.createdAt,editedAt:message.editedAt,editRevision:message.editRevision})):transcriptItems(ref.id).flatMap(item=>{
+ const version=ref.kind==='group'?chatMessagesVersion(ref.id):'direct-v1:'+directVersion(ref.id)
+ return {id:ref.key,version:JSON.stringify([typeof version==='number'?[liveEpoch,version]:version,ref.card?.lastReply?.id,ref.card?.lastReply?.createdAt,ref.card?.lastReply?.itemId]),read:()=>ref.kind==='group'?readChatMessages(ref.id).map(message=>({conversation:ref.key,id:message.id,author:message.authorName,authorIdentity:message.author,role:message.author.kind==='operator'?'user':'assistant',text:message.text,images:message.attachments?.filter(file=>file.kind==='image').map(file=>file.path)??[],files:message.attachments?.filter(file=>file.kind==='file'),createdAt:message.createdAt,editedAt:message.editedAt,editRevision:message.editRevision})):directItems(ref.id).flatMap(item=>{
   if(item.role==='notice')return []
-  const text=item.role==='user'?item.text:item.blocks.filter(block=>block.kind==='text').map(block=>block.text).join('\n\n'),images=item.role==='user'?item.images??[]:[]
+  const text=item.role==='user'?item.text:item.blocks.filter(block=>block.kind==='text').map(block=>block.text).join('\n\n'),images=item.images??[]
   if(!text.trim()&&!images.length&&!(item.role==='user'&&item.files?.length))return []
   const authorIdentity=item.role==='user'?item.author:{kind:'agent' as const,employeeId:ref.id}
-  return [{conversation:ref.key,id:item.id,author:'',authorIdentity,role:item.role,text,images,files:item.role==='user'?item.files:undefined,createdAt:messageTime(item,ref.card?.lastReply)}]
+  return [{conversation:ref.key,id:item.id,author:'',authorIdentity,role:item.role,text,images,files:item.files,createdAt:messageTime(item,ref.card?.lastReply)}]
  })}
 }
 function presentMessages(rows:PublicMessage[],state:MessengerState):MessengerMessage[]{
@@ -63,24 +93,26 @@ function publicMessages(value:string,state:MessengerState,ids?:string[]):Messeng
 export function readMessengerMessages(conversation:string,ids?:string[]){authorize('messenger.search');const ref=resolve(conversation);if(ref.kind==='channel'&&ids){const state=read();return ids.map(id=>channelMessage(ref.id,id,state))};return publicMessages(conversation,read(),ids)}
 /** A user-approved excerpt can be shared; it never grants access to its source. */
 export function resolveConversationReply(conversation:unknown,id:unknown,quote?:MessageQuote,textOnly?:boolean):MessageReply{
- authorize('messenger.reference');if(requestContext().principal.kind!=='operator')throw Error('Only the user may quote another conversation')
+ authorize('messenger.reference');if(!isAppAdministrator())throw Error('Only the user or Secretary may quote another conversation')
  if(typeof id!=='string'||!id)throw Error('Choose a source message')
  if(textOnly!==undefined&&typeof textOnly!=='boolean')throw Error('textOnly must be boolean')
  const ref=resolve(conversation),state=read(),source=ref.kind==='channel'?channelMessage(ref.id,id,state):publicMessages(ref.key,state).find(message=>message.id===id)
+ if(ref.kind==='channel')requireSavedChannelEntry(ref.id,id)
  if(!source||source.preferences.hidden)throw Error('Source message is unavailable or hidden')
  if((source.images.length||source.files?.length)&&!quote&&!textOnly)throw Error('Choose a text-only quote or forward the attachments explicitly')
  const selected=ref.kind!=='employee'&&quote!==undefined?validateQuote(source.text,quote):undefined
- const reply=ref.kind==='employee'?resolveMessageReply(ref.id,id,quote)!:{id,role:source.role,author:source.authorIdentity,text:selected?.text??Array.from(source.text).slice(0,1200).join(''),...(selected?{quote:selected}:{}),...(!selected&&Array.from(source.text).length>1200?{truncated:true}:{})}
+ const reply=ref.kind==='employee'?directReply(ref.id,id,quote)!:{id,role:source.role,author:source.authorIdentity,text:selected?.text??Array.from(source.text).slice(0,1200).join(''),...(selected?{quote:selected}:{}),...(!selected&&Array.from(source.text).length>1200?{truncated:true}:{})}
  const {images,files,...excerpt}=reply
  return {...excerpt,conversation:ref.key,conversationTitle:ref.title,authorName:source.author,...(source.images.length?{omittedImages:source.images.length}:{}),...(source.files?.length?{omittedFiles:source.files.length}:{})}
 }
 const patchFields=(patch:unknown,allowed:string[])=>{if(!patch||typeof patch!=='object'||Array.isArray(patch)||!Object.keys(patch).length)throw Error('Provide a nonempty patch');for(const [key,value] of Object.entries(patch)){if(!allowed.includes(key))throw Error('Unknown preference: '+key);if(key==='reaction'){if(value!==''&&!MESSAGE_REACTIONS.includes(value as any))throw Error('Choose a supported reaction')}else if(typeof value!=='boolean')throw Error(key+' must be boolean')}return patch}
-export function messengerRequest(command:string,args:Record<string,any>={}){
+export async function messengerRequest(command:string,args:Record<string,any>={}){
+ if(typeof args.conversation==='string'&&args.conversation.startsWith('channel:')){await ensureChannelContent();for(const id of args.ids??(args.id?[args.id]:[]))if(typeof id==='string'){if(id.startsWith('np_'))await loadChannelPost(id);else if(id.startsWith('cm_'))await loadChannelMessage(args.conversation.slice(8),id)}}
  authorize(command,args);requireAppAdministrator()
  const state=read()
  switch(command){
   case 'messenger.profile':{
-   if(requestContext().principal.kind!=='operator')throw Error('Only the user may change their message avatar')
+   if(!isAppAdministrator())throw Error('Only the user or Secretary may change their message avatar')
    if(Object.keys(args).some(key=>!['avatar','image'].includes(key))||(args.avatar===undefined)===(args.image===undefined))throw Error('Choose a message avatar')
    if(args.image!==undefined){
     if(!args.image||typeof args.image!=='object'||Array.isArray(args.image)||Object.keys(args.image).some(key=>!['name','mimeType','data'].includes(key)))throw Error('Unknown avatar image field')
@@ -94,7 +126,7 @@ export function messengerRequest(command:string,args:Record<string,any>={}){
    state.profile=avatar?{avatar}:{};const result=write(state);atomicJson(profileImageFile,null);return result
   }
   case 'messenger.profile-image':{
-   if(requestContext().principal.kind!=='operator')throw Error('Only the user may read their message avatar')
+   if(!isAppAdministrator())throw Error('Only the user or Secretary may read their message avatar')
    if(Object.keys(args).some(key=>key!=='sha256')||typeof args.sha256!=='string'||args.sha256!==state.profile?.image?.sha256)throw Error('Message avatar changed. Reload the profile.')
    const image=readJson<{sha256:string;name:string;mimeType:string;data:string}|null>(profileImageFile,()=>null)
    if(!image||image.sha256!==args.sha256)throw Error('Message avatar is unavailable')
@@ -122,7 +154,7 @@ export function messengerRequest(command:string,args:Record<string,any>={}){
    return write(state)
   }
   case 'messenger.forward-draft':{
-   if(requestContext().principal.kind!=='operator')throw Error('Only the user may manage forwarding attempts')
+   if(!isAppAdministrator())throw Error('Only the user or Secretary may manage forwarding attempts')
    const {value,expectedClientMessageId}=args,current=state.pendingForward
    if(expectedClientMessageId!==undefined&&(typeof expectedClientMessageId!=='string'||!expectedClientMessageId||expectedClientMessageId.length>160))throw Error('Invalid forwarding request ID')
    if(expectedClientMessageId!==undefined&&current?.clientMessageId!==expectedClientMessageId)return state
@@ -130,6 +162,7 @@ export function messengerRequest(command:string,args:Record<string,any>={}){
    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['clientMessageId','messages','to','comment','textOnly','preview','attempted'].includes(key)))throw Error('Invalid forwarding setup')
    if(typeof value.clientMessageId!=='string'||!value.clientMessageId||value.clientMessageId.length>160)throw Error('Invalid forwarding request ID')
    if(!Array.isArray(value.messages)||!value.messages.length||value.messages.length>50||value.messages.some((ref:any)=>!ref||typeof ref.conversation!=='string'||!/^(employee|group|channel):[a-zA-Z0-9_-]+$/.test(ref.conversation)||typeof ref.id!=='string'||!ref.id))throw Error('Choose 1–50 source messages')
+   for(const ref of value.messages)if(ref.conversation.startsWith('channel:'))requireSavedChannelEntry(ref.conversation.slice(8),ref.id)
    if(value.to!==undefined&&(typeof value.to!=='string'||!/^(employee|group):[a-zA-Z0-9_-]+$/.test(value.to)))throw Error('Choose a destination conversation')
    if(typeof value.comment!=='string'||value.comment.length>16000||typeof value.textOnly!=='boolean'||typeof value.attempted!=='boolean'||value.attempted&&!value.to)throw Error('Invalid forwarding setup')
    if(!value.preview||typeof value.preview.text!=='string'||Array.from(value.preview.text).length>1200||!Number.isSafeInteger(value.preview.images)||value.preview.images<0)throw Error('Invalid forwarding preview')
@@ -175,8 +208,8 @@ export function messengerRequest(command:string,args:Record<string,any>={}){
    if(ref.kind==='channel'){
     const selected=[...new Set<string>(ids)].map(id=>channelMessage(ref.id,id,state))
     if(selected.some(message=>message.news)&&Object.keys(patch).some(key=>key!=='saved'))throw Error('Use news actions to manage a channel post')
-    for(const message of selected){if(message.news)channelRequest('channel.save',{id:message.id,saved:patch.saved});else {const key=messageKey(ref.key,message.id);state.messages[key]={...state.messages[key],...patch}}}
-    return write(state,ref.key)
+    for(const message of selected){if(message.news){channelRequest('channel.save',{id:message.id,saved:patch.saved});await saveChannelContent(message.id)}else {const key=messageKey(ref.key,message.id);state.messages[key]={...state.messages[key],...patch}}}
+    const result=write(state,ref.key);if(patch.saved!==undefined)for(const message of selected)if(!message.news)await saveChannelMessageContent(message.id,patch.saved);return result
    }
    const known=new Set(publicMessages(ref.key,state).map(message=>message.id));if(ids.some((id:string)=>!known.has(id)))throw Error('Unknown public message')
    for(const id of new Set<string>(ids)){const key=messageKey(ref.key,id);state.messages[key]={...state.messages[key],...patch}}
@@ -216,7 +249,7 @@ function conversationDirectory(args:Record<string,any>,state:MessengerState){
  type Entry=CategoryEntry&{id:string;title:string;description:string;channelId?:string;locator?:string;team?:string;role?:string;engine?:string;archived:boolean}
  const entries:Entry[]=[
   ...visibleEmployees().filter(card=>!card.deleting).map(card=>({key:'employee:'+card.id,id:card.id,kind:'employee' as const,title:card.title,description:[card.group,card.managementRole??'employee',card.engine].join(' · '),team:card.group,role:card.managementRole??'employee',engine:card.engine,archived:false})),
-  ...listChatGroups().map(group=>({key:'group:'+group.id,id:group.id,kind:'group' as const,title:group.name,description:group.members.map(member=>member.title).join(', '),archived:false})),
+  ...listChatGroups().map(group=>({key:'group:'+group.id,id:group.id,kind:'group' as const,botKind:group.bot?.kind,title:group.name,description:group.bot?(group.bot.provider==='grok'?'Grok':'Dot')+' Worker':group.members.map(member=>member.title).join(', '),archived:false})),
   ...(channelRequest('channel.list',{}) as {id:string;name:string;kind:string;sourceCount?:number}[]).map(channel=>({key:'channel:'+channel.id,id:channel.id,kind:'channel' as const,title:channel.name,description:channel.kind,platform:channel.kind,sourceCount:channel.sourceCount,archived:false})),
   ...socialElements({includeDisabled:true}).map(source=>({key:source.key,id:source.id,kind:'source' as const,title:source.name,description:source.platform+' · '+source.locator,platform:source.platform,locator:source.locator,channelId:source.channelId,enabled:source.enabled,archived:false}))
  ].map(entry=>({...entry,archived:!!state.conversations[entry.key]?.archived}))
@@ -246,7 +279,7 @@ async function searchMessages(args:Record<string,any>,state:MessengerState){
    const sources=conversations.map(value=>messageSource(resolve(value)))
    if(!selected||selected.kind==='channel')sources.push(...channelMessageSources(selected?.id))
    const queryResult=await indexedQuery('search',sources,state,{query:term,author,filter,offset:0,limit:offset+limit}),found=queryResult.result;state=queryResult.state
-   const news=author==='all'&&(!selected||selected.kind==='channel')&&['all','saved','media','links'].includes(filter)?queryChannelPosts({...(selected?{channelId:selected.id}:{}),...(term?{query:term}:{}),...(filter==='saved'?{saved:true}:filter==='media'?{media:true}:filter==='links'?{links:true}:{}),messageOrder:true,limit:offset+limit}):{posts:[],total:0}
+   const news=author==='all'&&(!selected||selected.kind==='channel')&&['all','saved','media','links'].includes(filter)?await queryChannelPostPrefix({...(selected?{channelId:selected.id}:{}),...(term?{query:term}:{}),...(filter==='saved'?{saved:true}:filter==='media'?{media:true}:filter==='links'?{links:true}:{}),messageOrder:true,limit:offset+limit}):{posts:[],total:0}
    const combined=[...presentMessages(found.rows,state),...news.posts.map(newsMessage)].sort((a,b)=>(b.createdAt??0)-(a.createdAt??0)||a.conversation.localeCompare(b.conversation)||a.id.localeCompare(b.id)),total=found.total+news.total
    return {messages:combined.slice(offset,offset+limit),total,hasMore:offset+limit<total}
 }

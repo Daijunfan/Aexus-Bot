@@ -2,8 +2,7 @@ import {useEffect,useRef,useState} from 'react'
 import type {ChannelCollector,ChannelConnection,ChannelView} from '../../../shared/channels'
 import {api} from '../api'
 import {translate as uiText,useI18n,interfaceLocale} from '../i18n'
-import {useMessageCopy} from '../chat/MessageActionRail'
-import {ChannelPlans} from './ChannelPlans'
+import {useMessageCopy} from '../chat/useMessageCopy'
 import {Icon} from './Icon'
 import type {ChannelEditorRun} from './ChannelEngineEditor'
 
@@ -20,7 +19,7 @@ export function ChannelConnectionPanel({channel,token,busy,run,onCredential,onCh
  return <div className="channel-connection-panel">
   <header><Icon name={internal?'organization':'plug'}/><strong>{uiText(internal?'Publishing tasks':'Process connection')}</strong><button type="button" disabled={busy} aria-label={uiText('Refresh connection status')} onClick={()=>void run(refresh)}><Icon name="refresh"/></button></header>
   <p className="channel-connection-status" role="status" data-status={connection.status}>{uiText(status)}</p>
-  {internal?<><p>{uiText('Selected employees can publish directly from their existing tasks. Ordinary private replies are not automatically published.')}</p><code>channel.publish {'{'} channelId: {JSON.stringify(channel.id)}, externalId, publishedAt, title, body {'}'}</code><ChannelPlans channel={channel} busy={busy}/></>:<>
+  {internal?<p>{uiText('Channels are read-only feeds. Employees access news through the channel API.')}</p>:<>
    <dl><dt>{uiText('Core receiver URL')}</dt><dd><code>{connection.endpoint}</code></dd>{connection.engine.kind==='external'&&connection.engine.host&&<><dt>{uiText('Process IP or hostname')}</dt><dd>{connection.engine.host}</dd></>}{connection.lastSeenAt&&<><dt>{uiText('Last authenticated request')}</dt><dd>{new Date(connection.lastSeenAt).toLocaleString(interfaceLocale())}</dd></>}<dt>{uiText('Local collector listener')}</dt><dd>{uiText(connection.listener.enabled?'Enabled':'Disabled')} · 127.0.0.1:{connection.listener.port}</dd><dt>{uiText('Publication sources')}</dt><dd>{connection.sources.map(source=><span key={source.sourceId}><strong>{source.name}</strong><code>{source.sourceId}</code></span>)}</dd></dl>
    {token&&<div className="channel-token"><label>{uiText('Save this token now · shown only once')}<input aria-label={uiText('Collector token')} type={reveal?'text':'password'} readOnly autoComplete="off" value={token}/></label><button type="button" onClick={()=>setReveal(value=>!value)}>{uiText(reveal?'Hide token':'Show token')}</button></div>}
    <p>{uiText('Send POST requests with Bearer authentication and JSON {cmd, args}. A saved IP is deployment information, not proof of a live connection.')}</p>

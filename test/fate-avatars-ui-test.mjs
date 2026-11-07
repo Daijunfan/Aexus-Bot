@@ -1,4 +1,4 @@
-// Fate skins share Core identity, real activity state and the existing flat picker.
+// Fate skins share Core identity, real activity state and the live enabled catalog.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -21,18 +21,19 @@ for(const id of FATE_AVATARS){
  assert.ok(new Set(hashes).size>=6,id+' has distinct authored animation frames');assert.notEqual(hashes[2],hashes[3]);assert.notEqual(hashes[4],hashes[5])
 }
 const app=await electron.launch({executablePath:process.env.AGENTS_COMPANY_TEST_APP||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[root],env}),page=await app.firstWindow(),errors=[];page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message))
-const call=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args})
+const call=(cmd,args={})=>page.evaluate(async({cmd,args})=>{try{return await window.agents.call(cmd,args)}catch(error){throw Error(error?.message??error?.error??JSON.stringify(error))}},{cmd,args})
 try{
- await page.locator('.infinite-canvas').waitFor();await call('group.add',{name:'Fate verification',mode:'build'});await call('settings.set',{theme:'white'})
+ await page.locator('.infinite-canvas').waitFor();await call('group.add',{name:'Fate verification',mode:'build'});await call('settings.set',{theme:'white'});for(const id of FATE_AVATARS)await call('avatar.update',{id,enabled:true});await page.emulateMedia({reducedMotion:'no-preference'})
  const card=await call('card.create',{title:'Identity stays',group:'Fate verification',avatar:FATE_AVATARS[0],engine:'codex',model:'gpt-6-luna',effort:'low'}),actor=page.locator(`[data-card-id="${card.id}"]`)
+ await expect.poll(async()=>(await call('session.status',{employee:card.id}))[0]?.initialization?.status).toBe('ready')
  for(const avatar of FATE_AVATARS){
   const updated=await call('card.update',{id:card.id,patch:{avatar,color:SPRITE_COLORS[avatar]}}),saved=updated.sessions.find(c=>c.id===card.id);assert.equal(saved.engine,card.engine);assert.equal(saved.cwd,card.cwd);assert.equal(saved.title,card.title)
   await expect(actor.locator('.fate-pet')).toHaveAttribute('data-avatar',avatar)
   const size=await actor.locator('.pet-cell').evaluate(async el=>{const img=new Image();img.src=getComputedStyle(el).backgroundImage.slice(5,-2);await img.decode();return [img.naturalWidth,img.naturalHeight]});assert.deepEqual(size,[3072,416])
  }
- await call('view.open',{kind:'employee',employee:card.id});await expect(page.locator('.avatar-options')).toHaveCount(1);await expect(page.locator('.avatar-options .fate-pet')).toHaveCount(42);await expect(page.locator('.avatar-collection')).toHaveCount(0)
- for(const avatar of FATE_AVATARS){const pet=page.locator(`.avatar-options [data-avatar="${avatar}"]`);const size=await pet.locator('.pet-cell').evaluate(async el=>{const img=new Image();img.src=getComputedStyle(el).backgroundImage.slice(5,-2);await img.decode();return [img.naturalWidth,img.naturalHeight]});assert.deepEqual(size,[1536,208]);await pet.hover();await expect(pet).toHaveAttribute('data-pose','pickup');const frame=await pet.getAttribute('data-frame');await expect.poll(()=>pet.getAttribute('data-frame')).not.toBe(frame)}
- await page.locator('.avatar-options [data-avatar="fate-rin-chibi"]').click();await page.locator('.save-employee').click();await expect(page.locator('.employee-form')).toHaveCount(0)
+ await call('view.open',{kind:'employee',employee:card.id});await page.locator('.profile-portrait').click();const picker=page.locator('.character-picker');await expect(picker.locator('[data-character]')).toHaveCount(42);await expect(page.locator('.avatar-options')).toHaveCount(0)
+ for(const avatar of FATE_AVATARS){await picker.locator('[data-character="'+avatar+'"]').click();const pet=picker.locator('.character-stage .fate-pet');await expect(pet).toHaveAttribute('data-avatar',avatar);const size=await pet.locator('.pet-cell').evaluate(async el=>{const img=new Image();img.src=getComputedStyle(el).backgroundImage.slice(5,-2);await img.decode();return [img.naturalWidth,img.naturalHeight]});assert.deepEqual(size,[3072,416]);const frame=await pet.getAttribute('data-frame');await expect.poll(()=>pet.getAttribute('data-frame')).not.toBe(frame)}
+ await picker.locator('[data-character="fate-rin-chibi"]').click();await picker.getByRole('button',{name:'Use character',exact:true}).click();await expect(picker).toHaveCount(0)
  await call('view.open',{kind:'home'});await page.mouse.move(1100,40)
  const pet=actor.locator('.fate-pet');await expect(pet).toHaveAttribute('data-avatar','fate-rin-chibi');await expect(pet.locator('.sleep-marks')).toHaveCount(1)
  fs.writeFileSync(control+'/'+card.id+'.hold-user','');await call('session.send',{employee:card.id,text:'Hold this deterministic fixture turn'})
@@ -40,6 +41,6 @@ try{
  await actor.screenshot({path:out+'/working-in-app.png'})
  await call('session.interrupt',{employee:card.id});await expect(actor).toHaveAttribute('data-state','sleeping');await expect(pet.locator('.sleep-marks')).toHaveCount(1);await actor.screenshot({path:out+'/resting-in-app.png'})
  assert.deepEqual(errors,[]);assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(w=>!w.isVisible())))
- fs.writeFileSync(out+'/ui-verification.json',JSON.stringify({skins:42,servants:14,masters:7,framesPerSkin:8,flatPicker:true,identityPreserved:true,workSleepStatesVerified:true,productionDataUsed:false,modelCalls:0}))
- console.log('PASS 42 Fate skins, 336 authored cells, transparent assets, compact picker animation, Core selection/save, identity preservation and true work/rest state; hidden fixture only')
+ fs.writeFileSync(out+'/ui-verification.json',JSON.stringify({skins:42,servants:14,masters:7,framesPerSkin:8,independentPicker:true,identityPreserved:true,workSleepStatesVerified:true,productionDataUsed:false,modelCalls:0}))
+ console.log('PASS 42 Fate skins, 336 authored cells, transparent assets, independent picker animation, Core selection/save, identity preservation and true work/rest state; hidden fixture only')
 }finally{await app.close();fs.rmSync(temp,{recursive:true,force:true})}

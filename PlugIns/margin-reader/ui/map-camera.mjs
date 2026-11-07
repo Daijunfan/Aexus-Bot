@@ -37,6 +37,9 @@ export class MapCamera{
   if(this.needsFit&&this.view.clientWidth>0&&this.view.clientHeight>0){this.needsFit=false;const z=Math.max(MIN_ZOOM,Math.min(1,(this.view.clientWidth-64)/this.layout.width,(this.view.clientHeight-64)/this.layout.height));this.state={x:(this.view.clientWidth-this.layout.width*z)/2,y:(this.view.clientHeight-this.layout.height*z)/2,z};}
   if(!this.viewportSize&&this.view.clientWidth>0&&this.view.clientHeight>0)this.viewportSize={width:this.view.clientWidth,height:this.view.clientHeight};
   const {x,y,z}=this.state;this.map.zoom=z;
+  // Controls live within a zoomed world. Counter-scale their hit targets so
+  // on-screen edit/collapse/menu buttons remain large enough for a trackpad.
+  this.view.style.setProperty('--mm-control-scale',String(Math.min(128,1/z)));
   Object.assign(this.world.style,{left:x+'px',top:y+'px',width:this.layout.width+'px',height:this.layout.height+'px',transform:`scale(${z})`});
   const extent=document.getElementById('study-map-extent');extent.style.width='100%';extent.style.height='100%';
   Object.assign(this.view.dataset,{cameraX:String(x),cameraY:String(y),cameraZoom:String(z)});

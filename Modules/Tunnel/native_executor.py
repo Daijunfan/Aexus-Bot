@@ -1,10 +1,12 @@
 """Private transport for Codex's native execution protocol. Not a model tool."""
+import sys
+# Runtime imports must not change a signed application bundle.
+sys.dont_write_bytecode = True
 import json
 import os
 import shlex
 import signal
 import subprocess
-import sys
 import threading
 from pathlib import Path
 

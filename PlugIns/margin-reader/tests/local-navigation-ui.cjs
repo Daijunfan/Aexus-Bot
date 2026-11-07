@@ -14,7 +14,7 @@ async function main(){
   const pass=s=>{report.checks.push(s);console.log('PASS '+s);};
   const api=async(method,params={})=>{const r=await server.runtime.request({jsonrpc:'2.0',id:randomUUID(),method,params});assert(!r.error,JSON.stringify(r.error));return r.result;};
   try{
-    browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||'/Users/djf/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell'});
+    browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||chromium.executablePath()});
     const page=await browser.newPage({viewport:{width:1520,height:1000}});page.on('pageerror',e=>report.browserErrors.push(e.message));
     let set=await api('study.create',{mapMode:'cards',title:'Linked reading'});
     set=await api('study.documents.add',{setId:set.id,expectedRevision:set.revision,paths:['first.pdf','second.pdf','long.html']});

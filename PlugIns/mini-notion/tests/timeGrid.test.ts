@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makePage } from '../src/model.ts';
 import { createWorkspace } from '../src/seed.ts';
-import { timeGridProjection, gridInstant } from '../src/database/timeGrid.ts';
+import { arrangeTimeEvents, compactTimeEvents, timeGridProjection, gridInstant } from '../src/database/timeGrid.ts';
 import { makeDateValue } from '../src/database/dateValue.ts';
 import { viewPeriod, navigateViewDate } from '../src/database/dates.ts';
 import { executeWorkspaceCommand } from '../src/core/commands.ts';
@@ -73,6 +73,29 @@ test('hourly layouts convert time zones, split midnight, keep all-day ranges and
   assert.equal(next.continuesBefore, true);
   assert.equal(next.minuteEnd, 60);
   assert.equal(next.sourceEnd - next.sourceStart, 2 * 3600000);
+});
+
+test('hundreds of overlapping timed events use bounded lanes with every hidden record accessible', () => {
+  const crowded = Array.from({ length: 640 }, (_, index) => ({
+    id: `crowded-${String(index).padStart(4, '0')}`,
+    start: '2026-09-11T09:00',
+    end: '2026-09-11T10:00',
+    hasEnd: true,
+    sourceStart: 0, sourceEnd: 3600000,
+    minuteStart: 540, minuteEnd: 600,
+    continuesBefore: false, continuesAfter: false,
+    column: 0, columns: 1,
+  }));
+  arrangeTimeEvents(crowded, 60 / 0.9);
+  const layout = compactTimeEvents(crowded);
+  assert.equal(layout.columns, 4);
+  assert.deepEqual(layout.visible.map(event => event.id), crowded.slice(0, 3).map(event => event.id));
+  assert.equal(layout.overflow.length, 1);
+  assert.equal(layout.overflow[0].minute, 540);
+  assert.equal(layout.overflow[0].hidden.length, 637);
+  assert.equal(new Set([...layout.visible, ...layout.overflow.flatMap(item => item.hidden)].map(event => event.id)).size, 640);
+  const later = { ...crowded[0], id: 'later', minuteStart: 960, minuteEnd: 1020, column: 0, columns: 1 };
+  assert.equal(compactTimeEvents([...crowded, later]).visible.at(-1)?.id, 'later');
 });
 
 test('DST days expose 23/25 chronological hours and distinguish the two repeated local times', () => {

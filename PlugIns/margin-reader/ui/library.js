@@ -21,7 +21,11 @@ export class Library extends LibraryView {
     $('file-input').addEventListener('change', run(async event => { await this.importFiles(event.target.files); event.target.value = ''; }));
     $('import-url').addEventListener('click', () => this.importUrl());
     $('open-trash').addEventListener('click', run(() => this.trashDialog()));
-    $('library-root').addEventListener('click', run(() => this.navigate('.')));
+    $('library-root').setAttribute('aria-expanded', 'true');
+    $('library-root').addEventListener('click', run(() => {
+      if (!$('reader-view').hidden) { this.rootCollapsed = !this.rootCollapsed; $('file-tree').hidden = this.rootCollapsed; $('library-root').setAttribute('aria-expanded', String(!this.rootCollapsed)); return; }
+      return this.navigate('.');
+    }));
     $('refresh-files').addEventListener('click', run(() => this.refresh()));
     document.addEventListener('click', event => { if (!event.target.closest('.context-menu,.file-more')) this.closeMenu(); });
     document.addEventListener('keydown', event => { if (event.key === 'Escape' && this.menu) { event.preventDefault(); this.closeMenu(true); } });
@@ -44,9 +48,13 @@ export class Library extends LibraryView {
     walk(this.tree); return result;
   }
   setActive(path) {
-    this.activePath = path;
-    const parts = (path || '').split('/'); parts.pop(); let parent = '';
-    for (const part of parts) { parent = parent ? `${parent}/${part}` : part; this.expanded.add(parent); }
+    // A background document refresh must not re-open a branch the reader closed.
+    // Reveal ancestors once, only when the selected document actually changes.
+    if (this.activePath !== path) {
+      this.activePath = path;
+      const parts = (path || '').split('/'); parts.pop(); let parent = '';
+      for (const part of parts) { parent = parent ? `${parent}/${part}` : part; this.expanded.add(parent); }
+    }
     this.renderTree();
   }
   newFolder() {

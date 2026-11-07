@@ -43,10 +43,16 @@ app
     await window.loadFile(snapshot ? path.join(__dirname, '../dist/index.html') : input);
     if (snapshot)
       await window.webContents.executeJavaScript(`new Promise((resolve, reject) => {
-    const check = () => { if (document.querySelector('.page-title')) resolve(); else if (document.querySelector('.startup-state button')) reject(new Error(document.querySelector('.startup-state').textContent)); else setTimeout(check, 10); }; check();
+    const start = Date.now();
+    const check = () => {
+      if (document.querySelector('.startup-state button')) return reject(new Error(document.querySelector('.startup-state').textContent));
+      if (document.querySelector('.page-title') && !document.querySelector('.loading-surface, .page-symbol-pending')) return resolve();
+      if (Date.now() - start > 30000) return reject(new Error('页面内容加载超时，未生成不完整的 PDF'));
+      setTimeout(check, 10);
+    }; check();
   }).then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))`);
     await window.webContents.executeJavaScript(
-      'Promise.all([document.fonts.ready, ...Array.from(document.images).map(image => image.complete ? Promise.resolve() : new Promise(resolve => { image.onload = image.onerror = resolve; }))])',
+      'Promise.all([document.fonts.ready, ...Array.from(document.images).map(image => { image.loading = "eager"; return image.complete ? Promise.resolve() : new Promise(resolve => { image.onload = image.onerror = resolve; }); })])',
     );
     fs.writeFileSync(
       output,

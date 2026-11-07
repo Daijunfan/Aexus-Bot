@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
-const {expect}=require('../../../node_modules/@playwright/test'),{pdfFixture}=require('./fixtures.cjs');
+const {expect}=require('./ui-session.cjs'),{pdfFixture}=require('./fixtures.cjs');
 exports.exercise=async({page,api,url,workspace,pass,output})=>{
  const original=pdfFixture();await fs.writeFile(path.join(workspace,'drag-source.pdf'),original);
  let set=await api('study.create',{title:'Drag original excerpts into topics'});
@@ -9,10 +9,10 @@ exports.exercise=async({page,api,url,workspace,pass,output})=>{
  await change('study.view.set',{view:'split',documentId});await api('study.open',{setId:set.id});await page.goto(url);await page.locator('body[data-ready=true]').waitFor();await expect(page.locator('.pdf-page[data-page="1"] canvas')).toBeVisible();await page.click('#study-zoom-fit');
  const select=async()=>{
   await page.click('#reader-annotations summary');await page.click('#study-region');const b=await page.locator('.pdf-page[data-page="1"]').boundingBox();
-  await page.mouse.move(b.x+b.width*.1,b.y+b.height*.05);await page.mouse.down();await page.mouse.move(b.x+b.width*.75,b.y+b.height*.14,{steps:10});await page.mouse.up();await expect(page.locator('#excerpt-drag-handle')).toBeVisible();
+  await page.mouse.move(b.x+b.width*.1,b.y+b.height*.05);await page.mouse.down();await page.mouse.move(b.x+b.width*.75,b.y+b.height*.14,{steps:10});await page.mouse.up();await expect(page.locator('#study-palette')).toBeVisible();await page.click('#study-palette-more');await expect(page.locator('#excerpt-drag-handle')).toBeVisible();
  };
- await select();const revision=(await get()).revision;await page.locator('#excerpt-drag-handle').dragTo(page.locator(`.mindmap-topic[data-card-id="${parent}"] header strong`));
- await expect.poll(async()=>(await get()).cards.length).toBe(2);assert.equal(set.revision,revision+1);const excerpt=set.cards.find(c=>c.id!==parent);assert.equal(excerpt.parentId,parent);assert.equal(excerpt.source.documentId,documentId);assert(excerpt.image);assert.equal(set.cards.find(c=>c.id===parent).collapsed,false);
+ await select();await page.click('#selection-note');await page.fill('#selection-note-text','Dragged source with its inline thought');await page.selectOption('#selection-style','underline');const revision=(await get()).revision;await page.locator('#excerpt-drag-handle').dragTo(page.locator(`.mindmap-topic[data-card-id="${parent}"] header strong`));
+ await expect.poll(async()=>(await get()).cards.length).toBe(2);assert.equal(set.revision,revision+1);const excerpt=set.cards.find(c=>c.id!==parent);assert.equal(excerpt.parentId,parent);assert.equal(excerpt.source.documentId,documentId);assert(excerpt.image);assert.equal(excerpt.note,'Dragged source with its inline thought');assert.equal(excerpt.annotation.style,'underline');await expect(page.locator('#study-palette')).toBeHidden();assert.equal(set.cards.find(c=>c.id===parent).collapsed,false);
  await expect(page.locator(`.study-mark[data-card-id="${excerpt.id}"]`).first()).toBeVisible();await expect(page.locator('#study-board')).toHaveAttribute('data-rendered-study-revision',String(set.revision));
  await page.locator(`.mindmap-topic[data-card-id="${excerpt.id}"] header strong`).click();await expect(page.locator('#document-path')).toHaveText('drag-source.pdf');assert.equal((await api('reader.position.get',{id:documentId})).locator.page,1);
  pass('An actual dragged PDF selection creates a durable source-linked child, expands its collapsed parent and adds the original annotation in one Core transaction');
@@ -20,6 +20,14 @@ exports.exercise=async({page,api,url,workspace,pass,output})=>{
  const count=set.cards.length;await page.locator('#excerpt-drag-handle').dragTo(page.locator('#study-map-viewport'),{targetPosition:{x:50,y:80}});
  await expect.poll(async()=>(await get()).cards.length).toBe(count+1);const floating=set.cards.find(c=>c.id!==parent&&c.id!==excerpt.id);assert.equal(floating.parentId,null);assert.equal(floating.inMap,true);assert(floating.position&&Number.isFinite(floating.position.x));assert(floating.source&&floating.image);
  await expect(page.locator('#study-board')).toHaveAttribute('data-rendered-study-revision',String(set.revision));await page.click('#study-undo');await expect.poll(async()=>(await get()).cards.length).toBe(count);assert(set.cards.some(c=>c.id===excerpt.id));
- await page.screenshot({path:path.join(output,'excerpt-drag.png'),animations:'disabled'});assert.deepEqual(await fs.readFile(path.join(workspace,'drag-source.pdf')),original);
  pass('Dropping on blank space creates a positioned floating excerpt despite preset grouping; one undo removes only that drop and original PDF bytes remain intact');
+ await expect(page.locator('#study-board')).toHaveAttribute('data-rendered-study-revision',String(set.revision));await select();await page.click('#study-palette-more');await expect(page.locator('#excerpt-drag-handle')).toBeHidden();const beforeButton=await get();
+ await page.locator('#selection-map').dragTo(page.locator(`.mindmap-topic[data-card-id="${parent}"] header strong`));await expect.poll(async()=>(await get()).cards.length).toBe(beforeButton.cards.length+1);assert.equal(set.revision,beforeButton.revision+1);const buttonCard=set.cards.find(c=>!beforeButton.cards.some(old=>old.id===c.id));assert.equal(buttonCard.parentId,parent);assert.equal(buttonCard.inMap,true);assert(buttonCard.source&&buttonCard.image);
+ pass('The compact primary map button drags directly into a topic without expanding the selection toolbar');
+ // WebKit's dragTo leaves its native pointer pressed after dragend.
+ if(page.context().browser().browserType().name()==='webkit')await page.mouse.up();
+ await expect(page.locator('#study-board')).toHaveAttribute('data-rendered-study-revision',String(set.revision));await page.keyboard.press('Escape');
+ const span=page.locator('.pdf-page[data-page="2"] .textLayer span').filter({hasText:'Chapter Two'}).first();await span.scrollIntoViewIfNeeded();await expect(page.locator('#reader-scroll')).toHaveAttribute('aria-busy','false');await expect(span).toBeVisible();const textBox=await span.boundingBox(),y=textBox.y+textBox.height/2;await page.mouse.move(textBox.x+1,y);await page.mouse.down();await page.mouse.move(textBox.x+textBox.width-1,y,{steps:16});await page.mouse.up();await expect(page.locator('#study-palette')).toBeVisible();const selected=await page.evaluate(()=>window.getSelection().toString().trim());assert(selected.length>0);const beforeText=await get(),mapBox=await page.locator('#study-map-viewport').boundingBox();await page.mouse.move(textBox.x+textBox.width/2,y);await page.mouse.down();await page.waitForTimeout(250);await page.mouse.move(mapBox.x+50,mapBox.y+80,{steps:25});await page.mouse.up();await expect.poll(async()=>(await get()).cards.length).toBe(beforeText.cards.length+1);const textCard=set.cards.find(c=>!beforeText.cards.some(old=>old.id===c.id));assert.equal(textCard.text,selected);assert.equal(textCard.parentId,null);assert.equal(textCard.inMap,true);assert(textCard.position&&textCard.image);
+ await page.screenshot({path:path.join(output,'excerpt-drag.png'),animations:'disabled'});assert.deepEqual(await fs.readFile(path.join(workspace,'drag-source.pdf')),original);
+ pass('Native selected-text dragging creates a positioned source-linked excerpt with the exact selected text and preserves original PDF bytes');
 };

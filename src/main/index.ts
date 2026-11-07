@@ -4,7 +4,7 @@ import {closeMediaClient,mediaAvailable} from './media'
 import {operatorContext} from './authorization'
 import {openExternalUrl,setExternalOpener} from './external'
 import {attachPluginDesktop} from './plugins/desktop'
-import { app, BrowserWindow, ipcMain, shell,dialog,protocol } from 'electron'
+import { session, app, BrowserWindow, ipcMain, shell,dialog,protocol } from 'electron'
 import { join } from 'node:path'
 import { writeFileSync } from 'node:fs'
 import {getPreferences} from './store'
@@ -24,6 +24,7 @@ const OFFSCREEN = process.env.AGENTS_COMPANY_OFFSCREEN === '1'
 const HIDDEN = OFFSCREEN || process.env.AGENTS_COMPANY_HIDDEN === '1'
 if ((HEADLESS || HIDDEN) && process.platform === 'darwin') app.setActivationPolicy('prohibited')
 // Keep the existing Electron profile when the product display name changes.
+app.commandLine.appendSwitch('disable-http-cache')
 app.setPath('userData', process.env.AGENTS_COMPANY_HOME ? join(process.env.AGENTS_COMPANY_HOME, 'electron') : join(app.getPath('appData'), 'Agents Company'))
 
 let mainWindow:BrowserWindow|undefined
@@ -41,7 +42,7 @@ ipcMain.handle('api:request', async (event, request: Request):Promise<Response> 
   try{
     if(!trusted(event))throw new Error('Untrusted IPC sender')
     // Desktop acknowledgements require the actual native window to be foregrounded.
-    const data=['session.acknowledge','chat.acknowledge','channel.acknowledge'].includes(request.cmd)&&!activeWindow(mainWindow)
+    const data=['session.acknowledge','chat.acknowledge','channel.acknowledge','direct.acknowledge'].includes(request.cmd)&&!activeWindow(mainWindow)
       ?{acknowledged:false,reason:'window-not-active'}
       :await handleRequest(request,{...operatorContext(),...(request.cmd.startsWith('messenger.media-')?{clientId:'desktop-media-'+event.sender.id}:{})})
     return {ok:true,data}
@@ -76,6 +77,7 @@ setUiHandler(async (op, args) => {
     const css=args?.privacy?await contents.insertCSS('.team-root-label,.activity-bubble,.room-dimension{visibility:hidden!important}'):undefined
     try{
       if(throttled)contents.setBackgroundThrottling(false)
+      await contents.executeJavaScript('Promise.all([...document.images].filter(i=>{const r=i.getBoundingClientRect();return i.complete&&i.naturalWidth>0&&r.bottom>0&&r.top<innerHeight&&r.right>0&&r.left<innerWidth}).map(i=>i.decode().catch(()=>undefined)))')
       // Wake an occluded compositor while export styling is still applied. Its
       // first capture can contain the preceding frame even after renderer rAF.
       await contents.capturePage(undefined,{stayHidden:true,stayAwake:true})
@@ -87,6 +89,10 @@ setUiHandler(async (op, args) => {
     }finally{if(css)await contents.removeInsertedCSS(css);if(throttled)contents.setBackgroundThrottling(true)}
   }
   if ((op === 'drag' || op === 'wheel') && win) {
+    if(op==='wheel'&&!args?.zoom){
+      const scrolled=await win.webContents.executeJavaScript(`(()=>{const el=document.querySelector(${JSON.stringify(String(args?.selector))});if(!el||el.scrollHeight<=el.clientHeight&&el.scrollWidth<=el.clientWidth)return false;el.scrollTop-=${Number(args?.dy??0)};el.scrollLeft-=${Number(args?.dx??0)};return true})()`)
+      if(scrolled){await new Promise(resolve=>setTimeout(resolve,200));return askRenderer('snapshot')}
+    }
     const rect=await askRenderer<{x:number;y:number;width:number;height:number}>('rect',{selector:args?.selector})
     const scale=win.webContents.getZoomFactor()
     const x=Math.round((rect.x+rect.width/2)*scale),y=Math.round((rect.y+rect.height/2)*scale)
@@ -117,7 +123,7 @@ function createWindow() {
     backgroundColor: '#141724',
     webPreferences: {
       preload: join(__dirname,REMOTE_WEB_URL?'../preload/web.js':'../preload/index.js'), sandbox: true,
-      contextIsolation: true, nodeIntegration: false, offscreen: OFFSCREEN,
+      contextIsolation: true, nodeIntegration: false, offscreen: OFFSCREEN, v8CacheOptions:'none',
       backgroundThrottling: !(HIDDEN||OFFSCREEN)
     }
   })
@@ -152,6 +158,7 @@ function createWindow() {
 let stop: (() => Promise<void>) | undefined
 let quitting=false,preparingQuit=false
 app.whenReady().then(() => {
+  void session.defaultSession.clearCache()
   if (HEADLESS || HIDDEN) void app.dock?.hide()
   else setExternalOpener(url=>shell.openExternal(url))
   if(REMOTE_WEB_URL){if(HEADLESS)throw Error('Remote Web desktop cannot be headless; use agents serve on the server');createWindow();return}

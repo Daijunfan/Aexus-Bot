@@ -1,5 +1,6 @@
 import iconNames from './iconNames.json' with { type: 'json' };
 import { CommandError } from './errors.ts';
+import type { CustomEmoji } from '../types.ts';
 
 // Keep the existing string field: old emojis, copies and page references need no migration.
 export const iconColors = {
@@ -24,6 +25,17 @@ export const iconSchema = {
   colors: iconColors,
   example: 'icon:BookOpen:blue',
   calloutField: 'props.emoji',
+  customEmojiLibrary: {
+    field: 'settings.customEmojis',
+    item: {
+      id: 'unique ID',
+      name: 'unique display name',
+      url: 'asset://local/... or image URL',
+      keywords: 'optional search aliases',
+    },
+    inlineType: 'customEmoji',
+    inlineProps: ['id', 'name', 'url'],
+  },
 };
 export function parseIcon(value?: string): { name: string; color: IconColor } | undefined {
   const match = /^icon:([A-Za-z0-9]+):([a-z]+)$/.exec(value || '');
@@ -36,4 +48,28 @@ export function validateIcon(value: unknown) {
       'INVALID_ICON',
       '图标需要 emoji、本地图片或 icon:<name>:<color>；使用 schema 查看图标名称与颜色',
     );
+}
+export function validateCustomEmojis(value: unknown): asserts value is CustomEmoji[] | undefined {
+  if (value === undefined) return;
+  if (!Array.isArray(value)) throw new CommandError('INVALID_EMOJI_LIBRARY', '表情库需要数组');
+  const ids = new Set<string>(),
+    names = new Set<string>();
+  for (const item of value) {
+    if (
+      !item ||
+      typeof item.id !== 'string' ||
+      !item.id ||
+      typeof item.name !== 'string' ||
+      !item.name.trim() ||
+      typeof item.url !== 'string' ||
+      !/^(asset:\/\/local\/|https?:\/\/|data:image\/)/i.test(item.url) ||
+      (item.keywords !== undefined && typeof item.keywords !== 'string')
+    )
+      throw new CommandError('INVALID_EMOJI_LIBRARY', '自定义表情需要 ID、名称和图片地址');
+    const name = item.name.normalize('NFKC').trim().toLowerCase();
+    if (ids.has(item.id) || names.has(name))
+      throw new CommandError('DUPLICATE_EMOJI', '表情名称或 ID 已存在');
+    ids.add(item.id);
+    names.add(name);
+  }
 }

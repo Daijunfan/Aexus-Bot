@@ -1,46 +1,112 @@
 # News channels
 
-Channels are a Core-owned publishing surface with an explicit employee or external-process
-engine. External collection can run on the Core host, another machine, or behind a tunnel.
+Channels are Core-owned read-only news feeds populated by external collectors. External collection can run on the Core host, another machine, or behind a tunnel.
 The renderer never calls social platforms or reads a collector's configuration files.
 
-## Publishing engine, channel identity and schedules
+The deployed Linux integration and its CLI/service commands are documented in
+[`Collectors/README.md`](../Collectors/README.md). YouTube channels receive
+DeepSeek summaries and source links; full translations are disabled in that
+worker. All Messages channel backgrounds use the original Telegram Web A pattern
+with theme-specific colors, independently of whether a channel stores documents.
 
-`channel.create {name,engine,avatar?}` requires a deliberate engine choice. The shared
-desktop/Web channel manager exposes New channel and Channel settings; the same contracts
-are available to the user or Secretary through Core and CLI. Creation is atomic, including
-image validation, source identities and any dedicated credential. It does not launch a
-process or employee task.
+## Read-only employee channel API
 
-For an employee channel, select existing employees, or add the current members of a Team.
-This is a membership snapshot, not a new Team, employee or native session. Publishing
-membership is the existing channel administrator list; change it through `channel.update`.
-The same employee may publish in several channels. Removing a member immediately revokes
-publication but retains that employee's articles and source identity.
+Channels are news feeds with explicit reading grants, not employee discussion groups.
+The Channel access button assigns employees who may read/search through the API;
+Secretary automatically accesses and administers every channel. There are no news
+discussion, moderation, automatic employee notifications or post-count tasks. The UI
+shows browsing, source filters, access, search, Save, Download and subscription settings.
+Group chat keeps its independent members, roles, replies and notices.
+
+Initialized Employee/Manager/Governor discover only their authorized channels.
+The user or Secretary grants/revokes readers atomically; Secretary needs no grant.
+Use the existing Agent credential, without borrowing another identity:
 
 ```sh
-agents channel create --name 'Research desk' --engine '{"kind":"employees","employeeIds":["EMPLOYEE_A","EMPLOYEE_B"]}' --json
-agents channel update CHANNEL_ID --admins '["EMPLOYEE_A"]' --expected-revision 1 --json
-# Run with the publishing employee's existing authentication; no discussion parent is needed.
-agents channel publish --data @article.json --json
+# User or Secretary: get revision, then replace the reader list.
+agents channel access CHANNEL_ID --json
+agents channel access CHANNEL_ID --employees '["EMPLOYEE_ID"]' --expected-revision REVISION --json
 ```
 
-An employee article uses `{channelId,externalId,publishedAt,title,body,mediaIds?}`.
-Core resolves its source from the authenticated employee and current membership, and supplies
-the actual employee author name. It rejects a different employee's source or author name.
-Upload images first through `channel.media-put` with the same channelId, externalId and
-publishedAt, plus mediaKey/name/mimeType/base64 data. Stable externalId and original Unix
-millisecond publishedAt keep retries idempotent; do not reset them on every retry.
-Articles share the existing timeline, post view, saved state and retention rules. Ordinary
-private answers do not automatically become channel articles, and the author does not receive
-its own news as another awareness turn. Discussion replies keep their separate existing rules.
+```sh
+agents channel list --json
+agents channel get CHANNEL_ID --json
+agents channel sources --query 'OpenAI' --json
+agents channel source-info SOURCE_ID --json
+agents channel fetch-text CHANNEL_ID --limit 50 --json
+agents channel fetch-images CHANNEL_ID --limit 20 --json
+agents channel search CHANNEL_ID --query 'LLM' --limit 50 --json
+agents channel search CHANNEL_ID --sources '["SOURCE_A","SOURCE_B"]' --keywords-any '["AI","芯片"]' --json
+# Use the returned cursor with the same channel, filters and search query.
+agents channel fetch-text CHANNEL_ID --limit 50 --cursor NEXT_CURSOR --json
+```
 
-After creating the channel, Add publishing schedule creates an ordinary `schedule.create`
-agent task. Choose a publishing employee, interval, task prompt and whether to enable runs.
-The editor includes the channel publication contract in the task and uses a clientRequestId
-for retry safety. Without an explicit anchor, the first interval occurs one interval after
-acceptance. Manage/pause the task in Plan. Removing a publisher revokes writes, not that
-employee's independent schedule. No second scheduler or worker queue is created.
+The canonical API commands are `channel.fetch-text`, `channel.fetch-images` and
+`channel.search`. Arguments are `{id,limit?,sourceId?|sourceIds?,since?,until?,
+timeRanges?,keywordsAll?,keywordsAny?,excludeKeywords?,cursor?}`; search also
+accepts `query?` and `images?:boolean` (default false). `query` may be omitted when
+`keywordsAll` or `keywordsAny` is supplied. `sourceIds` selects several authorized
+sources with OR semantics; legacy `sourceId` remains accepted but the two forms
+cannot be combined. `limit` is 1–100, default 20. Responses are
+`{kind:"channel-messages",channelId,mode,messages,limit,total,nextCursor}`.
+Messages are ordered by original publication time descending, then stable ID
+descending, and include `id,sourceId,sourceName,platform,authorName,title,text,
+publishedAt`, optional URL and document metadata. Text is complete, without the
+browsing feed's excerpt truncation. Search matches title, text and source name.
+
+`keywordsAll` requires every lowercased literal term, `keywordsAny` requires at
+least one, and `excludeKeywords` rejects any; the groups combine with AND.
+`since`/`until` accept epoch milliseconds or ISO date-times with `Z` or an explicit
+offset such as `+08:00`, and bound `[since, until)`. `timeRanges` supplies up to 31
+`{since,until}` windows combined with OR; using both time forms intersects them.
+A cursor is bound to the channel, normalized filter and query, so following
+`nextCursor` requires the same parameters. See
+[CHANNEL_FILTERS.md](CHANNEL_FILTERS.md) for source discovery, pagination and
+worked employee examples.
+
+`channel.sources` searches subscribed authors by name/handle, including `query`
+matching, and returns stable source IDs, original avatars and order. It and
+`channel.source-info SOURCE_ID` are available to ordinary employees with a reading
+grant. `channel.source-info` returns the author/channel profile (name,
+handle/locator, linked channel and platform URL), original avatar, retained count,
+latest publication time and subscriber count when available; it never starts
+collection. `channel.source-order CHANNEL_ID` is readable by every authorized
+reader. Reordering with `--sources JSON --expected-revision N` is reserved for the
+user or Secretary and changes only display order, not subscriptions or articles.
+
+Text mode never loads image bytes. Image mode additionally includes
+`images:[{id,mimeType,data}]`, where `data` is base64 for CLI/HTTP clients.
+The built-in native API tool delivers real text/image content blocks through
+Claude, Codex MCP, Cline MCP and Pi, with message/image IDs associating each image
+with its text. Server previews use a 640-pixel maximum edge; originals remain
+available through the user's Download action. Vision understanding still depends
+on the employee's configured native model.
+
+Pages are bounded to 2 MiB text, 32 images and 8 MiB decoded image bytes; a page
+may contain fewer than `limit`. Follow `nextCursor` to continue without omissions
+or duplicate messages. A single message exceeding a response budget reports an
+explicit error. Document metadata never downloads the original document.
+
+Reading requires a channel grant, except for the user and Secretary. User Save and
+human read acknowledgment are not needed, and no task dispatch or model call occurs.
+Explicit API retrieval authorizes putting the fetched
+content in the employee's native context/history; it does not automatically Save
+an article, mark it read, or create a local channel-content file. Normal channel browsing remains
+memory-only. Explicit Save/Download and other user-facing business APIs are also
+available to Secretary; these never happen as a side effect of reading.
+
+Automatic Channel, Board and Posts acknowledgment only covers entries whose end is visible in the active foreground. Explicitly clicking the Channel down-arrow also marks the current source selection (or all sources) read, including unloaded history, using `channel.acknowledge {all:true,sourceIds?}`. Search/saved results and programmatic scrolling never perform that bulk action. A failed write retains its unread count and exposes retry; new arrivals remain unread. Board detail follows the same visible-end rule,
+and source/view switches share the read state of the same entry ID. Unread badges
+show the real count without a `99+` cap.
+
+Channel `message-send/message-post`, employee publishing engines, `channel.update`
+with `adminIds`, channel member/role/moderation/notice writes and post-count rule
+writes are rejected. Existing legacy records/files are retained, without automatic
+news delivery or post-count execution. `channel.context` returns enabled source IDs and the exact text/image/search API
+routes; select one or more authors inside a platform aggregate with `sourceIds`.
+Use explicit fetch/search for news; old discussion history is not the news feed.
+
+## External collectors and channel identity
 
 External engines require a process name and local/remote location. Remote engines additionally
 require the process IP/hostname and a Core receiver URL reachable **from that process**:
@@ -75,15 +141,19 @@ to 8 MiB as `avatar:{name,mimeType,data}` during create/update. Original validat
 stored independently of news expiry. `channel.avatar-image {id}` reads the image; the channel
 view projects `{channelId,sourceId:channelId,sha256}`. A custom image overrides any platform
 icon. Send `avatar:null` to restore the platform/default image. Updating engine location,
-connection, membership, name or avatar supports expectedRevision; a stale save preserves the
+connection, name or avatar supports expectedRevision; a stale save preserves the
 UI draft and offers an explicit reload. Engine kind itself is fixed after configuration.
 
 ## Ownership and routing
 
-- Core stores subscriptions, channel routes, retained articles, original images and
-  saved state under `AGENTS_COMPANY_HOME/channels`.
-- Each Telegram subscription owns one channel. X and YouTube start with separate
-  aggregate channels. An X or YouTube author can be moved to any external-engine channel;
+- Core persists subscriptions, routes, read IDs and explicit saves under
+  `AGENTS_COMPANY_HOME/channels`. Unsaved content and original author images are
+  held in Mac memory and the Linux server only. An archive `read-mark` writes the
+  Mac read IDs and forces a new summary/broadcast only after Core confirms the
+  read-mark is persisted; it does not attach an older in-flight summary, and a
+  failure neither fakes a read nor prevents retry. The Mac keeps only read IDs and
+  other metadata, never news bodies.
+- Telegram, X and YouTube each start with one aggregate channel. An X or YouTube author can be moved to any external-engine channel;
   all their retained articles, including saved articles, follow the route immediately.
 - Unfollowing disables collection while preserving the author's identity and saved
   articles. Re-following reuses that identity.
@@ -94,77 +164,27 @@ UI draft and offers an explicit reload. Engine kind itself is fixed after config
   private chats, groups and channels, and overlap. Deleting a category does not delete
   its contents. All is the only built-in category.
 
-An article's stable identity is its source ID and external item ID. Updating content
-does not reset its expiry. Unsaved articles expire at the earlier of publication plus
-48 hours and receipt plus 48 hours. Saving retains the article and its local media;
-unsaving after expiry deletes them immediately. User deletion is authoritative, and
-bounded tombstones prevent collector retries from recreating deleted content.
+An article's stable identity is its source ID and external item ID. History has
+no age TTL. Each social platform has its own 1 TB budget and pressure removes
+the oldest unsaved/unrequested items first. Saved/downloaded content is protected.
+Core fetches only indexed pages and keeps bounded RAM caches. Explicit Save and
+Download persist channel content on the Mac; deliberate employee API retrieval may also
+persist the returned content in that native engine's own history. Deleted identities
+remain authoritative and cannot be revived by collector retries.
 
-## Administrators and discussion
+## Views and native author images
 
-Administrators are existing employees assigned by the user or Secretary to this channel only.
-The same employee may administer several channels and join several groups. Removing
-one assignment leaves the others intact. The assignment does not change company
-roles, permissions, engines or workspaces. An authenticated employee can discover
-its own channel identities with `agents channel list` and `agents channel get ID`;
-other channels and user subscription/saved metadata remain inaccessible.
-Legacy/external channels start without administrators; employee channels start with their
-selected publishers. Adding a member does not replay older articles.
+Telegram, X and YouTube each appear as one aggregate channel. Every channel, including future platform/process channels,
+offers Channel, Board and Posts. Old Posts preferences migrate to Board.
+Board uses a Xiaohongshu-style masonry layout with covers, short titles and round
+author images. Posts uses a vertical timeline, refresh/pull-to-refresh and
+infinite scrolling. Each refresh has stable ranked pages and avoids the previous
+first item when alternatives exist. No engagement counts are fabricated.
 
-New external articles reach the current administrators through their existing native
-queue as silent-only reading turns. The queue retains a news ID reference rather
-than a duplicate article body. Full text and source/media metadata are delivered;
-image bytes are not automatically sent to native vision inputs. The channel UI
-still displays and downloads the original images. Expired, deleted or moved articles and revoked
-administrator assignments are rejected before a queued read. Article cleanup does
-not rewrite the native engine's own history of content it already received.
-
-The channel composer publishes user discussion to every current administrator. A Secretary who is an actual administrator can also send a management request through channel.message-send, retaining its own Agent author; Core marks that request as its own discussion root.
-Mentions and a reply's administrator author identify the work targets; without a
-target, all administrators receive work. Others receive context only. Administrators
-may publish a concise reply only within a user or Secretary management discussion delivered to them.
-When no public reply is needed, they make no publication call. A news-only notification does not invite a public
-reply; a user's question about news is a normal discussion that may be answered.
-Questions, stories and casual conversation are valid requests as well as work tasks.
-Public administrator replies cause silent-only awareness in the other recipients,
-preventing automatic acknowledgment loops.
-
-Reading runs privately without tools. Core records receipt only after native success
-and current-authority checks; no acknowledgment API or special output is needed.
-Awareness ends here. Work targets receive the original task in the same native session.
-Failed or interrupted reading does not start that task.
-
-The optional native agents_company_discussion_post is a response-stage publisher:
-{conversationType:"channel",conversationId:CHANNEL_ID,messageId:ENTRY_ID,text:STRING}.
-It is bound to the current task/employee; wrong or stale IDs, revoked credentials,
-empty text and null are rejected. The ordinary API remains channel.message-post
---text ... --reply-to .... --silent is removed. Ordinary text/JSON/thoughts never create
-public messages. Reading other employees' posts cannot invoke a publisher. Channel
-work remains in the full employee transcript but creates no private/Company unread.
-
-Channel discussion supports personal save, pin, hide and reactions, message references,
-forwarding, and text/mentions/same-channel reply drafts. News keeps its original 48-hour
-retention and independent saved state. See the channel discussion contracts in API.md.
-
-## Administrator history reads
-
-For "summarize the news above", use the full public timeline rather than the
-legacy discussion-only history:
-
-```sh
-agents channel timeline CHANNEL_ID --kind news --before-entry QUESTION_ID --limit 20 --json
-agents channel timeline CHANNEL_ID --kind news --before-entry QUESTION_ID --limit 20 --cursor NEXT_CURSOR --json
-```
-
-Choose 1–100 entries per request (default 20), or omit kind for news and discussion.
-The latest page is returned chronologically; nextCursor retrieves older entries
-with the same channel/kind/beforeEntry. News bodies and source metadata are complete;
-user bookmark fields and image bytes are omitted. Ordinary administrators can read
-their channel; this does not grant subscription management or unrelated-channel
-access. Expired/deleted news stays excluded, saved articles remain available, and
-reads never acknowledge, replay or publish anything. Fetch on demand in the response
-stage, not during initialization/ACK. See API.md for ordering and current-timeline
-boundaries.
+Posts and subscription rows use original platform-author images. X can reuse
+verified original author images from collected records, and YouTube uses the
+public channel image. A missing/unreachable profile is not replaced with a
+fabricated author portrait. These bytes remain in Mac RAM unless saved.
 
 ## Collector connection
 
@@ -183,7 +203,7 @@ without changing subscriptions or articles.
 
 The service uses `POST /api/channels/collector` with `Content-Type: application/json`,
 `Authorization: Bearer <collector token>`, and a body containing `{cmd,args}`. Only
-four operations are available through this listener:
+the following operations are available through this listener:
 
 1. `channel.collector-config`: fetch public subscriptions on startup, then pass
    `sinceRevision` to poll for changes. Reconcile by stable source/target IDs.
@@ -195,6 +215,12 @@ four operations are available through this listener:
 4. `channel.source-avatar-put`: replace the original source identity image independently
    of article retention. It uses the same image validation and source capability;
    an identical hash is a no-op. No message or administrator operation is exposed.
+
+5. `channel.collector-ack`: confirm the delivered subscription revision only after
+   the runtime scheduler applies it.
+6. `channel.storage-exchange/result`: only the configured all-source storage
+   credential can service issued channel-content requests. No general Core or
+   terminal permission is granted.
 
 Responses use `{ok:true,data}` or `{ok:false,error,code}`. A successful publish reports
 `created`, `updated`, `duplicate`, `deleted` or `expired`. Treat the last two as final
@@ -231,14 +257,13 @@ replaceable cache; local subscription mutation is disabled in managed mode. Cach
 configuration is only reusable for the same endpoint. Existing worker secrets,
 collection logic and worker-side cleanup remain local. YouTube enrichment runs on
 the worker: download the cover and complete audio, transcribe with its local Whisper
-model, then use DeepSeek for a Chinese summary and the complete Chinese translation.
-Only the finished article and images are published. Preparation, transcript and
-translation chunks are checkpointed independently; restart resumes saved work.
+model, then use DeepSeek for a Chinese summary. Full translations are disabled.
+Only the finished article and images are published. Preparation is checkpointed; completed original audio/transcripts are removed.
 Review, scoring and publication to public social accounts remain disabled.
 
 An already published title-only YouTube item is completed by updating its original
 source/external identity and publication time with a new content hash. This preserves
-the Core article ID, saved state and original 48-hour retention deadline. Deleted or
+the Core article ID, saved state and archive capacity policy. Deleted or
 expired articles are never recreated. The Core requires no ASR or model credentials;
 the worker uses its existing private DeepSeek key file (or `DEEPSEEK_API_KEY`).
 
@@ -269,33 +294,38 @@ cross-host read/publication probe against a disposable Core. Set
 authorized `host`, `project`, `probeScript`, and three existing `recordIds` (Telegram,
 X, YouTube). It does not change real collector configuration or publication marks.
 
-## Cloud documents and channel storage
+## Server retention and on-demand magazines
 
-An external channel may bind `engine.fileStorage: {hostId,directory}` to an existing
-Cloud Hosts record and the collector's content-addressed media root. Its collector
-configuration advertises `collectFiles:true`. The collector sends only
-`channel.publish.files` metadata: `{id,name,mimeType,bytes,sha256,thumbnailMediaId?}`.
-Original document bytes remain on the cloud host; paths are always derived as
-`directory/SHA256_PREFIX/SHA256`, never supplied arbitrarily by the collector.
-The existing validated image protocol handles optional document thumbnails.
+Configure the existing SSH host and all-source collector with `channel.storage`.
+The server store has independent 1 TB budgets for X, YouTube and Telegram,
+without age expiry. Oldest unsaved/unrequested entries are evicted only under
+capacity pressure; explicit saves and requested documents remain protected. The Mac verifies complete server
+row/image hashes before erasing legacy unsaved local copies. A server outage
+never creates a local disk fallback.
 
-```sh
-agents channel file-download --post POST_ID --file FILE_ID --json
-agents channel file-status --post POST_ID --file FILE_ID --json
-agents conversation workspace channel:CHANNEL_ID --json
-```
+Telegram documents are metadata-only during collection/listing, including no
+automatically generated full-file previews. Click Download to retrieve the
+original on Linux, then transfer it to the Mac channel workspace with exact
+size/SHA-256 checks. Progress distinguishes server retrieval and Mac transfer.
+The server retains that requested copy; repeat downloads reuse it. The Mac file
+survives message expiration. Existing documents in legacy `engine.fileStorage`
+remain compatible. Read [API.md](../API.md#channel-views-memory-policy-and-cloud-documents)
+for CLI and transport fields.
 
-`channel.file-download {postId,fileId}` is human-only and starts an existing SSH
-transfer into the channel's shared workspace. `channel.file-status` reports
-not-downloaded/queued/running/completed/failed, byte progress and the saved relative
-path. Wait for completed: acceptance is not completion. Files up to 2 GiB are
-streamed in chunks; size and SHA-256 are verified before atomic commit. A conflicting
-user filename is retained, and a new suffix is used. Repeated downloads reuse the
-completed copy. The channel Files button opens the same storage interface as groups.
+Channel, Board and Posts share one searchable, multi-select source bar directly
+below the main toolbar. `All sources` and specific sources are mutually exclusive;
+selecting `All sources` again restores the previous source selection. Source chips
+drag to reorder (or use Alt + arrow keys), and the order persists across restarts
+through `channel.source-order` without changing subscriptions. Author avatars open
+independent author information. Board and Posts offer manual refresh; Channel has
+no refresh button. The bar uses complete subscription metadata, not the currently
+loaded article page. Changing sources uses Core `sourceIds` paging and keeps the
+platform identity. No status/retention caption or loaded-item banner separates the
+bar from the toolbar. `channel.aggregate --plugin telegram` consolidates compatible
+empty legacy wrappers and keeps aliases for their old links and personal
+organization.
 
-For document channels, cloud posts and files expire seven days after publication.
-The worker automatically removes expired records and unreferenced file bytes.
-Initial backfill is the last 48 hours. Ordinary channels retain their existing
-48-hour policy. Saving a local post does not extend cloud cache lifetime. Documents
-explicitly copied into the local channel workspace survive cloud expiration, post
-deletion and Core restart. SSH failure never reads a same-named file on the Mac.
+
+## Telegram wallpaper colors
+
+Messages settings exposes the original Telegram Web A light/dark gradients and all twelve solid color chips, plus pink/purple/blue/gray variants and custom one-to-four RGB colors with rotation. `settings.set {messageWallpaper:{pattern:"telegram",palette:"pink"}}` selects the same palette as the UI; use `palette:"custom",colors:["#c6c1ed","#edc7dd"],rotation:90` for a gradient. Channels reuse the original Telegram SVG; a static64x64 gradient uses the upstream resting blend with no animation loop or network request. These are bundled decoration/configuration, not a cache of channel content.

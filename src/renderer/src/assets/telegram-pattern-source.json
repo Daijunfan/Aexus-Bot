@@ -1,0 +1,11 @@
+{
+  "project": "Telegram Web A",
+  "repository": "https://github.com/Ajaxy/telegram-tt",
+  "commit": "6002824b6532f3d913997ce496d9ab5f9b86bc22",
+  "file": "src/assets/pattern.svg",
+  "license": "GPL-3.0",
+  "sha256": "20ab743df20e869076d07d4ede3ca20d8b24acce9bb7f8c6defdfe04f48c3389",
+  "presentation": "Unmodified pattern and upstream light/dark palettes,12 color chips and static64px gradient blending;430px default mask scale.",
+  "gradientFile": "src/util/gradientBackground.ts",
+  "colorsFile": "src/components/left/settings/SettingsGeneralBackgroundColor.tsx"
+}

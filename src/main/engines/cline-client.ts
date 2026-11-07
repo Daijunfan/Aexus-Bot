@@ -44,7 +44,7 @@ export async function clineClient(options:{cwd:string;directory:string;workRoot?
   let buffer='';const decoder=new StringDecoder('utf8')
   child.stdout?.on('data',chunk=>{buffer+=decoder.write(chunk);let end:number;while((end=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,end).replace(/\r$/,'');buffer=buffer.slice(end+1);if(line)consume(line)}})
   return {
-    provider:compatibility.provider,model:compatibility.model,managedReasoning:compatibility.managedReasoning,baseUrl:compatibility.baseUrl,
+    native:compatibility.native,models:compatibility.models,provider:compatibility.provider,model:compatibility.model,managedReasoning:compatibility.managedReasoning,baseUrl:compatibility.baseUrl,
     call(method:string,params:Record<string,unknown>={},timeout=30000):Promise<any>{return new Promise((resolve,reject)=>{const id=++sequence,timer=timeout?setTimeout(()=>{pending.delete(id);reject(Error('Cline '+method+' timed out'))},timeout):undefined;pending.set(id,{resolve,reject,timer});try{send({jsonrpc:'2.0',id,method,params})}catch(error){pending.delete(id);clearTimeout(timer);reject(error)}})},
     notify(method:string,params:Record<string,unknown>={}){send({jsonrpc:'2.0',method,params})},
     async close(){try{if(!closed){child.stdin?.end();terminateTree(child);const timer=setTimeout(()=>terminateTree(child,true),2000);try{await exited}finally{clearTimeout(timer)}}}finally{await compatibility.close()}},

@@ -1,0 +1,13 @@
+.native-workers>header button,.native-workers article button,.native-worker-form button{border:1px solid var(--border);border-radius:8px;background:var(--bg-elev);color:var(--fg);padding:7px 11px;cursor:pointer}
+.native-workers button:disabled{opacity:.5;cursor:wait}
+.native-worker-form{display:grid;gap:12px;padding:16px;border:1px solid var(--border);border-radius:12px;margin:12px 0}
+.native-worker-form label{display:grid;gap:6px;font-size:13px}
+.native-worker-form input,.native-worker-form select{padding:9px;border:1px solid var(--border);border-radius:7px;background:var(--bg-elev);color:var(--fg);min-width:0}
+.native-worker-form small{color:var(--fg-dim)}
+.native-worker-form button{justify-self:start}
+.native-worker-list{display:grid;gap:8px}
+.native-worker-list article{display:flex;gap:10px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:12px;flex-wrap:wrap}
+.native-worker-list article.selected{border-color:var(--accent)}
+.native-worker-list article>div{display:grid;gap:4px;flex:1;min-width:140px}
+.native-worker-list small,.native-worker-list code{color:var(--fg-dim);font-size:11px;overflow-wrap:anywhere}
+.native-worker-terminal{height:410px;background:#10141d;border-radius:10px;padding:12px;margin-top:14px;overflow:hidden}

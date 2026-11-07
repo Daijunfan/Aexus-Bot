@@ -1,15 +1,17 @@
 import {memo,useId} from 'react'
 import {DEFAULT_MESSAGE_WALLPAPER,type MessageWallpaperSettings} from '../../../shared/message-wallpaper'
 import {WALLPAPER_MOTIFS,WALLPAPER_FILLERS,WALLPAPER_TILE_SIZE,wallpaperMarks,wallpaperSpeckles} from './wallpaper-patterns'
+import {TelegramWallpaper} from './TelegramWallpaper'
 
 const wrappedOffsets=(value:number,margin:number)=>[0,...(value<margin?[WALLPAPER_TILE_SIZE]:[]),...(value+margin>WALLPAPER_TILE_SIZE?[-WALLPAPER_TILE_SIZE]:[])]
 
 /** One small vector tile is repeated by the browser, independent of conversation length. */
-export const MessageWallpaper=memo(function MessageWallpaper({settings}:{settings?:Partial<MessageWallpaperSettings>}){
+export const MessageWallpaper=memo(function MessageWallpaper({settings,dark=false}:{settings?:Partial<MessageWallpaperSettings>;dark?:boolean}){
  const {pattern,layout,density,opacity}={...DEFAULT_MESSAGE_WALLPAPER,...settings},id='wallpaper-'+useId().replace(/[^\w-]/g,'')
+ if(pattern==='telegram')return <TelegramWallpaper settings={settings} dark={dark} className="message-wallpaper"/>
  const motifs=pattern==='none'?null:WALLPAPER_MOTIFS[pattern],marks=pattern==='none'?[]:wallpaperMarks(pattern,layout),scale=100/density
  return <div className="message-wallpaper" aria-hidden="true" data-wallpaper-pattern={pattern} data-wallpaper-layout={layout} data-wallpaper-density={density} data-wallpaper-opacity={opacity}>
-  <div className="message-wallpaper-mesh"/>
+  {settings?.palette&&settings.palette!=='theme'?<TelegramWallpaper settings={{...settings,pattern:'none'}} dark={dark}/>:<div className="message-wallpaper-mesh"/>}
   {motifs&&opacity>0&&<svg className="message-wallpaper-pattern" width="100%" height="100%" focusable="false" style={{opacity:opacity/100}}><defs>
    {motifs.map(([name,d],index)=><path key={name} id={id+'-motif-'+index} d={d}/>)}
    <pattern id={id} width={WALLPAPER_TILE_SIZE} height={WALLPAPER_TILE_SIZE} patternUnits="userSpaceOnUse" patternTransform={'scale('+scale+')'}>

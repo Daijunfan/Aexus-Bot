@@ -19,6 +19,12 @@ try{
   const visit=node=>{if(ts.isStringLiteralLike(node)&&known.has(node.text)){const sites=references.get(node.text)??new Set();sites.add(path.relative(root,file)+':'+(source.getLineAndCharacterOfPosition(node.pos).line+1));references.set(node.text,sites)}ts.forEachChild(node,visit)};visit(source)
  }}};walk(path.join(root,'src/renderer/src'))
  const exclusions={
+  'channel.save':'Human Save explicitly persists channel content on the Mac',
+  'channel.export':'Human Download explicitly persists channel content on the Mac',
+  'messenger.message':'Human message preferences and saved content',
+  'messenger.state':'Human personal message organization and preferences',
+  'channel.publish':'External collector or human import only; employees explicitly fetch/search news',
+  'channel.media-put':'External collector or human import only; no employee channel publishing',
   'assets.browse':'User-owned cross-company library; Agents retain own workspace.catalog discovery',
   'assets.info':'Explicit user filesystem information; no expansion of Agent access',
   'assets.preview':'Derived user file covers; no Agent-wide file access',

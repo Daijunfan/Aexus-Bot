@@ -1,3 +1,4 @@
+import {nativeToolResult} from '../native-tool-result'
 import {engineState} from './state'
 import { DOCUMENTATION_TOOL,invokeDocumentationTool } from '../documentation-tool'
 import {API_TOOL,invokeApiTool} from '../api-tool'
@@ -18,7 +19,7 @@ import { engineEnvironment,processProvider } from './configuration'
 import { deepSeekModels } from '../claude-provider'
 import type { ModelInfo } from '../../shared/types'
 
-const modelsFrom=(result:any,provider:ReturnType<typeof processProvider>):ModelInfo[]=>(provider.managedReasoning?[{modelId:provider.model,name:provider.model}]:(result.models?.availableModels??[])).map((m:any)=>({value:m.modelId,displayName:m.name??m.modelId,description:provider.managedReasoning?'Custom gateway · Provider-managed reasoning':'DeepSeek · Thinking off',inputModalities:deepSeekModels.find(model=>model.value===m.modelId)?.inputModalities??['text'],supportsEffort:false,supportedEffortLevels:[],supportsAdaptiveThinking:false,supportsFastMode:false,isDefault:m.modelId===provider.model}))
+const modelsFrom=(result:any,provider:Pick<ReturnType<typeof processProvider>,'native'|'models'|'provider'|'model'|'managedReasoning'>):ModelInfo[]=>(provider.native&&provider.models.length?provider.models.map((m:any)=>({modelId:m.id,name:m.name})):provider.managedReasoning?[{modelId:provider.model,name:provider.model}]:(result.models?.availableModels??[])).map((m:any)=>({value:m.modelId,displayName:m.name??m.modelId,description:'Native configuration · Provider-managed reasoning',inputModalities:deepSeekModels.find(model=>model.value===m.modelId)?.inputModalities??['text'],supportsEffort:false,supportedEffortLevels:[],supportsAdaptiveThinking:false,supportsFastMode:false,isDefault:m.modelId===provider.model}))
 export async function discoverCline(){
   const directory=fs.mkdtempSync(path.join(os.tmpdir(),'agents-cline-discovery-'))
   const client=await clineClient({cwd:directory,directory,env:{CLINE_API_KEY:engineEnvironment('cline').CLINE_API_KEY||'discovery-only-no-inference'}})
@@ -33,7 +34,7 @@ export async function openCline(context:EngineStart){
   const state=engineState(context,{model:args.model||processProvider('cline').model})
   let receiptTaskId:string|undefined,receiptRead=false
   const markRead=()=>{if(receiptTaskId&&!receiptRead&&state.running){receiptRead=true;emit('session:receipt',{sessionId,taskId:receiptTaskId,stage:'read'})}}
-  let turnId='',textBlock=0,acceptUpdates=false,textSeen=false,reasoningSeen=false,nativeSaved=!!card?.clineSessionId
+  let turnId='',textBlock=0,acceptUpdates=false,textSeen=false,reasoningSeen=false,toolSeen=false,nativeSaved=!!card?.clineSessionId
   // ACP session/new is only an in-memory handle. Native history starts with the first turn.
   const rememberNative=()=>{if(!nativeSaved&&state.sessionId){patchSession(cardId,{clineSessionId:state.sessionId});nativeSaved=true}}
   const launch=context.remoteLaunch,tunnel=launch?await openTunnelTools(launch):undefined,approved=new Map<string,number>()
@@ -57,7 +58,7 @@ export async function openCline(context:EngineStart){
   }
   let client:Awaited<ReturnType<typeof clineClient>>
   try{client=await clineClient({cwd:launch?.cwd??cwd,remoteLaunch:launch,mcpBridge:{tools:[...(tunnel?.tools??[]),DISCUSSION_TOOL,DOCUMENTATION_TOOL,API_TOOL],close:()=>tunnel?.close(),call:async(name,input,signal,callId)=>{
-    if((name===DISCUSSION_TOOL.name||name===DOCUMENTATION_TOOL.name||name===API_TOOL.name)){const result=await (name===DISCUSSION_TOOL.name?invokeDiscussionTool:name===API_TOOL.name?invokeApiTool:invokeDocumentationTool)(state,input,String(callId??''),state.abort?AbortSignal.any([state.abort.signal,signal]):signal);return {content:[{type:'text',text:JSON.stringify(result)}]}}
+    if((name===DISCUSSION_TOOL.name||name===DOCUMENTATION_TOOL.name||name===API_TOOL.name)){const result=await (name===DISCUSSION_TOOL.name?invokeDiscussionTool:name===API_TOOL.name?invokeApiTool:invokeDocumentationTool)(state,input,String(callId??''),state.abort?AbortSignal.any([state.abort.signal,signal]):signal);return nativeToolResult(result)}
     const key=signature(name,input),count=approved.get(key)??0
     if(!state.running||!state.abort||state.abort.signal.aborted||!count)throw Error('Tunnel operation has no matching Core approval')
     if(count===1)approved.delete(key);else approved.set(key,count-1)
@@ -68,7 +69,7 @@ export async function openCline(context:EngineStart){
     const send=(event:unknown)=>emit('session:agent',{sessionId,event})
     if(update.sessionUpdate==='agent_message_chunk'&&update.content?.type==='text'){textSeen=true;send({kind:'text-delta',id:turnId+'/'+textBlock,text:update.content.text})}
     else if(update.sessionUpdate==='agent_thought_chunk'){reasoningSeen=true;if(client.managedReasoning&&update.content?.type==='text')send({kind:'reasoning-delta',id:turnId+'/'+textBlock,text:update.content.text})}
-    else if(update.sessionUpdate==='tool_call'){textBlock++;send({kind:'tool-start',id:update.toolCallId,name:update.title??update.kind,command:JSON.stringify(update.rawInput??{})})}
+    else if(update.sessionUpdate==='tool_call'){toolSeen=true;textBlock++;send({kind:'tool-start',id:update.toolCallId,name:update.title??update.kind,command:JSON.stringify(update.rawInput??{})})}
     else if(update.sessionUpdate==='tool_call_update'&&['completed','failed'].includes(update.status))send({kind:'tool-end',id:update.toolCallId,name:update.title??'Cline tool',output:typeof update.rawOutput==='string'?update.rawOutput:JSON.stringify(update.rawOutput??{}),exitCode:update.status==='failed'?1:0})
   }})}catch(error){tunnel?.close();throw error}
   try{
@@ -84,9 +85,9 @@ export async function openCline(context:EngineStart){
         receiptTaskId=taskId;receiptRead=false
         const attachment=client.stageImages(images)
         const prompt=[launch?.instructions,text,attachment?.marker].filter(Boolean).join('\n\n')
-        state.running=true;state.abort=new AbortController();turnId=randomUUID();textBlock=0;textSeen=false;reasoningSeen=false;acceptUpdates=true;rememberMeta(sessionId,{busy:true});emit('session:turn-start',{sessionId})
+        state.running=true;state.abort=new AbortController();turnId=randomUUID();textBlock=0;textSeen=false;reasoningSeen=false;toolSeen=false;acceptUpdates=true;rememberMeta(sessionId,{busy:true});emit('session:turn-start',{sessionId})
         state.finished=(async()=>{let error:string|undefined
-          try{const result=await client.call('session/prompt',{sessionId:state.sessionId,prompt:[{type:'text',text:prompt}]},0);if(result.stopReason!=='cancelled')attachment?.verify();if(reasoningSeen&&!client.managedReasoning)throw Error('Cline returned reasoning despite Thinking off');if(result.stopReason!=='cancelled'&&!textSeen&&!state.acknowledging)throw Error('Cline returned no assistant response');if(result.stopReason==='cancelled')throw Error('Interrupted')}catch(cause){error=client.redact(String((cause as Error).message));if(isOpen(sessionId))emit('session:error',{sessionId,message:error})}
+          try{const result=await client.call('session/prompt',{sessionId:state.sessionId,prompt:[{type:'text',text:prompt}]},0);if(result.stopReason!=='cancelled')attachment?.verify();if(reasoningSeen&&!client.managedReasoning)throw Error('Cline returned reasoning despite Thinking off');if(result.stopReason!=='cancelled'&&!textSeen&&!toolSeen&&!state.acknowledging)throw Error('Cline returned no assistant response');if(result.stopReason==='cancelled')throw Error('Interrupted')}catch(cause){error=client.redact(String((cause as Error).message));if(isOpen(sessionId))emit('session:error',{sessionId,message:error})}
           finally{approved.clear();acceptUpdates=false;state.running=false;state.abort=undefined;cancelApprovals(sessionId);rememberMeta(sessionId,{busy:false});emit('session:result',{sessionId,success:!error,error});emit('session:turn-end',{sessionId});if(isOpen(sessionId))dispatchQueued(state,sessionId)}
         })()
       },

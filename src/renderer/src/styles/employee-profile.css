@@ -31,7 +31,7 @@
 .profile-quick-actions>button:first-child{background:var(--accent);border-color:var(--accent);color:var(--button-ink,#fff)}
 .profile-quick-actions>button:hover{box-shadow:0 3px 12px color-mix(in srgb,var(--accent) 12%,transparent);border-color:color-mix(in srgb,var(--accent) 35%,var(--border))}
 .profile-quick-actions .codicon{font-size:18px}
-.profile-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:9px 18px 12px;background:var(--bg-elev);border-bottom:1px solid var(--border-soft);flex:none;gap:8px}
+.profile-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:9px 18px 12px;background:var(--bg-elev);border-bottom:1px solid var(--border-soft);flex:none;gap:8px}
 .profile-tabs>button{--view-color:var(--accent);position:relative;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:8px 10px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--fg-dim);font-size:12px;white-space:nowrap}
 .profile-tabs>button[data-profile-tab=messages]{--view-color:var(--profile-messages)}.profile-tabs>button[data-profile-tab=plan]{--view-color:var(--profile-plan)}
 .profile-tabs>button:hover{background:var(--bg-alt)}

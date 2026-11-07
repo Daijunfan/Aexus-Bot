@@ -6,10 +6,20 @@
 .group-message-row>.message-author-avatar{position:sticky;bottom:6px;width:var(--group-portrait-size);height:var(--group-portrait-size);border-radius:14px;margin-bottom:1px;box-shadow:0 1px 4px color-mix(in srgb,var(--fg) 8%,transparent),0 0 0 1px color-mix(in srgb,var(--bg-elev) 82%,transparent)}
 .group-message-row>.message-author-avatar>.message-former-avatar{width:100%;height:100%;border-radius:inherit}
 .message-view .group-message-row>.group-message{flex:0 1 auto;margin:0;max-width:min(660px,calc(100% - var(--group-portrait-size) - var(--group-portrait-gap) - 20px))}
-.message-view .group-message-row>.group-message:has(>.message-action-rail[data-layout=gutter]){max-width:min(660px,calc(100% - var(--group-portrait-size) - var(--group-portrait-gap) - 50px))}
 .group-message-row>.group-message>.group-message-heading{gap:7px;min-width:0}
 .group-message-row .group-kind{flex:none}
-.group-message-row>.group-message>.group-open-private{margin-left:0}
+.group-typing-row{animation:group-typing-enter .2s ease-out}
+.group-typing-row .message-list-avatar,.group-typing-row .message-list-avatar>.message-avatar{width:100%;height:100%;border-radius:inherit}
+.message-view .group-message-row>.group-typing-bubble{min-width:94px;padding:12px 18px 14px}
+.group-typing-bubble>.group-message-heading{margin-bottom:5px}
+.group-typing-dots{display:flex;align-items:center;gap:6px;height:23px;padding:2px 1px}
+.group-typing-dots>i{display:block;width:6px;height:6px;border-radius:50%;background:var(--fg-dim);animation:group-typing-dot 1.2s cubic-bezier(.45,.05,.55,.95) infinite;will-change:transform,opacity}
+.group-typing-dots>i:nth-child(2){animation-delay:.16s}
+.group-typing-dots>i:nth-child(3){animation-delay:.32s}
+.group-thinking-members[data-animate=false] .group-typing-dots>i{animation:none;opacity:.6}
+@keyframes group-typing-dot{0%,60%,100%{opacity:.35;transform:translateY(0) scale(.85)}30%{opacity:1;transform:translateY(-3px) scale(1.07)}}
+@keyframes group-typing-enter{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.group-typing-row{animation:none}.group-typing-dots>i{animation:none;opacity:.6}}
 /* Existing multi-select checkboxes retain their message target, clear of the avatar column. */
 .group-message-row.is-incoming>.group-message>.message-select-toggle{left:calc(-1 * (var(--group-portrait-size) + var(--group-portrait-gap) + 25px))}
 @media(max-width:760px){

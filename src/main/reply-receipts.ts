@@ -1,12 +1,34 @@
+import {isAppAdministrator} from './application-authority'
 import {createHash} from 'node:crypto'
 import {readStore,writeStore} from './store'
 import {requestContext} from './authorization'
-import {employeeReady,type Item} from '../shared/types'
-import {catalog,messages} from './chat-group-store'
-import {all} from './channel-store'
-import {transcriptItems} from './transcripts'
+import {employeeReady,type Item,type GroupReplyReference} from '../shared/types'
+import {catalog,messages,advanceGroupRead} from './chat-group-store'
+import {advanceDirectRead,directSummary} from './direct-messages'
+import type {DirectReplyReference} from '../shared/direct-messages'
 
 const replyId=(taskId:string|undefined,itemId:string,text:string)=>createHash('sha256').update(JSON.stringify([taskId,itemId,text])).digest('hex')
+// Only the active turn and its latest explicit group publication are linked.
+// No text matching, copied transcripts or per-message read history is needed.
+const turns=new Map<string,{id:string;groupReply?:GroupReplyReference;directReply?:DirectReplyReference}>()
+export function beginReplyTurn(employeeId:string,taskId:string){turns.set(employeeId,{id:taskId})}
+export function endReplyTurn(employeeId:string,taskId?:string){if(!taskId||turns.get(employeeId)?.id===taskId)turns.delete(employeeId)}
+export function recordGroupReply(employeeId:string,reference:GroupReplyReference){const turn=turns.get(employeeId);if(turn)turn.groupReply=reference}
+export function recordDirectReply(employeeId:string,reference:DirectReplyReference){const turn=turns.get(employeeId);if(turn)turn.directReply=reference}
+export function acknowledgeDirectReply(employeeId:string,reference:DirectReplyReference){
+ const store=readStore(),card=store.sessions.find(c=>c.id===employeeId),reply=card?.lastReply
+ if(!card||!reply?.directReply||reply.directReply.sequence>reference.sequence)return
+ if(!reply.readAt){card.lastReply={...reply,readAt:Date.now()};writeStore(store)}
+ if(reply.groupReply&&catalog().groups.some(g=>g.id===reply.groupReply!.groupId)){advanceGroupRead(reply.groupReply.groupId,reply.groupReply.sequence);acknowledgeGroupReplies(reply.groupReply.groupId,reply.groupReply.sequence)}
+}
+export function acknowledgeGroupReplies(groupId:string,sequence:number){
+ const store=readStore(),history=messages(groupId);let changed=false
+ for(const card of store.sessions){const reply=card.lastReply,reference=reply?.groupReply;if(card.deleting||!reply||reply.readAt||reference?.groupId!==groupId||reference.sequence>sequence)continue
+  if(!history.some(message=>message.id===reference.messageId&&message.sequence===reference.sequence&&message.author.kind==='agent'&&message.author.employeeId===card.id))continue
+  card.lastReply={...reply,readAt:Date.now()};if(reply.directReply)advanceDirectRead(card.id,reply.directReply);changed=true
+ }
+ if(changed)writeStore(store)
+}
 
 /** Publish once per completed visible answer, never for tools/thinking/onboarding. */
 export function publishReply(employeeId:string,items:Item[],turnKey?:string){
@@ -19,6 +41,8 @@ export function publishReply(employeeId:string,items:Item[],turnKey?:string){
       if(block.kind==='text'&&block.text.trim()){answer={itemId:item.id,text:block.text.trim()};break}
     }
   }
+  const turn=turns.get(employeeId),directReply=turn&&turn.id===turnKey?turn.directReply:undefined
+  if(!answer&&directReply){for(let i=items.length-1;i>=0;i--){const item=items[i];if(item.role==='user')break;if(item.role==='assistant'){answer={itemId:item.id,text:'Private message sent'};break}}}
   if(!answer)return
   const store=readStore(),card=store.sessions.find(card=>card.id===employeeId&&!card.deleting)
   if(!card||!employeeReady(card))return
@@ -28,37 +52,27 @@ export function publishReply(employeeId:string,items:Item[],turnKey?:string){
   const paragraph=paragraphs.at(-1)??answer.text,characters=Array.from(paragraph)
   // The full answer remains in transcripts; the persisted floor preview is bounded.
   const text=characters.length>4000?'…'+characters.slice(-4000).join(''):paragraph
-  card.lastReply={id,itemId:answer.itemId,text,createdAt:Date.now()}
+  const groupReply=turn&&turn.id===turnKey?turn.groupReply:undefined
+  const alreadyRead=groupReply&&catalog().groups.some(group=>group.id===groupReply.groupId&&group.readSequence>=groupReply.sequence)||directReply&&directSummary(employeeId).readSequence>=directReply.sequence
+  card.lastReply={id,itemId:answer.itemId,text,createdAt:Date.now(),...(groupReply?{groupReply}:{}),...(directReply?{directReply}:{}),...(alreadyRead?{readAt:Date.now()}:{})}
   writeStore(store)
-}
-
-/** Remove only an old unread whose exact digest proves shared-task provenance. Never rewrite history or infer human reads. */
-export function repairSharedReplyReceipts(){
-  const store=readStore(),candidates=store.sessions.filter(card=>!card.deleting&&card.lastReply&&!card.lastReply.readAt)
-  if(!candidates.length)return
-  const tasks=new Map(candidates.map(card=>[card.id,new Set<string>()]))
-  try{for(const group of catalog().groups){try{for(const message of messages(group.id))for(const delivery of message.deliveries)if(delivery.taskId)tasks.get(delivery.employeeId)?.add(delivery.taskId)}catch(error){console.error('[Shared receipt history]',group.id,String(error))}}}catch(error){console.error('[Shared receipt catalog]',String(error))}
-  for(const row of all('SELECT employee_id,task_id FROM channel_deliveries WHERE task_id IS NOT NULL'))tasks.get(row.employee_id)?.add(row.task_id)
-  let changed=false
-  for(const card of candidates){
-    if(!tasks.get(card.id)?.size)continue
-    try{
-      const items=transcriptItems(card.id),receipt=card.lastReply!,answer=[...items].reverse().find(item=>item.role==='assistant'&&item.id===receipt.itemId)
-      if(answer?.role!=='assistant')continue
-      const block=[...answer.blocks].reverse().find(block=>block.kind==='text'&&block.text.trim())
-      if(block?.kind==='text'&&[...tasks.get(card.id)!].some(task=>replyId(task,answer.id,block.text.trim())===receipt.id)){delete card.lastReply;changed=true}
-    }catch(error){console.error('[Shared receipt verification]',card.id,String(error))}
-  }
-  if(changed)writeStore(store)
 }
 
 /** An old UI frame must not acknowledge a newer reply. Agent readers never mark user read. */
 export function acknowledgeReply(employeeId:string,replyId:string){
-  if(requestContext().principal.kind!=='operator')throw Error('Only the user may acknowledge a reply')
+  if(!isAppAdministrator())throw Error('Only the user or Secretary may acknowledge a reply')
   if(typeof replyId!=='string'||!replyId)throw Error('replyId is required')
   const store=readStore(),card=store.sessions.find(card=>card.id===employeeId&&!card.deleting)
   if(!card)throw Error('Unknown employee')
   if(!card.lastReply||card.lastReply.id!==replyId)return {acknowledged:false,replyId:card.lastReply?.id}
+  if(card.lastReply.directReply)advanceDirectRead(employeeId,card.lastReply.directReply)
+  const reference=card.lastReply.groupReply
+  if(reference&&catalog().groups.some(group=>group.id===reference.groupId)&&messages(reference.groupId).some(message=>message.id===reference.messageId&&message.sequence===reference.sequence&&message.author.kind==='agent'&&message.author.employeeId===employeeId)){
+   const sequence=advanceGroupRead(reference.groupId,reference.sequence)!
+   acknowledgeGroupReplies(reference.groupId,sequence)
+   const current=readStore().sessions.find(card=>card.id===employeeId)!.lastReply!
+   return {acknowledged:true,replyId,readAt:current.readAt}
+  }
   if(!card.lastReply.readAt){card.lastReply={...card.lastReply,readAt:Date.now()};writeStore(store)}
   return {acknowledged:true,replyId,readAt:card.lastReply.readAt}
 }

@@ -1,4 +1,4 @@
-import {useMentionPicker} from '../chat/useMentionPicker'
+import {useMentionPicker,mentionLabels,mentionTargets} from '../chat/useMentionPicker'
 import {useAttachmentUploads,AttachmentTransfers,DraftFiles} from '../chat/MessageAttachments'
 import {draftContent} from '../../../shared/message-drafts'
 import {useEffect,useLayoutEffect,useRef,useState} from 'react'
@@ -21,9 +21,9 @@ export function ChannelComposer({channel,store,reply,onReply,onReveal,onSent,onA
  const [text,setText]=useState(saved?.text??''),[mentions,setMentions]=useState<string[]|'all'>(saved?.mentions??[]),[sending,setSending]=useState(false),[error,setError]=useState(''),[retryId,setRetryId]=useState<string|null>(null)
  const [images,setImages]=useState<string[]>(saved?.images??[]),[files,setFiles]=useState<string[]>(saved?.files??[]),attachments=useRef({images,files}),attachmentInput=useRef<HTMLInputElement>(null);attachments.current={images,files}
  const composer=useRef<HTMLTextAreaElement>(null),inFlight=useRef(false),alive=useRef(true),[restored,setRestored]=useState(false)
- const picker=useMentionPicker(composer,text),menu=picker.open,index=picker.index,setIndex=picker.setIndex
- const request=useRef({id:saved?.clientMessageId??crypto.randomUUID(),payload:payloadIdentity(saved?.text??'',saved?.mentions??[],saved?.replyTo,saved?.images,saved?.files),persisted:!!saved})
  const admins=store.sessions.filter(card=>(channel.memberIds??channel.adminIds).includes(card.id)&&!card.deleting),name=(id:string)=>admins.find(card=>card.id===id)?.title??uiText('Former member')
+ const picker=useMentionPicker(composer,text,mentionLabels(mentions,admins)),menu=picker.open,index=picker.index,setIndex=picker.setIndex
+ const request=useRef({id:saved?.clientMessageId??crypto.randomUUID(),payload:payloadIdentity(saved?.text??'',saved?.mentions??[],saved?.replyTo,saved?.images,saved?.files),persisted:!!saved})
  useComposerHeight(composer,text,!hidden,channel.id)
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
  const restore=(draft:Omit<MessageDraft,'updatedAt'>|undefined,initial=false)=>{request.current={id:draft?.clientMessageId??crypto.randomUUID(),payload:payloadIdentity(draft?.text??'',draft?.mentions??[],draft?.replyTo,draft?.images,draft?.files),persisted:!!draft};setImages(draft?.images??[]);setFiles(draft?.files??[]);attachments.current={images:draft?.images??[],files:draft?.files??[]};setText(draft?.text??'');setMentions(draft?.mentions??[]);if(!initial||!reply)onReply(draft?.replyTo?{id:draft.replyTo,author:uiText('Original message'),text:''}:null)}
@@ -35,10 +35,10 @@ export function ChannelComposer({channel,store,reply,onReply,onReveal,onSent,onA
  const uploads=useAttachmentUploads(conversation,(_conversation,path,kind)=>{const next={...attachments.current,[kind==='image'?'images':'files']:[...attachments.current[kind==='image'?'images':'files'],path]};attachments.current=next;setImages(next.images);setFiles(next.files)},images.length+files.length)
  const attach=(selected:File[])=>{if(inFlight.current)return;try{uploads.add(selected);setError('')}catch(cause){setError((cause as Error).message)}}
  const removeAttachment=(path:string)=>{setImages(value=>value.filter(file=>file!==path));setFiles(value=>value.filter(file=>file!==path))}
- const change=(value:string)=>{setText(value);setError('')}
+ const change=(value:string)=>{setText(value);setMentions(mentionTargets(value,mentions,admins));setError('')}
  const term=picker.query
  const choices=[{id:'all',title:uiText('All members')},...admins].filter(card=>card.title.toLowerCase().includes(term))
- const choose=(id:string)=>{setMentions(id==='all'?'all':mentions==='all'?[id]:[...new Set([...mentions,id])]);setText(picker.consume())}
+ const choose=(id:string)=>{const next=picker.consume(id==='all'?'all':name(id));setMentions(mentionTargets(next,id==='all'?'all':mentions==='all'?[id]:[...new Set([...mentions,id])],admins));setText(next)}
  const send=async()=>{
   if(!restored||!text.trim()&&!images.length&&!files.length||uploads.pending||inFlight.current)return
   if(picker.active){setError(uiText('Choose a member from the mention menu before sending.'));return}
@@ -57,7 +57,6 @@ export function ChannelComposer({channel,store,reply,onReply,onReveal,onSent,onA
  return <div className="group-composer channel-composer" hidden={hidden} onDragOver={event=>{if([...event.dataTransfer.items].some(item=>item.kind==='file')){event.preventDefault();event.dataTransfer.dropEffect='copy'}}} onDrop={event=>{if(event.dataTransfer.files.length){event.preventDefault();event.stopPropagation();attach([...event.dataTransfer.files])}}}>
   {error&&<p className="group-error" role="alert">{uiText(error)}{retryId===request.current.id&&<><br/><small>{uiText('Retrying the same message will not send it twice.')}</small></>}</p>}
   {reply&&<MotionStrip className="group-replying"><button className="group-reply-source" aria-label={uiText('Go to original message')} onClick={()=>onReveal(reply.id)}><strong>{uiText('Replying to')} {reply.author}</strong><small>{reply.text||uiText('Original message')}</small></button><button aria-label={uiText('Cancel reply')} onClick={()=>{onReply(null);composer.current?.focus()}}><Icon name="close"/></button></MotionStrip>}
-  {(mentions==='all'||mentions.length>0)&&<div className="group-recipient-chips" aria-label={uiText('Mentioned members')}>{(mentions==='all'?['all']:mentions).map(id=><button key={id} aria-label={uiText('Remove mention {0}',[id==='all'?uiText('All members'):name(id)])} onClick={()=>setMentions(mentions==='all'?[]:mentions.filter(value=>value!==id))}>@{id==='all'?uiText('All members'):name(id)} <span>×</span></button>)}</div>}
   <DraftFiles conversation={conversation} images={images} files={files} onRemove={removeAttachment}/><AttachmentTransfers uploads={uploads}/>
   <div className="group-compose-box">
    <input ref={attachmentInput} type="file" multiple hidden aria-label={uiText("Choose attachments")} onChange={event=>{attach([...event.target.files??[]]);event.target.value=''}}/><button className="message-attach" aria-label={uiText("Attach files")} disabled={sending||!restored} onClick={()=>attachmentInput.current?.click()}><Icon name="attach"/></button>

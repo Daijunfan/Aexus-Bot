@@ -39,7 +39,7 @@ export const TOOLS = Object.freeze([
   ['ui-appearance','外观工作室','appearance','always','主题 配色 背景 动画 theme','预览、自定义、导入和导出主题'],
   ['reader-appearance-open','阅读与联动视图','appearance','always','分栏 亮度 沉浸 布局 split','文档与脑图的排列及阅读亮度'],
   ['study-create','新建学习集','organize','always','知识库 notebook 学习集','引用文档并开始主题学习'],
-  ['workspace-card-box','全库卡片盒','organize','always','分组 筛选 词条 board','跨学习集过滤与批量编辑'],
+  ['workspace-card-box','全库数据库','organize','always','数据库 表格 卡片盒 分组 筛选 词条 board database','跨学习集检索、编辑摘录与笔记，保存视图并批量整理'],
   ['study-add-note','新建笔记卡','notes','study','独立 文本 卡片 new','创建独立卡片，不修改原文'],
   ['card-inspector-open','原位编辑卡片','notes','card','详情 标题 正文 笔记 F2 edit','保持阅读位置并在浮动面板编辑'],
   ['study-undo','撤销学习编辑','notes','study','undo 撤回','撤销最近一次可恢复学习操作'],

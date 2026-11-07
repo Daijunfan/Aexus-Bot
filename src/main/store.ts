@@ -36,7 +36,7 @@ export function readStore(): Store {
     if (!existsSync(FILE)) return { ...EMPTY }
     const raw = JSON.parse(readFileSync(FILE, 'utf8'))
     return {
-      revision:raw.revision??0,fullAccessDefaultApplied:raw.fullAccessDefaultApplied,access:raw.access,connectorAnchors:raw.connectorAnchors,lastEmployeeTemplate:raw.lastEmployeeTemplate,lastTeamTemplate:raw.lastTeamTemplate,
+      revision:raw.revision??0,avatarCatalog:raw.avatarCatalog,fullAccessDefaultApplied:raw.fullAccessDefaultApplied,access:raw.access,connectorAnchors:raw.connectorAnchors,lastEmployeeTemplate:raw.lastEmployeeTemplate,lastTeamTemplate:raw.lastTeamTemplate,
       sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
       groups: Array.isArray(raw.groups) ? raw.groups : [],
       teamViews:Array.isArray(raw.teamViews)?raw.teamViews:[],activeTeamViewId:raw.activeTeamViewId??ALL_TEAM_VIEW,
@@ -188,6 +188,7 @@ export function removeSession(id: string|string[]): Store {
 
 export function validateTeamSettings(settings:TeamSettings):TeamSettings {
   if(!['work','build','cloud'].includes(settings.mode))throw new Error('Team 模式必须是 work、build 或 cloud')
+  if(settings.pluginId&&settings.mode!=='work')throw new Error(settings.mode==='cloud'?'云端团队不支持插件':'插件仅适用于本地插件团队')
   if(settings.directoryMode!==undefined&&!['default','bind'].includes(settings.directoryMode))throw new Error('请选择默认生成或绑定已有文件夹')
   if(settings.mode==='cloud'){if(!settings.hostId)throw new Error('请先在 Cloud Hosts 插件添加云主机，再使用 hostId 绑定 Team');const remote=cloudHostTarget(settings.hostId,settings.directory??settings.remote?.directory);return {mode:'cloud',hostId:settings.hostId,directory:remote.directory,remote}}
   if(settings.remote||settings.hostId||settings.directory)throw new Error('SSH 主机和远端目录只能配置在 cloud Team 中；请使用 --mode cloud')
@@ -205,6 +206,7 @@ export function addGroup(name: string, root?: string, settings:TeamSettings={mod
   const clean = String(name ?? '').trim()
   if (!clean) throw new Error('Team 名称不能为空')
   if (!store.groups.includes(clean)) {
+    if(settings.mode==='work'||settings.pluginId)throw new Error('团队不再绑定插件；请打开插件，按页面或内容给员工授权')
     const config=validateTeamSettings(settings)
     const canonical = chooseTeamRoot(clean,config,root)
     if(config.mode!=='cloud'&&Object.entries(store.teamRoots??{}).some(([name,path])=>teamSettings(store,name).mode!=='cloud'&&path===canonical&&(config.mode==='work'||config.directoryMode!=='bind')))throw new Error('此工作目录已属于另一个项目或插件')
@@ -378,6 +380,7 @@ export function configureTeam(name:string,settings:TeamSettings,path?:string):St
   const store=readStore()
   if(!store.groups.includes(name))throw new Error('Unknown Team')
   const previous=teamSettings(store,name)
+  if(settings.mode==='work'&&(previous.mode!=='work'||settings.pluginId!==previous.pluginId))throw Error('团队不再绑定插件；请打开插件按内容授权')
   if(store.teamRoots?.[name])throw new Error('Team 工作方式和工作目录创建后不可更换')
   if(previous.mode==='work'&&previous.directoryMode==='bind'&&settings.mode==='work'&&settings.pluginId===previous.pluginId&&settings.directoryMode===undefined&&path===undefined)return store
   const samePlugin=settings.mode===previous.mode&&settings.pluginId===previous.pluginId

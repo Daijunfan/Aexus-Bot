@@ -167,11 +167,23 @@ Governor 目标还必须提供 `--view VIEW_ID`，见下文“Governor 任务的
 ## Management authorization
 
 Jobs and runs preserve the requesting principal. Visual relation IDs never grant scheduling authority.
-Creation, manual run, resume and actual launch revalidate that authority. Revocation
-disables future jobs and cancels matching active runs; unrelated user/Manager work
-is retained. Legacy jobs without delegation remain operator-owned. `source` is only
-a label and never grants permission. Manager schedule listings include their own
-jobs and runs, not the global scheduler store.
+Every role may create, read, modify, pause/resume and delete its own one-off,
+recurring and event tasks regardless of `createdBy`. Authorization follows the
+current target, not the original author: Manager covers itself and lower-role
+Employees in its Team; Governor covers itself and global Employees/Managers, but not
+another Governor or Secretary; Secretary covers itself and every legitimate employee,
+including other Secretaries. Changing the target requires authority over both the old
+and new target; `createdBy` remains unchanged audit history. Creation, explicit
+update/resume, manual run and signal trigger revalidate the current actor's authority.
+Manual run and trigger use the caller's current authorization, never the original
+author's credentials, and do not re-enable a revoked automatic delegation. Background
+due runs recheck the saved authorization. Missing-employee orphans may have metadata
+maintained only by the user or Secretary and can never execute. Revocation disables
+future automatic jobs and cancels matching active runs; the old automatic authorization
+stays disabled until a legitimate actor explicitly updates or resumes the task.
+Unrelated user/Manager work is retained. Legacy jobs without delegation remain
+operator-owned. `source` is only a label and never grants permission. Manager schedule
+listings cover records within their current target scope, not the global scheduler store.
 
 ## Governor 任务的视图目标
 
@@ -195,11 +207,11 @@ Plan is now a first-class view over this same scheduler. `afterSeconds`, `employ
 
 ## Plan 统一调度与严格下行权限
 
-所有角色的定时、重复、事件触发员工工作统一使用本 API，并能在 Core Plan 中查询和调整。Employee 只能给自己排期；Manager 可给自己及本 Team 的 Employee 排期；Governor 可给自己及全局 Employee/Manager 排期；Secretary 可给自己及全局 Employee/Manager/Governor 排期。任何 Agent 均不能给其他同级或上级安排任务。用户可调整全部员工规划。一般管理/消息权限不因这一独立的调度规则改变。
+所有角色的定时、重复、事件触发员工工作统一使用本 API，并能在 Core Plan 中查询和调整。各职位都可创建、读取、修改、暂停恢复或删除自己及可管理目标的一次/重复/事件任务，不论记录由谁创建。Employee 只能给自己排期；Manager 可给自己及本 Team 的 Employee 排期；Governor 可给自己及全局 Employee/Manager 排期，不能管理另一 Governor 或 Secretary；Secretary 代表用户管理全局合法员工排期，包括同级其他 Secretary。Manager/Governor 仍不能向同级或上级分派。修改按当前目标权限判定，不按 `createdBy` 作者；变更目标须同时可管理原目标和新目标，原 `createdBy` 审计不重写。用户与 Secretary 可调整全部合法员工规划；Secretary 任免仍由用户控制。
 
-`schedule.create/update/preview/run/resume/trigger` 等目标操作均受同一权限边界保护；原委派在实际执行和异步准备之后再次复核。新增 `action.channelId` 明确关联员工引擎频道，要求目标持续具有发布成员身份。旧 UI 的 `source:channel:ID` 仅迁移为经过校验的频道引用，不授予权限。移除成员会停用关联任务。
+`schedule.create/update/preview/run/resume/trigger` 等目标操作均受同一权限边界保护。撤权后旧自动授权保持停用；合法调用者显式 update/resume 才重新授权，manual run/signal trigger 使用当前调用者的本次授权，不能借用原作者凭据，manual run 也不会重新启用旧自动委派。后台到期运行复核保存的授权，实际执行和异步准备之后再次复核。新增 `action.channelId` 明确关联员工引擎频道，要求目标持续具有发布成员身份。旧 UI 的 `source:channel:ID` 仅迁移为经过校验的频道引用，不授予权限。移除成员会停用关联任务。
 
-新增 `rule:{kind:"event",event:"signal"|"channel.posted",channelId?,cooldownSeconds?}`。信号通过 `schedule.trigger {id,eventId}` 提交；原生新帖事件仅由首次成功发布产生。冷却默认 60 秒，可选 0–86400 秒。每个任务保存最近 256 个事件 claim，并利用保留的运行历史去重；暂停/过期/冷却/不在工作窗口的事件不执行，不存在隐藏重试队列。已接受的忙碌事件保留 skipped 记录并消耗次数。重启不会补放离线事件。
+事件规则现支持 `signal`、`channel.posted`、`message.received`、`session.completed`、`monitor.output`、`monitor.exited`。来源分别使用 channelId、conversation、employeeId 或 monitorId，只有对应字段可填写。先保存事件再执行委派/启动监测程序。忙碌、冷却和工作时间窗将事件持久排队，每次最多合并 100 条，其余继续等待；稳定 ID 去重，重启保留队列，已开始后中断的执行不盲目重做。Dot 的首条确认或安静间隔不表示整个任务完成。见 [事件计划与程序监控](docs/EVENT_TASKS.md) 和 [外部 Worker](docs/BOT_WORKERS.md)。
 
 事件计划立即出现在 Plan，等待时 nextAt 为 null；预览不虚构日期，日历展示真实执行记录。事件与定时任务共用原有持久化、保留策略、执行器和取消入口，不另建计时器或员工会话。频道表单复用完整 PlanEditor，尚未配置发布计划时明确显示自动发布未配置。详细字段和 CLI 示例见 PLAN.md 的 Unified automation 章节。
 
@@ -222,4 +234,9 @@ also accept `--expected-revision` to guard against a changed task.
 
 ## Conversation notices are separate from Plan
 
-Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Company managementRole. Only actual conversation Owner/Admin configures mute, quiet mode and fixed-text notifications; Company Secretary has no conversation-office bypass. Owner alone dissolves groups or transfers ownership, with the human user's external recovery override. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Company managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Company roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+
+
+## Secretary 应用管理
+
+Secretary 代表用户全局管理合法员工的 Plan，包括其他 Secretary。Manager/Governor 保持严格下行和原 Team 范围。任务执行仍检查当前目标、原始委派、初始化、原生执行许可与时效；用户独占 Secretary 任免，不借排期变更身份。

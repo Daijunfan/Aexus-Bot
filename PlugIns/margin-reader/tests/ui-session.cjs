@@ -1,16 +1,21 @@
 "use strict";
 const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
 const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto');
-const {chromium,expect}=require('../../../node_modules/@playwright/test');
+// Use the host test dependency; the plugin does not depend on a standalone checkout.
+const playwrightPath=path.join(__dirname,'../../../node_modules/@playwright/test');
+const {chromium,webkit,expect}=require(playwrightPath);
 const root=path.resolve(__dirname,'..');
 exports.expect=expect;
+exports.chromium=chromium;
+exports.webkit=webkit;
 exports.create=async function(name,options={}){
   const temp=await fs.mkdtemp(path.join(os.tmpdir(),'mr-'+name+'-')),workspace=path.join(temp,'library');
   await fs.mkdir(workspace);const server=await require('../dist-plugin/lib/server.cjs').startServer({workspace});
   const report={passed:false,checks:[],browserErrors:[]};let browser;
-  const output=path.join(root,'artifacts/completion-resume-20260929',name);await fs.mkdir(output,{recursive:true});
+  const useWebKit=process.env.MR_WEBKIT_TEST==='1';
+  const output=path.join(root,'artifacts/completion-resume-20260929',name+(useWebKit?'-webkit':''));await fs.mkdir(output,{recursive:true});
   try{
-    browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||'/Users/djf/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell',...(options.launch||{})});
+    browser=await (useWebKit?webkit:chromium).launch({headless:true,...(useWebKit?{}:{executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||chromium.executablePath()}),...(options.launch||{})});
     const context=await browser.newContext({viewport:{width:1520,height:1000},...(options.context||{})});const page=await context.newPage();
     page.on('pageerror',error=>report.browserErrors.push(error.message));page.setDefaultTimeout(15000);
     return {page,context,server,workspace,temp,output,report,

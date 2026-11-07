@@ -17,6 +17,8 @@ let app: ElectronApplication;
 let page: Page;
 let data: string;
 let errors: string[];
+// UI commits are debounced; a separate CLI reader must observe a durable save.
+const waitSaved = () => expect(page.locator('.save-status')).toContainText('已保存到本机');
 async function dragRecord(source: Locator, target: Locator, targetOffset?: { x: number; y: number }) {
   await target.scrollIntoViewIfNeeded();
   await source.scrollIntoViewIfNeeded();
@@ -240,7 +242,7 @@ test('native import/export, attachment protocol, backup and history', async () =
   await app.evaluate(({ dialog }, file) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });
   }, exportPath);
-  await page.getByRole('button', { name: '导出', exact: true }).click();
+  await page.getByRole('button', { name: '导出页面', exact: true }).click();
   await page
     .getByRole('dialog', { name: '导出页面' })
     .getByRole('button', { name: '导出', exact: true })
@@ -285,6 +287,7 @@ test('theme, templates, nested pages and narrow window remain usable', async () 
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(900, 680));
   await page.screenshot({ animations: 'disabled', path: 'test-results/desktop-narrow.png' });
   await expect(page.locator('.page-title')).toBeInViewport();
+  await page.locator('.sidebar').hover();
   await page.getByRole('button', { name: '收起侧边栏 ⌘\\' }).click();
   await expect(page.locator('.sidebar')).toHaveCount(0);
   await page.getByRole('button', { name: '展开侧边栏 ⌘\\' }).click();
@@ -370,7 +373,7 @@ test('backup restores all pages and attachments; page history restores content; 
   await app.evaluate(({ dialog }, file) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });
   }, pdf);
-  await page.getByRole('button', { name: '导出', exact: true }).click();
+  await page.getByRole('button', { name: '导出页面', exact: true }).click();
   await page.getByRole('dialog').getByRole('combobox', { includeHidden: true }).selectOption('pdf');
   await page.getByRole('dialog').getByRole('button', { name: '导出', exact: true }).click();
   await expect.poll(() => fs.existsSync(pdf)).toBe(true);
@@ -419,7 +422,7 @@ test('database relations and rollups stay live and export calculated values', as
   await app.evaluate(({ dialog }, file) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });
   }, output);
-  await page.getByRole('button', { name: '导出', exact: true }).click();
+  await page.getByRole('button', { name: '导出页面', exact: true }).click();
   await page.getByRole('dialog').getByRole('combobox', { includeHidden: true }).selectOption('csv');
   await page.getByRole('dialog').getByRole('button', { name: '导出', exact: true }).click();
   await expect.poll(() => fs.existsSync(output)).toBe(true);
@@ -450,7 +453,7 @@ test('imported images are local, render offline after restart, and travel with M
   await app.evaluate(({ dialog }, file) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });
   }, output);
-  await page.getByRole('button', { name: '导出', exact: true }).click();
+  await page.getByRole('button', { name: '导出页面', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: '导出', exact: true }).click();
   await expect.poll(() => fs.existsSync(output)).toBe(true);
   expect(fs.readFileSync(output, 'utf8')).toContain('with-images.assets/');
@@ -565,7 +568,7 @@ test('timeline, chart, feed and form views work with the same live database', as
   await page.mouse.down();
   await page.mouse.move(handle!.x + 33, handle!.y + 14, { steps: 5 });
   await page.mouse.up();
-  await expect(editedBar).toHaveAttribute('title', `整理个人知识库 · ${dateKey(0)} → ${dateKey(5)}`);
+  await expect(editedBar).toHaveAttribute('aria-label', `整理个人知识库 ${dateKey(0)} 至 ${dateKey(5)}`);
   await page.screenshot({ animations: 'disabled', path: 'test-results/timeline-view.png' });
   await addView('状态分布', '图表');
   await expect(page.locator('.chart-mark')).toHaveCount(3);
@@ -867,12 +870,19 @@ test('CLI conflict resolution releases GUI drafts, including drafts restored aft
     const response = await page.evaluate((patch) => window.native!.api('workspace.patch', { patch }), patch);
     expect(response.error?.code).toBe('CONFLICT');
     const id = response.error!.details.conflictId;
-    await page.evaluate(
-      ({ patch, id }) =>
+    // Inject the simulated persisted draft at the beginning of the next load.
+    // A live workspace notification between setItem and reload would otherwise
+    // clear it, producing an intermittent false failure in this recovery test.
+    await page.addInitScript(
+      ({ patch, id }) => {
+        const marker = 'mini-notion-test-draft-' + id;
+        if (sessionStorage.getItem(marker)) return;
+        sessionStorage.setItem(marker, '1');
         localStorage.setItem(
           'mini-notion-pending',
           JSON.stringify({ patches: [patch], conflictId: id, error: '待处理并发草稿' }),
-        ),
+        );
+      },
       { patch, id },
     );
     await page.reload();
@@ -923,6 +933,7 @@ test('database templates use the full editor and share defaults between GUI and 
   await page.keyboard.insertText('固定议程：回顾、讨论、行动。');
   await page.getByRole('button', { name: '完成编辑 → 返回数据库' }).click();
   await expect(page.locator('.database-table tbody tr')).toHaveCount(0);
+  await waitSaved();
   const templates = await cli('template', 'list', '--database-id', db.id);
   expect(templates).toHaveLength(1);
   const template = templates[0];
@@ -935,6 +946,7 @@ test('database templates use the full editor and share defaults between GUI and 
   await expect(page.locator('.peek-panel .bn-editor')).toContainText('固定议程');
   await expect(page.locator('.peek-panel .page-properties')).toContainText('进行中');
   await page.getByRole('button', { name: '关闭预览' }).click();
+  await waitSaved();
   const cliRow = await cli('record', 'create', db.id, '--title', 'CLI 使用默认模板', '--color', 'white');
   expect(cliRow.values.status).toBe('进行中');
   expect(JSON.stringify(cliRow.blocks)).toContain('固定议程');
@@ -1045,6 +1057,7 @@ test('sub-items, card previews, timeline dependencies and automatic scheduling w
   await page.getByRole('menuitem', { name: '后续任务', exact: true }).click();
   await expect(page.locator('.peek-panel')).toHaveCount(0);
   await expect(page.locator('.dependency-edge')).toHaveCount(1);
+  await waitSaved();
   expect(await cli('dependency', 'list', db.id)).toEqual([{ from: a.id, to: b.id }]);
   await cli('record', 'update', a.id, '--values', '{"start":"2026-09-10","end":"2026-09-11"}');
   await expect(page.locator(`[data-timeline-id="${b.id}"]`)).toHaveAttribute(
@@ -1124,6 +1137,7 @@ test('calendar ranges span weeks, drag without losing duration, and share schedu
   await page.locator('.schedule-fields > summary').click();
   await page.getByRole('combobox', { includeHidden: true, name: '计划结束日期' }).selectOption('');
   await expect(page.locator(`.plan-card[data-record-id="${row.id}"]`)).toHaveCount(1);
+  await waitSaved();
   expect((await cli('view', 'list', db.id)).find((view: any) => view.id === plan.id).timelineEnd).toBe('');
 });
 
@@ -1143,6 +1157,7 @@ test('page and selected-block comments synchronize between the sidebar and CLI',
   await page.getByRole('textbox', { name: '新评论' }).fill('请确认这版内容。');
   await page.locator('.new-comment').getByRole('button', { name: '评论', exact: true }).click();
   await expect(page.locator('.comment-text')).toContainText('请确认这版内容。');
+  await waitSaved();
   const thread = (await cli('comment', 'list', note.id))[0];
   await page.locator('.comment-reply textarea').fill('已确认，继续推进。');
   await page.locator('.comment-reply').getByRole('button', { name: '回复', exact: true }).click();
@@ -1156,6 +1171,7 @@ test('page and selected-block comments synchronize between the sidebar and CLI',
   await page.getByRole('combobox', { includeHidden: true, name: '评论状态' }).selectOption('open');
   await page.getByRole('button', { name: '添加表情反馈' }).first().click();
   await page.locator('.comment-reactions').getByRole('button', { name: '👍', exact: true }).click();
+  await waitSaved();
   expect((await cli('comment', 'get', note.id, thread.id)).messages[0].reactions['👍']).toBe(true);
   await page.getByRole('button', { name: '关闭评论' }).click();
   await page.locator('.bn-editor').click();
@@ -1164,6 +1180,7 @@ test('page and selected-block comments synchronize between the sidebar and CLI',
   await expect(page.locator('.comment-new-quote')).toContainText('需要评审');
   await page.getByRole('textbox', { name: '新评论' }).fill('针对原文的批注');
   await page.locator('.new-comment').getByRole('button', { name: '评论', exact: true }).click();
+  await waitSaved();
   const anchored = (await cli('comment', 'list', note.id)).find((thread: any) => thread.blockId);
   expect(anchored.blockId).toBe(note.blocks[0].id);
   await page.screenshot({ animations: 'disabled', path: 'test-results/comments-sidebar.png' });
@@ -1473,13 +1490,14 @@ test('hourly planner moves, resizes and completes real timed records with matchi
   await page.locator('.plan-backlog .plan-card').filter({ hasText: '安排阅读' }).scrollIntoViewIfNeeded();
   await dragToMinute(page.locator('.plan-backlog .plan-card').filter({ hasText: '安排阅读' }), 10 * 60 + 30);
   await expect
-    .poll(async () => (await cli('page', 'get', unplanned.id)).values.date.start)
+    .poll(async () => (await cli('page', 'get', unplanned.id)).values.date?.start)
     .toBe('2026-09-11T10:30+08:00');
   expect((await cli('page', 'get', unplanned.id)).values.date.end).toBe('2026-09-11T11:30+08:00');
   await eventA.getByRole('checkbox').check();
   await expect.poll(async () => (await cli('page', 'get', a.id)).values.done).toBe(true);
   await page.getByLabel('隐藏已完成', { exact: true }).check();
   await expect(eventA).toHaveCount(0);
+  await waitSaved();
   const projection = await cli('view', 'render', db.id);
   expect(projection.timeGrid.days[0].events.map((event: any) => event.id)).toEqual([b.id, unplanned.id]);
   await page.getByLabel('时间表时区', { exact: true }).and(page.locator('select')).selectOption('UTC');
@@ -1532,11 +1550,13 @@ test('hourly plans create from the grid, switch to all-day, export PDF and show 
   await page.locator('.hourly-scroll').scrollIntoViewIfNeeded();
   await dragRecord(page.locator(`[data-time-event="${row.id}"]`), page.locator('.hourly-all-day'));
   await expect(page.locator('.hourly-all-day-event')).toContainText('全天与小时转换');
+  await waitSaved();
   expect((await cli('page', 'get', row.id)).values.date).toEqual({ start: '2026-09-11', end: '2026-09-11' });
   await page.locator('.hourly-scroll').evaluate((element) => (element.scrollTop = 12 * 60 * 0.9));
   const slots = await page.locator('.hourly-slots').boundingBox();
   await page.mouse.dblclick(slots!.x + 85, slots!.y + 18 * 60 * 0.9);
   await page.locator('.peek-panel .page-title').fill('晚间复盘');
+  await waitSaved();
   const created = (await cli('record', 'list', db.id)).find((row: any) => row.title === '晚间复盘');
   expect(created.values.date.start).toBe('2026-09-11T18:00+08:00');
   expect(created.values.date.end).toBe('2026-09-11T19:00+08:00');
@@ -1781,9 +1801,10 @@ test('date reminders deliver to the inbox, support snooze, and send the native n
   await page.getByRole('button', { name: '收件箱', exact: true }).click();
   await expect(page.locator('.inbox-items')).toContainText('请检查数据绑定');
   await page.getByRole('button', { name: '标为已读', exact: true }).click();
-  expect(await cli('inbox', 'list', '--status', 'unread')).toHaveLength(0);
+  await expect.poll(() => cli('inbox', 'list', '--status', 'unread')).toHaveLength(0);
   await page.getByLabel('稍后提醒', { exact: true }).and(page.locator('select')).selectOption('60');
   await expect(page.locator('.inbox-item')).toHaveCount(0);
+  await waitSaved();
   const snoozed = (await cli('reminder', 'list', '--page-id', row.id))[0];
   await cli('scheduler', 'run', '--at', snoozed.dueAt);
   await expect(page.locator('.inbox-item')).toHaveCount(1);
@@ -1800,7 +1821,7 @@ test('date reminders deliver to the inbox, support snooze, and send the native n
   await page.getByLabel('提醒方式', { exact: true }).and(page.locator('select')).selectOption('at');
   await page.getByLabel('提醒时间', { exact: true }).fill('2099-02-01T09:00');
   await page.getByRole('button', { name: '保存提醒', exact: true }).click();
-  expect((await cli('reminder', 'get', row.id, reminder.id)).propertyId).toBeUndefined();
+  await expect.poll(async () => (await cli('reminder', 'get', row.id, reminder.id)).propertyId).toBeUndefined();
 });
 
 test('reminders still arrive with no window and notification activation keeps the opened note selected after editing', async () => {
@@ -2022,7 +2043,8 @@ test('status groups edit in the desktop and planner completion recognizes all co
     'white',
   );
   await cli('page', 'open', db.id);
-  await page.locator('.database-table thead').getByRole('button', { name: '状态', exact: true }).click();
+  await page.locator('.database-table thead').getByRole('button', { name: '状态列选项', exact: true }).click();
+  await page.getByRole('menuitem', { name: '编辑属性', exact: true }).click();
   await page.getByLabel('选项名称 3', { exact: true }).fill('已交付');
   await page.getByRole('button', { name: '添加选项', exact: true }).click();
   await page.getByLabel('选项名称 4', { exact: true }).fill('已取消');

@@ -10,12 +10,12 @@ export class StudyInk {
     const bar=document.createElement('div');bar.id='study-ink-tools';bar.hidden=true;
     bar.innerHTML=`<button id="study-pen" aria-pressed="false">✎ 手写</button><button id="study-lasso" aria-pressed="false">套索</button><select id="study-ink-layer" aria-label="当前手写图层"></select><button id="study-layers">图层</button><button id="study-eraser" aria-pressed="false">橡皮擦</button><button id="study-ink-settings">笔刷 / 尺子</button><select id="study-ink-color" aria-label="手写颜色">${study.colors.map(([v,t])=>`<option value="${v}" ${v==='blue'?'selected':''}>${t}</option>`).join('')}</select><select id="study-ink-width" aria-label="笔画粗细"><option value="0.002">细</option><option value="0.004" selected>中</option><option value="0.008">粗</option></select><span id="study-ink-status" role="status"></span><button id="study-ink-retry" hidden>重试保存</button><button id="study-ink-discard" hidden>放弃笔画</button>`;
     $('study-reading-bar').after(bar);
-    $('study-lasso').onclick=()=>this.setMode(this.mode==='lasso'?'off':'lasso');$('study-layers').onclick=()=>this.manageLayers();
+    $('study-lasso').onclick=run(()=>this.setMode(this.mode==='lasso'?'off':'lasso'));$('study-layers').onclick=()=>this.manageLayers();
     $('study-ink-layer').onchange=run(()=>study.change('study.layer.update',{layerId:$('study-ink-layer').value,active:true}));
     $('study-ink-settings').onclick=()=>study.inkTools.configure();
     $('study-ink-color').onchange=run(()=>study.change('study.ink.settings',{color:$('study-ink-color').value}));
     $('study-ink-width').onchange=run(()=>study.change('study.ink.settings',{width:Number($('study-ink-width').value)}));
-    $('study-pen').onclick=()=>this.setMode(this.mode==='pen'?'off':'pen');$('study-eraser').onclick=()=>this.setMode(this.mode==='eraser'?'off':'eraser');
+    $('study-pen').onclick=run(()=>this.setMode(this.mode==='pen'?'off':'pen'));$('study-eraser').onclick=run(()=>this.setMode(this.mode==='eraser'?'off':'eraser'));
     $('study-ink-retry').onclick=run(()=>this.save(this.study.current.revision));$('study-ink-discard').onclick=()=>{this.draft=null;this.status('');this.render();document.dispatchEvent(new Event('reader-interaction-finished'));};
     $('reader-scroll').addEventListener('pointerdown',e=>this.start(e),true);
     this.observer=new MutationObserver(records=>{if(records.some(r=>r.type==='attributes'||[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches('.pdf-page,.pdf-pages')||n.querySelector('.pdf-page')))))this.render();});
@@ -26,7 +26,7 @@ export class StudyInk {
   get dirty(){return Boolean(this.draft)||this.busy||this.gesture;}
   status(message){$('study-ink-status').textContent=message;$('study-ink-retry').hidden=!this.draft||this.busy;$('study-ink-discard').hidden=!this.draft||this.busy;}
   showToolbar(context='document'){if(context==='document')this.study.inkTools.rulers.bind(context,()=>$('reader-scroll'),{drawing:()=>this.gesture});this.study.inkTools.toolbar.show(context,{controller:this,root:()=>$('reader-scroll'),mode:()=>this.mode,selectMode:mode=>this.setMode(mode),drawing:()=>this.gesture});}
-  setMode(mode){this.mode=mode;if(mode==='off')this.transient.clear();if(mode!=='off')this.study.excerpts.setRegion(false);for(const [id,value] of [['study-lasso','lasso'],['study-pen','pen'],['study-eraser','eraser']])$(id).setAttribute('aria-pressed',mode===value);$('reader-scroll').classList.toggle('study-ink-mode',mode!=='off');$('reader-scroll').classList.toggle('study-erase-mode',mode==='eraser');const bar=this.study.inkTools.toolbar;if(mode==='off')bar.hide(this);else if(bar.owner?.controller===this)bar.render();else this.showToolbar();}
+  setMode(mode){if(mode!=='off')this.study.excerpts.setRegion(false);this.mode=mode;if(mode==='off')this.transient.clear();for(const [id,value] of [['study-lasso','lasso'],['study-pen','pen'],['study-eraser','eraser']])$(id).setAttribute('aria-pressed',mode===value);$('reader-scroll').classList.toggle('study-ink-mode',mode!=='off');$('reader-scroll').classList.toggle('study-erase-mode',mode==='eraser');const bar=this.study.inkTools.toolbar;if(mode==='off')bar.hide(this);else if(bar.owner?.controller===this)bar.render();else this.showToolbar();}
   render(){
     const set=this.study.current,doc=this.study.getDocument(),active=set&&doc?.kind==='pdf'&&set.documentIds.includes(doc.id);$('study-ink-tools').hidden=!active;
     if(!active){this.setMode('off');return;}

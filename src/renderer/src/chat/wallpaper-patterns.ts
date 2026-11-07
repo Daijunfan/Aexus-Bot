@@ -63,7 +63,7 @@ export const WALLPAPER_MOTIFS={
   ['ribbon','M2 8c7-12 13 19 20 7M2 12c7-12 13 19 20 7M2 4c7-12 13 19 20 7']
  ]
 } as const
-export type WallpaperPattern=Exclude<MessageWallpaperSettings['pattern'],'none'>
+export type WallpaperPattern=keyof typeof WALLPAPER_MOTIFS
 export const WALLPAPER_TILE_SIZE=384
 export type WallpaperMark={x:number;y:number;size:number;angle:number;motif:number}
 const arrangements=new Map<string,WallpaperMark[]>()

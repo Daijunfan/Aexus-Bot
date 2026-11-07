@@ -36,8 +36,7 @@
 agents plugin install /absolute/path/to/plugin
 agents plugin list
 agents plugin describe workspace-notes
-agents plugin call workspace-notes notes.list --team '任意 Team 名称'
-agents workspace docs --team '任意 Team 名称'
+agents plugin call workspace-notes notes.list --workspace /existing/plugin/workspace
 ```
 
 内置插件位于应用 `Resources/plugins/`；用户插件位于
@@ -48,25 +47,22 @@ agents workspace docs --team '任意 Team 名称'
 
 ## Workspace contract
 
-Team 有三种类型：**Work** 绑定已安装插件，**Build** 使用本机项目文件夹，**cloud** 绑定 Cloud Hosts 登记的 SSH 主机 ID 和远端根目录。cloud 员工继承连接，只选择工作子目录；Work 插件保持本地运行。
-Build 不自动注入插件；`autoAttach` 作为旧 manifest 字段保留兼容，0.5 起以 Work
-Team 明确选择的 `pluginId` 为准。左侧目录展示所有已安装插件。点击直接打开其完整页面，不创建 Team，不弹出 Team 菜单。
+新 Team 只有 **Build** 本机项目与 **cloud** 云端项目；cloud 绑定已登记的主机和远端目录。插件独立打开，不配置插件团队。用户或 Secretary 在插件“授权人员”中选择具体内容和员工的阅读、修改、新增权限；员工通过 `plugin.resources` 发现内容，再使用 `plugin.call`。`autoAttach` 与旧 Work 绑定只保留兼容。
 
 ```sh
-agents group add Planning --mode work --plugin mininotion
-agents group configure Planning --mode build
+agents group add Planning --mode build
 agents group list --details --json
-agents plugin call mininotion fs.list --employee EMPLOYEE_ID
+agents plugin resources --id mininotion
+agents plugin call mininotion page.get --params '{"pageId":"AUTHORIZED_PAGE_ID"}'
 ```
 
-新的 Work Team 根目录固定为 `<插件工作区基目录>/<创建时的 Team 名称>`。
+旧 Work Team 根目录继续使用 `<插件工作区基目录>/<创建时的 Team 名称>`。
 便携发布包使用 `$AGENTS_COMPANY_HOME/workspaces/<workspaceDirectory>` 作为基目录；
 开发包有有效 `source-location.json` 时继续使用源码目录的 `workspaces/`，例如
 `PlugIns/mini-notion/workspaces/Planning`。`AGENTS_COMPANY_WORKSPACES` 显式覆盖时，
 基目录为 `<该环境变量>/<workspaceDirectory>`。安装到用户插件目录的包同样使用外部
 工作区数据目录，不把工作文件放进可替换的软件包。
-一个插件的多个 Team 各有独立目录；创建 Team 时不能使用
-`--directory-mode bind --root PATH` 选择其他位置。已登记的旧 Team 继续使用原目录，
+一个插件的旧 Team 各有独立目录；不再新增此类 Team。已登记的旧 Team 继续使用原目录，
 升级不会自动移动文件。`workspaceDirectory` 只允许字母、数字、下划线和连字符；
 省略时使用 `<plugin-id>-workspace`。
 
@@ -76,7 +72,7 @@ agents plugin call mininotion fs.list --employee EMPLOYEE_ID
 这是用户默认视图的选择，不扩大员工权限，不改变 Team/员工的 cwd，也不让插件向父级查找数据库。
 旧 `default/` 的文件保留原位，集合视图从子目录读取它们；旧版外部默认目录的首次导入仍
 复制到 `default/`，不覆盖集合或已有目录。集合外的旧 Team 使用显式 `--team` 访问，不自动搬迁。
-员工必须使用所属 Team 根目录的**子目录**，支持任意层级嵌套，不能占用 Team 根目录。同一个确切目录对应一个员工；父目录员工可以操作所有子目录，子目录员工
+旧 Work 员工使用所属 Team 根目录的**子目录**，支持任意层级嵌套，不能占用 Team 根目录。同一个确切目录对应一个员工；父目录员工可以操作所有子目录，子目录员工
 不能操作父目录或兄弟目录。Build 可以让多名员工共用普通项目根目录。
 Build 自动使用 `~/develop/Agents-company-projects/<创建时的 Team 名称>`。创建 Team 会创建
 对应目录；也可绑定其他已有的物理文件夹。Team 可在 UI 与 CLI 中改名，但原工作目录与员工目录不变；员工改显示名称也不重命名目录。员工支持新建文件夹
@@ -267,9 +263,7 @@ MiniNotion 的 `--workspace` 模式将 Markdown、代码/文本、CSV、图片�
 备份并检查绑定后才显式执行 `dryRun:false`。不得在升级时自动迁移用户资料。
 文件路径以 `fs.path` 为准，测试和其他消费者不得从页面标题或历史 `Documents` 布局猜测。
 
-默认插件窗口通过 `collection` 工作区展示同一基目录内的内容；`--team` 和 `--employee`
-仍选择各自范围。创建 Work Team、创建两名绑定不同主页面的员工、通过带员工凭据的
-CLI/mailbox 修改内容及从默认窗口回读，均由宿主集成测试覆盖。
+默认插件窗口通过 `collection` 工作区展示同一基目录内的内容；旧 `--team` 和 `--employee` 选择器仍兼容。新员工无需绑定页面目录，使用自身身份调用页面 API，由宿主按页面授权过滤读取和验证实际修改。集成测试覆盖普通团队员工、批量授权、撤销和旧目录兼容。
 
 `.mininotion/` 保存共享服务的索引、设置、历史、附件和草稿。该模式不读取独立 App
 的个人数据库，也不启动自身 Agent。完整备份应复制整个 Workspace；PDF 导出和
@@ -317,15 +311,20 @@ CLI/mailbox 修改内容及从默认窗口回读，均由宿主集成测试覆�
 
 `scope: "application"` 表示插件通过宿主公开 API 管理跨 Team 的平台资源；默认为 `workspace`。这是显式的管理能力，员工文档入口会说明这一点。工作文件仍限定在员工目录内，插件不得通过读取父目录偷偷扩大文件权限。应用级业务能力通过文档和 schema 明确列出，不通过私有 IPC。
 
-Cloud Hosts (`PlugIns/cloud-hosts`，独立 Git 仓库) 是此类插件：独立 CLI、runtime 和 UI 共用宿主 `host.*` Core 服务。可无窗口运行 `agents serve`；它不依赖 Electron、不导入宿主实现、不保存第二份主机库。创建 Work Team 并选择 `cloud-hosts` 后，每位 Worker 自动获得完整主机管理文档与 CLI；sandbox 内仍使用标准 mailbox。
+Cloud Hosts (`PlugIns/cloud-hosts`) 是此类插件：独立 CLI、runtime 和 UI 共用宿主 `host.*` Core 服务。可无窗口运行 `agents serve`；它不依赖 Electron、不导入宿主实现、不保存第二份主机库。无需插件团队；员工按获授权的具体主机操作，Secretary 默认全权。主机阅读不返回凭据，修改包含远端操作；普通员工不能导出 SSH 私钥文件或删除主机。
 
 新 cloud Team 只能使用已登记 `hostId` 和现有远端 `directory`。旧 SSH 配置自动迁入主机库，数据备份后去重；新 Team 不再新建账号。连接详情与凭据通过 `host` CLI 或 Cloud Hosts UI 修改，密码默认隐藏。
 
 ## 调用身份与授权
 
 宿主传入的 `requestHost({cmd,args})` 保留实际调用者身份。插件不得自行读取用户控制凭据来代替员工调用。员工 mailbox 请求携带自己的认证凭据；目录位置不是身份。
-每条允许普通员工使用的命令在 schema 声明 `agentAccess: "workspace"`，并且实现必须限制到 context.workspace；未声明的命令只向用户或显式全局 Manager 开放。应用级主机管理插件复用 host.* 的全局授权。插件内部的独立 Agent 启动入口不得向普通 Work 员工开放。
+普通员工由 runtime.requestScoped 按当前内容授权处理，禁止仅凭 schema 或工作目录扩大权限。旧 Work mailbox 的 `agentAccess: "workspace"` 仅兼容未配置新 ACL 的原有目录。用户与 Secretary 使用完整原生接口；其他职位不会自动获得全库权限。应用级主机插件复用同一 host.* 逐主机检查。插件内部的独立 Agent 启动入口不向普通员工开放。
 
 ## Web transport
 
 The host keeps plugin frames in an opaque-origin sandbox. It injects a bridge for same-view `fetch` POSTs to `rpc`; the parent sends declared methods through authenticated `plugin.call` with the original structured JSON-RPC result (`raw`). Plugins must not rely on Core cookies, tokens, or a browser-local loopback server. A page URL alone does not grant RPC authority. Keep existing fetch-based RPC and save/flush acknowledgement behavior shared between desktop and Web.
+
+
+## Content authorization capability
+
+Built-in plugins expose `resources(): Promise<PluginResource[]>` and `requestScoped(request,scope)` through the existing runtime boundary. Resources carry a stable ID, title, kind, optional nativeId/parentId/inheritFrom/capabilities. Scope contains the authenticated employee and current per-resource read/write/create grants; incoming client identity/scope fields are discarded. A scoped response may return private `createdResources` for Core to grant creators ongoing access before returning the native result. Unknown or unsupported scoped commands fail closed. User/Secretary execute the original plugin request interface unchanged. `mutates` is explicit in packaged command schemas so native read operations do not ask for write approval.

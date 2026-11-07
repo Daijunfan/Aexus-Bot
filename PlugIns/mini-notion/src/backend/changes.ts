@@ -15,6 +15,21 @@ type Change = {
   patch: WorkspacePatch;
   undoneAt?: number;
 };
+function validateEntries(value: unknown): asserts value is Change[] {
+  const object = (item: any) => !!item && typeof item === 'object' && !Array.isArray(item);
+  const ids = new Set<string>();
+  if (!Array.isArray(value) || value.some(entry => {
+    if (!object(entry) || typeof entry.id !== 'string' || !entry.id || ids.has(entry.id) ||
+        typeof entry.method !== 'string' || !Number.isFinite(entry.at) || !object(entry.patch) ||
+        typeof entry.patch.id !== 'string' || !Array.isArray(entry.patch.pages)) return true;
+    ids.add(entry.id);
+    const patch = entry.patch;
+    return patch.pages.some((page: any) => !object(page) || typeof page.id !== 'string' ||
+      !page.id || ![page.before, page.after].every(item => item === null || object(item))) ||
+      (patch.meta !== undefined && (!object(patch.meta) || !object(patch.meta.before) || !object(patch.meta.after))) ||
+      (patch.order !== undefined && (!object(patch.order) || ![patch.order.before, patch.order.after].every(items => Array.isArray(items) && items.every(id => typeof id === 'string'))));
+  })) throw new CommandError('INVALID_HISTORY', '操作历史格式无效，原始记录已保留');
+}
 const nonReversible = new Set([
   'fs.sync',
   'space.sync',
@@ -26,20 +41,27 @@ const nonReversible = new Set([
 ]);
 export class Changes {
   private file: string;
-  private entries: Change[];
+  private loadedEntries?: Change[];
   private journal?: ChangeStore<Change>;
   constructor(directory: string, segmented = false) {
     this.file = path.join(directory, 'changes.json');
-    this.journal = segmented ? new ChangeStore<Change>(directory) : undefined;
-    this.entries = this.journal ? this.journal.load() : fs.existsSync(this.file) ? JSON.parse(fs.readFileSync(this.file, 'utf8')) : [];
+    this.journal = segmented ? new ChangeStore<Change>(directory, validateEntries) : undefined;
   }
+  // Opening a notebook needs its current pages, not every prior page revision.
+  // Do not migrate/read the undo journal until a history operation or real edit.
+  private get entries(): Change[] {
+    if (this.loadedEntries) return this.loadedEntries;
+    const entries = this.journal ? this.journal.load() : fs.existsSync(this.file) ? JSON.parse(fs.readFileSync(this.file, 'utf8')) : [];
+    validateEntries(entries);
+    return this.loadedEntries = entries;
+  }
+  private set entries(entries: Change[]) { this.loadedEntries = entries; }
   private save(changed?: string[]) {
     if (this.journal) this.journal.save(this.entries.slice(-150), changed ? new Set(changed) : undefined);
     else atomicWrite(this.file, this.entries.slice(-150));
   }
   restore(entries: Change[]) {
-    if (!Array.isArray(entries) || entries.some((entry) => !entry.id || !Array.isArray(entry.patch?.pages)))
-      throw new CommandError('INVALID_HISTORY', '备份中的操作记录无效');
+    validateEntries(entries);
     this.entries = entries.slice(-150);
     this.save();
   }
@@ -47,6 +69,11 @@ export class Changes {
     return this.entries;
   }
   record(before: Workspace, after: Workspace, request: ApiRequest) {
+    this.prepare(before, after, request)?.();
+  }
+  /** Check the existing journal before the caller publishes its workspace.
+   * The returned operation records history only after that publication succeeds. */
+  prepare(before: Workspace, after: Workspace, request: ApiRequest): (() => void) | undefined {
     // These synchronize external bytes; reversing metadata alone cannot restore the files.
     if (
       ['history.undo', 'history.redo'].includes(request.method) ||
@@ -60,7 +87,21 @@ export class Changes {
       patch.meta = { before: keep(patch.meta.before), after: keep(patch.meta.after) };
       if (!Object.keys(patch.meta.before).length && !Object.keys(patch.meta.after).length) delete patch.meta;
     }
-    if (!hasChanges(patch)) return;
+    const changed = hasChanges(patch);
+    // Organizing can relocate raw file pages only inside FolderWorkspace.save.
+    if (!changed && request.method !== 'fs.organize') return;
+    // A corrupt history must fail before a new edit reaches disk. Assignment
+    // only occurs after a successful load, so a repaired journal can be retried.
+    void this.entries;
+    const preparedPages = after.pages;
+    return () => {
+      // Directory transactions may update sourceFile paths while publishing.
+      // The journal is already verified; include the actually committed paths.
+      if (after.pages !== preparedPages) this.record(before, after, request);
+      else if (changed) this.append(patch, request);
+    };
+  }
+  private append(patch: WorkspacePatch, request: ApiRequest) {
     const last = this.entries.at(-1),
       now = Date.now();
     const typing = (patch: WorkspacePatch) => {

@@ -46,7 +46,7 @@ const boundCli = async (employee, method, params = {}) => {
   const value=JSON.parse((await run(process.execPath,[path.join(root,'bin/agents'),'plugin','call','mininotion',method,'--employee',employee.id,'--params',JSON.stringify(params),'--json'],{cwd:employee.cwd,env:{...env,AGENTS_COMPANY_TOKEN:employeeTokens.get(employee.id)},timeout:30000,maxBuffer:16e6})).stdout);
   assert.ok(value.ok,value.error);return value.data;
 };
-const app = await electron.launch({ executablePath: require('electron'), args: [root], env });
+const app = await electron.launch({ executablePath: process.env.AGENTS_COMPANY_TEST_APP || require('../electron/runtime.cjs').electronRuntime().executable, args: process.env.AGENTS_COMPANY_TEST_APP ? [] : [root], env });
 const company = await app.firstWindow();
 let page = company;
 page.setDefaultTimeout(20000);

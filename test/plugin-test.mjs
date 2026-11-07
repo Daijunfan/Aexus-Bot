@@ -9,6 +9,10 @@ const temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-plugin-'))),
 fs.mkdirSync(workspace,{recursive:true});fs.mkdirSync(other,{recursive:true});const control=path.join(temp,'fixture');fs.mkdirSync(control);fs.writeFileSync(path.join(control,'release-all'),'')
 fs.writeFileSync(path.join(workspace,'AGENTS.md'),'# Keep user instructions\n')
 fs.writeFileSync(path.join(workspace,'CLAUDE.md'),'# Keep Claude instructions\n')
+// Old Work teams remain usable in place; new plugins no longer require teams.
+const legacyOther=path.join(path.dirname(workspace),'Other')
+fs.mkdirSync(legacyOther,{recursive:true});fs.mkdirSync(home,{recursive:true})
+fs.writeFileSync(path.join(home,'sessions.json'),JSON.stringify({sessions:[],groups:['任意命名','Other'],rooms:{},teamRoots:{任意命名:workspace,Other:legacyOther},teamSettings:{任意命名:{mode:'work',pluginId:'mininotion'},Other:{mode:'work',pluginId:'mininotion'}}}))
 const env={...process.env,CODEX_BIN:path.join(root,'test/fixtures/initialization-codex.cjs'),AC_INIT_FIXTURE:control,AGENTS_COMPANY_HOME:home,AGENTS_COMPANY_WORKSPACES:path.dirname(path.dirname(workspace)),CODEX_HOME:path.join(temp,'codex'),CLAUDE_CONFIG_DIR:path.join(temp,'claude'),AGENTS_COMPANY_PLUGIN_DIRS:''}
 for(const key of Object.keys(env))if(key.startsWith('AGENTS_COMPANY_TOKEN')||['AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_URL','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_PLUGIN_RPC','MINI_NOTION_SOCKET','MINI_NOTION_WORKSPACE','MINI_NOTION_DATA_DIR'].includes(key))delete env[key]
 const executable=process.env.AGENTS_COMPANY_TEST_CLI||process.execPath,prefix=process.env.AGENTS_COMPANY_TEST_CLI?[]:['bin/agents']
@@ -20,8 +24,8 @@ let count=0;const ok=(value,label)=>{assert.ok(value,label);count++;console.log(
 try{
   for(let i=0;i<100&&!fs.existsSync(path.join(home,'agents.sock'));i++)await new Promise(r=>setTimeout(r,50))
   ok((await cli('plugin','list')).some(p=>p.id==='mininotion'),'bundled manifest discovered without loading domain code')
-  await cli('group','add','任意命名','--mode','work','--plugin','mininotion')
-  await cli('group','add','Other','--mode','work','--plugin','mininotion')
+  await assert.rejects(()=>cli('group','add','New plugin team','--mode','work','--plugin','mininotion'))
+  ok(true,'new Work teams are rejected while saved legacy bindings remain available')
   const guide=fs.readFileSync(path.join(workspace,'AGENTS.md'),'utf8')
   const sharedGuide=await cli('api','docs')
   ok(guide==='# Keep user instructions\n'&&sharedGuide.document==='index'&&!fs.existsSync(path.join(workspace,'.agents-company'))&&fs.readFileSync(path.join(workspace,'CLAUDE.md'),'utf8')==='# Keep Claude instructions\n','user instructions stay untouched; discovery uses the shared index rather than copied workspace guides')
@@ -46,7 +50,7 @@ try{
   ok(!(await plugin('page.list',{},'Other')).some(p=>p.id===page.id),'same-plugin Teams have separate fixed roots')
   ok((await plugin('ui.register',{ready:false})).connected&&(await cli('plugin','describe','mininotion')).api.commands.some(c=>c.method==='ui.register'),'renderer readiness is a documented CLI API without opening a window')
   const view=await cli('plugin','view','mininotion','--team','任意命名'),base=new URL('.',view.url)
-  ok((await fetch(view.url).then(r=>r.text())).includes('Mini Notion'),'plugin serves its own renderer')
+  ok((await fetch(view.url).then(r=>r.text())).includes('plugin-host')&&(await fetch(new URL('index.html',base)).then(r=>r.text())).includes('Mini Notion'),'Core hosts content permissions around the original plugin renderer')
   const reply=await fetch(new URL('rpc',base),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:42,method:'page.get',params:{pageId:page.id}})}).then(r=>r.json())
   ok(reply.result.title==='API plan','scoped renderer JSON API uses the same service')
   ok((await fetch(new URL('/rpc',view.url))).status===404,'unguarded root has no RPC route')
@@ -61,11 +65,10 @@ try{
   await cli('plugin','install',starter)
   await assert.rejects(()=>cli('group','configure','Other','--mode','work','--plugin','workspace-notes'))
   ok(true,'existing Team plugin binding cannot be silently replaced')
-  await cli('group','add','Notes','--mode','work','--plugin','workspace-notes')
-  const result=await cli('plugin','call','workspace-notes','notes.write','--team','Notes','--params',JSON.stringify({name:'second.md',content:'Second independent plugin'}))
+  const result=await cli('plugin','call','workspace-notes','notes.write','--workspace',other,'--params',JSON.stringify({name:'second.md',content:'Second independent plugin'}))
   ok(result.name==='second.md'&&fs.existsSync(path.join(other,'second.md')),'second plugin installs and executes without host modifications')
-  await assert.rejects(()=>cli('plugin','call','workspace-notes','private.write','--team','Notes'))
-  const guarded=await cli('plugin','view','workspace-notes','--team','Notes'),guardedBase=new URL('.',guarded.url)
+  await assert.rejects(()=>cli('plugin','call','workspace-notes','private.write','--workspace',other))
+  const guarded=await cli('plugin','view','workspace-notes','--workspace',other),guardedBase=new URL('.',guarded.url)
   const denied=await fetch(new URL('rpc',guardedBase),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'private.write'})}).then(r=>r.json())
   ok(denied.error.code===-32601&&!fs.existsSync(path.join(other,'bypass.txt')),'renderer and CLI both reject runtime methods absent from the shared command schema')
   await cli('plugin','close',guarded.id)

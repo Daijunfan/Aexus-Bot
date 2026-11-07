@@ -71,37 +71,33 @@ export class PdfReader {
     if (this.layoutKey !== layoutKey) {
       this.epoch++; this.clearPages(); this.layoutKey = layoutKey;
       this.pages = layoutPages(metadata.sections, width, height, fit, zoom);
+      // Index annotations once. Filtering every note against every PDF page
+      // made long textbooks quadratic in page count and annotation count.
+      const regionsByPage=new Map(),notesByPage=new Map(),folded=new Set(metadata.foldedPages||[]);
+      for(const region of metadata.foldRegions||[])if(!region.sourceChanged){const list=regionsByPage.get(region.page)||[];list.push(region);regionsByPage.set(region.page,list);}
+      for(const note of notes){const page=note.anchor.locator.page,list=notesByPage.get(page)||[];list.push(note);notesByPage.set(page,list);}
+      this.notesByPage=notesByPage;
       let top=0;
       for(let i=0;i<this.pages.length;i++){
-        const rect=this.pages[i];rect.top=top;rect.sourceHeight=rect.height;
-        rect.slices=pageSlices(rect.sourceHeight,(metadata.foldRegions||[]).filter(r=>r.page===i+1&&!r.sourceChanged),notes.filter(c=>c.anchor.locator.page===i+1),rect.scale);
-        let marginBottom=0;if(marginWidth)for(const c of notes.filter(c=>c.anchor.locator.page===i+1&&c.anchor.display==='margin')){
+        const rect=this.pages[i],page=i+1,pageNotes=notesByPage.get(page)||[];
+        rect.top=top;rect.sourceHeight=rect.height;
+        rect.slices=pageSlices(rect.sourceHeight,regionsByPage.get(page)||[],pageNotes,rect.scale);
+        let marginBottom=0;if(marginWidth)for(const c of pageNotes.filter(c=>c.anchor.display==='margin')){
           const at=c.anchor.locator.pageOffset||0;if(rect.slices.blocks.some(b=>b.type==='fold'&&at>=b.start&&at<b.end))continue;
           marginBottom=Math.max(displayY(rect.slices,at),marginBottom)+(c.anchor.height||150)*rect.scale+8;
         }
-        rect.folded=metadata.foldedPages?.includes(i+1);rect.height=rect.folded?38:Math.max(rect.slices.height,marginBottom);rect.noteHeight=0;
+        rect.folded=folded.has(page);rect.height=rect.folded?38:Math.max(rect.slices.height,marginBottom);rect.noteHeight=0;
         top+=rect.height+8;
       }
       this.pagedIndex = this.mode === 'paged' ? index : null;
       this.slots = []; container.replaceChildren();
-      const used = this.mode === 'paged' ? [index] : this.pages.map((_, i) => i);
-      const maxWidth = Math.max(width, ...used.map(i => this.pages[i].width))+marginWidth;
+      // Keep only nearby page elements mounted; a 5,000-page PDF must not
+      // allocate 5,000 editable DOM pages before its first paint.
+      const maxWidth=(this.mode==='paged'?Math.max(width,this.pages[index].width):this.pages.reduce((max,p)=>Math.max(max,p.width),width))+marginWidth;
       const totalHeight = this.mode === 'paged' ? Math.max(height, this.pages[index].height + this.pages[index].noteHeight) : this.pages.at(-1).top + this.pages.at(-1).height + this.pages.at(-1).noteHeight;
       container.style.width = `${maxWidth}px`; container.style.height = `${totalHeight}px`;
       container.dataset.layout = this.mode;
-      const fragment = document.createDocumentFragment();
-      for (const i of used) {
-        const rect = this.pages[i], slot = document.createElement('div');
-        slot.className = 'pdf-page'; slot.dataset.page = i + 1;
-        slot.setAttribute('role', 'region'); slot.setAttribute('aria-label', `PDF 第 ${i + 1} 页`);
-        slot.style.width = `${rect.width}px`; slot.style.height = `${rect.height}px`;
-        slot.style.top = `${this.mode === 'paged' ? Math.max(0, (height - rect.height) / 2) : rect.top}px`;
-        slot.style.left = `${(maxWidth - marginWidth - rect.width) / 2}px`;
-        slot.pageSlices=rect.slices;
-        this.slots[i] = slot; fragment.append(slot);
-
-      }
-      container.append(fragment);
+      container.dataset.virtualized='true';
       // Put overflow equally on both sides when the user explicitly zooms in.
       scroller.scrollLeft = Math.max(0, (scroller.scrollWidth - scroller.clientWidth) / 2);
     }
@@ -148,7 +144,18 @@ export class PdfReader {
     }
     const wanted = new Set(desired.slice(0, this.mode==='paged'?3:MAX_CANVASES));
     for (const [i, record] of this.records) if (!wanted.has(i)) this.evict(i, record);
-    for (const i of wanted) this.ensurePage(i);
+    for (const i of wanted){
+      const slot=this.slot(i);
+      if(this.mode!=='paged'&&slot.parentElement!==this.container){
+        const after=[...this.container.querySelectorAll(':scope > .pdf-page')].find(el=>Number(el.dataset.page)>i+1);
+        this.container.insertBefore(slot,after||null);
+      }
+      this.ensurePage(i);
+    }
+    if(this.mode!=='paged')for(const slot of [...this.container.querySelectorAll(':scope > .pdf-page')]){
+      const i=Number(slot.dataset.page)-1;
+      if(!wanted.has(i)){slot.remove();this.slots[i]=undefined;}
+    }
     this.container.dataset.canvasBudget = this.mode==='paged'?3:MAX_CANVASES;
     this.container.dataset.cachedPages=String(this.records.size);
   }
@@ -156,7 +163,10 @@ export class PdfReader {
     if(this.slots[index])return this.slots[index];
     const rect=this.pages[index];if(!rect)return null;
     const slot=document.createElement('div');slot.className='pdf-page';slot.dataset.page=index+1;slot.setAttribute('role','region');slot.setAttribute('aria-label',`PDF 第 ${index+1} 页`);
-    slot.style.width=rect.width+'px';slot.style.height=rect.height+'px';slot.pageSlices=rect.slices;this.slots[index]=slot;return slot;
+    slot.style.width=rect.width+'px';slot.style.height=rect.height+'px';
+    slot.style.top=(this.mode==='paged'?Math.max(0,(this.scroller.clientHeight-PADDING*2-rect.height)/2):rect.top)+'px';
+    slot.style.left=(parseFloat(this.container.style.width)-(this.settings.noteMarginWidth||0)-rect.width)/2+'px';
+    slot.pageSlices=rect.slices;this.slots[index]=slot;return slot;
   }
   ensurePage(index) {
     if (this.records.has(index)) return this.records.get(index).promise;
@@ -189,7 +199,7 @@ export class PdfReader {
         if (!live()) return;
         record.textLayer = new library.TextLayer({ textContentSource: page.streamTextContent(), container: layer, viewport });
         await record.textLayer.render();
-        if (live()) {mountSlices(slot,record,viewport,this.settings,this.notes.filter(c=>c.anchor.locator.page===index+1));slot.dataset.renderState = 'ready';}
+        if (live()) {mountSlices(slot,record,viewport,this.settings,this.notesByPage?.get(index+1)||this.notes.filter(c=>c.anchor.locator.page===index+1));slot.dataset.renderState = 'ready';}
       } catch (error) {
         if (!live() || error.name === 'RenderingCancelledException' || error.name === 'AbortException') return;
         slot.dataset.renderState = 'error';

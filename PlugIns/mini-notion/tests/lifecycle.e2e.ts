@@ -39,7 +39,13 @@ test('CLI closes, reopens and quits the real macOS window without losing edits',
     );
   try {
     const page = await app.firstWindow();
+    expect(await app.evaluate(({ app }) => app.getPath('userData'))).toBe(directory);
     await page.locator('.page-title').waitFor();
+    expect(await page.locator('.sidebar-titlebar').evaluate(el => getComputedStyle(el).cursor)).toBe('default');
+    expect(await page.locator('.topbar').evaluate(el => getComputedStyle(el).cursor)).toBe('default');
+    // The initially invisible sidebar action must not intercept the titlebar cursor.
+    await page.mouse.move(420, 400);
+    expect(await page.locator('.sidebar-titlebar .icon-button').evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
     await page.getByRole('button', { name: '新建页面 ⌘N', exact: true }).click();
     await page.locator('.page-title').fill('CLI 生命周期');
     await page.locator('.page-title').press('Enter');

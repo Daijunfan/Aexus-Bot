@@ -41,6 +41,10 @@ def server_command(config):
             "exec(zlib.decompress(base64.b64decode(sys.stdin.readline())))")
     python = config.get("python", "python" if config["os"] == "windows" else "python3")
     if config["os"] == "windows":
+        # The fixed bootstrap contains no shell expansions or double quotes.
+        # Let either Windows OpenSSH default shell launch Python directly.
+        if not config.get("python"):
+            return ssh_args(config) + ['python -c "' + code + '"']
         # PowerShell's encoded bootstrap avoids quoting through Windows OpenSSH/cmd.
         quote = lambda s: "'" + s.replace("'", "''") + "'"
         script = "& " + quote(python) + " -c " + quote(code) + "; exit $LASTEXITCODE"

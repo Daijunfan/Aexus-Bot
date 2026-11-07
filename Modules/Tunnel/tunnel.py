@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Optional global CLI routing: local Agent, remote workspace tools."""
+import sys
+# Runtime imports must not change a signed application bundle.
+sys.dont_write_bytecode = True
 import json
 import os
 from pathlib import Path
 import subprocess
-import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import adapters

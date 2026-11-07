@@ -13,6 +13,8 @@ test('an overlapping target remains reachable after the dragged root leaves its 
  const f=await setup();f.layout.positions.set('a',{x:230,y:155,width:70,height:40});f.delta=[55,30];
  const plan=f.topicDrop({...f,point:[260,175]});assert.equal(plan.kind,'child');assert.equal(plan.parentId,'b');
 });
-test('self and descendant targets never become parents and blank dropping preserves existing sibling ordering',async()=>{
- const f=await setup();assert.equal(f.topicDrop({...f,point:[240,20]}).kind,'none');assert.equal(f.topicDrop({...f,point:[440,20]}).kind,'invalid');const plan=f.topicDrop({...f,point:[340,250]});assert.equal(plan.kind,'reorder');assert.equal(plan.parentId,'root');
+test('self-drop cancels, descendant-drop rotates without cycles, and blank drop preserves sibling order',async()=>{
+ const f=await setup();assert.equal(f.topicDrop({...f,point:[240,20]}).kind,'none');
+ const rotation=f.topicDrop({...f,point:[440,20]});assert.equal(rotation.kind,'child');assert.equal(rotation.parentId,'a-child');assert.equal(rotation.rotateDescendant,true);
+ const plan=f.topicDrop({...f,point:[340,250]});assert.equal(plan.kind,'reorder');assert.equal(plan.parentId,'root');
 });

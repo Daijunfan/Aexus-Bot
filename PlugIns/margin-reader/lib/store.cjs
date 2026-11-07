@@ -4,7 +4,7 @@ const lockfile = require('proper-lockfile');
 const { safePath, ensureDir, atomicWrite, exists, assert } = require('./safety.cjs');
 const META = '.margin-reader';
 function initialState() {
-  return { schemaVersion: 1, revision: 0, documents: {}, uploads: {}, trash: {}, studySets: {}, settings: { homeSection:'library',studyFolder:null,studyLibraryView:'grid',studyDocumentsView:'grid',pdfTurnEffect:'book',theme: 'light', uiPalette: 'azure', uiBackdrop: 'glow', uiMotion: 'system', uiCustomAccent: null, uiCustomGlow: null, uiBackgroundStrength: 1, view: 'grid', fontSize: 18, lineHeight: 1.8, sidebarWidth: 240, outlineWidth: 280, currentFolder: '.', lastDocument: null, activeStudySet: null, studyRatio: 0.53, pdfMode: 'continuous', pdfFit: 'width', pdfZoom: 1, pdfScrollSpeed: 1, pdfFocus: false } };
+  return { schemaVersion: 1, revision: 0, documents: {}, uploads: {}, trash: {}, studySets: {}, settings: { homeSection:'library',studyFolder:null,studyLibraryView:'grid',studyDocumentsView:'grid',pdfTurnEffect:'book',theme: 'light', uiPalette: 'azure', uiBackdrop: 'glow', uiMotion: 'system', uiCustomAccent: null, uiCustomGlow: null, uiBackgroundStrength: 1, view: 'grid', fontSize: 18, lineHeight: 1.8, sidebarWidth: 240, outlineWidth: 280, outlineSide: 'right', currentFolder: '.', lastDocument: null, activeStudySet: null, studyRatio: 0.53, pdfMode: 'continuous', pdfFit: 'width', pdfZoom: 1, pdfScrollSpeed: 1, pdfFocus: false } };
 }
 async function createStore(workspace) {
   for (const dir of [META, `${META}/cache`, `${META}/uploads`, `${META}/trash`]) await ensureDir(workspace, dir, true);
@@ -32,9 +32,16 @@ async function createStore(workspace) {
       try {
         const state = await load();
         const studyRevisions=new Map(Object.values(state.studySets).map(set=>[set.id,set.revision]));
+        const studyHistories=new Map(Object.values(state.studySets).map(set=>[set.id,set.history]));
         const autoVersions=Object.values(state.studySets).map(set=>require('./study-versions.cjs').candidate(set)).filter(Boolean);
         const result = await callback(state, action => undo.push(action));
         require('./study-emphasis.cjs').refreshGenerated(state,studyRevisions);
+        // History operations replace their journal object. Check their final
+        // business state before writing versions or committing files, so an
+        // edit cannot succeed while leaving its inverse too large to record.
+        // Navigation and other changes without a new journal remain available
+        // in older large workspaces.
+        for(const set of Object.values(state.studySets))if(set.history!==studyHistories.get(set.id)&&(set.history?.undo?.length||set.history?.redo?.length))require('./study-history.cjs').assertReversible(set);
         await require('./study-versions.cjs').automatic({workspace,meta:rel=>safePath(workspace,`${META}/${rel}`,{internal:true}),mkdir:rel=>ensureDir(workspace,`${META}/${rel}`,true)},state,autoVersions,action=>undo.push(action));
         if (compromised) throw compromised;
         state.revision++;

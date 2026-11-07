@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { coverPresentation, surfacePosition } from '../src/presentation';
 import { PageIcon } from '../src/ui';
+import { SymbolIcon } from '../src/components/SymbolIcon';
 import { AppearanceTheme } from '../src/appearance';
 import { iconNames } from '../src/core/icons';
 
@@ -15,6 +16,9 @@ test('cover presets and all supported image transports share one escaped crop re
     assert.equal(cover.style.backgroundImage, `url(${JSON.stringify(value)})`);
     assert.equal(cover.style.backgroundPosition, 'center 100%');
   }
+  const nativeCover = coverPresentation('asset://local/photo.png', 25, true);
+  assert.equal(nativeCover.style.backgroundImage, undefined, 'native images must not also fetch eager CSS backgrounds');
+  assert.equal((nativeCover.style as Record<string, unknown>)['--cover-position'], '25%');
   assert.equal(coverPresentation(null).className, '');
   assert.equal(coverPresentation('not a class').className, '');
 });
@@ -32,7 +36,7 @@ test('menu geometry stays inside the viewport even for oversized menus and edge 
 test('every declared symbol renders one correctly sized decorative SVG in both themes', () => {
   for (const theme of ['light', 'dark'] as const) for (const name of iconNames) {
     const markup = renderToStaticMarkup(createElement(AppearanceTheme.Provider, { value: theme },
-      createElement(PageIcon, { icon: `icon:${name}:blue`, size: 18 })));
+      createElement(SymbolIcon, { name, color: 'blue', theme, size: 18 })));
     assert.equal((markup.match(/<svg\b/g) || []).length, 1, name);
     assert.match(markup, /width="18"/);
     assert.match(markup, /height="18"/);

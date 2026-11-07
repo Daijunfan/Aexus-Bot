@@ -44,7 +44,7 @@ export function ChannelPostDetail({id,channelId,sourceId,sourceAvatar,blocked=fa
   <section ref={panel} className="channel-post-detail" role="dialog" aria-modal="true" aria-label={uiText('Post details')}>
    <header className="channel-post-detail-heading"><span>{uiText('Post')}</span><button type="button" aria-label={uiText('Close post')} title={uiText('Close post')} onClick={onClose}><Icon name="close"/></button></header>
    <div ref={scroll} className="channel-post-detail-scroll" aria-busy={loading}>
-    {post&&<ChannelNewsCard post={post} expandedInitially sourceAvatar={sourceAvatar} onAuthor={onAuthor} onChanged={changed}/>}
+    {post&&<ChannelNewsCard post={post} fullContent sourceAvatar={sourceAvatar} onAuthor={onAuthor} onChanged={changed}/>}
     {!post&&!error&&<div className="channel-post-detail-status" role="status"><Icon name="loading"/>{uiText('Loading article…')}</div>}
     {error&&<div className="channel-post-detail-status" role="alert"><Icon name="info"/><p>{uiText(error)}</p><button onClick={()=>refreshRef.current()}>{uiText('Retry')}</button></div>}
     {reading.error&&<p className="channel-inline-error" role="alert">{uiText(reading.error)}</p>}

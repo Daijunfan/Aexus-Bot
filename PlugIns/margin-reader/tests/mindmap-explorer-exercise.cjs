@@ -1,5 +1,5 @@
 'use strict';
-const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),{expect}=require('../../../node_modules/@playwright/test');
+const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),{expect}=require('./ui-session.cjs');
 exports.exercise=async({page,api,url,workspace,output,pass})=>{
  let set=await api('study.create',{title:'Outline and task views'});
  const get=async()=>set=await api('study.get',{setId:set.id}),change=async(method,p={})=>{await get();return set=await api(method,{setId:set.id,expectedRevision:set.revision,...p});};

@@ -1,5 +1,5 @@
 import { Bell, Bot, Clock } from 'lucide-react';
-import { isInternalPage } from '../model';
+import {internalPageIds} from '../model';
 import { useState, useEffect, useMemo, type DragEvent } from 'react';
 import {
   Search,
@@ -18,11 +18,12 @@ import {
   CircleHelp,
 } from 'lucide-react';
 import { useWorkspace } from '../store';
-import { EmojiPicker } from './Pickers';
+import { EmojiPicker } from './LazyPickers';
 import { IconButton, PageIcon } from '../ui';
 import type { Page } from '../types';
 import { activeView, getViews, selectView } from '../database/model';
 import { viewTypes } from '../database/viewTypes';
+import { SidebarList } from './SidebarList';
 
 export function Sidebar() {
   const {
@@ -43,7 +44,12 @@ export function Sidebar() {
   const [privateOpen, setPrivateOpen] = useState(true);
   const [favoritesOpen, setFavoritesOpen] = useState(true);
   useEffect(() => setWidth(ws!.settings.sidebarWidth), [ws!.settings.sidebarWidth]);
-  const visible = useMemo(() => ws!.pages.filter((p) => !p.trashedAt && !isInternalPage(p, ws!.pages) && (!p.sourceFile || p.sourceFile.kind === 'directory')), [ws!.pages]);
+  const visible = useMemo(() => {
+    const internal = internalPageIds(ws!.pages);
+    return ws!.pages.filter(page => !page.trashedAt && !internal.has(page.id) &&
+      (!page.sourceFile || page.sourceFile.kind === 'directory'));
+  }, [ws!.pages]);
+  const expandedIds = useMemo(() => new Set(ws!.expanded), [ws!.expanded]);
   const childrenByParent = useMemo(() => {
     const index = new Map<string | null, Page[]>();
     for (const page of visible) {
@@ -53,6 +59,24 @@ export function Sidebar() {
     return index;
   }, [visible]);
   const favorites = visible.filter((p) => p.favorite);
+  const treeRows = useMemo(() => {
+    type Row = { page: Page; depth: number; view?: ReturnType<typeof getViews>[number] };
+    const rows: Row[] = [];
+    const pending: Row[] = [...(childrenByParent.get(null) || [])].reverse().map(page => ({ page, depth: 0 }));
+    while (pending.length) {
+      const entry = pending.pop()!;
+      rows.push(entry);
+      if (!expandedIds.has(entry.page.id)) continue;
+      if (entry.page.database) {
+        rows.push(...getViews(entry.page.database).map(view => ({ ...entry, depth: entry.depth + 1, view })));
+      } else {
+        const children = childrenByParent.get(entry.page.id) || [];
+        for (let i = children.length - 1; i >= 0; i--) pending.push({ page: children[i], depth: entry.depth + 1 });
+      }
+    }
+    return rows;
+  }, [childrenByParent, expandedIds]);
+  const treePositions = useMemo(() => new Map(treeRows.flatMap((entry, index) => entry.view ? [] : [[entry.page.id, index] as const])), [treeRows]);
 
   const onDragOver = (event: DragEvent, page: Page) => {
     if (!event.dataTransfer.types.includes('application/x-mini-page')) return;
@@ -68,9 +92,8 @@ export function Sidebar() {
 
   const row = (page: Page, depth = 0, favorite = false): React.ReactNode => {
     const children = childrenByParent.get(page.id) || [];
-    const expanded = ws!.expanded.includes(page.id);
+    const expanded = expandedIds.has(page.id);
     return (
-      <div key={`${favorite ? 'fav' : 'tree'}-${page.id}`}>
         <div
           className={`sidebar-page ${ws!.activePageId === page.id ? 'selected' : ''} ${drop?.id === page.id && !favorite ? `drop-${drop.mode}` : ''}`}
           style={{ paddingLeft: `calc(8px + ${Math.min(depth, 5)} * var(--tree-step))` }}
@@ -81,22 +104,20 @@ export function Sidebar() {
           title={page.title || '无标题'}
           aria-level={depth + 1}
           aria-selected={ws!.activePageId === page.id}
-          aria-expanded={children.length ? expanded : undefined}
+          aria-expanded={!favorite && (children.length || page.database) ? expanded : undefined}
           data-page-id={page.id}
+          data-parent-index={!favorite && page.parentId ? treePositions.get(page.parentId) : undefined}
           onClick={event => navigate(page.id, undefined, event.metaKey || event.ctrlKey ? 'new' : undefined)}
           onAuxClick={event => { if (event.button === 1) { event.preventDefault(); navigate(page.id, undefined, 'new'); } }}
           onKeyDown={(e) => {
             if (e.target !== e.currentTarget) return;
-            const items = Array.from(e.currentTarget.closest('[role="tree"]')?.querySelectorAll<HTMLElement>('[role="treeitem"]') || []);
-            const position = items.indexOf(e.currentTarget);
-            if (['ArrowUp', 'ArrowDown', 'Home', 'End', 'ArrowRight', 'ArrowLeft', 'Enter'].includes(e.key)) e.preventDefault();
+            if (['ArrowRight', 'ArrowLeft', 'Enter'].includes(e.key)) e.preventDefault();
             if (e.key === 'Enter') navigate(page.id);
-            if (e.key === 'ArrowDown') items[Math.min(position + 1, items.length - 1)]?.focus();
-            if (e.key === 'ArrowUp') items[Math.max(0, position - 1)]?.focus();
-            if (e.key === 'Home') items[0]?.focus();
-            if (e.key === 'End') items.at(-1)?.focus();
-            if (e.key === 'ArrowRight') { if (!expanded && children.length) toggleExpanded(page.id); else if (children.length) items[position + 1]?.focus(); }
-            if (e.key === 'ArrowLeft') { if (expanded) toggleExpanded(page.id); else items.find(item => item.dataset.pageId === page.parentId)?.focus(); }
+            if (!favorite && e.key === 'ArrowRight' && !expanded && (children.length || page.database)) toggleExpanded(page.id);
+            if (!favorite && e.key === 'ArrowLeft') {
+              if (expanded) toggleExpanded(page.id);
+              else e.currentTarget.closest('[role="tree"]')?.querySelector<HTMLElement>(`[data-page-id="${CSS.escape(page.parentId || '')}"]`)?.focus();
+            }
           }}
           onContextMenu={(e) => {
             e.preventDefault();
@@ -122,7 +143,7 @@ export function Sidebar() {
             setDrop(null);
           }}
         >
-          {!favorite && (children.length ? (
+          {!favorite && (children.length || page.database ? (
             <button
               className={`tree-toggle ${expanded ? 'expanded' : ''}`}
               title={expanded ? '折叠子页面' : '展开子页面'}
@@ -170,33 +191,6 @@ export function Sidebar() {
             </IconButton>
           </span>
         </div>
-        {!favorite &&
-          children.length > 0 && expanded &&
-          (page.database ? (
-            <div role="group">
-              {getViews(page.database).map((view) => {
-                const Icon = viewTypes.find((v) => v.type === view.type)!.icon;
-                return (
-                  <button
-                    key={view.id}
-                    aria-label={`切换到 ${page.title} 的 ${view.name} 视图`}
-                    className={`sidebar-database-view ${ws!.activePageId === page.id && activeView(page.database!).id === view.id ? 'selected' : ''}`}
-                    style={{ paddingLeft: 39 + depth * 15 }}
-                    onClick={() => {
-                      patch(page.id, { database: selectView(page.database!, view.id) });
-                      navigate(page.id);
-                    }}
-                  >
-                    <Icon size={13} />
-                    <span>{view.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : children.length ? (
-            <div role="group">{children.map((p) => row(p, depth + 1))}</div>
-          ) : null)}
-      </div>
     );
   };
 
@@ -253,7 +247,7 @@ export function Sidebar() {
               收藏
               <ChevronRight size={12} className={favoritesOpen ? 'rotated' : ''} />
             </button>
-            {favoritesOpen && favorites.map((p) => row(p, 0, true))}
+            {favoritesOpen && <SidebarList count={favorites.length} label="收藏" itemKey={index => favorites[index].id}>{index => row(favorites[index], 0, true)}</SidebarList>}
           </section>
         )}
         <section
@@ -278,9 +272,18 @@ export function Sidebar() {
             </IconButton>
           </div>
           {privateOpen && (
-            <div role="tree" aria-label="页面">
-              {(childrenByParent.get(null) || []).map((p) => row(p))}
-            </div>
+            <SidebarList count={treeRows.length} label="页面" itemKey={index => `${treeRows[index].page.id}:${treeRows[index].view?.id || ''}`}>{index => {
+              const { page, depth, view } = treeRows[index];
+              if (!view) return row(page, depth);
+              const Icon = viewTypes.find(item => item.type === view.type)!.icon;
+              return <button aria-label={`切换到 ${page.title} 的 ${view.name} 视图`}
+                data-parent-index={treePositions.get(page.id)}
+                className={`sidebar-database-view ${ws!.activePageId === page.id && activeView(page.database!).id === view.id ? 'selected' : ''}`}
+                style={{ paddingLeft: 39 + (depth - 1) * 15, height: 'var(--sidebar-row-height, 31px)' }}
+                onClick={() => { patch(page.id, { database: selectView(page.database!, view.id) }); navigate(page.id); }}>
+                <Icon size={13} /><span>{view.name}</span>
+              </button>;
+            }}</SidebarList>
           )}
           <button className="sidebar-add" onClick={() => create()}>
             <Plus size={17} />

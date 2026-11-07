@@ -242,9 +242,25 @@ export async function startServer(directory: string, workspaceRoot?: string, lif
   process.once('SIGINT', onSignal);
   if(service.folder) {
     await service.request({jsonrpc:'2.0',id:randomUUID(),method:'fs.sync'});
-    watcher=fs.watch(service.folder.root,{recursive:true},(_event,filename)=>{
+    const folder=service.folder, dirty=new Set<string>();
+    watcher=fs.watch(folder.root,{recursive:true},(_event,filename)=>{
       if(!filename||ignoredFolderPath(String(filename)))return;
-      clearTimeout(watchTimer);watchTimer=setTimeout(()=>void service.request({jsonrpc:'2.0',id:randomUUID(),method:'fs.sync'}),120);
+      dirty.add(String(filename).replaceAll('\\','/'));
+      clearTimeout(watchTimer);
+      watchTimer=setTimeout(()=>{
+        const changed=[...dirty];dirty.clear();
+        const paths=Object.keys(folder.index.files);
+        // Native writes are already committed and broadcast. Only external
+        // changes (missing/new paths or changed metadata) need a full tree scan.
+        const external=changed.some(relative=>{
+          const stat=fs.statSync(path.join(folder.root,relative),{throwIfNoEntry:false});
+          const entry=folder.index.files[relative];
+          if (stat?.isFile()) return !entry || entry.stamp!==`${stat.mtimeMs}:${stat.size}`;
+          if (stat?.isDirectory()) return !paths.some(file=>file.startsWith(relative+'/'));
+          return !!entry && !entry.missing && !entry.trash;
+        });
+        if(external)void service.request({jsonrpc:'2.0',id:randomUUID(),method:'fs.sync'});
+      },120);
     });
   }
   service.startScheduler();

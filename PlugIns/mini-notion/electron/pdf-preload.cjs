@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 // An isolated, read-only workspace snapshot uses the actual desktop renderer.
 contextBridge.exposeInMainWorld('native', {
+  printMode: true,
   load: () => ipcRenderer.invoke('print:load'),
   api: async (_, __, id) => {
     const { workspace } = await ipcRenderer.invoke('print:load');

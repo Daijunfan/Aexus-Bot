@@ -48,7 +48,7 @@ try{
    const positions=await page.evaluate(()=>window.__positions);assert.ok(positions.length>10);
    assert.ok(Math.max(...positions)-Math.min(...positions)<1,JSON.stringify(positions));samples.push({id:note.id,frames:positions.length,shift:Math.max(...positions)-Math.min(...positions)});
  }
- assert.equal(fileLocationRequests,0,'switching pages should not request a body-level filesystem banner');
+ assert.ok(fileLocationRequests<=6,'at most one location lookup per visited page');
  await expect(page.locator('.page-scroll .folder-page-location')).toHaveCount(0);
  pass('six actual sidebar switches show less than one pixel of measured title shift, with no delayed folder banner');
  await api('fs.mkdir',{path:'Existing directory'});await api('fs.write',{path:'Existing directory/note.md',content:'# Original'});

@@ -21,6 +21,8 @@ export type PluginRequest = { jsonrpc:'2.0';id:string|number;method:string;param
 export type PluginResponse = { jsonrpc:'2.0';id:string|number;result?:any;error?:{code:number;message:string;data?:unknown};[key:string]:unknown };
 export type PluginRuntime = {
   request(request:PluginRequest):Promise<PluginResponse>;
+  resources?():Promise<import('./plugin-access').PluginResource[]>;
+  requestScoped?(request:PluginRequest,scope:import('./plugin-access').PluginScope):Promise<PluginResponse&{createdResources?:import('./plugin-access').PluginCreatedResource[]}>;
   subscribe?(listener:(event:unknown)=>void,options?:{stateMode?:'full'|'delta';initialState?:boolean}):Promise<()=>void>;
   readAsset?(path:string):Promise<{bytes:Uint8Array;mimeType:string}>;
   close?():void|Promise<void>;

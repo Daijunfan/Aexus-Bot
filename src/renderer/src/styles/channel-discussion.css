@@ -1,5 +1,5 @@
 .channel-conversation{position:relative}
-.channel-conversation .channel-person{cursor:pointer;border:0;background:none;padding:0;text-align:left;color:inherit}
+.channel-conversation .channel-person{cursor:default;border:0;background:none;padding:0;text-align:left;color:inherit}
 .channel-timeline{display:flex;flex-direction:column;gap:0;padding-bottom:20px}
 .channel-timeline>:is([data-chat-item],.channel-discussion-row){flex-shrink:0;min-width:0}
 .channel-news-item{width:100%;max-width:720px;align-self:flex-start}
@@ -28,7 +28,7 @@
 .channel-composer .group-compose-box{padding-left:15px}
 .channel-composer>footer>span{font-size:9px}
 .channel-composer .channel-add-admin{display:flex;align-items:center;gap:5px;margin-left:auto;color:var(--accent)}
-.channel-compose-region{position:relative;flex:none;min-width:0}
+.channel-reader-controls{position:relative;flex:none;min-width:0}
 .channel-jump-latest{position:absolute;right:22px;bottom:calc(100% + 12px);display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--border-soft);border-radius:50%;background:var(--bg-elev);color:var(--fg);box-shadow:0 4px 16px #1b254316;z-index:8}
 .channel-jump-latest .codicon{font-size:21px}
 .channel-filter-note{padding:12px 24px 18px;text-align:center}
@@ -37,6 +37,8 @@
 .channel-admin-note{font-size:13px;line-height:1.7;color:var(--fg-dim);margin:0 0 20px}
 .channel-admin-options .message-avatar{width:38px;height:38px;border-radius:13px;flex:none}
 .channel-admin-options>label{gap:10px;padding:10px}
+.channel-admin-options>label:has(input:checked){background:color-mix(in srgb,var(--accent) 10%,var(--bg-elev));border-color:color-mix(in srgb,var(--accent) 40%,var(--border))}
+.channel-admin-options>label:has(input:disabled){opacity:.75}
 .channel-admin-options>label>span:last-of-type{flex:1;min-width:0}
 .channel-admin-dialog .group-error button{margin-left:8px;border:1px solid currentColor;border-radius:7px;background:transparent;padding:5px 9px;color:inherit;font:inherit}
 .channel-admin-options em{font-size:9px;font-style:normal;padding:4px 7px;border-radius:7px;color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}

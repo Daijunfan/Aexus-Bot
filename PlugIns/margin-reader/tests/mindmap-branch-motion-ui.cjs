@@ -4,10 +4,10 @@ const {create,expect}=require('./ui-session.cjs');
 (async()=>{const f=await create('mindmap-branch-motion');let failure;try{
  const {page,api}=f;let set=await api('study.create',{title:'可见分支动画'});set=await api('study.mindmap.outline.import',{setId:set.id,expectedRevision:set.revision,text:'中心\n  研究\n    证据\n  设计\n    实现'});
  const root=set.cards[0].id,get=async()=>set=await api('study.get',{setId:set.id});
- const stable=async()=>{await get();await expect(page.locator('#study-board')).toHaveAttribute('data-rendered-study-revision',String(set.revision));await expect(page.locator('#study-board')).not.toHaveAttribute('data-map-geometry-animating','true');};
+ const stable=async()=>{await get();await expect(page.locator('#study-board')).toHaveAttribute('data-rendered-study-revision',String(set.revision));await expect(page.locator('#study-board')).not.toHaveAttribute('data-map-geometry-animating','true');await expect(page.locator('#study-board')).not.toHaveAttribute('data-map-animating','true');};
  const change=async(method,params)=>{await get();set=await api(method,{setId:set.id,expectedRevision:set.revision,...params});await stable();};
  await api('settings.set',{uiMotion:'full'});await api('study.open',{setId:set.id});await page.goto(f.server.url);await page.locator('body[data-ready=true]').waitFor();await page.click('#study-zoom-fit');
- await page.evaluate(()=>{window.branchMotion=[];const board=document.getElementById('study-board');new MutationObserver(()=>{if(board.dataset.mapGeometryAnimating!=='true')return;
+ await page.evaluate(()=>{window.branchMotion=[];window.branchPaintTransitions=[];const animate=Element.prototype.animate;Element.prototype.animate=function(frames,options){if(this.matches('.mm-branch')&&Array.isArray(frames))window.branchPaintTransitions.push(frames);return animate.call(this,frames,options);};const board=document.getElementById('study-board');new MutationObserver(()=>{if(board.dataset.mapGeometryAnimating!=='true')return;
   const sample=()=>[...document.querySelectorAll('.mm-motion-links path')].map(p=>({id:p.dataset.motionTo,fill:getComputedStyle(p).fill,stroke:getComputedStyle(p).stroke,d:p.getAttribute('d')}));
   window.branchMotion.push(sample());requestAnimationFrame(()=>requestAnimationFrame(()=>{if(board.dataset.mapGeometryAnimating==='true')window.branchMotion.push(sample());}));
  }).observe(board,{attributes:true,attributeFilter:['data-map-geometry-animating']});});
@@ -20,6 +20,7 @@ const {create,expect}=require('./ui-session.cjs');
   for(const frame of frames)for(const p of frame){assert(p.fill!=='none'||p.stroke!=='none',line+' invisible branch');const original=before.find(b=>b.id===p.id);assert(original);assert.equal(p.fill,original.fill);assert.equal(p.stroke,original.stroke);assert(p.d&&p.d.startsWith('M'));if(line==='tapered')assert(p.d.endsWith(' Z'),'Tapered branches must remain filled contours');}
   await expect(page.locator('.mm-motion-links,.mm-motion-ghost')).toHaveCount(0);assert.equal(set.cards.length,5);
  }
+ const paintTransitions=await page.evaluate(()=>window.branchPaintTransitions);assert(paintTransitions.every(frames=>frames.every(frame=>frame.fill!=='none'&&frame.stroke!=='none')),'Switching between filled and stroked branches must apply the new paint immediately instead of animating through an unpainted contour');
  f.pass('Both filled tapered branches and stroked curves retain actual paint throughout collapse frames, keep closed taper contours and leave no transient nodes');
  await change('study.mindmap.collapse',{cardIds:[root],level:-1});await change('study.mindmap.configure',{patch:{line:'tapered',skeleton:'classic'}});
  await page.evaluate(()=>{window.branchFillAnimations=0;const animate=Element.prototype.animate;Element.prototype.animate=function(frames,options){if(this.matches('.mm-branch,[data-motion-to]')&&Array.isArray(frames)&&frames.some(f=>'fill' in f))window.branchFillAnimations++;return animate.call(this,frames,options);};});

@@ -54,7 +54,7 @@
 
 ## 验证入口
 
-DeepSeek 配置下仅显示 Flash / V4 Pro；思考强度为 low / high / max，开关独立。
+Claude 模型列表完整继承原生 CLI；不再因检测到 DeepSeek 而替换成固定的两个模型。思考能力与可选强度由原生客户端报告。
 使用 SDK 配套官方运行时，避免旧 CLI 丢失自定义模型的关闭思考参数。
 Codex 模型列表读取全部分页与隐藏条目；新建员工使用 legacy 历史格式，保持克隆历史独立，
 防止新版分页历史对原件的引用阻止删除员工。详细证据见 `artifacts/model-catalog/README.md`。
@@ -97,7 +97,13 @@ Management APIs use the shared transcript/session layer and do not enable native
 
 | Engine | Provider/default model | Thinking default | Protocol | Initial workspace scope |
 | --- | --- | --- | --- | --- |
-| Cline | DeepSeek / deepseek-flash, or configured compatible URL and model | off by default; custom provider controls reasoning | ACP 1 | Core-local Build / Work plugins / Cloud Team via MCP Tunnel |
-| Pi | DeepSeek / deepseek-flash, or configured compatible URL and model | off by default; custom provider controls reasoning | Pi RPC | Core-local Build / Work plugins / Cloud Team via MCP Tunnel |
+| Cline | Active native Cline provider, model and credentials | Native provider controls reasoning | ACP 1 | Core-local Build / Work plugins / Cloud Team via MCP Tunnel |
+| Pi | Active native Pi provider, model and credentials | Inherits native thinking level | Pi RPC | Core-local Build / Work plugins / Cloud Team via MCP Tunnel |
+| OpenCode | Native user provider config (`~/.config/opencode/opencode.json[c]`); models from real native config options | Native effort choices | ACP 1 over stdio with HTTP MCP | Core-local Build / existing Work directories |
+| Kilo Code | Native user provider config (`~/.config/kilo/kilo.json[c]`); Mac global config currently DeepSeek official `deepseek-flash` / `deepseek-v4-pro` | Flash/Low by default; variants none/low/high/max | ACP 1 over stdio with HTTP MCP | Core-local Build / existing Work directories |
 
-Both use the existing CLI APIs for text, native resume, tool approvals, interrupt, queues and schedules. Pi supports steering; Cline supports Plan. Unsupported modes fail explicitly. Managers/Governors may use local, Tunnel-cloud or supported native-cloud workspaces; location does not grant or remove their role scope. `engine.capabilities` provides no-inference creation-time discovery to Managers and Governors. Cline/Pi cloud Employees use `kind:worker, workEnvironment:team`; Work/plugin workspaces are supported; native-cloud Cline/Pi processes remain unsupported. Cline Flash accepts pasted/local/cloud images, including native resume; Pi image input remains unsupported by this adapter. No cloud-to-local fallback is permitted. See API.md for install requirements and adapter limits.
+Cline and Pi use the existing CLI APIs for text, native resume, tool approvals, interrupt, queues and schedules. Pi supports steering; Cline supports Plan. Unsupported modes fail explicitly. Managers/Governors may use local, Tunnel-cloud or supported native-cloud workspaces; location does not grant or remove their role scope. `engine.capabilities` provides no-inference creation-time discovery to Managers and Governors. Cline/Pi cloud Employees use `kind:worker, workEnvironment:team`; Work/plugin workspaces are supported; native-cloud Cline/Pi processes remain unsupported. Cline Flash accepts pasted/local/cloud images, including native resume; Pi image input remains unsupported by this adapter. No cloud-to-local fallback is permitted. See API.md for install requirements and adapter limits.
+
+OpenCode and Kilo Code inherit native user provider configuration only; no application URL/key override is added. Model discovery reads the real native config options. Both stream text, thoughts and tools, accept images where the selected model supports them, expose native effort choices, resume native sessions in the per-employee data profile, and support build/code vs plan modes. Tool calls follow Core approval modes; native API calls recheck the actual employee identity and permissions. Only the Core-local workspace is supported (a Local workspace inside a Cloud Team is allowed); cloud-native/Tunnel remote workspace execution and strict process isolation are explicitly unsupported, with no silent local fallback. The worker TUI can launch native `opencode`/`kilo` with a clean context; direct ownership is unchanged.
+
+Kilo's current Mac global configuration contains only the official DeepSeek `deepseek-flash` and `deepseek-v4-pro`; new Kilo employees default to Flash / Low, with variants none/low/high/max. Its key references the existing Claude DeepSeek key file; no API secret is documented here.

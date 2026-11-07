@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { Worker } = require('node:worker_threads');
 const { assert, ReaderError, safePath, relative, exists, version, digest, readBounded, atomicWrite, LIMITS } = require('./safety.cjs');
-const TYPES = new Set(['mrv','pdf','html','htm','xhtml','md','markdown','txt','png','jpg','jpeg','webp','gif','avif','bmp']);
+const TYPES = new Set(['mrv','pdf','html','htm','xhtml','md','markdown','txt','epub','mobi','azw','azw3','kf8','doc','docx','odt','rtf','fb2','png','jpg','jpeg','webp','gif','avif','bmp']);
 let running = 0; const waiting = [];
 async function acquire() { if (running < 2) running++; else await new Promise(resolve => waiting.push(resolve)); }
 function release() { const next = waiting.shift(); if (next) next(); else running--; }

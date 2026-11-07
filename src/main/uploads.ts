@@ -11,7 +11,7 @@ const owner=()=>JSON.stringify([requestContext().principal,requestContext().clie
 type Upload={id:string;owner:string;target:FileEndpoint;to:FileLocation;name:string;bytes:number;offset:number;stage:string;busy:boolean;updatedAt:number;reservation?:string}
 const uploads=new Map<string,Upload>(),reservations=new Set<string>()
 const join=(a:string,b:string)=>[a==='.'?'':a,b].filter(Boolean).join('/')
-const call=async(id:string,end:FileEndpoint,operation:string,args:Record<string,unknown>)=>{await end.validate?.(operation,args);return end.remote?remoteFiles('upload-'+id+'-'+createHash('sha256').update(JSON.stringify(end.remote)).digest('hex').slice(0,16),end.remote,operation,args):Promise.resolve(workspaceFiles(end.root,operation,args))}
+const call=async(id:string,end:FileEndpoint,operation:string,args:Record<string,unknown>)=>{await end.validate?.(operation,args);const result=operation==='copy-commit'&&end.commit?await end.commit(args):end.read&&['copy-info','copy-read'].includes(operation)?await end.read(operation,args):end.remote?await remoteFiles('upload-'+id+'-'+createHash('sha256').update(JSON.stringify(end.remote)).digest('hex').slice(0,16),end.remote,operation,args):workspaceFiles(end.root,operation,args);if(operation==='copy-commit')end.changed?.();return result}
 const get=(id:string)=>{const value=uploads.get(id);if(!value||value.owner!==owner())throw Error('Unknown upload');return value}
 export async function beginUpload(to:FileLocation,target:FileEndpoint,name:string,bytes:number,unique=false){
   if(uploads.size>=64)throw Error('Too many uploads; finish or cancel existing uploads')

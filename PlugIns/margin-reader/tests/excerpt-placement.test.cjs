@@ -16,4 +16,18 @@ test('excerpt drop placement is atomic, bypasses presets only explicitly, expand
  for(const patch of [{x:2},{x:2,y:3,parentId:parent},{x:2e9,y:1,parentId:null}])await f.error('study.card.create',{...draft(),...patch},'INVALID_PARAMS');
  assert.deepEqual(await fs.readFile(path.join(f.workspace,'source.pdf')),bytes);await change('study.undo');assert.equal(set.cards.length,1);
  const defaultRequest=draft();result=await f.api('study.card.create',defaultRequest);assert.equal(result.card.parentId,parent);assert((await f.api('study.card.create',defaultRequest)).duplicate);
+ set=await f.api('study.get',{setId:set.id});
+ await change('study.capture.settings',{tags:['preset'],annotationStyle:'box',inMap:true});
+ const settings=structuredClone(set.captureSettings),count=set.cards.length;
+ request={...draft(),inMap:false,annotationStyle:'underline',note:'Atomic selection note 中文',tags:['selection']};
+ result=await f.api('study.card.create',request);set=await f.api('study.get',{setId:set.id});
+ assert.equal(set.cards.length,count+1);assert.equal(result.card.inMap,false);assert.equal(result.card.parentId,null);
+ assert.equal(result.card.note,request.note);assert.deepEqual(result.card.tags,['selection']);assert.equal(result.card.annotation.style,'underline');
+ assert.deepEqual(set.captureSettings,settings);assert((await f.api('study.card.create',request)).duplicate);
+ for(const patch of [{inMap:true},{annotationStyle:'highlight'},{note:'Different'},{tags:['different']}])await f.error('study.card.create',{...request,...patch},'CONFLICT');
+ for(const patch of [{parentId:parent},{parentId:null,x:2,y:3},{zoneId:randomUUID()}])await f.error('study.card.create',{...draft(),inMap:false,...patch},'INVALID_PARAMS');
+ await change('study.undo');assert.equal(set.cards.length,count);
+ await change('study.capture.settings',{inMap:false,parentId:null,organize:'none'});
+ result=await f.api('study.card.create',{...draft(),inMap:true});assert.equal(result.card.inMap,true);assert.equal(result.card.annotation.style,'box');assert.deepEqual(result.card.tags,['preset']);
+ assert.deepEqual(await fs.readFile(path.join(f.workspace,'source.pdf')),bytes);
 });

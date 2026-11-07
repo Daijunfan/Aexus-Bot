@@ -1,3 +1,9 @@
+import {monitorRequest} from './script-monitors'
+import {botRequest,botDirectTarget,botDirectRequest,botFileEndpoint,botGroup} from './bot-workers'
+import {hostRights} from './host-access'
+import {pluginAccess,pluginScope,pluginAccessEntry,grantCreatedPluginResources} from './plugins/access'
+import {pluginResourceRights} from '../shared/plugin-access'
+import {isAppAdministrator} from './application-authority'
 import {employeeReady} from '../shared/types'
 import {directoryName} from '../shared/directory-names'
 import {assetNaming} from './asset-naming'
@@ -19,17 +25,19 @@ import { randomUUID } from 'node:crypto'
 import { readChatMessages } from './chat-groups'
 import { resolveMessageReply } from './transcripts'
 import { forwardMessages,forwardStatus } from './message-forwarding'
-import { withPrivateSendReceipt,type PrivateSendAttempt } from './private-send-receipts'
+import { withPrivateSendReceipt,lookupPrivateSendReceipt,type PrivateSendAttempt } from './private-send-receipts'
+import {directHistory,postDirectMessage,prepareDirectInput,updateDirectInput,directDelivery,acknowledgeDirect,directFileEndpoint,directReply,directSummary,directSendKey} from './direct-messages'
+import {DIRECT_ATTACHMENT_PREFIX} from '../shared/direct-messages'
 import { privateSendQueued } from './sessions'
 import { messengerRequest,resolveConversationReply } from './messenger'
-import { channelRequest,channelFileEndpoint,getChannel } from './channels'
+import { channelOperation,channelRequest,channelFileEndpoint,getChannel } from './channels'
 import { syncChannelIngress,channelIngressStatus } from './channel-ingress'
 import { exportChannelPost } from './channel-export'
 import { planRequest } from './plan'
 import { APP_VIEWS,appView } from '../shared/app-views'
 import { listChatGroups,getChatGroup,groupMediaRoot } from './chat-groups'
 import { assertEngineWorkspace } from '../shared/engines'
-import { hostTerminals,openHostTerminal,requireHostTerminal,listHostDesktops,connectHostDesktop,launchHostDesktop,closeHostDesktop,assertHostIdle,closeHostTerminals } from './host-connections'
+import { hostTerminals,openHostTerminal,requireHostTerminal,assertHostIdle,closeHostTerminals } from './host-connections'
 import { isEngine } from '../shared/engines'
 import { runtimeInfo } from './platform'
 import { homedir } from 'node:os'
@@ -57,7 +65,8 @@ import { updateStore } from './store'
 import { validateCloudHostPatch,cloudHostFingerprints,trustCloudHostFingerprint,queryCloudHosts,cloudHostSummary,cloudHostCredentials,getCloudHost,createCloudHost,updateCloudHost,removeCloudHost,cloudHostTarget,checkCloudHost } from './cloud-hosts'
 import { openExternalUrl } from './external'
 import { sharedDirectory } from './shared-directory'
-import { listAvatars,resolveAvatar,avatarDescription,employeeAppearance,professionValue } from '../shared/avatars'
+import { resolveAvatar,randomAvatar,avatarDescription,employeeAppearance,professionValue } from '../shared/avatars'
+import {activeAvatarIds,avatarCatalog,getAvatar,updateAvatar} from './avatar-catalog'
 import { startTransfer,listTransfers,getTransfer,cancelTransfer,type FileEndpoint } from './transfers'
 import type { FileLocation } from '../shared/transfers'
 import { cloneEmployee } from './employees'
@@ -66,6 +75,8 @@ import { scheduleRequest,reconcileSchedules } from './scheduler/service'
 import { remoteTarget } from '../shared/remote'
 import { executeRemote,checkRemote,remoteFiles,closeRemote,resolveEmployeeWorkspace,teamConnectionId } from './tunnel'
 import { checkCloudNative,cloudNativeTarget,readCloudNativeSession } from './cloud-native'
+import {createWorker,listWorkers,startWorker,readWorker,inputWorker,resizeWorker,stopWorker,removeEmployeeWorkers} from './native-workers'
+import {beforeChannelRequest,flushChannelContent,saveChannelContent,loadChannelAsset,loadChannelPost,loadChannelMessage} from './channel-content'
 import { openTerminal,listTerminals,readTerminal,waitTerminalOutput,inputTerminal,resizeTerminal,closeTerminal,closeEmployeeTerminals } from './terminals'
 // A unix-socket server so the whole app can be driven from a terminal. Every
 // command maps onto the same operations the GUI uses, which is what makes
@@ -117,7 +128,7 @@ import {revealWorkspaceFile} from './file-reveal'
 import { employeeRoot,employeeWorkspace,executionEmployee,cloudDirectory,cloudRelative,workspaceStatus,teamRoot,managedTeamRoot,chooseTeamRoot,defaultPluginWorkspace,legacyPluginWorkspace,inside } from './workspaces'
 import { planOffice } from '../shared/canvas'
 import { listPlugins,requirePlugin,installPlugin,pluginFile } from './plugins/registry'
-import { callPlugin,openPluginView,closePluginView,releaseWorkspacePlugins } from './plugins/runtime'
+import { pluginRuntime,callPlugin,openPluginView,closePluginView,releaseWorkspacePlugins } from './plugins/runtime'
 import { provisionWorkspace,provisionEmployee,ensureEmployeeBootstrap } from './plugins/documents'
 import { readFileSync,writeFileSync } from 'node:fs'
 import { deleteNativeSessions,nativeRefsForRemoval } from './native-sessions'
@@ -194,7 +205,8 @@ export async function handleRequest(req:Request,context?:RequestContext&{signal?
   if(['card.','session.','config.'].some(prefix=>req.cmd.startsWith(prefix))&&new Set([a.employee,a.cardId,a.id].filter(value=>value!==undefined).map(employeeId).filter(Boolean)).size>1)throw Error('Forbidden: conflicting employee identifiers')
   if(req.cmd.startsWith('card.'))target=employeeId(req.cmd==='card.rename'?a.cardId:a.id)
   if(req.cmd.startsWith('config.')||req.cmd.startsWith('commands.')||req.cmd.startsWith('approval.')||['engine.inspect','engine.skill'].includes(req.cmd))target=employeeId(a.id)
-  if(req.cmd.startsWith('terminal.')&&a.id)target=listTerminals().find(terminal=>terminal.id===a.id)?.employee
+  if(req.cmd.startsWith('worker.'))target=undefined
+  if(req.cmd.startsWith('terminal.')&&a.id){const terminal=listTerminals().find(terminal=>terminal.id===a.id);if(terminal?.worker)throw Error('Native Worker terminals require worker.* ownership checks');target=terminal?.employee}
   if(['view.tools','view.details'].includes(req.cmd))target=getView().employee
   if(req.cmd==='session.open')target=employeeId(a.cardId??a.employee??a.id)
   if(req.cmd==='card.remove'||req.cmd==='group.remove'){
@@ -208,6 +220,36 @@ export async function handleRequest(req:Request,context?:RequestContext&{signal?
     if(a.deleteWorkspace&&!isGlobal(caller.principal))throw Error('删除工作文件夹需要用户或全局管理授权；管理关系只允许移除员工')
   }else authorize(req.cmd,a,target,caller)
   assertInitializationRequest(req.cmd,target)
+  if(req.cmd.startsWith('monitor.'))return monitorRequest(req.cmd,a)
+  if(req.cmd.startsWith('bot.'))return botRequest(req.cmd,a)
+  if(botDirectTarget(req.cmd,a)){
+    if(req.cmd==='direct.send'&&a.replyTo&&a.replyConversation!==undefined){
+      if(['employee:'+a.employee,'group:'+a.employee].includes(a.replyConversation)){delete a.replyConversation;delete a.replyTextOnly}
+      else a.crossReply=resolveConversationReply(a.replyConversation,a.replyTo,a.replyQuote,a.replyTextOnly)
+    }
+    return botDirectRequest(req.cmd,a)
+  }
+  if(req.cmd==='direct.send'){
+    for(const key of Object.keys(a))if(!['employee','text','images','files','mode','clientMessageId','replyTo','replyQuote','replyConversation','replyTextOnly','viewId'].includes(key))throw Error('Unknown direct.send field: '+key)
+    if(!isAppAdministrator())throw Error('Only the user or Secretary may send private user input')
+    if(!target)throw Error('Unknown employee conversation')
+    if(caller.principal.kind==='agent'&&caller.principal.employeeId===target)throw Error('Use direct.post to reply to the user; direct.send dispatches work to another employee')
+    const mode=a.mode??'enqueue';if(!['send','enqueue','steer'].includes(mode))throw Error('Unknown private delivery mode')
+    const args={...a,sourceView:'messages',clientMessageId:a.clientMessageId??randomUUID()}
+    const reply=a.replyTo?(a.replyConversation&&a.replyConversation!=='employee:'+target?resolveConversationReply(a.replyConversation,a.replyTo,a.replyQuote,a.replyTextOnly):directReply(target,a.replyTo,a.replyQuote)):undefined
+    const entry=await prepareDirectInput(target,{...args,resolvedReply:reply})
+    const work=(attempt:PrivateSendAttempt)=>{
+      const decorated:PrivateSendAttempt={directMessageId:entry.id,get queueId(){return attempt.queueId},queued:id=>{attempt.queued(id);directDelivery(target!,entry.id,'queued')},dispatching:id=>{attempt.dispatching(id);updateDirectInput(target!,entry.id,{nativeTaskId:id,outbound:{taskId:id}})},accepted:id=>{attempt.accepted(id);directDelivery(target!,entry.id,'accepted')},failed:error=>{attempt.failed(error);directDelivery(target!,entry.id,'failed',String((error as Error)?.message??error))},interrupted:reason=>{attempt.interrupted(reason);directDelivery(target!,entry.id,'interrupted',reason)}}
+      return handleAuthorizedRequest({cmd:mode==='enqueue'?'session.enqueue':'session.send'}, {...args,id:undefined,employee:target,...(reply?{crossReply:reply}:{}),replyConversation:undefined},target,caller,decorated)
+    }
+    if(mode==='steer'){
+      if(a.images?.length||a.files?.length)throw Error('Queue attachments instead of steering them')
+      if(entry.delivery?.state==='accepted')return {sent:true,directMessageId:entry.id}
+      try{const opened=await startSession({cardId:target});const sent=await steerMessage(opened.sessionId,String(a.text??''),'messages',entry.id);directDelivery(target,entry.id,'accepted');return {sent,directMessageId:entry.id}}catch(error){directDelivery(target,entry.id,'failed',String((error as Error).message));throw error}
+    }
+    try{const receipt=await withPrivateSendReceipt(target,{...args,clientMessageId:directSendKey(args.clientMessageId)},work,privateSendQueued,true);directDelivery(target,entry.id,receipt.status);return {...receipt,clientMessageId:args.clientMessageId,directMessageId:entry.id}}
+    catch(error){directDelivery(target,entry.id,'failed',String((error as Error).message));throw error}
+  }
   if(['session.send','session.enqueue','session.steer'].includes(req.cmd))a.sourceView=messageSourceView(a.sourceView)
   if((req.cmd==='session.send'||req.cmd==='session.enqueue')&&a.clientMessageId!==undefined){
     if(!target)throw Error('Unknown employee conversation')
@@ -216,11 +258,16 @@ export async function handleRequest(req:Request,context?:RequestContext&{signal?
   return handleAuthorizedRequest(req,a,target,caller)
 }
 async function handleAuthorizedRequest(req:Request,a:Record<string,any>,target:string|undefined,caller:RequestContext,privateSend?:PrivateSendAttempt){
+  if(req.cmd==='direct.send-status'){if(!isAppAdministrator())throw Error('Only the user or Secretary may inspect native private input');if(typeof a.employee!=='string'||typeof a.clientMessageId!=='string')throw Error('Provide employee and clientMessageId');return lookupPrivateSendReceipt(a.employee,directSendKey(a.clientMessageId),privateSendQueued)}
+  if(req.cmd==='direct.post')return postDirectMessage(a)
+  if(req.cmd==='direct.history')return directHistory(a as any)
+  if(req.cmd==='direct.acknowledge')return acknowledgeDirect(a as any)
   if((req.cmd==='session.send'||req.cmd==='session.enqueue')&&target)a.viewId=taskViewId(target,a.viewId)
   if(['session.send','session.enqueue','chat.send','chat.post'].includes(req.cmd)&&a.replyConversation!==undefined){
     const destination=req.cmd.startsWith('session.')?'employee:'+target:'group:'+a.id
     if(a.replyConversation!==destination){
-      if(caller.principal.kind!=='operator')throw Error('Only the user may quote another conversation')
+      if(!isAppAdministrator(caller.principal))throw Error('Only the user or Secretary may quote another conversation')
+      if(a.replyConversation.startsWith('channel:')){if(String(a.replyTo).startsWith('np_'))await loadChannelPost(a.replyTo);else if(String(a.replyTo).startsWith('cm_'))await loadChannelMessage(a.replyConversation.slice(8),a.replyTo)}
       const previous=req.cmd.startsWith('chat.')&&typeof a.clientMessageId==='string'?readChatMessages(a.id).find(message=>message.author.kind==='operator'&&message.clientMessageId===a.clientMessageId):undefined
       const savedReply=previous?.reply
       a.crossReply=savedReply&&savedReply.conversation===a.replyConversation&&savedReply.id===a.replyTo?savedReply:resolveConversationReply(a.replyConversation,a.replyTo,a.replyQuote,a.replyTextOnly)
@@ -262,15 +309,16 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
   if(req.cmd.startsWith('group.')&&!['group.list','group.remove'].includes(req.cmd))assertTeamAvailable(a.name)
   if(['card.update','card.avatar','card.move','card.remove','card.rename'].includes(req.cmd))assertTeamAvailable(readStore().sessions.find(c=>c.id===(a.id??a.cardId))?.group)
   if(['card.create','card.move','card.update','session.new'].includes(req.cmd))assertTeamAvailable(a.group??a.patch?.group)
-  if(MESSAGE_COLLABORATION_APIS.has(req.cmd))return messageCollaborationRequest(req.cmd,a,fileEndpoint)
-  if(req.cmd.startsWith('channel.')&&!['channel.settings','channel.image','channel.export'].includes(req.cmd))return channelRequest(req.cmd,a)
+  if(MESSAGE_COLLABORATION_APIS.has(req.cmd)){if(typeof a.conversation==='string'&&a.conversation.startsWith('channel:')){const entry=String(a.id??a.entryId);if(entry.startsWith('np_'))await loadChannelPost(entry);else if(entry.startsWith('cm_'))await loadChannelMessage(a.conversation.slice(8),entry);}return messageCollaborationRequest(req.cmd,a,fileEndpoint)}
+  if(req.cmd.startsWith('channel.')&&['channel.image','channel.export'].includes(req.cmd))await beforeChannelRequest(req.cmd,a)
+  if(req.cmd.startsWith('channel.')&&!['channel.settings','channel.image','channel.export'].includes(req.cmd)){const result=await channelOperation(req.cmd,a);if(['channel.save','channel.delete'].includes(req.cmd))await saveChannelContent(String(a.id));if(['channel.publish','channel.media-put','channel.source-avatar-put','channel.message-send','channel.message-post'].includes(req.cmd))await flushChannelContent();return result}
   if(CONVERSATION_CONTROL_APIS.has(req.cmd))return conversationControlRequest(req.cmd,a)
   if(req.cmd.startsWith('conversation.'))return conversationWorkspaceRequest(req.cmd,a,fileEndpoint)
   if(req.cmd.startsWith('engine.'))return engineRequest(req.cmd,a)
   if(req.cmd.startsWith('chat.'))return chatRequest(req.cmd,a)
   switch (req.cmd) {
     case 'messenger.media-open': {if(typeof a.conversation!=='string'||!/^(employee|group|channel):[a-zA-Z0-9_-]+$/.test(a.conversation)||typeof a.path!=='string'||!a.path)throw Error('Choose a conversation media file');const [kind,id]=a.conversation.split(':');return openMedia(()=>fileEndpoint({...(kind==='group'?{group:id}:kind==='channel'?{channel:id}:{employee:id}),path:a.path},false))}
-    case 'channel.image': {const file=channelFileEndpoint({channelId:s(a.channelId),postId:a.postId,mediaId:a.mediaId});return {...workspaceFiles(file.root,'read-image',{path:file.path}),name:file.name}}
+    case 'channel.image': {const file=channelFileEndpoint({channelId:s(a.channelId),postId:a.postId,mediaId:a.mediaId}),asset=await loadChannelAsset(s(a.mediaId),a.maxEdge);return {data:asset.data.toString('base64'),mimeType:asset.mimeType,name:file.name}}
     case 'channel.export': return exportChannelPost(s(a.id))
     case 'channel.settings': {const settings=await channelRequest(req.cmd,a);await syncChannelIngress().catch(()=>{});return {...settings,runtime:channelIngressStatus()}}
     case 'messenger.media-info':return mediaInfo(s(a.id))
@@ -279,7 +327,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'messenger.forward':return forwardMessages(a,(cmd,args)=>handleRequest({cmd,args}))
     case 'messenger.forward-status':return forwardStatus(a)
     case 'messenger.profile':case 'messenger.profile-image':case 'messenger.directory':case 'messenger.social':case 'messenger.forward-draft':case 'messenger.gallery':case 'messenger.reference':case 'messenger.state':case 'messenger.reorder':case 'messenger.folder-save':case 'messenger.folder-delete':case 'messenger.conversation':case 'messenger.message':case 'messenger.draft':case 'messenger.search':return messengerRequest(req.cmd,a)
-    case 'system.info': return {...runtimeInfo(),clientId:requestContext().clientId}
+    case 'system.info': return {...runtimeInfo(),clientId:requestContext().clientId,clock:{unixMs:Date.now(),iso:new Date().toISOString(),timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone}}
     case 'system.directories': {
       const directory=realpathSync(a.path?resolve(s(a.path)):homedir())
       if(!statSync(directory).isDirectory())throw Error('请选择后端主机上的文件夹')
@@ -305,7 +353,9 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     }
     case 'api.describe': {const command=allowedCommands(requestContext(),readStore(),a.all).find(value=>value.name===a.command);if(!command)throw Error('API not available to this caller');return command}
     case 'api.docs': return apiDocumentation(requestContext(),readStore(),a.document)
-    case 'avatar.list': return listAvatars(a)
+    case 'avatar.list': return avatarCatalog(a)
+    case 'avatar.get': return getAvatar(s(a.id))
+    case 'avatar.update': return updateAvatar({id:s(a.id),enabled:a.enabled,expectedRevision:a.expectedRevision})
     case 'office.layout': return officeLayout(a.team,a.viewId)
     case 'session.acknowledge': return acknowledgeReply(s(a.employee??employeeId(a.id)),a.replyId)
     case 'management.team': return setManagerTeam(a.clear===true?null:a.team)
@@ -341,22 +391,17 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'host.terminal-input': return inputTerminal(requireHostTerminal(s(a.id),s(a.terminal)),s(a.data??''))
     case 'host.terminal-resize': return resizeTerminal(requireHostTerminal(s(a.id),s(a.terminal)),Number(a.cols),Number(a.rows))
     case 'host.terminal-close': return closeTerminal(requireHostTerminal(s(a.id),s(a.terminal)))
-    case 'host.desktop-list': getCloudHost(s(a.id));return listHostDesktops(s(a.id))
-    case 'host.desktop-open': return connectHostDesktop(s(a.id))
-    case 'host.desktop-launch': return launchHostDesktop(s(a.id),s(a.session))
-    case 'host.desktop-close': return closeHostDesktop(s(a.id),s(a.session))
     case 'host.exec': return executeRemote(cloudHostTarget(s(a.id),a.directory),s(a.command),a.timeout===undefined?120:Number(a.timeout))
     case 'host.list': {
-      if(a.credentials&&!isGlobal(requestContext().principal)&&!isSupervisor(callerEmployee()?.managementRole))throw Error('Forbidden: host credentials')
-      return queryCloudHosts(a).map(host=>{
+      return queryCloudHosts(a).filter(host=>hostRights(host.id).read).map(host=>{
         const allowed=canReadHostCredentials(host.id)
-        if(a.credentials&&allowed)return {...host,credentials:cloudHostCredentials(host.id)}
-        return allowed&&!a.summary?host:cloudHostSummary(host)
+        if(a.credentials&&allowed)return {...host,credentials:cloudHostCredentials(host.id,isAppAdministrator())}
+        return {...(allowed&&!a.summary?host:cloudHostSummary(host)),access:hostRights(host.id)}
       })
     }
     case 'host.get': return getCloudHost(s(a.id))
-    case 'host.credentials': return cloudHostCredentials(s(a.id),a.files!==false)
-    case 'host.create': {const host=createCloudHost(a);writeStore(readStore());publishEvent('hosts:changed',{});return host}
+    case 'host.credentials': return cloudHostCredentials(s(a.id),isAppAdministrator()&&a.files!==false)
+    case 'host.create': {const host=createCloudHost(a);const caller=requestContext().principal;if(caller.kind==='agent'&&!isAppAdministrator(caller)){const root=defaultPluginWorkspace('cloud-hosts');grantCreatedPluginResources('cloud-hosts',root,pluginScope('cloud-hosts',root,caller.employeeId),[{id:'host:'+host.id,parentId:'@root'}])};writeStore(readStore());publishEvent('hosts:changed',{});return host}
     case 'host.update': {
       assertHostIdle(s(a.id))
       const store=readStore(),teams=store.groups.filter(name=>teamSettings(store,name).hostId===a.id)
@@ -407,7 +452,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
           if(saved.employee&&!readStore().sessions.some(card=>card.id===saved.employee&&!card.deleting&&employeeReady(card)))return setView({kind:'messages'})
           if(saved.chatId)getChatGroup(saved.chatId)
           if(saved.sourceId)saved.channelId=socialIdentity('source:'+saved.sourceId).channelId
-          if(saved.channelId)getChannel(saved.channelId)
+          if(saved.channelId){saved.channelId=getChannel(saved.channelId).id;if(['youtube','x','telegram'].includes(getChannel(saved.channelId).kind))delete saved.sourceId}
           return setView(saved)
         }catch{return setView({kind:'messages'})}
       }
@@ -420,8 +465,8 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       if(a.planViewId!==undefined&&(kind!=='plan'||!((await planRequest('views',{})) as Array<{id:string}>).some((view:any)=>view.id===a.planViewId)))throw Error('Unknown Plan view')
       if([a.employee,a.chatId,a.channelId].filter(value=>value!==undefined).length>1)throw Error('Choose one conversation')
       if(a.chatId!==undefined){if(kind!=='messages')throw Error('Group conversations belong to Messages');getChatGroup(a.chatId)}
-      if(a.sourceId!==undefined){if(kind!=='messages'||a.employee!==undefined||a.chatId!==undefined)throw Error('Social elements belong to Messages');const source=socialIdentity('source:'+a.sourceId);if(a.channelId!==undefined&&a.channelId!==source.channelId)throw Error('Social element belongs to another channel');a.channelId=source.channelId}
-      if(a.channelId!==undefined){if(kind!=='messages')throw Error('News channels belong to Messages');getChannel(a.channelId)}
+      if(a.sourceId!==undefined){if(kind!=='messages'||a.employee!==undefined||a.chatId!==undefined)throw Error('Social elements belong to Messages');const source=socialIdentity('source:'+a.sourceId);if(a.channelId!==undefined&&a.channelId!==source.channelId)throw Error('Social element belongs to another channel');a.channelId=source.channelId;if(['youtube','x','telegram'].includes(source.platform))delete a.sourceId}
+      if(a.channelId!==undefined){if(kind!=='messages')throw Error('News channels belong to Messages');a.channelId=getChannel(a.channelId).id}
       if((kind==='workspace'||(kind==='team'&&a.name))&&!store.groups.includes(a.name))throw new Error('Unknown Team')
       if((kind==='conversation'||kind==='clone'||a.employee)&&!store.sessions.some(c=>c.id===a.employee))throw new Error('Unknown employee')
       if(a.employee&&kind!=='initialization'&&!(kind==='employee'&&store.sessions.find(card=>card.id===a.employee)?.initialization?.status==='failed'))assertEmployeeReady(s(a.employee))
@@ -438,14 +483,14 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       await beforeViewChange()
       const view=getView(),back=view.returnTo
       if(back?.kind==='plan')return setView({kind:'plan',planViewId:back.planViewId})
-      if(back){let channelId:string|undefined;if(back.channelId){try{channelId=getChannel(back.channelId).id}catch{}};return setView({kind:'messages',employee:readStore().sessions.some(card=>card.id===back.employee&&!card.deleting)?back.employee:undefined,...(back.chatId&&listChatGroups().some(group=>group.id===back.chatId)?{chatId:back.chatId}:{}),...(channelId?{channelId,...(back.sourceId?{sourceId:back.sourceId}:{})}:{})})}
+      if(back){let channelId:string|undefined;if(back.channelId){try{channelId=getChannel(back.channelId).id}catch{}};return setView({kind:'messages',employee:readStore().sessions.some(card=>card.id===back.employee&&!card.deleting)?back.employee:undefined,...(back.chatId&&listChatGroups().some(group=>group.id===back.chatId)?{chatId:back.chatId}:{}),...(channelId?{channelId,...(back.sourceId&&!['youtube','x','telegram'].includes(getChannel(channelId).kind)?{sourceId:back.sourceId}:{})}:{})})}
       if(view.kind==='messages'&&(view.employee||view.chatId||view.channelId))return setView({kind:'messages'})
       return setView({kind:'home',pluginId:view.pluginId})
     }
     case 'view.tools': {
       const view=getView();if(!['conversation','messages'].includes(view.kind)||!view.employee)throw new Error('Open a conversation first')
       if(a.section&&!['skills','mcp','account','usage','config','export','background'].includes(a.section))throw new Error('Unknown engine section')
-      await beforeViewChange();return setView({...view,tools:a.section||undefined})
+      await beforeViewChange();return setView({...view,...(view.kind==='messages'&&a.section?{kind:'conversation' as const,returnTo:{kind:'messages' as const,employee:view.employee}}:{}),tools:a.section||undefined})
     }
     case 'view.details': {
       await beforeViewChange()
@@ -477,6 +522,15 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       if(a.employee&&!employee)throw new Error('Unknown employee')
       return checkRemote(employee?executionEmployee(readStore(),employee).remote:a.team?teamSettings(readStore(),a.team).remote:a.remote)
     }
+    case 'worker.create': return createWorker({employee:a.employee,engine:s(a.engine),title:a.title,cwd:a.cwd})
+    case 'worker.list': return listWorkers(a.employee)
+    case 'worker.start': return startWorker(s(a.id),a.cols,a.rows)
+    case 'worker.read': return readWorker(s(a.id),Number(a.cursor??0),Number(a.waitMs??0))
+    case 'worker.input': return inputWorker(s(a.id),s(a.data??''))
+    case 'worker.resize': return resizeWorker(s(a.id),Number(a.cols),Number(a.rows))
+    case 'worker.interrupt': return inputWorker(s(a.id),'\x03')
+    case 'worker.stop': return stopWorker(s(a.id))
+    case 'worker.remove': return stopWorker(s(a.id),true)
     case 'terminal.open': {
       const store=readStore(),card=store.sessions.find(c=>c.id===a.employee)
       if(!card)throw new Error('Unknown employee')
@@ -484,12 +538,18 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       employeeWorkspace(store,card.group,card.cwd,card.id)
       return openTerminal(executionEmployee(store,card),Number(a.cols??100),Number(a.rows??24))
     }
-    case 'terminal.list': return listTerminals(a.employee).filter(terminal=>canReadEmployee(requestContext().principal,terminal.employee))
+    case 'terminal.list': return listTerminals(a.employee).filter(terminal=>!terminal.worker&&canReadEmployee(requestContext().principal,terminal.employee))
     case 'terminal.read': return readTerminal(s(a.id),Number(a.cursor??0))
     case 'terminal.input': return inputTerminal(s(a.id),s(a.data??''))
     case 'terminal.resize': return resizeTerminal(s(a.id),Number(a.cols),Number(a.rows))
     case 'terminal.close': return closeTerminal(s(a.id))
     case 'workspace.image':case 'workspace.list':case 'workspace.read':case 'workspace.write':case 'workspace.mkdir':case 'workspace.move':case 'workspace.trash':case 'workspace.restore': {
+      if(a.employee&&String(a.path).startsWith(DIRECT_ATTACHMENT_PREFIX)){
+        const operation=req.cmd==='workspace.image'?'read-image':req.cmd==='workspace.read'?'read':undefined
+        if(!operation)throw Error('Published private attachments are read-only')
+        const end=directFileEndpoint(a.employee,a.path);await end.validate?.(operation,{path:end.path})
+        return end.remote?remoteFiles('direct-image-'+a.employee,end.remote,operation,{path:end.path}):workspaceFiles(end.root,operation,{path:end.path})
+      }
       if(a.shared){if(a.team||a.employee)throw Error('共享文件夹不能同时指定 Team 或员工');return workspaceFiles(sharedDirectory(),req.cmd==='workspace.image'?'read-image':req.cmd.split('.')[1],a)}
       const store=readStore(),saved=a.employee?store.sessions.find(c=>c.id===a.employee):undefined,card=saved?executionEmployee(store,saved):undefined
       if(card?.remote){if(a.team&&a.team!==card.group)throw new Error('员工不属于这个 Team');return remoteFiles(card.id,card.remote,req.cmd==='workspace.image'?'read-image':req.cmd.split('.')[1],a)}
@@ -509,6 +569,16 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     }
     case 'workspace.docs':
       {const context=workspaceContext(a);return a.employee?ensureEmployeeBootstrap(context.store.sessions.find(c=>c.id===a.employee)!,context.store):context.settings.mode==='cloud'?{mode:'cloud',workspace:context.root,teamRoot:context.teamRoot,documentation:apiDocumentation().catalogRoot}:provisionWorkspace(context.root,context.settings,context.teamRoot)}
+    case 'plugin.access':case 'plugin.resources': {
+      const root=pluginWorkspace(a),caller=requestContext().principal
+      if(req.cmd==='plugin.resources'&&!isAppAdministrator(caller)&&caller.kind==='agent'&&!pluginScope(s(a.id),root,caller.employeeId).grants.some(g=>g.read||g.write||g.create))return {plugin:s(a.id),workspace:root,revision:pluginAccessEntry(s(a.id),root).revision,resources:[]}
+      const {runtime}=await pluginRuntime(s(a.id),root)
+      if(!runtime.resources)throw Error('This plugin has no content authorization catalog')
+      const resources=await runtime.resources()
+      if(req.cmd==='plugin.access')return pluginAccess(s(a.id),root,resources,a)
+      const principal=requestContext().principal,scope=principal.kind==='agent'?pluginScope(s(a.id),root,principal.employeeId):undefined
+      return {plugin:s(a.id),workspace:root,revision:pluginAccessEntry(s(a.id),root).revision,resources:resources.flatMap(resource=>{const rights=isAppAdministrator()?{read:true,write:true,create:true}:((resource as any).rights??pluginResourceRights(scope!,resources,resource.id));return rights.read||rights.write||rights.create?[{...resource,rights}]:[]})}
+    }
     case 'plugin.call':
       return callPlugin(s(a.id),pluginWorkspace(a),s(a.method),a.params??{},a.raw===true)
     case 'plugin.open': {
@@ -522,7 +592,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'plugin.mode': return modePluginWindow(s(a.id),a.mode)
     case 'plugin.dismiss': return dismissPluginWindow(s(a.id))
     case 'plugin.view':
-      {const root=pluginWorkspace(a);if(a.team||a.employee||a.workspace){const context=workspaceContext(a);provisionWorkspace(root,context.settings,context.teamRoot)}return openPluginView(s(a.id),root)}
+      {const root=pluginWorkspace(a);if(a.team||a.employee){const context=workspaceContext(a);provisionWorkspace(root,context.settings,context.teamRoot)}return openPluginView(s(a.id),root)}
     case 'plugin.close':
       return pluginWindows().some(window=>window.id===a.viewId)?dismissPluginWindow(s(a.viewId)):closePluginView(s(a.viewId))
     case 'status':
@@ -541,10 +611,9 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     }
 
     case 'session.inbox': {
-      const {transcriptPreview}=await import('./transcripts')
       return visibleEmployees().map(card=>{
-        try{return {...transcriptPreview(card),employeeId:card.id,unread:!!card.lastReply&&!card.lastReply.readAt}}
-        catch{return {employeeId:card.id,text:'',role:null,updatedAt:null,hasMessages:false,unread:!!card.lastReply&&!card.lastReply.readAt,error:'History unavailable'}}
+        try{return {...directSummary(card.id),employeeId:card.id}}
+        catch{return {employeeId:card.id,text:'',role:null,updatedAt:null,hasMessages:false,unread:false,error:'History unavailable'}}
       })
     }
     case 'session.new': return startSession(a as StartArgs)
@@ -857,7 +926,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       if (!isEngine(engine)) throw new Error('Unknown engine')
       let model=a.model||defaultEmployeeModel(engine,kind)
       if (!String(a.title ?? '').trim()) throw new Error('Employee name is required')
-      const avatar=resolveAvatar(a),appearance=employeeFields({...a,...(avatar!==undefined?{avatar}:{}),role:professionValue(a)})
+      const avatar=resolveAvatar(a,activeAvatarIds())??randomAvatar(activeAvatarIds()),appearance=employeeFields({...a,avatar,color:a.color??avatarDescription(avatar).color,role:professionValue(a)})
       const store=readStore(),identity={group:s(a.group??''),workEnvironment:a.workEnvironment},config=employeeSettings(store,identity)
       assertEngineWorkspace(engine,config.mode,kind)
       if(a.workEnvironment!==undefined&&!['team','local'].includes(a.workEnvironment))throw Error('工作环境必须为 team 或 local')
@@ -890,24 +959,26 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'card.avatar': {
       const card=readStore().sessions.find(c=>c.id===a.id&&!c.deleting)
       if(!card)throw Error('Unknown employee')
-      const avatar=resolveAvatar(a)
-      if(!avatar)throw Error('Provide avatar or character with avatarStyle; discover choices with agents avatar list')
+      const avatar=resolveAvatar(a,activeAvatarIds())??randomAvatar(activeAvatarIds())
       assertNotRemoving(card.id)
       const saved=patchSession(card.id,{avatar,color:avatarDescription(avatar).color}).sessions.find(c=>c.id===card.id)!
       return {id:saved.id,...employeeAppearance(saved)}
     }
     case 'card.update': {
+      for(const key of Object.keys(a))if(!['id','patch'].includes(key))throw Error('Unknown card.update field: '+key+'; put profile fields inside patch, e.g. {id,patch:{profession:"..."}}')
+      if(!a.patch||typeof a.patch!=='object'||Array.isArray(a.patch)||!Object.keys(a.patch).length)throw Error('card.update requires a nonempty patch object, e.g. {id,patch:{profession:"..."}}')
       const store=readStore(), card=store.sessions.find(c=>c.id===a.id)
       if(!card) throw new Error('Unknown employee')
       if(a.patch?.group!==undefined&&a.patch.group!==card.group)throw new Error('员工创建后不能更换 Team')
       if(a.patch?.cwd!==undefined&&a.patch.cwd!==card.cwd||a.patch?.directoryMode!==undefined)throw new Error('员工工作目录创建后不能更换')
       const prospective={...card,group:a.patch?.group??card.group};assertManagementKind(prospective,hasGlobalRole(store.access,prospective),employeeSettings(store,prospective).mode==='cloud')
-      const patch={...a.patch};const avatar=resolveAvatar(patch);if(avatar!==undefined)patch.avatar=avatar;if(patch.profession!==undefined)patch.role=professionValue(patch)
+      const patch={...a.patch},unchangedAvatar=patch.avatar===card.avatar&&patch.character===undefined&&patch.avatarStyle===undefined
+      const avatar=unchangedAvatar?patch.avatar:resolveAvatar(patch,activeAvatarIds());if(avatar!==undefined)patch.avatar=avatar;if(patch.profession!==undefined)patch.role=professionValue(patch)
       if(patch.workEnvironment!==undefined&&patch.workEnvironment!==(card.workEnvironment??'team'))throw Error('工作环境创建后固定；请创建新员工')
       if(patch.accessMode!==undefined)throw Error('Use card.access-mode')
       if(patch.kind!==undefined&&patch.kind!==(card.kind??'worker'))throw new Error('员工职位创建后不可更改')
       if(patch.chatProvider!==undefined||patch.chatMode!==undefined||patch.chromeProfile!==undefined)throw new Error('Web chat employees are no longer supported')
-      employeeFields(patch,card)
+      if(!Object.keys(employeeFields(patch,card)).length)throw Error('No editable profile fields in patch; use title, profession, role, avatar, accessory or color')
       assertEngineWorkspace(patch.engine??card.engine,employeeSettings(store,card).mode)
       if(patch.remote!==undefined)throw new Error('云主机连接由 Team 统一配置，员工不能覆盖主机')
       if(card.kind==='cloud-native-worker'){
@@ -979,7 +1050,7 @@ async function removeEmployees(ids:string[],deleteWorkspace=false,teams:string[]
     if(deleteWorkspace)for(const id of wanted){const folder=await removeEmployeeWorkspace(id,true,scope);folders.set(folder.key,{id,path:folder.path})}
     for(const id of wanted)authorize('card.remove',{id},id)
     updateStore(store=>{for(const card of store.sessions)if(wanted.has(card.id))card.deleting=true})
-    for(const id of wanted){await cancelEmployeeInitialization(id);revokeAgentCredential(id);await closeEmployeeTerminals(id);closeRemote(id)}
+    for(const id of wanted){await cancelEmployeeInitialization(id);revokeAgentCredential(id);await removeEmployeeWorkers(id);await closeEmployeeTerminals(id);closeRemote(id)}
     for(const live of listLive())if(wanted.has(sessionSnapshot(live.id).cardId!))await closeSession(live.id)
     const latest=readStore(),refs=latest.sessions.filter(card=>wanted.has(card.id)).flatMap(nativeRefsForRemoval)
     const others=latest.sessions.filter(card=>!wanted.has(card.id)).flatMap(nativeSessionRefs)
@@ -995,12 +1066,16 @@ async function removeEmployees(ids:string[],deleteWorkspace=false,teams:string[]
 }
 
 function pluginWorkspace(args:Record<string,any>):string {
-  if(!args.team&&!args.employee){
+  if(requirePlugin(String(args.id)).scope==='application')return teamRoot(defaultPluginWorkspace(String(args.id)),isAppAdministrator()?true:'preview',true)
+  if(args.workspace&&(isAppAdministrator()||pluginAccessEntry(String(args.id),String(args.workspace)).revision>0))return teamRoot(String(args.workspace),false,true)
+  const selected=args.employee?readStore().sessions.find(card=>card.id===args.employee):undefined,legacy=selected?employeeSettings(readStore(),selected):args.team?teamSettings(readStore(),args.team):undefined
+  if(!legacy||legacy.mode!=='work'||legacy.pluginId!==args.id){
     const settings={mode:'work' as const,pluginId:String(args.id)}
     const defaultRoot=teamRoot(defaultPluginWorkspace(settings.pluginId),'preview',true)
     const isolatedRoot=managedTeamRoot('',settings)
     const selected=args.workspace?teamRoot(String(args.workspace),false,true):defaultRoot
     if(selected===defaultRoot||selected===isolatedRoot){
+      if(!isAppAdministrator())return teamRoot(selected,'preview',true)
       // Keep the old direct-plugin folder in place. Legacy imports go to its
       // original default slot, never over the collection or an existing Team.
       const legacy=legacyPluginWorkspace(settings.pluginId)
@@ -1048,10 +1123,13 @@ async function attachmentDirectory(conversation:string):Promise<FileLocation>{
 function fileEndpoint(ref:FileLocation,destination:boolean):FileEndpoint {
   if(ref?.asset){const mapped=assetLocation(ref.asset,ref.path),endpoint=fileEndpoint(mapped,destination),context=requestContext();return {...endpoint,validate:async(operation,args)=>withCaller(context,async()=>{const current=fileEndpoint(assetLocation(ref.asset!,ref.path),destination);if(current.root!==endpoint.root||JSON.stringify(current.remote)!==JSON.stringify(endpoint.remote))throw Error('Asset workspace changed during transfer');await endpoint.validate?.(operation,args);if(operation==='copy-commit')assetIndex.invalidate()})}}
   if(!ref||typeof ref.path!=='string'||[!!ref.shared,!!ref.team,!!ref.employee,!!ref.local,!!ref.group,!!ref.channel,!!ref.conversation].filter(Boolean).length!==1)throw Error('File location requires one shared/team/employee/local/group/channel scope and path')
+  const botId=ref?.group??ref?.employee??(ref?.conversation?.startsWith('group:')?ref.conversation.slice(6):undefined)
+  if(botId&&botGroup(botId)&&typeof ref.path==='string'&&ref.path.startsWith('@bot/')){if(destination)throw Error('Published bot files are read-only; download a workspace copy');return botFileEndpoint(botId,ref.path)}
+  if(ref.employee&&ref.path.startsWith(DIRECT_ATTACHMENT_PREFIX)){if(destination)throw Error('Published private attachments are read-only');return directFileEndpoint(ref.employee,ref.path)}
   if(ref.conversation)return conversationFileEndpoint(ref.conversation,ref.path,destination)
   if((ref.group||ref.channel)&&ref.path.startsWith(WORKSPACE_FILE_PREFIX))return conversationFileEndpoint((ref.group?'group:'+ref.group:'channel:'+ref.channel),ref.path,destination)
-  if(ref.channel){if(destination)throw Error('Channel files are read-only');if(requestContext().principal.kind!=='operator')throw Error('Only the user may download channel files');return channelFileEndpoint({channelId:ref.channel,path:ref.path})}
-  if(ref.group){if(requestContext().principal.kind!=='operator')throw Error('Use chat.file for published group attachments');return {root:groupMediaRoot(ref.group),path:ref.path||'.'}}
+  if(ref.channel){if(destination)throw Error('Channel files are read-only');if(!isAppAdministrator())throw Error('Only the user or Secretary may download channel files');return channelFileEndpoint({channelId:ref.channel,path:ref.path})}
+  if(ref.group){if(!isAppAdministrator())throw Error('Use chat.file for published group attachments');return {root:groupMediaRoot(ref.group),path:ref.path||'.'}}
   if(ref.shared)return {root:sharedDirectory(),path:ref.path||'.'}
   if(ref.local){
     if(!isAbsolute(ref.path))throw Error('本地路径必须为绝对路径')

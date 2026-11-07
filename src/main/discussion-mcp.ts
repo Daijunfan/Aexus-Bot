@@ -1,3 +1,4 @@
+import {nativeToolResult} from './native-tool-result'
 import http from 'node:http'
 import {randomBytes} from 'node:crypto'
 import {DISCUSSION_TOOL,invokeDiscussionTool} from './discussion-tool'
@@ -6,7 +7,7 @@ import {API_TOOL,invokeApiTool} from './api-tool'
 import type {Live} from './sessions'
 
 /** Per-session native tools. Discovery is read-only; publication remains bound to its shared response stage. */
-export async function openDiscussionMcp(state:Live){
+export async function openDiscussionMcp(state:Live,stableCatalog=false){
  const route='/discussion/'+randomBytes(24).toString('hex')
  const server=http.createServer(async(request,response)=>{
   if(request.method!=='POST'||request.url!==route||request.headers.origin){response.writeHead(403);response.end();return}
@@ -23,14 +24,16 @@ export async function openDiscussionMcp(state:Live){
    let result:unknown
    if(input.method==='initialize')result={protocolVersion:input.params?.protocolVersion??'2024-11-05',capabilities:{tools:{}},serverInfo:{name:'agents-company-discussion',version:'1'}}
    else if(input.method==='ping')result={}
-   else if(input.method==='tools/list')result={tools:state.acknowledging?[]:state.privateInitialization?[DOCUMENTATION_TOOL]:[DOCUMENTATION_TOOL,API_TOOL,DISCUSSION_TOOL]}
+   // Some ACP clients cache discovery for the entire native session. Execution still
+   // rechecks initialization, awareness and current principal in each tool handler.
+   else if(input.method==='tools/list')result={tools:!stableCatalog&&state.acknowledging?[]:!stableCatalog&&state.privateInitialization?[DOCUMENTATION_TOOL]:[DOCUMENTATION_TOOL,API_TOOL,DISCUSSION_TOOL]}
    else if(input.method==='tools/call'){
     try{
      const invoke=input.params?.name===DISCUSSION_TOOL.name?invokeDiscussionTool:input.params?.name===DOCUMENTATION_TOOL.name?invokeDocumentationTool:input.params?.name===API_TOOL.name?invokeApiTool:undefined
      if(!invoke)throw Error('Unknown Agents Company tool')
      if(input.id===undefined)throw Error('Discussion tool calls require a request ID')
      const value=await invoke(state,input.params.arguments,String(input.id),controller.signal)
-     result={content:[{type:'text',text:JSON.stringify(value)}]}
+     result=nativeToolResult(value)
     }catch(error){result={isError:true,content:[{type:'text',text:(error as Error).message}]}}
    }else throw Error('Unsupported discussion MCP method')
    response.writeHead(200,{'content-type':'application/json'});response.end(JSON.stringify({jsonrpc:'2.0',id:input.id,result}))

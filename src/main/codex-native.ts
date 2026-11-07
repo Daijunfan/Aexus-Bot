@@ -133,7 +133,10 @@ async function connect(binary:string,initial:Args){
       if(waiting&&(!p.turn.id||!waiting.turnId||waiting.turnId===p.turn.id)){p.turn.status==='failed'?waiting.reject(new Error(p.turn.error?.message||'Turn failed')):waiting.resolve()}
       else args.onEvent({kind:'background-turn',busy:false})
     }
-    if(event.method==='error'&&!p.willRetry){const error=new Error(p.error?.message||'Engine error');if(waiting)waiting.reject(error);else args.onEvent({kind:'notice',level:'error',text:error.message})}
+    if(event.method==='error'){
+      if(p.willRetry)args.onEvent({kind:'notice',level:'info',text:p.error?.message||'Codex 连接中断，正在重试…'})
+      else{const error=new Error(p.error?.message||'Engine error');if(waiting)waiting.reject(error);else args.onEvent({kind:'notice',level:'error',text:error.message})}
+    }
   })
   const close=()=>closing??=(async()=>{
     lifetime.abort();const requests=[...incoming.values()];incoming.clear();for(const c of requests)c.abort()

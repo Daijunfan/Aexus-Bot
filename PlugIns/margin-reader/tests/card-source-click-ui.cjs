@@ -37,7 +37,7 @@ async function fixture(){
   };
   const high=await capture(first,'Same page upper source',3,.1),low=await capture(first,'Same page lower source',3,.76),far=await capture(first,'Distant page source',10,.76),other=await capture(second,'Other PDF source',5,.44);
   await api('settings.set',{pdfMode:'continuous',pdfFit:'width'});await api('study.open',{setId:set.id});
-  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||'/Users/djf/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell'});
+  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||chromium.executablePath()});
   page=await browser.newPage({viewport:{width:1520,height:1000}});page.setDefaultTimeout(12000);page.on('pageerror',e=>report.browserErrors.push(e.message));
   const calls=[];page.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/rpc')){const body=r.postDataJSON();if(body?.method)calls.push(body.method);}});
   await page.goto(server.url);await page.locator('body[data-ready=true]').waitFor();

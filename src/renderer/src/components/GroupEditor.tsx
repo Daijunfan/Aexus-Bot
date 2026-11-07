@@ -1,59 +1,40 @@
-import {useSurfaceMotion} from '../chat/surfaceMotion'
-import {translate as uiText,useI18n} from '../i18n'
-import {useEffect,useState} from 'react'
+import {useRef,useState} from 'react'
 import {createPortal} from 'react-dom'
-import {ConversationControls} from './ConversationControls'
-import {groupRole,CONVERSATION_ROLE_LABELS} from '../../../shared/conversation-controls'
 import type {Store} from '../../../shared/types'
 import type {ChatGroupView} from '../../../shared/chat-groups'
 import {api} from '../api'
-import {Icon} from './Icon'
+import {translate as t,useI18n} from '../i18n'
 import {useDialogFocus} from '../office/useDialogFocus'
+import {useSurfaceMotion} from '../chat/surfaceMotion'
+import {AppSelect} from './AppSelect'
+import {ConversationControls} from './ConversationControls'
+import {EmployeePortrait} from './EmployeePortrait'
+import {Icon} from './Icon'
 
-export function GroupEditor({store,group,onClose,onSaved}:{store:Store;group?:ChatGroupView;onClose:()=>void;onSaved:(group:ChatGroupView)=>void}){
-  useI18n()
-  const surface=useSurfaceMotion<HTMLDivElement>('dialog')
+type Props={store:Store;group?:ChatGroupView;onClose:()=>void;onSaved:(group:ChatGroupView)=>void}
+/** Existing groups save each management action through their own Core policy. */
+export function GroupEditor(props:Props){return props.group?<ConversationControls conversation={'group:'+props.group.id} store={props.store} onClose={props.onClose}/>:<GroupCreation {...props}/>}
 
- const [ownerId,setOwnerId]=useState(group?.ownerId??'')
- const [base]=useState(group),[confirmed,setConfirmed]=useState(group)
- const current=group&&confirmed&&confirmed.revision>group.revision?confirmed:group
- const baseRevision=current&&base&&current.name===base.name&&JSON.stringify(current.memberIds)===JSON.stringify(base.memberIds)?current.revision:base?.revision
- const [name,setName]=useState(group?.name??''),[selected,setSelected]=useState(group?.memberIds??[]),[query,setQuery]=useState(''),[error,setError]=useState(''),[saving,setSaving]=useState(false),[muting,setMuting]=useState(false),[confirmDelete,setConfirmDelete]=useState(false)
- useDialogFocus('.group-editor',true)
- useEffect(()=>{const close=(event:KeyboardEvent)=>{if(event.key==='Escape'&&!event.defaultPrevented&&!event.isComposing){event.preventDefault();onClose()}};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close)},[onClose])
- const cards=store.sessions.filter(card=>!card.deleting),shown=cards.filter(card=>[card.title,card.group].join(' ').toLowerCase().includes(query.toLowerCase()))
- const toggle=(id:string)=>setSelected(previous=>previous.includes(id)?previous.filter(value=>value!==id):[...previous,id])
- const importTeam=(team:string)=>{if(!team)return;setSelected(previous=>[...new Set([...previous,...cards.filter(card=>card.group===team).map(card=>card.id)])]);if(!name.trim())setName(team)}
- const save=async()=>{setSaving(true);setError('');try{
-  const values={name:name.trim(),members:selected,...(!group?{ownerId:selected.includes(ownerId)?ownerId:selected[0]}:{})}
-  if(!group){onSaved(await api.call<ChatGroupView>('chat.create',values));return}
-  let value:ChatGroupView
-  try{value=await api.call<ChatGroupView>('chat.update',{id:group.id,expectedRevision:baseRevision,...values})}
-  catch(cause){
-   if((cause as Error).message!=='Group changed; reload before saving')throw cause
-   const latest=await api.call<ChatGroupView>('chat.get',{id:group.id})
-   if(!base||latest.name!==base.name||JSON.stringify(latest.memberIds)!==JSON.stringify(base.memberIds))throw cause
-   value=await api.call<ChatGroupView>('chat.update',{id:group.id,expectedRevision:latest.revision,...values})
-  }
-  onSaved(value)
- }catch(cause){setError((cause as Error).message)}finally{setSaving(false)}}
- const remove=async()=>{if(!group)return;setSaving(true);try{await api.call('chat.delete',{id:group.id});onClose()}catch(cause){setError((cause as Error).message)}finally{setSaving(false)}}
- return createPortal(<div ref={surface} className="group-editor-overlay">
-  <div className="group-editor-backdrop" onClick={onClose}/>
-  <section className="group-editor" aria-hidden={muting||undefined} role="dialog" aria-modal="true" aria-label={group?uiText("Edit group"):uiText("New group")}>
-   <header><div><span>{uiText("GROUP CONVERSATION")}</span><h2>{group?uiText("Your group, your people"):uiText("Bring your team together")}</h2></div><button aria-label={uiText("Close group editor")} onClick={onClose}><Icon name="close"/></button></header>
-   <label>{uiText("Group name")}<input autoFocus name="chat-name" value={name} maxLength={80} placeholder={uiText("e.g. Product launch")} onChange={event=>setName(event.target.value)}/></label>
-   <label>{uiText("Add a Team")}<select name="chat-team" defaultValue="" onChange={event=>{importTeam(event.target.value);event.target.value=''}}><option value="">{uiText("Choose a Team to add its members")}</option>{store.groups.map(team=><option key={team}>{team}</option>)}</select></label>
-   <p className="group-editor-note">{uiText("A Team fills the selection. Add people from other teams or uncheck anyone. Their original teams and conversations stay unchanged.")}</p>
-   <label className="group-member-search"><Icon name="search"/><input aria-label={uiText("Search group members")} placeholder={uiText("Search employees or teams")} value={query} onChange={event=>setQuery(event.target.value)}/></label>
-   <div className="group-member-heading"><strong>{uiText("Members")}</strong><span>{uiText('{0} selected',[selected.length])}</span><button onClick={()=>setSelected(current?.ownerId?[current.ownerId]:[])} disabled={saving||muting||!selected.length}>{uiText("Clear")}</button></div>
-   <div className="group-member-options">{shown.map(card=><label key={card.id}><input type="checkbox" checked={selected.includes(card.id)} disabled={card.id===current?.ownerId} onChange={()=>toggle(card.id)}/><span><strong>{card.title}</strong><small>{card.group} · {CONVERSATION_ROLE_LABELS[current?groupRole(current,card.id)??'member':(selected.includes(ownerId)?ownerId:selected[0])===card.id?'owner':'member']}</small></span></label>)}{!shown.length&&<p>{uiText("No employees match your search.")}</p>}</div>
-   {!current&&selected.length>0&&<label>Owner<select name="chat-owner" value={selected.includes(ownerId)?ownerId:selected[0]} onChange={event=>setOwnerId(event.target.value)}>{cards.filter(card=>selected.includes(card.id)).map(card=><option key={card.id} value={card.id}>{card.title}</option>)}</select></label>}
-   {current&&<button className="conversation-control-open" disabled={saving||muting} onClick={()=>setMuting(true)}><Icon name="shield"/>{uiText('Roles, moderation & notifications')}</button>}
-   {error&&<p className="group-error" role="alert">{uiText(error)}</p>}
-   {confirmDelete&&<div className="group-delete-confirm" role="alert"><p>{uiText("Remove this group? Employees, their work, and private conversations will be kept.")}</p><button disabled={saving||muting} onClick={()=>void remove()}>{uiText("Confirm removal")}</button><button onClick={()=>setConfirmDelete(false)}>{uiText("Keep group")}</button></div>}
-   <footer>{group&&<button className="group-delete" disabled={saving||muting} onClick={()=>setConfirmDelete(true)}>{uiText("Delete group")}</button>}<button onClick={onClose}>{uiText("Cancel")}</button><button className="primary" disabled={saving||muting||!name.trim()||!group&&!selected.length} onClick={()=>void save()}>{saving?uiText("Saving…"):group?uiText("Save group"):uiText("Create group")}</button></footer>
-  </section>
-  {current&&muting&&<ConversationControls conversation={'group:'+current.id} store={store} onClose={()=>setMuting(false)} onChanged={()=>void api.call<ChatGroupView>('chat.get',{id:current.id}).then(setConfirmed).catch(()=>onClose())}/>}
+function GroupCreation({store,onClose,onSaved}:Props){
+ useI18n();useDialogFocus('.group-creation-dialog',true)
+ const surface=useSurfaceMotion<HTMLDivElement>('dialog'),inFlight=useRef(false)
+ const [name,setName]=useState(''),[selected,setSelected]=useState<string[]>([]),[owner,setOwner]=useState(''),[query,setQuery]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('')
+ const cards=store.sessions.filter(card=>!card.deleting),shown=cards.filter(card=>[card.title,card.group].join(' ').toLocaleLowerCase().includes(query.toLocaleLowerCase())),ownerId=selected.includes(owner)?owner:selected[0]??''
+ const addTeam=(team:string)=>{if(!team)return;setSelected(previous=>[...new Set([...previous,...cards.filter(card=>card.group===team).map(card=>card.id)])]);if(!name.trim())setName(team)}
+ const close=()=>{if(!inFlight.current)onClose()}
+ const save=async()=>{if(inFlight.current)return;inFlight.current=true;setBusy(true);setError('');try{onSaved(await api.call<ChatGroupView>('chat.create',{name:name.trim(),members:selected,ownerId}))}catch(cause){setError((cause as Error).message)}finally{inFlight.current=false;setBusy(false)}}
+ return createPortal(<div ref={surface} className="group-editor-overlay" onKeyDown={event=>{if(event.key==='Escape'&&!event.defaultPrevented&&!event.nativeEvent.isComposing){event.preventDefault();event.stopPropagation();close()}}}>
+  <div className="group-editor-backdrop" onClick={close}/><form className="group-editor group-creation-dialog" role="dialog" aria-modal="true" aria-label={t('New group')} onSubmit={event=>{event.preventDefault();if(!busy&&name.trim()&&selected.length&&selected.length<=200)void save()}}>
+   <header><span className="management-dialog-mark"><Icon name="organization"/></span><div><h2>{t('New group')}</h2><small>{t('Choose a name, members and group owner')}</small></div><button type="button" disabled={busy} aria-label={t('Close group editor')} onClick={close}><Icon name="close"/></button></header>
+   <div className="group-creation-body">
+    <label>{t('Group name')}<input autoFocus name="chat-name" maxLength={80} placeholder={t('e.g. Product team')} disabled={busy} value={name} onChange={event=>setName(event.target.value)}/></label>
+    <div className="group-creation-pair"><label>{t('Add a Team')}<AppSelect aria-label={t('Add a Team')} name="chat-team" value="" disabled={busy} onChange={event=>addTeam(event.target.value)}><option value="">{t('Choose a Team to add its members')}</option>{store.groups.map(team=><option key={team} value={team}>{team}</option>)}</AppSelect></label><label>{t('Group owner')}<AppSelect aria-label={t('Group owner')} name="chat-owner" value={ownerId} disabled={busy||!selected.length} onChange={event=>setOwner(event.target.value)}>{!selected.length&&<option value="">{t('Choose members first')}</option>}{cards.filter(card=>selected.includes(card.id)).map(card=><option key={card.id} value={card.id}>{card.title}</option>)}</AppSelect></label></div>
+    <div className="group-member-heading"><strong>{t('Members')}</strong><span>{selected.length} / 200</span><button type="button" disabled={busy||!selected.length} onClick={()=>setSelected([])}>{t('Clear')}</button></div>
+    <label className="management-search"><Icon name="search"/><input aria-label={t('Search group members')} placeholder={t('Search employees or teams')} value={query} onChange={event=>setQuery(event.target.value)}/></label>
+    <div className="group-member-options group-creation-members">{shown.map(card=><label key={card.id} data-selected={selected.includes(card.id)}><input type="checkbox" checked={selected.includes(card.id)} disabled={busy||!selected.includes(card.id)&&selected.length>=200} onChange={()=>setSelected(previous=>previous.includes(card.id)?previous.filter(id=>id!==card.id):[...previous,card.id])}/><EmployeePortrait avatar={card.avatar} color={card.color}/><span><strong>{card.title}</strong><small>{card.group} · {t(card.kind==='cloud-native-worker'?'Cloud engine':'Local engine')}</small></span>{ownerId===card.id&&<em className="conversation-role-badge owner"><Icon name="star-full"/>{t('Group owner')}</em>}</label>)}{!shown.length&&<p>{t('No employees match your search.')}</p>}</div>
+    {error&&<p className="group-error" role="alert">{t(error)}</p>}
+   </div>
+   <footer><button type="button" disabled={busy} onClick={close}>{t('Cancel')}</button><button type="submit" className="primary" disabled={busy||!name.trim()||!selected.length||selected.length>200}>{t(busy?'Creating…':'Create group')}</button></footer>
+  </form>
  </div>,document.body)
 }

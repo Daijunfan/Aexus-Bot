@@ -18,7 +18,7 @@ export async function probeProcessEngine(engine:'cline'|'pi',model=processProvid
       await client.call('session/set_config_option',{sessionId:session.sessionId,configId:'model',value:model})
       await client.call('session/prompt',{sessionId:session.sessionId,prompt:[{type:'text',text:prompt}]},45000)
     }else{
-      await client.call('set_model',{provider:client.provider,modelId:model});await client.call('set_thinking_level',{level:'off'})
+      await client.call('set_model',{provider:client.provider,modelId:model})
       const settled=new Promise<void>((resolve,reject)=>{finish=resolve;timer=setTimeout(()=>reject(Error('Pi model probe timed out')),45000)})
       void settled.catch(()=>{});await client.call('prompt',{message:prompt});await settled
     }

@@ -191,6 +191,87 @@ function textValue(value: any): string {
     }`.trim();
   return JSON.stringify(value, null, 2);
 }
+function markdownCell(value: any): string {
+  const raw = value === null || value === undefined ? ''
+    : typeof value === 'object' ? JSON.stringify(value) : String(value);
+  return raw.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('|', '\\|').replace(/\r?\n/g, '<br>');
+}
+function markdownTable(headers: string[], rows: any[][]): string {
+  const line = (cells: any[]) => '| ' + cells.map(markdownCell).join(' | ') + ' |';
+  return [line(headers), line(headers.map(() => '---')), ...rows.map(line)].join('\n');
+}
+function markdownRecords(records: any[], columns?: { id: string; name: string }[]): string {
+  const keys = columns?.map(column => column.id) ||
+    [...new Set(records.flatMap(record => Object.keys(record.values || {})))];
+  const headers = ['名称', ...keys.map(id => columns?.find(column => column.id === id)?.name || id), 'ID'];
+  return markdownTable(headers, records.map(record => [
+    record.title || '无标题', ...keys.map(id => record.values?.[id]), record.id,
+  ]));
+}
+function markdownValue(value: any): string {
+  if (value && Array.isArray(value.records) && value.view) {
+    const lines = [
+      '# ' + markdownCell(value.name || '数据库'),
+      '',
+      '**视图：** ' + markdownCell(value.view.name || value.view.type),
+      '**记录数：** ' + value.count,
+      '',
+      '## 记录',
+      '',
+      markdownRecords(value.records, value.columns),
+    ];
+    const titles = new Map(value.records.map((record: any) => [record.id, record.title || '无标题']));
+    if (value.series?.length) lines.push('', '## 图表数据', '',
+      markdownTable(['分组', '数值'], value.series.map((entry: any) => [entry.name, entry.value])));
+    if (value.groups?.length) lines.push('', '## 分组', '',
+      markdownTable(['分组', '记录'], value.groups.map((group: any) =>
+        [group.name, group.records.map((id: string) => titles.get(id) || id).join('、')])));
+    if (value.days?.length) lines.push('', '## 日期', '',
+      markdownTable(['日期', '记录'], value.days.map((day: any) =>
+        [day.date, day.records.map((id: string) => titles.get(id) || id).join('、')])));
+    if (value.schedule?.length) lines.push('', '## 日程', '',
+      markdownTable(['开始', '结束', '记录'], value.schedule.map((event: any) =>
+        [event.start || '未排期', event.end, event.title])));
+    if (value.timeGrid?.days?.length) {
+      lines.push('', '## 时间安排');
+      for (const day of value.timeGrid.days) {
+        lines.push('', '### ' + markdownCell(day.date), '');
+        for (const id of day.allDay) lines.push('- 全天：' + markdownCell(titles.get(id) || id));
+        for (const event of day.events)
+          lines.push('- ' + markdownCell(event.start) + ' → ' + markdownCell(event.end) +
+            '：' + markdownCell(titles.get(event.id) || event.id));
+      }
+    }
+    if (value.hierarchy?.length) lines.push('', '## 层级', '',
+      ...value.hierarchy.map((row: any) => '  '.repeat(row.depth) +
+        '- ' + markdownCell(titles.get(row.id) || row.id)));
+    for (const [heading, ids] of [['未排期', value.unscheduled], ['逾期', value.overdue]] as const)
+      if (ids?.length) lines.push('', '## ' + heading, '',
+        ...ids.map((id: string) => '- ' + markdownCell(titles.get(id) || id)));
+    if (value.dependencies?.length) lines.push('', '## 依赖关系', '',
+      ...value.dependencies.map((edge: any) =>
+        '- ' + markdownCell(edge.fromTitle) + ' → ' + markdownCell(edge.toTitle)));
+    if (value.calculations && Object.keys(value.calculations).length)
+      lines.push('', '## 汇总', '', markdownTable(['属性', '结果'],
+        Object.entries(value.calculations).map(([id, entry]: [string, any]) =>
+          [value.columns?.find((column: any) => column.id === id)?.name || id, entry.value])));
+    return lines.join('\n');
+  }
+  if (Array.isArray(value)) {
+    if (!value.length) return '_没有记录_';
+    if (value.every(item => item && typeof item === 'object' && item.id && 'title' in item))
+      return markdownRecords(value);
+    if (value.every(item => item && typeof item === 'object' && !Array.isArray(item))) {
+      const keys = [...new Set(value.flatMap(item => Object.keys(item)))];
+      return markdownTable(keys, value.map(item => keys.map(key => item[key])));
+    }
+    return value.map(item => '- ' + markdownCell(item)).join('\n');
+  }
+  if (value && typeof value === 'object')
+    return markdownTable(['字段', '值'], Object.entries(value));
+  return markdownCell(value);
+}
 function print(result: any, response?: ApiResponse) {
   const options = program.opts();
   const format = options.json ? 'json' : options.format;
@@ -199,7 +280,8 @@ function print(result: any, response?: ApiResponse) {
     return;
   }
   if (format === 'json') process.stdout.write(JSON.stringify(result, null, 2) + '\n');
-  else if (format === 'text' || format === 'markdown') process.stdout.write(textValue(result) + '\n');
+  else if (format === 'text') process.stdout.write(textValue(result) + '\n');
+  else if (format === 'markdown') process.stdout.write(markdownValue(result) + '\n');
   else if (format === 'csv') {
     const rows = Array.isArray(result) ? result : result.records;
     if (!Array.isArray(rows)) throw new ApiError('INVALID_FORMAT', 'CSV 输出需要记录列表');

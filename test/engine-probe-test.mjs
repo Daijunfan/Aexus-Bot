@@ -27,9 +27,12 @@ try{
  assert.ok(calls[0].args.includes('--ephemeral')&&calls[0].args.includes('read-only'))
  assert.ok(calls[1].args.includes('--no-session-persistence'));assert.equal(calls[1].args[calls[1].args.indexOf('--tools')+1],'')
  await f.cli('engine','configure','--engine','codex','--data','{"apiKey":"probe-test-sensitive"}')
+ const catalog=await f.cli('engine','providers','--engine','codex');assert.equal(catalog.source,'app');assert.equal(catalog.profiles.find(p=>p.active).source,'app');assert.ok(!JSON.stringify(catalog).includes('probe-test-sensitive'))
+ assert.equal((await f.raw(null,'engine','providers','--engine','invalid')).ok,false)
  const failed=await f.raw(null,'engine','probe','--engine','codex','--model','fail','--confirm')
  assert.equal(failed.ok,false);assert.ok(!failed.error.includes('probe-test-sensitive'));assert.match(failed.error,/redacted/)
  await f.cli('group','add','A');const card=await f.cli('card','create','--title','Employee','--group','A','--model','gpt-6-luna'),token=await f.token(card.id)
  assert.equal((await f.raw(token,'engine','probe','--engine','codex','--confirm')).ok,false)
+ assert.equal((await f.raw(token,'engine','providers','--engine','codex')).ok,false)
  console.log('PASS explicit engine probe: confirmation, real response protocol, target process, cleanup, permission, no employee side effects and credential redaction; fixture only')
 }finally{await f.close();fs.rmSync(temp,{recursive:true,force:true})}

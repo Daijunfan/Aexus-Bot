@@ -89,3 +89,69 @@ test('invalid types, syntax, missing properties and arbitrary code are rejected'
   assert.throws(() => run('unknown(1)'), /未知函数/);
   assert.throws(() => run('1;2'));
 });
+
+test('reused formula syntax keeps record values, clocks and lambda scopes independent', () => {
+  const expression = 'prop("values").map(current + index + prop("offset"))';
+  const source = [1, 2, 3];
+  for (const offset of [0, 20, -5]) {
+    assert.deepEqual(
+      evaluateFormula(expression, {
+        ...context,
+        property: (name) => (name === 'values' ? source : offset),
+      }),
+      [1 + offset, 3 + offset, 5 + offset],
+    );
+  }
+  assert.deepEqual(source, [1, 2, 3]);
+  assert.equal(evaluateFormula('timestamp(now())', { ...context, now: new Date(123456) }), 123456);
+  assert.equal(evaluateFormula('timestamp(now())', { ...context, now: new Date(987654) }), 987654);
+  assert.deepEqual(run('[[1, 2], [3]].map(current.map(current + index))'), [[1, 3], [3]]);
+  assert.equal(run('if(true, 7, prop("不存在"))'), 7);
+  assert.equal(run('and(false, prop("不存在"))'), false);
+  assert.equal(run('or(true, prop("不存在"))'), true);
+});
+
+test('list membership evaluates its search argument once per call', () => {
+  let reads = 0;
+  const result = evaluateFormula('prop("values").includes(prop("needle"))', {
+    ...context,
+    property: (name) => {
+      if (name === 'values') return [1, 2, 3, 4];
+      reads++;
+      return 4;
+    },
+  });
+  assert.equal(result, true);
+  assert.equal(reads, 1);
+});
+
+test('large-list aggregates and unique values preserve order without argument-stack limits', () => {
+  const values = Array.from({ length: 150_000 }, (_, index) => index - 50_000);
+  const large = { ...context, property: () => values };
+  assert.equal(evaluateFormula('max(prop("values"))', large), 99_999);
+  assert.equal(evaluateFormula('min(prop("values"))', large), -50_000);
+  assert.equal(evaluateFormula('prop("values").unique().length()', large), values.length);
+  const page = { kind: 'page' as const, id: 'a' };
+  const date = new Date('2026-01-01T00:00:00Z');
+  const structured = [page, { ...page }, [1, 2], [1, 2], date, new Date(date), null, null, 1, '1'];
+  assert.deepEqual(evaluateFormula('prop("values").unique()', { ...context, property: () => structured }), [
+    page,
+    [1, 2],
+    date,
+    null,
+    1,
+    '1',
+  ]);
+});
+
+test('official Notion formula examples retain their list, text and date behavior', () => {
+  assert.equal(run('substring("Notion", 3)'), 'ion');
+  assert.equal(run('sum([1, 2, 3], 4, 5)'), 15);
+  assert.deepEqual(run('slice(["a", "b", "c"], 1)'), ['b', 'c']);
+  assert.deepEqual(run('sort([3, 1, 2])'), [1, 2, 3]);
+  assert.deepEqual(run('flat([[1, 2], [3, 4]])'), [1, 2, 3, 4]);
+  assert.equal(run('find([1, 2, 3], current > 100)'), null);
+  assert.equal(run('findIndex([1, 2, 3], current > 100)'), -1);
+  assert.equal(run('lets(base, 3, height, 8, base * height / 2)'), 12);
+  assert.equal(run('timestamp(fromTimestamp(1689024900123))'), 1689024900000);
+});

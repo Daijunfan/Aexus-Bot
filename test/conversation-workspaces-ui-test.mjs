@@ -27,7 +27,7 @@ try{
   await page.screenshot({path:path.join(out,'company-header-'+width+'.png'),animations:'disabled'})
  }
  await page.setViewportSize({width:1440,height:1000});await page.getByRole('button',{name:'Messages',exact:true}).click();await expect(page.locator('.company-actions')).toHaveCount(0)
- await page.getByRole('button',{name:'Plan',exact:true}).click();await expect(page.locator('.plan-view')).toBeVisible();await expect(page.locator('.company-actions')).toHaveCount(0)
+ await page.getByRole('button',{name:'Mission',exact:true}).click();await expect(page.locator('.plan-view')).toBeVisible();await expect(page.locator('.company-actions')).toHaveCount(0)
  await page.getByRole('button',{name:'Messages',exact:true}).click();await page.getByRole('button',{name:'New group',exact:true}).click()
  let dialog=page.getByRole('dialog',{name:'New group',exact:true});await dialog.locator('[name=chat-team]').selectOption('Product');await dialog.locator('.group-member-options label').filter({hasText:'Bob'}).getByRole('checkbox').check();await dialog.locator('[name=chat-name]').fill('Release room');await dialog.getByRole('button',{name:'Create group',exact:true}).click()
  const group=(await rpc('chat.list')).find(value=>value.name==='Release room'),ref='group:'+group.id,channelRef='channel:'+channel.id

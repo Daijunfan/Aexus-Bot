@@ -6,7 +6,7 @@ import { validateRelationships, relationIds } from '../src/database/relations.ts
 import { hierarchyRows } from '../src/database/structure.ts';
 import { queryRows, activeView } from '../src/database/model.ts';
 import { applyDependencyShifts } from '../src/database/dependencies.ts';
-import { readProperty } from '../src/model.ts';
+import { makePage, readProperty } from '../src/model.ts';
 import type { Workspace } from '../src/types.ts';
 
 function fixture() {
@@ -28,6 +28,29 @@ function fixture() {
     },
   };
 }
+
+test('deep sub-item and dependency graphs validate without recursion and still reject cycles', () => {
+  const database = makePage({ id: 'deep-db', database: { view: 'table', columns: [] } });
+  const records = Array.from({ length: 15_000 }, (_, index) =>
+    makePage({
+      id: `deep-${index}`,
+      parentId: database.id,
+      subItemOf: index ? `deep-${index - 1}` : null,
+      blockedBy: index ? [`deep-${index - 1}`] : [],
+    }),
+  );
+  const workspace = { ...createWorkspace(), pages: [database, ...records.toReversed()] };
+  assert.doesNotThrow(() => validateRelationships(workspace));
+  const cycle = (changes: { subItemOf?: string; blockedBy?: string[] }) => ({
+    ...workspace,
+    pages: workspace.pages.map((page) => (page.id === records[0].id ? { ...page, ...changes } : page)),
+  });
+  assert.throws(() => validateRelationships(cycle({ subItemOf: records.at(-1)!.id })), /循环层级/);
+  assert.throws(
+    () => validateRelationships(cycle({ blockedBy: [records.at(-1)!.id] })),
+    /依赖关系不能形成循环/,
+  );
+});
 test('sub-items nest, collapse and expose live parent/children relations to formulas and rollups', () => {
   const f = fixture(),
     call = f.call;

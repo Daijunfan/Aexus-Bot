@@ -46,7 +46,23 @@ export class MindmapStudio {
   this.map.board.addEventListener('dblclick',e=>{if(!this.enabled||e.target.closest('button,input,select,[data-link-id]')||this.study.cardInk.mode!=='off')return;const card=e.target.closest('.study-card');if(card){e.preventDefault();e.stopImmediatePropagation();if(e.target.closest('.mm-equation'))this.equation.open(card.dataset.cardId);else run(()=>this.editTitle(card.dataset.cardId))();}},true);
   this.map.board.addEventListener('click',e=>{const item=e.target.closest('[data-mm-item]'),link=e.target.closest('[data-mm-link]');if(item||link){e.preventDefault();e.stopPropagation();this.open(item?'decoration':'relationship',item?.dataset.mmItem||link?.dataset.mmLink);}},true);
   const view=$('study-map-viewport');view.addEventListener('scroll',()=>this.overview(),{passive:true});new ResizeObserver(()=>this.overview()).observe(view);
-  minimap.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;e.preventDefault();e.stopPropagation();const svg=minimap.querySelector('svg'),rect=svg.getBoundingClientRect(),layout=this.map.layout,scale=Math.min(rect.width/layout.width,rect.height/layout.height),left=rect.x+(rect.width-layout.width*scale)/2,top=rect.y+(rect.height-layout.height*scale)/2;const move=e=>{this.map.camera.center((e.clientX-left)/scale,(e.clientY-top)/scale);};move(e);minimap.setPointerCapture(e.pointerId);const stop=()=>{minimap.removeEventListener('pointermove',move);minimap.removeEventListener('pointerup',stop);};minimap.addEventListener('pointermove',move);minimap.addEventListener('pointerup',stop,{once:true});});
+  minimap.addEventListener('pointerdown',e=>{
+   if(e.button!==0||e.target.closest('button'))return;
+   e.preventDefault();e.stopPropagation();
+   const svg=minimap.querySelector('svg'),rect=svg.getBoundingClientRect(),layout=this.map.layout,scale=Math.min(rect.width/layout.width,rect.height/layout.height),left=rect.x+(rect.width-layout.width*scale)/2,top=rect.y+(rect.height-layout.height*scale)/2;
+   const id=e.pointerId,initial={...this.map.camera.state};
+   const move=e=>{if(e.pointerId===id)this.map.camera.center((e.clientX-left)/scale,(e.clientY-top)/scale);};
+   const finish=keep=>{
+    minimap.removeEventListener('pointermove',move);minimap.removeEventListener('pointerup',end);minimap.removeEventListener('pointercancel',cancel);minimap.removeEventListener('lostpointercapture',cancel);document.removeEventListener('keydown',key,true);
+    if(minimap.hasPointerCapture(id))minimap.releasePointerCapture(id);
+    if(!keep){this.map.camera.state=initial;this.map.camera.paint();}
+   };
+   const end=e=>{if(e.pointerId===id){move(e);finish(true);}};
+   const cancel=e=>{if(e.pointerId===id)finish(false);};
+   const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();finish(false);}};
+   minimap.addEventListener('pointermove',move);minimap.addEventListener('pointerup',end);minimap.addEventListener('pointercancel',cancel);minimap.addEventListener('lostpointercapture',cancel);document.addEventListener('keydown',key,true);
+   minimap.setPointerCapture(id);move(e);
+  });
  }
  get enabled(){return this.study.current?.map?.mindmap?.enabled===true;}
  get dirty(){return Boolean(this.zones?.active||this.busy||this.inline||this.baseline&&JSON.stringify(this.values())!==JSON.stringify(this.baseline));}
@@ -140,7 +156,27 @@ export class MindmapStudio {
  richTitle(){const set=this.study.current,card=set.cards.find(c=>c.id===this.selectedIds[0]);if(!card)return;showDialog({title:'局部文字格式',html:field('text','匹配文字','',{required:true,help:'对首个匹配范围设置格式；其它文字的已有格式保留。标题：'+card.title})+field('color','颜色','#D25F61',{type:'color'})+field('weight','字体','bold',{choices:[['bold','加粗'],['italic','斜体'],['underline','下划线'],['normal','仅颜色']]}),onSubmit:v=>{const start=card.title.indexOf(v.text);if(start<0)throw Error('标题中没有这段文字。');return this.study.change('study.mindmap.topics.update',{cardIds:[card.id],patch:{runs:applyTitleRun(card.mindmap?.runs,start,start+v.text.length,{color:v.color,...(v.weight==='normal'?{}:{[v.weight]:true})})}},set.revision);}});}
  organizeRoots(){this.guard();const set=this.study.current,summaryIds=new Set((set.map.mindmap.items||[]).filter(i=>i.kind==='summary').map(i=>i.topicId)),roots=set.cards.filter(c=>!c.parentId&&c.inMap!==false&&!summaryIds.has(c.id));if(roots.length<2){toast('已有统一中心，使用 Tab 添加子主题，Enter 添加同级主题。');return;}showDialog({title:'整理成一个完整思维导图',html:field('title','中心主题',set.title,{required:true})+'<p class="dialog-note">将 '+roots.length+' 个自由分支放到新中心下，保留已有子主题、摘录、笔记和原文链接。可用撤销恢复原结构。</p>',submit:'整理',onSubmit:async v=>{await this.study.change('study.cards.group',{cardIds:roots.map(c=>c.id),title:v.title},set.revision);this.map.fit();}});}
  templates(){const set=this.study.current;run(async()=>{const c=await api('study.mindmap.catalog');showDialog({title:'添加导图模板',html:field('template','结构模板','brainstorm',{choices:Object.entries(c.templates).map(([id,t])=>[id,t.title])})+field('title','中心主题','',{help:'留空使用模板名称；现有主题与原文不会删除。'}),submit:'添加',onSubmit:async v=>{const next=await this.study.change('study.mindmap.template.apply',{template:v.template,...(v.title.trim()?{title:v.title}:{})},set.revision);this.map.select(next.lastInsertedCard);this.map.fit();}});})();}
- export(){const set=this.study.current;showDialog({title:'导出思维导图',html:field('format','格式','svg',{choices:[['svg','SVG · 矢量图'],['png','PNG · 图像'],['pdf','PDF · 矢量文字与曲线'],['pptx','PowerPoint · 可编辑讲解页']]})+field('content','导出内容','map',{choices:[['map','思维导图 · SVG / PNG / PDF'],['pitch','自动编排演示 · PDF / PPTX']]})+field('pdfMode','PDF 模式','vector',{choices:[['vector','矢量 · 可选择文字'],['raster','图像 · 字体兼容']]})+field('paper','PDF 纸张','auto',{choices:[['auto','自动 · 整张导图'],['A4','A4 横向'],['A3','A3 横向']]})+field('path','保存路径','mindmap.svg',{required:true})+field('scope','范围','all',{choices:[['all','完整导图 · 展开所有分支'],['visible','当前分支与折叠状态']]})+'<p class="dialog-note">原件、卡片与历史不变。SVG 与默认 PDF 保留矢量文字和曲线；PDF 使用本机 Unicode 字体，PNG 与兼容 PDF 才栅格化。</p>',submit:'导出',onSubmit:async v=>{const r=await api('study.mindmap.export',{setId:set.id,expectedRevision:set.revision,...v});toast(`已导出 ${r.topics} 个主题${r.slides?' / '+r.slides+' 页演示':''}：${r.path}${r.warnings?.length?' · '+r.warnings.join('；'):''}`);},afterOpen:()=>{$('dialog-fields').querySelector('[name=format]').onchange=e=>{$('dialog-fields').querySelector('[name=path]').value='mindmap.'+e.target.value;$('dialog-fields').querySelector('[name=content]').value=e.target.value==='pptx'?'pitch':'map';};}});}
+ export(){const set=this.study.current;showDialog({title:'导出思维导图',html:field('format','格式','svg',{choices:[['svg','SVG · 矢量图'],['png','PNG · 图像'],['pdf','PDF · 矢量文字与曲线'],['pptx','PowerPoint · 可编辑讲解页'],['md','Markdown · 可编辑层级与笔记']]})+field('content','导出内容','map',{choices:[['map','思维导图 · SVG / PNG / PDF'],['pitch','自动编排演示 · PDF / PPTX']]})+field('pdfMode','PDF 模式','vector',{choices:[['vector','矢量 · 可选择文字'],['raster','图像 · 字体兼容']]})+field('paper','PDF 纸张','auto',{choices:[['auto','自动 · 整张导图'],['A4','A4 横向'],['A3','A3 横向']]})+field('path','保存路径','mindmap.svg',{required:true})+field('scope','范围','all',{choices:[['all','完整导图 · 展开所有分支'],['visible','当前分支与折叠状态']]})+'<p class="dialog-note">原件、卡片与历史不变。SVG 与默认 PDF 保留矢量文字和曲线；PDF 使用本机 Unicode 字体，PNG 与兼容 PDF 才栅格化。</p>',submit:'导出',onSubmit:async v=>{const r=v.format==='md'?await api('study.export.file',{setId:set.id,path:v.path,format:'md',expanded:v.scope!=='visible'}):await api('study.mindmap.export',{setId:set.id,expectedRevision:set.revision,...v});toast(v.format==='md'?`已导出 Markdown：${r.path}`:`已导出 ${r.topics} 个主题${r.slides?' / '+r.slides+' 页演示':''}：${r.path}${r.warnings?.length?' · '+r.warnings.join('；'):''}`);},afterOpen:()=>{
+      const form=$('dialog-fields'),format=form.querySelector('[name=format]'),filename=form.querySelector('[name=path]');
+      const toggle=(name,visible)=>{
+        const input=form.querySelector('[name='+name+']'),row=input?.closest('.dialog-field');
+        if(row)row.style.display=visible?'':'none';
+        if(input)input.disabled=!visible;
+      };
+      const apply=(changed=false)=>{
+        const value=format.value,pdf=value==='pdf',pitch=value==='pptx';
+        if(changed){
+          const old=filename.value.trim()||'mindmap.svg';
+          filename.value=/\.(svg|png|pdf|pptx|md)$/i.test(old)?old.replace(/\.(svg|png|pdf|pptx|md)$/i,'.'+value):old+'.'+value;
+        }
+        form.querySelector('[name=content]').value=pitch?'pitch':'map';
+        toggle('content',pdf);
+        toggle('pdfMode',pdf);
+        toggle('paper',pdf);
+        toggle('scope',!pitch);
+      };
+      format.onchange=()=>apply(true);apply();
+    }});}
  overview(){
   const l=this.map.layout,v=$('study-map-viewport');this.minimap.hidden=!this.enabled||!l||this.study.current.map.mindmap.minimap===false||v.hidden;if(this.minimap.hidden)return;
   const svg=this.minimap.querySelector('svg');svg.setAttribute('viewBox',`0 0 ${l.width} ${l.height}`);const signature=this.study.current.id+':'+this.study.current.revision+':'+l.width+':'+l.height;

@@ -1,5 +1,6 @@
 import type { Workspace } from '../types.ts';
-import type { ApiResponse, StateEvent } from './protocol.ts';
+import type { ApiResponse, ServiceEvent, StateEvent } from './protocol.ts';
+import {applyWorkspaceDelta} from './stateDelta.ts';
 import { applyWorkspacePatch, diffWorkspace, hasChanges, type WorkspacePatch } from './patch.ts';
 
 export type SyncState = {
@@ -47,8 +48,15 @@ export class WorkspaceSync {
     };
     this.listeners.forEach((listener) => listener(state));
   }
-  receive(event: StateEvent) {
-    if (!event.workspace) return;
+  receive(event: Extract<ServiceEvent,{type:'state'|'delta'}>) {
+    const incoming = event.type === 'delta' ? applyWorkspaceDelta(this.confirmed,event.delta) : event.workspace;
+    if (!incoming) {
+      // Recover a skipped delta from the authoritative service without dropping drafts.
+      if (event.type === 'delta') void this.request('workspace.get', {}).then(response => {
+        if (response.result) this.receive({type:'state',workspace:response.result,revision:response.revision});
+      }).catch(error => { this.error = String(error); this.emit(); });
+      return;
+    }
     this.projected = undefined;
     if (event.resolution) {
       const failed = this.pending.find((patch) => patch.id === event.resolution!.patchId);
@@ -66,7 +74,7 @@ export class WorkspaceSync {
     // A scan can happen while processing a write; it is not that write's receipt.
     if (event.requestId && (!event.method || event.method === 'workspace.patch'))
       this.pending = this.pending.filter((patch) => patch.id !== event.requestId);
-    if (event.revision >= (this.confirmed.revision || 0)) this.confirmed = event.workspace;
+    if (event.revision >= (this.confirmed.revision || 0)) this.confirmed = incoming;
     this.emit();
     if (event.resolution && !this.error) void this.flush();
   }
@@ -112,12 +120,22 @@ export class WorkspaceSync {
             this.emit();
             break;
           }
+          const confirmed = response.workspace || (response.delta
+            ? applyWorkspaceDelta(this.confirmed,response.delta)
+            : null);
+          if (!confirmed) {
+            // SSE may have delivered a newer revision before the mutation reply.
+            if ((this.confirmed.revision || 0) >= response.revision) {
+              this.pending = this.pending.filter(item => item.id !== patch.id);
+              this.projected = undefined;
+              this.emit();
+              continue;
+            }
+            throw new Error('增量版本不匹配，请重试同步');
+          }
           this.receive({
-            type: 'state',
-            workspace: response.workspace!,
-            revision: response.revision,
-            requestId: patch.id,
-            method: 'workspace.patch',
+            type: 'state', workspace: confirmed,
+            revision: response.revision, requestId: patch.id, method: 'workspace.patch',
           });
         } catch (error) {
           this.error = error instanceof Error ? error.message : String(error);

@@ -99,6 +99,12 @@ try{
   await resize(1440);for(const type of ['table','board','gallery','list','feed','chart','form']){await select(type);await page.locator('.database').scrollIntoViewIfNeeded();if(['table','board','gallery','list','feed'].includes(type))await expect(page.locator('.database')).toContainText('循环');await shot(`view-${type}`)}
   for(const mode of ['day','week','agenda']){await select('plan',{planMode:mode});await page.locator('.plan-view').scrollIntoViewIfNeeded();await expect(page.locator('.plan-view')).toContainText('循环');await shot('plan-'+mode)}
   for(const scale of ['week','quarter','year']){await select('timeline',{timelineScale:scale});await expect(page.locator(`[data-timeline-id="${short.id}"] .event-summary`)).toContainText('09:00–09:05');await shot('timeline-'+scale)}
+  // Density/overflow was checked above. Keep this keyboard/resize case in a clear lane.
+  for(const row of await api('record.list',{databaseId:db.id})){
+    const start=row.values?.date?.start;
+    if(row.id!==short.id && typeof start==='string' && start.startsWith(day+'T09:'))
+      await api('record.update',{pageId:row.id,values:{date:{start:day+'T12:00',end:day+'T13:00',timeZone:zone}}});
+  }
   await select('plan',{planMode:'hourDay'});const target=page.locator(`.hourly-event[data-record-id="${short.id}"]`);await target.scrollIntoViewIfNeeded();await target.focus();await target.press('Alt+ArrowDown');
   await expect.poll(async()=>String((await api('page.get',{pageId:short.id})).values.date.start)).toContain('09:15');
   const changed=(await api('page.get',{pageId:short.id})).values.date;assert.ok(changed.end.includes('09:20'),'visual minimum does not change five-minute duration');

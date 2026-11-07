@@ -268,6 +268,963 @@
       ]
     ]
   },
+  "worker.start": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "cols",
+        "cols",
+        "number",
+        false,
+        false
+      ],
+      [
+        "rows",
+        "rows",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.read": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "cursor",
+        "cursor",
+        "number",
+        false,
+        false
+      ],
+      [
+        "waitMs",
+        "wait-ms",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.resize": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "cols",
+        "cols",
+        "number",
+        false,
+        false
+      ],
+      [
+        "rows",
+        "rows",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.interrupt": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ],
+    "rawPositionals": true
+  },
+  "worker.stop": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ],
+    "rawPositionals": true
+  },
+  "worker.remove": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ],
+    "rawPositionals": true
+  },
+  "direct.send": {
+    "fields": [
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ],
+      [
+        "text",
+        "text",
+        "text",
+        false,
+        false
+      ],
+      [
+        "images",
+        "images",
+        "json",
+        false,
+        false
+      ],
+      [
+        "files",
+        "files",
+        "json",
+        false,
+        false
+      ],
+      [
+        "mode",
+        "mode",
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientMessageId",
+        "client-message-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "replyTo",
+        "reply-to",
+        "text",
+        false,
+        false
+      ],
+      [
+        "replyQuote",
+        "reply-quote",
+        "json",
+        false,
+        false
+      ],
+      [
+        "replyConversation",
+        "reply-conversation",
+        "text",
+        false,
+        false
+      ],
+      [
+        "replyTextOnly",
+        "reply-text-only",
+        "boolean",
+        false,
+        false
+      ],
+      [
+        "viewId",
+        "view-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "direct.post": {
+    "fields": [
+      [
+        "text",
+        "text",
+        "text",
+        false,
+        false
+      ],
+      [
+        "images",
+        "images",
+        "json",
+        false,
+        false
+      ],
+      [
+        "files",
+        "files",
+        "json",
+        false,
+        false
+      ],
+      [
+        "replyTo",
+        "reply-to",
+        "text",
+        false,
+        false
+      ],
+      [
+        "replyQuote",
+        "reply-quote",
+        "json",
+        false,
+        false
+      ],
+      [
+        "clientMessageId",
+        "client-message-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "direct.history": {
+    "fields": [
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ],
+      [
+        "before",
+        "before",
+        "number",
+        false,
+        false
+      ],
+      [
+        "around",
+        "around",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "direct.send-status": {
+    "fields": [
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientMessageId",
+        "client-message-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "direct.acknowledge": {
+    "fields": [
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ],
+      [
+        "messageId",
+        "message-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "bot.appearance": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "avatar",
+        "avatar",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "bot.list": {
+    "fields": [
+      [
+        "includeRemoved",
+        "include-removed",
+        "boolean",
+        false,
+        false
+      ]
+    ]
+  },
+  "bot.update": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "name",
+        "name",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "bot.delete": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "bot.restore": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "bot.sync": {
+    "fields": []
+  },
+  "bot.create": {
+    "fields": [
+      [
+        "name",
+        "name",
+        "text",
+        false,
+        false
+      ],
+      [
+        "description",
+        "description",
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "bot.group-create": {
+    "fields": [
+      [
+        "name",
+        "name",
+        "text",
+        false,
+        false
+      ],
+      [
+        "members",
+        "members",
+        "json",
+        false,
+        false
+      ],
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "bot.access": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "employeeIds",
+        "employee-ids",
+        "json",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "monitor.list": {
+    "fields": [
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "monitor.create": {
+    "fields": [
+      [
+        "name",
+        "name",
+        "text",
+        false,
+        false
+      ],
+      [
+        "program",
+        "program",
+        "json",
+        false,
+        false
+      ],
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ],
+      [
+        "cwd",
+        "cwd",
+        "text",
+        false,
+        false
+      ],
+      [
+        "restartOnLaunch",
+        "restart-on-launch",
+        "boolean",
+        false,
+        false
+      ]
+    ]
+  },
+  "monitor.start": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "monitor.read": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "cursor",
+        "cursor",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "monitor.stop": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "monitor.remove": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "channel.source-info": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "channel.source-order": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "sourceIds",
+        "sources",
+        "json",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "channel.access": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "employeeIds",
+        "employees",
+        "json",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "channel.fetch-text": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "sourceId",
+        "source",
+        "text",
+        false,
+        false
+      ],
+      [
+        "sourceIds",
+        "sources",
+        "json",
+        false,
+        false
+      ],
+      [
+        "since",
+        "since",
+        "number-or-text",
+        false,
+        false
+      ],
+      [
+        "until",
+        "until",
+        "number-or-text",
+        false,
+        false
+      ],
+      [
+        "timeRanges",
+        "time-ranges",
+        "json",
+        false,
+        false
+      ],
+      [
+        "keywordsAll",
+        "keywords-all",
+        "json",
+        false,
+        false
+      ],
+      [
+        "keywordsAny",
+        "keywords-any",
+        "json",
+        false,
+        false
+      ],
+      [
+        "excludeKeywords",
+        "exclude-keywords",
+        "json",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ],
+      [
+        "cursor",
+        "cursor",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "channel.fetch-images": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "sourceId",
+        "source",
+        "text",
+        false,
+        false
+      ],
+      [
+        "sourceIds",
+        "sources",
+        "json",
+        false,
+        false
+      ],
+      [
+        "since",
+        "since",
+        "number-or-text",
+        false,
+        false
+      ],
+      [
+        "until",
+        "until",
+        "number-or-text",
+        false,
+        false
+      ],
+      [
+        "timeRanges",
+        "time-ranges",
+        "json",
+        false,
+        false
+      ],
+      [
+        "keywordsAll",
+        "keywords-all",
+        "json",
+        false,
+        false
+      ],
+      [
+        "keywordsAny",
+        "keywords-any",
+        "json",
+        false,
+        false
+      ],
+      [
+        "excludeKeywords",
+        "exclude-keywords",
+        "json",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ],
+      [
+        "cursor",
+        "cursor",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "channel.search": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "query",
+        "query",
+        "text",
+        false,
+        false
+      ],
+      [
+        "sourceId",
+        "source",
+        "text",
+        false,
+        false
+      ],
+      [
+        "sourceIds",
+        "sources",
+        "json",
+        false,
+        false
+      ],
+      [
+        "since",
+        "since",
+        "number-or-text",
+        false,
+        false
+      ],
+      [
+        "until",
+        "until",
+        "number-or-text",
+        false,
+        false
+      ],
+      [
+        "timeRanges",
+        "time-ranges",
+        "json",
+        false,
+        false
+      ],
+      [
+        "keywordsAll",
+        "keywords-all",
+        "json",
+        false,
+        false
+      ],
+      [
+        "keywordsAny",
+        "keywords-any",
+        "json",
+        false,
+        false
+      ],
+      [
+        "excludeKeywords",
+        "exclude-keywords",
+        "json",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ],
+      [
+        "cursor",
+        "cursor",
+        "text",
+        false,
+        false
+      ],
+      [
+        "images",
+        "images",
+        "boolean",
+        false,
+        false
+      ]
+    ]
+  },
+  "channel.aggregate": {
+    "fields": [
+      [
+        "plugin",
+        "plugin",
+        "text",
+        true,
+        false
+      ]
+    ]
+  },
+  "channel.media-register": {
+    "fields": [
+      [
+        "sourceId",
+        "source-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "externalId",
+        "external-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "publishedAt",
+        "published-at",
+        "number",
+        false,
+        false
+      ],
+      [
+        "mediaKey",
+        "media-key",
+        "text",
+        false,
+        false
+      ],
+      [
+        "name",
+        "name",
+        "text",
+        false,
+        false
+      ],
+      [
+        "mimeType",
+        "mime-type",
+        "text",
+        false,
+        false
+      ],
+      [
+        "sha256",
+        "sha256",
+        "text",
+        false,
+        false
+      ],
+      [
+        "bytes",
+        "bytes",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
   "channel.file-download": {
     "fields": [
       [
@@ -477,6 +1434,13 @@
         "boolean",
         false,
         false
+      ],
+      [
+        "query",
+        "query",
+        "text",
+        false,
+        false
       ]
     ]
   },
@@ -598,6 +1562,55 @@
         false
       ],
       [
+        "sourceIds",
+        "sources",
+        "json",
+        false,
+        false
+      ],
+      [
+        "since",
+        "since",
+        "number-or-text",
+        false,
+        false
+      ],
+      [
+        "until",
+        "until",
+        "number-or-text",
+        false,
+        false
+      ],
+      [
+        "timeRanges",
+        "time-ranges",
+        "json",
+        false,
+        false
+      ],
+      [
+        "keywordsAll",
+        "keywords-all",
+        "json",
+        false,
+        false
+      ],
+      [
+        "keywordsAny",
+        "keywords-any",
+        "json",
+        false,
+        false
+      ],
+      [
+        "excludeKeywords",
+        "exclude-keywords",
+        "json",
+        false,
+        false
+      ],
+      [
         "saved",
         "saved",
         "boolean",
@@ -622,6 +1635,34 @@
         "limit",
         "limit",
         "number",
+        false,
+        false
+      ],
+      [
+        "order",
+        "order",
+        "text",
+        false,
+        false
+      ],
+      [
+        "seed",
+        "seed",
+        "text",
+        false,
+        false
+      ],
+      [
+        "snapshot",
+        "snapshot",
+        "number",
+        false,
+        false
+      ],
+      [
+        "avoidFirst",
+        "avoid-first",
+        "text",
         false,
         false
       ]
@@ -673,6 +1714,13 @@
         "text",
         false,
         false
+      ],
+      [
+        "maxEdge",
+        "max-edge",
+        "number",
+        false,
+        false
       ]
     ]
   },
@@ -702,6 +1750,75 @@
       ]
     ],
     "rawPositionals": true
+  },
+  "channel.storage": {
+    "fields": [
+      [
+        "patch",
+        "patch",
+        "json",
+        false,
+        false
+      ]
+    ]
+  },
+  "channel.storage-exchange": {
+    "fields": [
+      [
+        "waitMs",
+        "wait-ms",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "channel.storage-result": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        true,
+        false
+      ],
+      [
+        "result",
+        "result",
+        "json",
+        false,
+        false
+      ],
+      [
+        "error",
+        "error",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "channel.subscription-status": {
+    "fields": [
+      [
+        "channelId",
+        "channel",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "channel.collector-ack": {
+    "fields": [
+      [
+        "revision",
+        "revision",
+        "number",
+        false,
+        false
+      ]
+    ]
   },
   "channel.collector-config": {
     "fields": [
@@ -2181,6 +3298,63 @@
       ]
     ]
   },
+  "conversation.upload": {
+    "fields": [
+      [
+        "conversation",
+        "conversation",
+        "text",
+        false,
+        false
+      ],
+      [
+        "from",
+        "from",
+        "json",
+        false,
+        false
+      ],
+      [
+        "path",
+        "path",
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedVersion",
+        "expected-version",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "conversation.upload-status": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "cancel",
+        "cancel",
+        "boolean",
+        false,
+        false
+      ]
+    ]
+  },
   "workspace.catalog": {
     "fields": [
       [
@@ -2265,6 +3439,45 @@
         "name",
         "name",
         "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "conversation.download-local": {
+    "fields": [
+      [
+        "conversation",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "entryId",
+        "entry-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "attachmentId",
+        "attachment-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "path",
+        "path",
+        "text",
+        false,
+        false
+      ],
+      [
+        "overwrite",
+        "overwrite",
+        "boolean",
         false,
         false
       ]
@@ -2594,6 +3807,17 @@
     "fields": [],
     "rawPositionals": true
   },
+  "engine.providers": {
+    "fields": [
+      [
+        "engine",
+        "engine",
+        "text",
+        true,
+        false
+      ]
+    ]
+  },
   "engine.list": {
     "fields": [],
     "rawPositionals": true
@@ -2687,6 +3911,18 @@
     "rawPositionals": true
   },
   "auth.revoke": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ],
+    "rawPositionals": true
+  },
+  "avatar.get": {
     "fields": [
       [
         "id",
@@ -3353,6 +4589,70 @@
       ]
     ],
     "rawPositionals": true
+  },
+  "plugin.resources": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        true,
+        false
+      ],
+      [
+        "workspace",
+        "workspace",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "plugin.access": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        true,
+        false
+      ],
+      [
+        "workspace",
+        "workspace",
+        "text",
+        false,
+        false
+      ],
+      [
+        "resourceIds",
+        "resources",
+        "json",
+        false,
+        false
+      ],
+      [
+        "employees",
+        "employees",
+        "json",
+        false,
+        false
+      ],
+      [
+        "updates",
+        "updates",
+        "json",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
   },
   "plugin.windows": {
     "fields": [],

@@ -6,7 +6,8 @@ const windows=new Map<string,RecordWindow>()
 const pending=new Map<string,{owner:string;resolve:()=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>()
 window.addEventListener('message',event=>{
   const data=event.data,record=windows.get(data?.token)
-  if(!record||event.source!==record.frame.contentWindow||event.origin!=='null')return
+  if(!record||event.source!==record.frame.contentWindow||event.origin!=='null'&&event.origin!==location.origin)return
+  if(data.type==='agents-plugin:host-rpc'){const port=event.ports[0],request=data.request;if(!port||!['plugin.resources','plugin.access'].includes(request?.cmd))return;void record.api.call(request.cmd,{...request.args,id:record.plugin,workspace:record.workspace}).then(result=>port.postMessage({ok:true,data:result})).catch(error=>port.postMessage({ok:false,error:{message:error.message}})).finally(()=>port.close());return}
   if(data.type==='agents-plugin:rpc'){
     const port=event.ports[0],request=data.request
     if(!port||request?.jsonrpc!=='2.0'||typeof request.method!=='string')return
@@ -32,7 +33,7 @@ export function showPlugin(state:any,api:AgentsApi){
   title.textContent=state.name;close.textContent='×';maximize.textContent='□'
   const labels=()=>{close.setAttribute('aria-label',uiText('Close {0}',[state.name]));maximize.setAttribute('aria-label',uiText('Maximize {0}',[state.name]))};labels();const offLanguage=onInterfaceLanguageChange(labels)
   header.append(title,maximize,close);element.append(header)
-  const frame=document.createElement('iframe');frame.title=state.name;frame.sandbox.add('allow-scripts','allow-forms','allow-downloads');frame.allowFullscreen=true;frame.src=state.url;element.append(frame,error);document.body.append(element)
+  const frame=document.createElement('iframe');frame.title=state.name;frame.sandbox.add('allow-scripts','allow-forms','allow-downloads','allow-same-origin');frame.allowFullscreen=true;frame.src=state.url;element.append(frame,error);document.body.append(element)
   const record:RecordWindow={element,frame,plugin:state.plugin,workspace:state.workspace,ready:false,api,off:()=>{},flush:()=>new Promise<void>((resolve,reject)=>{
     if(!record.ready){resolve();return}
     const id=crypto.randomUUID(),timer=setTimeout(()=>{pending.delete(id);reject(Error(uiText('The plugin has not confirmed saving. Try again shortly.')))},12000)

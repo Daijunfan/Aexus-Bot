@@ -1,6 +1,11 @@
 /* Keep the header and parent card stationary while only the files scroll. */
 .library-view{display:flex;flex-direction:column;overflow:hidden}
 .library-top,.selection-bar{flex-shrink:0}
+.library-top-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+#library-view #new-folder{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:7px 13px;border:1px solid var(--accent);border-radius:9px;background:var(--accent);color:white;font-weight:600;white-space:nowrap;cursor:pointer}
+#library-view #new-folder:hover{filter:brightness(.94)}
+#library-view #new-folder .icon{width:17px;height:17px}
+@media(max-width:720px){.library-top-actions{gap:6px}#library-view #new-folder{padding:8px 10px}#library-view #new-folder span:last-child{display:none}}
 .files{flex:1;min-height:0;overflow:auto;padding:3px;margin:-3px;scrollbar-gutter:stable}
 #files .empty-state{grid-column:2 / -1;margin:0;padding:12px;min-width:0;height:274px;overflow:auto}
 #files .empty-illustration{width:56px;height:56px;border-radius:16px;margin-bottom:0;flex-shrink:0}

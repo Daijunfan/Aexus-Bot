@@ -75,3 +75,19 @@ test('draft checkpoints do not wait behind an unrelated busy data queue',async t
  assert.deepEqual(await client.call('fs.draft-read'),draft);
  release();await server.service.idle();
 });
+
+test('local editor writes do not rescan the full folder tree; external files still synchronize',async t=>{
+  const {root,client,server}=await fixture(t);
+  const events=[],unsubscribe=server.service.subscribe(event=>{if(event.type==='state')events.push(event.method);});
+  t.after(unsubscribe);
+  const created=await client.request('page.create',{title:'Watcher ownership',color:'white'},undefined,'delta');
+  assert.ifError(created.error);
+  events.length=0;
+  await wait(350);
+  assert.equal(events.filter(method=>method==='fs.sync').length,0,'own native commits must not trigger a redundant fs.sync');
+  const file=path.join(root,'Externally added.md');
+  fs.writeFileSync(file,'# External edits must remain visible\n');
+  await until(()=>events.includes('fs.sync'));
+  const listing=await client.request('page.list',{},undefined,'delta');
+  assert.ok(JSON.stringify(listing.result).includes('Externally added.md'));
+});

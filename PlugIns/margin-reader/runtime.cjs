@@ -34,11 +34,11 @@ function validate(method, params) {
 exports.createPlugin = async ({ workspace }) => {
   assert(typeof workspace === 'string' && workspace, 'INVALID_WORKSPACE', 'A workspace is required.');
   workspace = await fs.realpath(workspace); assert((await fs.stat(workspace)).isDirectory(), 'INVALID_WORKSPACE', 'Workspace must be an existing directory.');
-  const store = await createStore(workspace), events = new EventEmitter();
+  const access=require('./lib/access.cjs').createAccessStore(await createStore(workspace)),store=access.store,events = new EventEmitter();
   const localReading=require('./lib/local-reading.cjs').createLocalReading(store);
   const previews = createPreviews(store), studies = createStudies(store,localReading);
-  let closed = false, watcher, debounce;
-  const emit = () => { if (!closed) events.emit('change', { type: 'library.changed', at: new Date().toISOString() }); };
+  let closed = false, watcher, debounce, lastStateMutation = 0;
+  const emit = (method, origin) => { if (!closed) events.emit('change', { type: 'library.changed', at: new Date().toISOString(), method, origin }); };
   async function execute(method, p) {
     if(require('./lib/mindmap-designs.cjs').methods.has(method))return require('./lib/mindmap-designs.cjs').request(store,method,p);
     if(require('./lib/xmind-interchange.cjs').methods.has(method))return require('./lib/xmind-interchange.cjs').request(store,method,p);
@@ -101,6 +101,11 @@ exports.createPlugin = async ({ workspace }) => {
     return documentCommand(store, method, p);
   }
   return {
+    resources:access.resources,
+    async requestScoped(request,scope){
+      try{validate(request.method,request.params||{});const result=await access.run(scope,request.method,request.params||{},()=>execute(request.method,request.params||{}));if(methods.get(request.method)?.mutates){lastStateMutation=Date.now();emit(request.method);}return {jsonrpc:'2.0',id:request.id,result:result.result,createdResources:result.createdResources};}
+      catch(error){return errorResponse(request.id,error);}
+    },
     async request(request) {
       const id = request?.id;
       try {
@@ -109,7 +114,10 @@ exports.createPlugin = async ({ workspace }) => {
         const params = request.params === undefined ? {} : request.params;
         const command = validate(request.method, params);
         const result = await execute(request.method, params);
-        if (command.mutates) emit();
+        if (command.mutates) {
+          lastStateMutation = Date.now();
+          emit(request.method, typeof request.origin === 'string' && request.origin.length <= 128 ? request.origin : undefined);
+        }
         return { jsonrpc: '2.0', id, result };
       } catch (error) { return errorResponse(id, error); }
     },
@@ -127,6 +135,9 @@ exports.createPlugin = async ({ workspace }) => {
       if (!watcher) {
         try { watcher = fsSync.watch(workspace, { recursive: true }, (_event, name) => {
           if (!meaningfulWorkspaceChange(name)) return;
+          // RPC mutations already broadcast their own event. Avoid a second
+          // full refresh when their debounced state.json write reaches fs.watch.
+          if (name && String(name).replaceAll('\\', '/') === '.margin-reader/state.json' && Date.now() - lastStateMutation < 1200) return;
           clearTimeout(debounce); debounce = setTimeout(emit, 180); debounce.unref?.();
         }); watcher.on('error', () => { watcher?.close(); watcher = null; }); } catch {}
       }

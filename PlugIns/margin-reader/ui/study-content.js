@@ -18,9 +18,10 @@ export class StudyContent {
   constructor(study) {
     this.study = study;
     const buttons = document.createElement('span'); buttons.className = 'study-content-tools';
-    buttons.innerHTML='<button id="study-media-add" title="把本地图片或音频添加为独立主题">图片 / 音频</button>';
+    buttons.innerHTML='<button id="study-media-add" title="把本地图片或音频添加为独立主题">图片 / 音频</button><button id="study-dictionary" title="设置正文词条的来源、子脑图与颜色">个人字典</button>';
     study.map.board.querySelector('.study-organization-tools').append(buttons);
     $('study-media-add').onclick=()=>this.importMedia();
+    $('study-dictionary').onclick=run(()=>this.dictionary());
   }
   async openUri(value) {
     const study = this.study;

@@ -76,8 +76,11 @@ function createCapture(store) {
     assert(M.UUID.test(p.captureId), 'INVALID_PARAMS', 'captureId must be a UUID for safe retries.');
     assert(typeof p.text === 'string' && p.text.length <= 12000, 'INVALID_PARAMS', 'Excerpt text must be at most 12000 characters.');
     M.color(p.color);
+    assert(p.note===undefined||typeof p.note==='string'&&p.note.length<=20000,'INVALID_PARAMS','Excerpt note must be at most 20000 characters.');
+    if(p.tags!==undefined)M.tags(p.tags);
+    assert(p.inMap!==false||p.parentId===undefined&&p.x===undefined&&p.zoneId===undefined,'INVALID_PARAMS','An annotation-only excerpt cannot have a map placement.');
     assert(p.x===undefined&&p.y===undefined||p.parentId===null&&[p.x,p.y].every(v=>Number.isFinite(v)&&Math.abs(v)<=1000000000),'INVALID_PARAMS','Floating excerpts require x, y and explicit parentId:null.');
-    const fingerprint = digest(JSON.stringify([p.documentId,p.expectedSourceVersion,p.text,p.locator,p.selection || {},p.color,p.title || '',p.parentId || null,...(p.x!==undefined?[p.x,p.y]:[]),...(p.parentId===null?['root']:[]),...(p.zoneId?[p.zoneId]:[])]));
+    const fingerprint = digest(JSON.stringify([p.documentId,p.expectedSourceVersion,p.text,p.locator,p.selection || {},p.color,p.title || '',p.parentId || null,...(p.x!==undefined?[p.x,p.y]:[]),...(p.parentId===null?['root']:[]),...(p.zoneId?[p.zoneId]:[]),...(p.inMap!==undefined?[p.inMap]:[]),...(p.annotationStyle!==undefined?[p.annotationStyle]:[]),...(p.note!==undefined?[p.note]:[]),...(p.tags!==undefined?[p.tags]:[])]));
     const initial = await store.load(), set = M.findSet(initial,p.setId), prior = duplicate(set,p,fingerprint); if(prior)return prior;
     M.revision(set,p.expectedRevision);
     assert(set.documentIds.includes(p.documentId), 'NOT_MEMBER', 'Add this document to the study set before making an excerpt.');
@@ -98,16 +101,16 @@ function createCapture(store) {
       const source = findDocument(state,p.documentId);
       assert(fresh.documentIds.includes(source.id),'NOT_MEMBER','This document was removed from the study set.');
       assert(source.sourceVersion === p.expectedSourceVersion && !(await sourceStatus(store,source)).changed,'SOURCE_CHANGED','Document changed during capture. Nothing was saved.');
-      const now = new Date().toISOString(), card = { id, captureId:p.captureId, fingerprint, title:M.title(p.title || p.text.trim().split('\n')[0].slice(0,100) || `第 ${locator.page} 页摘录`), text:p.text, note:'', color:p.color, parentId:null, collapsed:false, createdAt:now, updatedAt:now,
+      const now = new Date().toISOString(), card = { id, captureId:p.captureId, fingerprint, title:M.title(p.title || p.text.trim().split('\n')[0].slice(0,100) || `第 ${locator.page} 页摘录`), text:p.text, note:p.note||'', color:p.color, parentId:null, collapsed:false, createdAt:now, updatedAt:now,
         source:{documentId:doc.id,notebookId:notebook.id,path:doc.path,title:doc.title,format:doc.format,hash:doc.hash,sourceVersion:doc.sourceVersion,locator,selection:selected,...(doc.virtual?{virtualSources:require('./virtual-document.cjs').canonicalSources(state,source,selected)}:{})}, image:{...(rendered.fragments?{fragments:rendered.fragments}:{}),kind:rendered.kind,width:rendered.width,height:rendered.height,mimeType:'image/png'} };
       await store.mkdir(`study-assets/${fresh.id}`); const file=await store.meta(`study-assets/${fresh.id}/${id}.png`);
       await writeNew(file,Buffer.from(rendered.bytes));rollback(()=>fs.rm(file,{force:true}));
       require('./study-history.cjs').checkpoint(fresh);
       const preset=fresh.captureSettings||{};
-      card.tags=M.tags(preset.tags||[]);card.inMap=p.parentId!==undefined||preset.inMap!==false;
-      card.annotation={visible:true,style:preset.annotationStyle||'highlight'};
+      card.tags=M.tags(p.tags??preset.tags??[]);card.inMap=p.inMap??(p.parentId!==undefined||preset.inMap!==false);
+      card.annotation={visible:true,style:p.annotationStyle||preset.annotationStyle||'highlight'};
       fresh.cards.push(card);
-      const parentId=p.parentId!==undefined?p.parentId:preset.parentId;
+      const parentId=p.inMap===false?null:p.parentId!==undefined?p.parentId:preset.parentId;
       if(parentId){M.move(fresh,card,parentId);card.inMap=true;if(p.parentId)M.card(fresh,parentId).collapsed=false;}
       else if(p.parentId===undefined&&card.inMap&&['document','toc'].includes(preset.organize))require('./study-organize.cjs').organizeByDocument(state,fresh,[card.id],preset.organize==='toc');
       if(p.x!==undefined)card.position={x:p.x,y:p.y};

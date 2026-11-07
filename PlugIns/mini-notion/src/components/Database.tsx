@@ -1,15 +1,16 @@
-import {AppSelect} from './AppSelect';
+import { AppSelect } from './AppSelect';
 import { isSelectProperty, isReadOnlyProperty } from '../database/propertySchema';
 import { PeoplePicker } from '../database/PeoplePicker';
 import { FilesPicker } from '../database/FilesPicker';
 import { Zap } from 'lucide-react';
-import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppearanceTheme, viewAppearanceStyle } from '../appearance';
 import {
   ArrowDownUp,
   Copy,
   Filter,
   MoreHorizontal,
+  LayoutGrid,
   Pencil,
   Plus,
   Search,
@@ -18,6 +19,7 @@ import {
   X,
   Check,
   ChevronDown,
+  Columns3,
 } from 'lucide-react';
 import type { Database as DatabaseType, DatabaseView, DatabaseViewState, Page, Property } from '../types';
 import { useWorkspace } from '../store';
@@ -45,6 +47,7 @@ import { FormView } from '../database/views/FormView';
 import { PlanView } from '../database/views/PlanView';
 import { CalendarView } from './CalendarView';
 import { TemplateMenu } from '../database/TemplateMenu';
+import { GroupOptionEditor, groupEditorAnchor, type GroupEditorAnchor } from '../database/GroupControls';
 import { defaultTemplateId } from '../database/templatesModel';
 import { StructureSettings } from '../database/StructureSettings';
 import type { ViewProps } from '../database/views/types';
@@ -60,13 +63,21 @@ export function Database({
 }) {
   const { workspace, patch, update, create, navigate, setPeekId, setPeekMode, notify, command, setModal } =
     useWorkspace();
-  const db = { ...page.database!, ...viewState };
+  const db = useMemo(() => ({ ...page.database!, ...viewState }), [page.database, viewState]);
   const theme = useContext(AppearanceTheme);
-  const views = getViews(db);
-  const view = activeView(db);
+  const views = useMemo(() => getViews(db), [db]);
+  const view = useMemo(() => activeView(db), [db]);
   const [query, setQuery] = useState('');
+  const [viewSearch, setViewSearch] = useState('');
+  const matchingViews = useMemo(() => views.filter(item => item.name.toLocaleLowerCase().includes(viewSearch.trim().toLocaleLowerCase())), [views, viewSearch]);
+  useEffect(() => setQuery(''), [page.id]);
   const [property, setProperty] = useState<Property | null>(null);
   const [creatingView, setCreatingView] = useState(false);
+  const [renamingView, setRenamingView] = useState<{ id: string; name: string } | null>(null);
+  const [groupEditor, setGroupEditor] = useState<{ viewId: string; columnId: string; value?: string; anchor: GroupEditorAnchor } | null>(null);
+  const [groupHelp, setGroupHelp] = useState(false);
+  const [pendingGroupColumn, setPendingGroupColumn] = useState<{ viewId: string; columnId: string } | null>(null);
+  const [pendingCategories, setPendingCategories] = useState<{ viewId: string; columnId: string; name: string }[]>([]);
   const [structure, setStructure] = useState(false);
   const [templateMenu, setTemplateMenu] = useState<{ x: number; y: number } | null>(null);
   const [menu, setMenu] = useState<{
@@ -81,14 +92,32 @@ export function Database({
   const [bulkValue, setBulkValue] = useState<Page['values'][string]>('');
   const [bulkUploading, setBulkUploading] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const openGroupEditor = (columnId: string, value?: string, trigger?: Element | null) => {
+    const origin = trigger || tabsRef.current?.closest('.database')?.querySelector('.database-new') || null;
+    setGroupEditor({ viewId: view.id, columnId, value, anchor: groupEditorAnchor(origin) });
+  };
   useEffect(() => {
     const showSettings = (event: Event) => {
       const { databaseId, viewId, section = 'main', visible } = (event as CustomEvent).detail;
-      if (visible === false) { setMenu(null); return; }
+      if (visible === false) {
+        setMenu(null);
+        return;
+      }
       if (databaseId !== page.id || (viewId && viewId !== view.id)) return;
-      if (!['main', 'layout', 'properties', 'filter', 'sort', 'group', 'appearance'].includes(section)) return;
+      if (
+        !['main', 'layout', 'properties', 'edit-properties', 'filter', 'sort', 'group', 'appearance', 'conditional'].includes(
+          section,
+        )
+      )
+        return;
       const rect = tabsRef.current?.parentElement?.getBoundingClientRect();
-      if (rect) setMenu({ type: 'settings', section, x: rect.right - (section === 'filter' ? 580 : 380), y: rect.bottom + 5 });
+      if (rect)
+        setMenu({
+          type: 'settings',
+          section,
+          x: rect.right - (['filter', 'conditional'].includes(section) ? 580 : 380),
+          y: rect.bottom + 5,
+        });
     };
     window.addEventListener('mini:view-settings', showSettings);
     return () => window.removeEventListener('mini:view-settings', showSettings);
@@ -101,8 +130,10 @@ export function Database({
     if (!tabs || !button) return;
     const left = button.getBoundingClientRect().left - tabs.getBoundingClientRect().left + tabs.scrollLeft;
     const right = left + button.offsetWidth;
+    const actionsWidth = tabs.querySelector('.view-tab-actions')?.getBoundingClientRect().width || 0;
     if (left < tabs.scrollLeft) tabs.scrollLeft = left;
-    else if (right > tabs.scrollLeft + tabs.clientWidth - 65) tabs.scrollLeft = right - tabs.clientWidth + 65;
+    else if (right > tabs.scrollLeft + tabs.clientWidth - actionsWidth)
+      tabs.scrollLeft = right - tabs.clientWidth + actionsWidth;
   }, [view.id, view.name, views.length]);
   useEffect(() => setSelected(new Set()), [view.id, view.type, page.id]);
   const saveDatabase = (database: DatabaseType) => {
@@ -116,9 +147,83 @@ export function Database({
       });
     } else patch(page.id, { database });
   };
-  const changeView = (changes: Partial<DatabaseView>) => saveDatabase(updateView(db, view.id, changes));
-  const rows = queryRows(page, view, workspace!.pages, query);
-  const columns = visibleColumns(db, view);
+  const prepareBoard = (database: DatabaseType, viewId: string): DatabaseType => {
+    const nextView = getViews(database).find((item) => item.id === viewId);
+    if (
+      page.locked ||
+      nextView?.type !== 'board' ||
+      database.columns.some(
+        (column) =>
+          column.id === nextView.groupBy && !['url', 'rollup', 'files', 'button'].includes(column.type),
+      )
+    )
+      return database;
+    let column = ['status', 'select', 'person', 'multiSelect', 'relation']
+      .map((type) => database.columns.find((property) => property.type === type))
+      .find(Boolean);
+    if (!column) {
+      let name = '状态',
+        suffix = 2;
+      while (database.columns.some((property) => property.name === name)) name = `状态 ${suffix++}`;
+      column = command('property.add', { databaseId: page.id, name, type: 'status' }) as Property;
+      database = { ...database, columns: [...database.columns, column] };
+    }
+    return updateView(database, viewId, { groupBy: column.id });
+  };
+  const changeView = (changes: Partial<DatabaseView>) => {
+    if (page.locked && changes.type && changes.type !== view.type) return;
+    // A group's identity belongs to its property. Old collapsed/hidden names
+    // must not leak into a different grouping when users switch properties.
+    const nextChanges: Partial<DatabaseView> = 'groupBy' in changes && changes.groupBy !== view.groupBy
+      ? { hiddenGroups: [], collapsedGroups: [], groupOrder: [], revealedGroups: [], ...changes }
+      : changes;
+    const next = updateView(db, view.id, nextChanges);
+    saveDatabase(changes.type === 'board' ? prepareBoard(next, view.id) : next);
+  };
+  // Reveal the new empty category in its originating view, even if the user
+  // changes tabs before the property edit settles. One pending slot loses edits.
+  const queueCategory = (viewId: string, columnId: string, name: string) =>
+    setPendingCategories(previous => [...previous, { viewId, columnId, name }]);
+  useEffect(() => {
+    if (!pendingCategories.length) return;
+    const ready = pendingCategories.filter(pending =>
+      page.database!.columns.some(column =>
+        column.id === pending.columnId && column.options?.includes(pending.name)));
+    if (!ready.length) return;
+    let next = db;
+    for (const pending of ready) {
+      const target = getViews(next).find(item => item.id === pending.viewId);
+      if (!target || target.groupBy !== pending.columnId ||
+          target.revealedGroups?.includes(pending.name)) continue;
+      next = updateView(next, pending.viewId, {
+        revealedGroups: [...(target.revealedGroups || []), pending.name],
+      });
+    }
+    if (next !== db) saveDatabase(next);
+    setPendingCategories(previous => previous.filter(pending => !ready.includes(pending)));
+  }, [pendingCategories, page.database, viewState]);
+
+  // Asynchronously created properties belong to the requesting view, not
+  // whichever tab happens to be selected when the new property appears.
+  useEffect(() => {
+    if (!pendingGroupColumn || !page.database?.columns.some(column => column.id === pendingGroupColumn.columnId)) return;
+    const target = views.find(item => item.id === pendingGroupColumn.viewId);
+    if (target && target.groupBy !== pendingGroupColumn.columnId)
+      saveDatabase(updateView(db, target.id, { groupBy: pendingGroupColumn.columnId,
+        hiddenGroups: [], collapsedGroups: [], groupOrder: [], revealedGroups: [] }));
+    if (view.id === pendingGroupColumn.viewId) openGroupEditor(pendingGroupColumn.columnId);
+    setPendingGroupColumn(null);
+  }, [pendingGroupColumn, page.database, view.id]);
+  const chooseView = (id: string) => {
+    saveDatabase(prepareBoard(selectView(db, id), id));
+    setQuery('');
+  };
+  // A board can display a legacy default grouping even before that view is saved.
+  const groupingColumn = db.columns.find((column) => column.id === view.groupBy) ||
+    (view.type === 'board' ? db.columns.find((column) => isSelectProperty(column)) : undefined);
+  const canEditCategories = !!groupingColumn && ['select', 'multiSelect', 'status'].includes(groupingColumn.type);
+  const rows = useMemo(() => queryRows(page, view, workspace!.pages, query), [page.id, page.database, view, workspace!.pages, query]);
+  const columns = useMemo(() => visibleColumns(db, view), [db, view]);
   const openRow = (id: string) => {
     if (view.openPagesIn === 'full') navigate(id);
     else {
@@ -132,23 +237,31 @@ export function Database({
   };
   const options = (column: Property, options: string[]) =>
     saveDatabase({ ...db, columns: db.columns.map((c) => (c.id === column.id ? { ...c, options } : c)) });
-  const selectRow = (id: string, checked: boolean) =>
+  const selectRow = (id: string | string[], checked: boolean) =>
     setSelected((previous) => {
       const next = new Set(previous);
-      if (checked) next.add(id);
-      else next.delete(id);
+      for (const key of typeof id === 'string' ? [id] : id) {
+        if (checked) next.add(key);
+        else next.delete(key);
+      }
       return next;
     });
   const openSettings = (event: React.MouseEvent<HTMLButtonElement>, section: SettingsSection) => {
     const r = event.currentTarget.getBoundingClientRect();
-    setMenu({ type: 'settings', section, x: r.right - (section === 'filter' ? 570 : 370), y: r.bottom + 5 });
+    setMenu({
+      type: 'settings',
+      section,
+      x: r.right - (['filter', 'conditional'].includes(section) ? 570 : 370),
+      y: r.bottom + 5,
+    });
   };
   const addView = (next: DatabaseView) => {
-    if (next.type === 'board' && !next.groupBy)
-      next.groupBy = db.columns.find((c) => isSelectProperty(c))?.id;
+    if (page.locked) return;
     next.calendarBy ??= db.columns.find((c) => c.type === 'date')?.id;
     next.chartGroup ??= db.columns.find((c) => isSelectProperty(c))?.id;
-    saveDatabase({ ...db, views: [...views, next], activeViewId: next.id, view: next.type });
+    saveDatabase(
+      prepareBoard({ ...db, views: [...views, next], activeViewId: next.id, view: next.type }, next.id),
+    );
     setCreatingView(false);
     setMenu(null);
   };
@@ -196,6 +309,7 @@ export function Database({
     updateView: changeView,
     editProperty: setProperty,
     updateOptions: options,
+    onCategoryCreated: queueCategory,
     openRow,
     addRow,
     selected,
@@ -206,7 +320,11 @@ export function Database({
   const menuView = views.find((v) => v.id === menu?.id) || view;
 
   return (
-    <div className={`database saved-view-database ${Object.values(view.appearance || {}).some((value) => value && value !== 'default') ? 'styled-database' : ''}`} data-database-id={page.id} style={viewAppearanceStyle(view.appearance, theme, workspace!.settings.appearance)}>
+    <div
+      className={`database saved-view-database ${Object.values(view.appearance || {}).some((value) => value && value !== 'default') ? 'styled-database' : ''}`}
+      data-database-id={page.id}
+      style={viewAppearanceStyle(view.appearance, theme, workspace!.settings.appearance)}
+    >
       <div className="database-toolbar">
         <div className="view-tabs" ref={tabsRef}>
           {views.map((item) => {
@@ -218,18 +336,39 @@ export function Database({
                 className={item.id === view.id ? 'active' : ''}
                 data-view-id={item.id}
                 title={item.name}
+                aria-haspopup="menu"
+                aria-pressed={item.id === view.id}
+                aria-expanded={menu?.type === 'view' && menu.id === item.id}
                 onClick={(e) => {
                   if (item.id === view.id) {
                     const r = e.currentTarget.getBoundingClientRect();
                     setMenu({ type: 'view', id: item.id, x: r.left, y: r.bottom + 5 });
                   } else {
-                    saveDatabase(selectView(db, item.id));
-                    setQuery('');
+                    chooseView(item.id);
                   }
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   setMenu({ type: 'view', id: item.id, x: e.clientX, y: e.clientY });
+                }}
+                onKeyDown={(event) => {
+                  if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                    event.preventDefault();
+                    const index = views.findIndex(candidate => candidate.id === item.id);
+                    const next = event.key === 'Home' ? 0 : event.key === 'End' ? views.length - 1
+                      : (index + (event.key === 'ArrowRight' ? 1 : -1) + views.length) % views.length;
+                    chooseView(views[next].id);
+                    tabsRef.current?.querySelectorAll<HTMLButtonElement>('[data-view-id]')[next]?.focus();
+                  }
+                  if (event.key === 'ArrowDown' || (event.shiftKey && event.key === 'F10')) {
+                    event.preventDefault();
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    setMenu({ type: 'view', id: item.id, x: rect.left, y: rect.bottom + 5 });
+                  }
+                  if (event.key === 'F2' && !page.locked) {
+                    event.preventDefault();
+                    setRenamingView({ id: item.id, name: item.name });
+                  }
                 }}
                 onDragStart={(e) => e.dataTransfer.setData('application/x-mini-view', item.id)}
                 onDragOver={(e) => {
@@ -238,7 +377,7 @@ export function Database({
                 onDrop={(e) => {
                   const id = e.dataTransfer.getData('application/x-mini-view');
                   const moved = views.find((v) => v.id === id);
-                  if (!moved) return;
+                  if (!moved || id === item.id || page.locked) return;
                   e.preventDefault();
                   const next = views.filter((v) => v.id !== id);
                   next.splice(
@@ -251,6 +390,7 @@ export function Database({
               >
                 <Icon size={16} />
                 <span>{item.name || '无标题视图'}</span>
+                {item.id === view.id && <ChevronDown size={12} aria-hidden="true" />}
               </button>
             );
           })}
@@ -258,15 +398,23 @@ export function Database({
             <IconButton
               label="全部视图"
               onClick={(e) => {
+                setViewSearch('');
                 const r = e.currentTarget.getBoundingClientRect();
                 setMenu({ type: 'view-list', x: r.right - 260, y: r.bottom + 5 });
               }}
             >
               <ChevronDown size={14} />
             </IconButton>
-            <IconButton label="添加视图" disabled={page.locked} onClick={() => setCreatingView(true)}>
+            <button
+              type="button"
+              className="text-button"
+              aria-label="添加视图"
+              disabled={page.locked}
+              onClick={() => setCreatingView(true)}
+            >
               <Plus size={17} />
-            </IconButton>
+              添加视图
+            </button>
           </div>
         </div>
         <div className="database-tools">
@@ -278,7 +426,11 @@ export function Database({
                 placeholder="搜索…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={event => {
+                  if (event.key === 'Escape' && query) { event.preventDefault(); event.stopPropagation(); setQuery(''); }
+                }}
               />
+              {query && <IconButton label="清除数据库搜索" onClick={() => setQuery('')}><X size={13} /></IconButton>}
             </div>
           )}
           {view.type !== 'form' && (
@@ -291,6 +443,15 @@ export function Database({
               <ArrowDownUp size={17} />
             </IconButton>
           )}
+          {['board', 'table', 'list', 'gallery', 'timeline', 'feed'].includes(view.type) && (
+            <button type="button" className="database-group-control"
+              aria-label="设置分组与分类" title="选择用于分组的属性"
+              onClick={(event) => openSettings(event, 'group')}>
+              <Columns3 size={15} />
+              <span>分组</span>
+              <ChevronDown size={12} aria-hidden="true" />
+            </button>
+          )}
           <IconButton label="自动化" onClick={() => setModal({ type: 'automations', pageId: page.id })}>
             <Zap size={17} />
           </IconButton>
@@ -298,12 +459,18 @@ export function Database({
             <Settings2 size={18} />
           </IconButton>
           <div className="database-new-split">
-            <button className="primary-button database-new" disabled={page.locked} onClick={() => addRow()}>
-              新建
+            <button className="primary-button database-new" disabled={page.locked}
+              aria-label={view.type === 'board' ? '新增分类' : '新建记录'}
+              onClick={event => view.type === 'board'
+                ? (canEditCategories && groupingColumn
+                  ? openGroupEditor(groupingColumn.id, undefined, event.currentTarget)
+                  : setGroupHelp(true))
+                : addRow()}>
+              {view.type === 'board' ? '新增分类' : '新建'}
             </button>
             <button
               className="database-new-options"
-              aria-label="新建模板与选项"
+              aria-label={view.type === 'board' ? '新建记录与模板' : '新建模板与选项'}
               disabled={page.locked}
               onClick={(event) => {
                 const rect = event.currentTarget.getBoundingClientRect();
@@ -335,6 +502,10 @@ export function Database({
           </button>
         </div>
       )}
+      {query.trim() && <div className="database-search-results" role="status">
+        {rows.length ? `找到 ${rows.length} 条记录` : '没有匹配的记录'}
+        <button onClick={() => setQuery('')}>清除搜索</button>
+      </div>}
       {!!selected.size && (
         <div className="database-selection-toolbar">
           <span>已选择 {selected.size} 条记录</span>
@@ -447,29 +618,87 @@ export function Database({
         />
       )}
       {creatingView && <CreateViewDialog onCreate={addView} onClose={() => setCreatingView(false)} />}
+      {renamingView && (
+        <Modal title="重命名视图" onClose={() => setRenamingView(null)}>
+          <form
+            className="modal-body"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const name = renamingView.name.trim();
+              if (!name || page.locked) return;
+              saveDatabase(updateView(db, renamingView.id, { name }));
+              setRenamingView(null);
+            }}
+          >
+            <label className="field-label">
+              视图名称
+              <input
+                autoFocus
+                aria-label="视图名称"
+                value={renamingView.name}
+                onFocus={(event) => event.currentTarget.select()}
+                onChange={(event) => setRenamingView({ ...renamingView, name: event.target.value })}
+              />
+            </label>
+            <div className="modal-actions">
+              <button type="button" className="secondary-button" onClick={() => setRenamingView(null)}>
+                取消
+              </button>
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={page.locked || !renamingView.name.trim()}
+              >
+                保存
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
       {menu?.type === 'view-list' && (
         <Popover x={menu.x} y={menu.y} width={280} onClose={() => setMenu(null)}>
           <div className="picker-heading">全部视图 · {views.length}</div>
-          {views.map((item) => {
-            const Icon = viewTypes.find((type) => type.type === item.type)!.icon;
-            return (
-              <MenuItem
-                key={item.id}
-                icon={<Icon size={16} />}
-                checked={item.id === view.id}
-                onClick={() => {
-                  saveDatabase(selectView(db, item.id));
+          <div className="view-switcher-search">
+            <Search size={15} aria-hidden="true" />
+            <input autoFocus aria-label="搜索视图" placeholder="查找视图…" value={viewSearch}
+              onChange={event => setViewSearch(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter' && matchingViews.length) {
+                  chooseView(matchingViews[0].id);
                   setMenu(null);
-                  setQuery('');
-                }}
-              >
-                {item.name}
-              </MenuItem>
-            );
-          })}
+                }
+              }} />
+          </div>
+          <div className="view-switcher-list">
+            {matchingViews.map((item) => {
+              const Icon = viewTypes.find((type) => type.type === item.type)!.icon;
+              return (
+                <div key={item.id} className="view-switcher-row">
+                  <MenuItem
+                    icon={<Icon size={16} />}
+                    checked={item.id === view.id}
+                    onClick={() => {
+                      chooseView(item.id);
+                      setMenu(null);
+                    }}
+                  >
+                    {item.name}
+                  </MenuItem>
+                  <IconButton
+                    label={`${item.name} 的视图操作`}
+                    onClick={() => setMenu({ ...menu, type: 'view', id: item.id })}
+                  >
+                    <MoreHorizontal size={15} />
+                  </IconButton>
+                </div>
+              );
+            })}
+            {!matchingViews.length && <p className="view-switcher-empty">没有匹配的视图</p>}
+          </div>
           <div className="menu-divider" />
           <MenuItem
             icon={<Plus size={15} />}
+            disabled={page.locked}
             onClick={() => {
               setMenu(null);
               setCreatingView(true);
@@ -483,7 +712,7 @@ export function Database({
         <Popover
           x={menu.x}
           y={menu.y}
-          width={menu.section === 'filter' ? 580 : 380}
+          width={['filter', 'conditional'].includes(menu.section || '') ? 580 : 380}
           onClose={() => setMenu(null)}
         >
           <ViewSettings
@@ -491,7 +720,17 @@ export function Database({
             view={view}
             database={db}
             section={menu.section}
+            onSectionChange={(section) => setMenu({ ...menu, section })}
             onChange={changeView}
+            locked={!!page.locked}
+            onManageGroup={(column, value, trigger) => {
+              setMenu(null);
+              openGroupEditor(column.id, value, trigger);
+            }}
+            onEditProperty={(column) => {
+              setMenu(null);
+              setProperty(column);
+            }}
             onStructure={() => {
               setMenu(null);
               setStructure(true);
@@ -507,13 +746,33 @@ export function Database({
         <Popover x={menu.x} y={menu.y} onClose={() => setMenu(null)} width={255}>
           <div className="picker-heading">{menuView.name}</div>
           <MenuItem
+            icon={<Pencil size={15} />}
+            disabled={page.locked}
+            onClick={() => {
+              setRenamingView({ id: menuView.id, name: menuView.name });
+              setMenu(null);
+            }}
+          >
+            重命名视图
+          </MenuItem>
+          <MenuItem
             icon={<Settings2 size={15} />}
             onClick={() => {
-              saveDatabase(selectView(db, menuView.id));
+              chooseView(menuView.id);
               setMenu({ ...menu, type: 'settings', section: 'main' });
             }}
           >
             编辑视图
+          </MenuItem>
+          <MenuItem
+            icon={<LayoutGrid size={15} />}
+            disabled={page.locked}
+            onClick={() => {
+              chooseView(menuView.id);
+              setMenu({ ...menu, type: 'settings', section: 'layout' });
+            }}
+          >
+            布局
           </MenuItem>
           <MenuItem
             icon={<Copy size={15} />}
@@ -544,6 +803,7 @@ export function Database({
           <div className="menu-divider" />
           <MenuItem
             icon={<Plus size={15} />}
+            disabled={page.locked}
             onClick={() => {
               setMenu(null);
               setCreatingView(true);
@@ -552,6 +812,56 @@ export function Database({
             添加视图
           </MenuItem>
         </Popover>
+      )}
+      {groupHelp && (
+        <Modal title="选择分类属性" onClose={() => setGroupHelp(false)} className="group-setup-dialog">
+          <div className="modal-body">
+            <p className="view-settings-description">
+              {groupingColumn
+                ? `当前按「${groupingColumn.name}」分组，该属性不能预设空分类。`
+                : '当前视图没有可编辑的分类属性。'}
+              切换为状态、单选或多选属性后，即可直接创建分类。原来的属性及记录数据都会保留。
+            </p>
+            {db.columns.filter(column => ['status', 'select', 'multiSelect'].includes(column.type)).map(column => (
+              <button key={column.id} className="group-setup-choice" onClick={() => {
+                if (view.groupBy !== column.id) changeView({ groupBy: column.id });
+                setGroupHelp(false);
+                openGroupEditor(column.id);
+              }}>
+                <span>使用「{column.name}」分类</span>
+                <ChevronDown size={14} />
+              </button>
+            ))}
+            <button className="group-setup-choice" disabled={page.locked} onClick={() => {
+              try {
+                const name = db.columns.some(column => column.name === '分类') ? '新分类' : '分类';
+                const column = command('property.add', { databaseId: page.id, name, type: 'select' }) as Property;
+                setPendingGroupColumn({ viewId: view.id, columnId: column.id });
+                setGroupHelp(false);
+              } catch (error) { notify(error instanceof Error ? error.message : String(error)); }
+            }}>
+              <Plus size={15} /> 创建新的单选分类属性
+            </button>
+            <div className="modal-actions"><button className="secondary-button" onClick={() => setGroupHelp(false)}>取消</button></div>
+          </div>
+        </Modal>
+      )}
+      {groupEditor && db.columns.some((column) => column.id === groupEditor.columnId) && (
+        <GroupOptionEditor
+          key={`${groupEditor.columnId}:${groupEditor.value ?? 'new'}`}
+          page={page}
+          column={db.columns.find((column) => column.id === groupEditor.columnId)!}
+          value={groupEditor.value}
+          anchor={groupEditor.anchor}
+          revealViewId={groupEditor.viewId}
+          onClose={() => setGroupEditor(null)}
+          onCreated={(name) => {
+            // Renaming or recoloring an existing category must preserve the
+            // view's hide-empty preference. Only a new empty option is revealed.
+            if (groupEditor.value === undefined)
+              queueCategory(groupEditor.viewId, groupEditor.columnId, name);
+          }}
+        />
       )}
       {property && (
         <PropertyEditor

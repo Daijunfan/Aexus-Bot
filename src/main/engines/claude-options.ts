@@ -12,7 +12,7 @@ import {readStore} from '../store'
 import {CLOUD_TOOLS,cloudClaudeSettings,cloudToolAllowed} from '../scope'
 import {spawnRemoteAgent} from '../remote-agent-process'
 import {spawnEmployeeProcess} from '../agent-process-isolation'
-import {deepSeekProvider,deepSeekModel,deepSeekEffort,deepSeekPicker} from '../claude-provider'
+import {deepSeekProvider,deepSeekModel,deepSeekEffort,claudeProviderPicker,claudeWireEffort} from '../claude-provider'
 import {engineExecutable} from './executable'
 import {engineProcessEnvironment} from './configuration'
 export function buildOptions(args: {
@@ -45,9 +45,8 @@ export function buildOptions(args: {
     env,
     permissionMode: args.planMode?'plan':args.permissionMode ?? 'default',
     includePartialMessages: true,
-    thinking:
-      args.thinking === false ? { type: 'disabled' } : { type: 'adaptive', display: 'summarized' },
-    model: args.model,
+    thinking: args.thinking === undefined ? undefined : args.thinking === false ? { type: 'disabled' } : { type: 'adaptive', display: 'summarized' },
+    model: args.model==='default'?undefined:args.model,
     effort: args.effort as Options['effort'],
     resume: args.resume,
     systemPrompt: { type: 'preset', preset: 'claude_code',snapshot:false, ...(instructions?{append:instructions}:{}) },
@@ -73,8 +72,8 @@ export function buildOptions(args: {
         return {hookSpecificOutput:{hookEventName:'PreToolUse',permissionDecision:allowed?'allow':'deny',permissionDecisionReason:planning?'计划模式只允许读取文件；请切换到执行模式后修改。':'云主机模式仅允许 Tunnel 远端工具'}}
       }]}]}})
   }
-  opts.settings={...(typeof opts.settings==='object'?opts.settings:{}),fastMode:args.fastMode??false}
-  if(args.employeeId&&readStore().sessions.find(card=>card.id===args.employeeId)?.accessMode==='isolated')opts.settings={...opts.settings,sandbox:{enabled:false}}
+  if(args.fastMode!==undefined)opts.settings={...(typeof opts.settings==='object'?opts.settings:{}),fastMode:args.fastMode}
+  if(args.employeeId&&readStore().sessions.find(card=>card.id===args.employeeId)?.accessMode==='isolated')opts.settings={...(typeof opts.settings==='object'?opts.settings:{}),sandbox:{enabled:false}}
   if(args.nativeRemote){
     opts.pathToClaudeCodeExecutable='claude'
     opts.env={}
@@ -82,12 +81,7 @@ export function buildOptions(args: {
   }
   const provider=args.nativeRemote?undefined:deepSeekProvider(args.remote?undefined:args.cwd)
   if(provider){
-    // The installed system CLI may predate custom model capabilities. Use the SDK's paired runtime.
-    opts.pathToClaudeCodeExecutable=engineExecutable('claude',true)
-    opts.model=deepSeekModel(provider,args.model||'deepseek-flash')
-    opts.thinking=args.thinking===true?{type:'adaptive',display:'summarized'}:{type:'disabled'}
-    opts.effort=(deepSeekEffort(args.effort)??'high') as Options['effort']
-    opts.settings={...opts.settings,...deepSeekPicker,fastMode:false}
+    opts.effort=claudeWireEffort(provider,args.model,args.effort) as Options['effort']
   }
   if(args.employeeId){if(!args.nativeRemote)opts.spawnClaudeCodeProcess=options=>spawnEmployeeProcess(args.employeeId,options.command,options.args,{cwd:options.cwd,env:engineProcessEnvironment('claude',options.env),signal:options.signal});opts.disallowedTools=[...new Set([...(opts.disallowedTools??[]),'Agent','Task'])]}
   return opts

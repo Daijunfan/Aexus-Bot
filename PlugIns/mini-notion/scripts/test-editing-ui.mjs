@@ -11,7 +11,7 @@ const require = createRequire(import.meta.url),
 const root = path.resolve(import.meta.dirname, '../../..');
 const temp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ac-notion-local-')));
 const artifacts =
-  process.env.AGENTS_COMPANY_TEST_ARTIFACTS || path.join(root, 'artifacts/mininotion-editing');
+  process.env.AGENTS_COMPANY_TEST_ARTIFACTS || path.join(root, '.aexus/artifacts/mininotion-editing');
 fs.mkdirSync(artifacts, { recursive: true });
 fs.mkdirSync(path.join(temp, 'fixture'));
 fs.writeFileSync(path.join(temp, 'fixture/release-all'), '');
@@ -37,7 +37,7 @@ for (const key of Object.keys(env))
   )
     delete env[key];
 const app = await electron.launch({
-  executablePath: process.env.AGENTS_COMPANY_TEST_APP || require('electron'),
+  executablePath: process.env.AGENTS_COMPANY_TEST_APP || require('../electron/runtime.cjs').electronRuntime().executable,
   args: process.env.AGENTS_COMPANY_TEST_APP ? [] : [root],
   env,
 });

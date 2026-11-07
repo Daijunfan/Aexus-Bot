@@ -1,17 +1,28 @@
 import { EventSummary } from '../../components/EventSummary';
 import { eventDescription, eventPresenter } from '../../scheduling/presentation';
-import {AppSelect} from '../../components/AppSelect';
+import { AppSelect } from '../../components/AppSelect';
 import { AppearanceTheme, recordAppearanceStyle } from '../../appearance';
-import { useContext, useEffect, useRef, useState } from 'react';
+import { conditionalColor } from '../model';
+import { conditionalColorStyle } from '../conditionalColors';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Clock, Plus } from 'lucide-react';
 import type { DatabaseView, Page } from '../../types';
 import { useWorkspace } from '../../store';
 import { IconButton, Popover } from '../../ui';
 import { scheduledRange, parseDay } from '../dates';
 import { dateParts, hasTime, makeDateValue, zonedDate } from '../dateValue';
-import { arrangeTimeEvents, gridInstant, timeGridProjection, timeInZone, type TimeGridEvent } from '../timeGrid';
+import {
+  arrangeTimeEvents,
+  compactTimeEvents,
+  gridInstant,
+  timeGridProjection,
+  timeInZone,
+  type TimeGridEvent,
+} from '../timeGrid';
 
-const pixelsPerMinute = 0.9, minimumEventHeight = 60, visibleAllDay = 3;
+const pixelsPerMinute = 0.9,
+  minimumEventHeight = 60,
+  visibleAllDay = 3;
 type Props = {
   now: Date;
   page: Page;
@@ -30,16 +41,30 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
   const [resize, setResize] = useState<{ id: string; end: number } | null>(null);
   const scroll = useRef<HTMLDivElement>(null);
   const [allDayPanel, setAllDayPanel] = useState<{ date: string; x: number; y: number } | null>(null);
-  const describe = eventPresenter(workspace!, page, view, now);
-  const grid = timeGridProjection(page, view, rows, now);
-  // Optical collision lanes account for minimum readable cards without changing stored times.
-  for (const day of grid.days) arrangeTimeEvents(day.events, minimumEventHeight / pixelsPerMinute);
-  const allDayHeight = 22 + Math.min(visibleAllDay, Math.max(...grid.days.map(day => day.allDay.length))) * 60
-    + (grid.days.some(day => day.allDay.length > visibleAllDay) ? 28 : 0);
-  const height = Math.max(...grid.days.map(day => Math.max(day.minutes * pixelsPerMinute,
-    ...day.events.map(event => event.minuteStart * pixelsPerMinute + minimumEventHeight))));
+  const [timedPanel, setTimedPanel] = useState<{ date: string; minute: number; ids: string[]; x: number; y: number } | null>(null);
+  const describe = useMemo(() => eventPresenter(workspace!, page, view, now), [workspace, page, view, now]);
+  const grid = useMemo(() => {
+    const projection = timeGridProjection(page, view, rows, now);
+    // Optical collision lanes account for minimum readable cards without changing stored times.
+    for (const day of projection.days) arrangeTimeEvents(day.events, minimumEventHeight / pixelsPerMinute);
+    return projection;
+  }, [page, view, rows, now]);
+  const allDayHeight = useMemo(() =>
+    22 +
+    Math.min(visibleAllDay, Math.max(...grid.days.map((day) => day.allDay.length))) * 60 +
+    (grid.days.some((day) => day.allDay.length > visibleAllDay) ? 28 : 0), [grid]);
+  const height = useMemo(() => Math.max(
+    ...grid.days.map((day) =>
+      Math.max(
+        day.minutes * pixelsPerMinute,
+        ...day.events.map((event) => event.minuteStart * pixelsPerMinute + minimumEventHeight),
+      ),
+    ),
+  ), [grid]);
+  const timeZones = useMemo(() => [...new Set([grid.timeZone, 'UTC', ...Intl.supportedValuesOf('timeZone')])], [grid.timeZone]);
+  const lanes = useMemo(() => new Map(grid.days.map((day) => [day.date, compactTimeEvents(day.events)] as const)), [grid]);
   const fields = { startProperty: grid.dateProperty, endProperty: grid.endProperty || '' };
-  const byId = new Map(rows.map(row => [row.id, row]));
+  const byId = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
   const rowFor = (id: string) => byId.get(id);
 
   useEffect(() => {
@@ -148,7 +173,7 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
           disabled={page.locked}
           onChange={(event) => updateView({ timeZone: event.target.value })}
         >
-          {[...new Set([grid.timeZone, 'UTC', ...Intl.supportedValuesOf('timeZone')])].map((zone) => (
+          {timeZones.map((zone) => (
             <option key={zone} value={zone}>
               {zone}
             </option>
@@ -158,7 +183,14 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
       <div className="hourly-scroll" ref={scroll}>
         <div
           className="hourly-grid"
-          style={{ gridTemplateColumns: grid.days.map(day => `minmax(${Math.max(212, Math.max(1, ...day.events.map(event => event.columns)) * 152 + 32)}px, 1fr)`).join(' ') }}
+          style={{
+            gridTemplateColumns: grid.days
+              .map(
+                (day) =>
+                  `minmax(${Math.max(212, lanes.get(day.date)!.columns * 152 + 32)}px, 1fr)`,
+              )
+              .join(' '),
+          }}
         >
           {grid.days.map((day) => (
             <div className="hourly-day" key={day.date} data-hour-date={day.date}>
@@ -209,7 +241,13 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
                       <button
                         type="button"
                         className="hourly-all-day-event"
-                        style={recordAppearanceStyle(row, theme, workspace!.settings.appearance)}
+                        style={{
+                          ...recordAppearanceStyle(row, theme, workspace!.settings.appearance),
+                          ...conditionalColorStyle(
+                            conditionalColor(row, view, page.database!, workspace!.pages),
+                            theme,
+                          ),
+                        }}
                         key={id}
                         title={eventDescription(describe(row))}
                         data-record-id={id}
@@ -221,9 +259,17 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
                       </button>
                     );
                   })}
-                  {day.allDay.length > visibleAllDay && <button className="hourly-more" onClick={event => {
-                    const rect = event.currentTarget.getBoundingClientRect(); setAllDayPanel({ date: day.date, x: rect.left, y: rect.bottom + 4 });
-                  }}>还有 {day.allDay.length - visibleAllDay} 项全天日程</button>}
+                  {day.allDay.length > visibleAllDay && (
+                    <button
+                      className="hourly-more"
+                      onClick={(event) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setAllDayPanel({ date: day.date, x: rect.left, y: rect.bottom + 4 });
+                      }}
+                    >
+                      还有 {day.allDay.length - visibleAllDay} 项全天日程
+                    </button>
+                  )}
                 </div>
               </div>
               <div
@@ -263,7 +309,7 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
                   setDropAt(null);
                 }}
                 onDoubleClick={(event) => {
-                  if (!(event.target as HTMLElement).closest('.hourly-event'))
+                  if (!(event.target as HTMLElement).closest('.hourly-event,.hourly-more-timed'))
                     createAt(
                       gridInstant(
                         day,
@@ -293,22 +339,30 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
                     —
                   </div>
                 )}
-                {day.events.map((event) => {
+                {lanes.get(day.date)!.visible.map((event) => {
                   const row = rowFor(event.id)!;
+                  const displayedColumns = Math.min(4, event.columns);
                   const endMinute =
                     resize?.id === event.id
                       ? Math.min(day.minutes, (resize.end - day.startTimestamp) / 60000)
                       : event.minuteEnd;
                   const top = event.minuteStart * pixelsPerMinute,
-                    eventHeight = Math.max(minimumEventHeight, (endMinute - event.minuteStart) * pixelsPerMinute - 2);
+                    eventHeight = Math.max(
+                      minimumEventHeight,
+                      (endMinute - event.minuteStart) * pixelsPerMinute - 2,
+                    );
                   const endTimestamp = resize?.id === event.id ? resize.end : event.sourceEnd;
                   const startLabel = event.continuesBefore ? '00:00' : event.start.slice(11, 16);
                   const endLabel =
                     endTimestamp >= day.endTimestamp
                       ? '24:00'
                       : timeInZone(endTimestamp, grid.timeZone).slice(11, 16);
-                  const label = startLabel + (event.hasEnd || resize?.id === event.id ? `–${endLabel}` : ' · 未设结束');
-                  const info = { ...describe(row), when: `${event.continuesBefore ? '← ' : ''}${label}${event.continuesAfter ? ' →' : ''}` };
+                  const label =
+                    startLabel + (event.hasEnd || resize?.id === event.id ? `–${endLabel}` : ' · 未设结束');
+                  const info = {
+                    ...describe(row),
+                    when: `${event.continuesBefore ? '← ' : ''}${label}${event.continuesAfter ? ' →' : ''}`,
+                  };
                   return (
                     <div
                       className={`hourly-event ${isDone(row) ? 'completed' : ''} ${eventHeight < 35 ? 'compact' : ''}`}
@@ -321,21 +375,28 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
                       title={`${eventDescription(info)}\n⌥↑↓ 移动 15 分钟 · ⌥←→ 移动一天 · ⌥⇧↑↓ 调整时长`}
                       style={{
                         ...recordAppearanceStyle(row, theme, workspace!.settings.appearance),
+                        ...conditionalColorStyle(
+                          conditionalColor(row, view, page.database!, workspace!.pages),
+                          theme,
+                        ),
                         top,
                         height: eventHeight,
-                        left: `calc(${(event.column / event.columns) * 100}% + ${28 * (1 - event.column / event.columns)}px)`,
-                        width: `calc(${100 / event.columns}% - ${28 / event.columns + 3}px)`,
+                        left: `calc(${(event.column / displayedColumns) * 100}% + ${28 * (1 - event.column / displayedColumns)}px)`,
+                        width: `calc(${100 / displayedColumns}% - ${28 / displayedColumns + 3}px)`,
                       }}
                       draggable={!grid.readonlyDates && !page.locked && !row.locked && !resize}
                       onDragStart={(drag) => {
                         drag.dataTransfer.setData('application/x-mini-row', row.id);
                         const grabbed = Math.min(
                           Math.max(0, Math.ceil((event.minuteEnd - event.minuteStart) / 15) - 1) * 15,
-                          Math.max(0, Math.round(
-                            (drag.clientY - drag.currentTarget.getBoundingClientRect().top) /
-                              pixelsPerMinute /
-                              15,
-                          ) * 15),
+                          Math.max(
+                            0,
+                            Math.round(
+                              (drag.clientY - drag.currentTarget.getBoundingClientRect().top) /
+                                pixelsPerMinute /
+                                15,
+                            ) * 15,
+                          ),
                         );
                         drag.dataTransfer.setData(
                           'application/x-mini-time-offset',
@@ -348,7 +409,10 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
                       onClick={() => openRow(row.id)}
                       onKeyDown={(key) => {
                         if (key.target !== key.currentTarget) return;
-                        if (key.key === 'Enter' || key.key === ' ') { key.preventDefault(); openRow(row.id); }
+                        if (key.key === 'Enter' || key.key === ' ') {
+                          key.preventDefault();
+                          openRow(row.id);
+                        }
                         if (
                           key.altKey &&
                           ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key.key)
@@ -370,9 +434,17 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
                     >
                       <div className="hourly-event-label" style={{ top: allDayHeight + 40 }}>
                         <EventSummary info={info} />
-                        {complete && <input className="hourly-complete" type="checkbox"
-                          aria-label={`完成 ${row.title || '无标题'}`} checked={isDone(row)} disabled={page.locked || row.locked}
-                          onClick={event => event.stopPropagation()} onChange={event => complete(row, event.target.checked)} />}
+                        {complete && (
+                          <input
+                            className="hourly-complete"
+                            type="checkbox"
+                            aria-label={`完成 ${row.title || '无标题'}`}
+                            checked={isDone(row)}
+                            disabled={page.locked || row.locked}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={(event) => complete(row, event.target.checked)}
+                          />
+                        )}
                       </div>
                       {!event.continuesAfter && !grid.readonlyDates && !page.locked && !row.locked && (
                         <div
@@ -385,6 +457,22 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
                     </div>
                   );
                 })}
+                {lanes.get(day.date)!.overflow.map(({ minute, hidden }) => (
+                  <button
+                    type="button"
+                    key={minute}
+                    className="hourly-more-timed"
+                    style={{ top: minute * pixelsPerMinute + 1, left: 'calc(75% + 7px)', width: 'calc(25% - 10px)' }}
+                    aria-label={`${day.date} ${timeInZone(day.startTimestamp + minute * 60000, grid.timeZone).slice(11, 16)} 附近还有 ${hidden.length} 项小时日程`}
+                    onDoubleClick={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      setTimedPanel({ date: day.date, minute, ids: hidden.map((item) => item.id), x: rect.left, y: rect.bottom + 4 });
+                    }}
+                  >
+                    +{hidden.length} 项日程
+                  </button>
+                ))}
                 {grid.now >= day.startTimestamp && grid.now < day.endTimestamp && (
                   <div
                     className="hourly-now"
@@ -401,14 +489,49 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
           ))}
         </div>
       </div>
-      {allDayPanel && <Popover {...allDayPanel} width={380} role="dialog" label={`${allDayPanel.date} 的全天日程`} onClose={() => setAllDayPanel(null)}>
-        <div className="event-detail-list"><header>{allDayPanel.date} · 全天日程</header>
-          {grid.days.find(day => day.date === allDayPanel.date)?.allDay.map(id => <button key={id} onClick={() => { setAllDayPanel(null); openRow(id); }}>
-            <EventSummary info={describe(rowFor(id)!)} detailed />
-          </button>)}
+      {allDayPanel && (
+        <Popover
+          {...allDayPanel}
+          width={380}
+          role="dialog"
+          label={`${allDayPanel.date} 的全天日程`}
+          onClose={() => setAllDayPanel(null)}
+        >
+          <div className="event-detail-list">
+            <header>{allDayPanel.date} · 全天日程</header>
+            {grid.days
+              .find((day) => day.date === allDayPanel.date)
+              ?.allDay.map((id) => (
+                <button
+                  key={id}
+                  onClick={() => {
+                    setAllDayPanel(null);
+                    openRow(id);
+                  }}
+                >
+                  <EventSummary info={describe(rowFor(id)!)} detailed />
+                </button>
+              ))}
+          </div>
+        </Popover>
+      )}
+      {timedPanel && <Popover
+        x={timedPanel.x} y={timedPanel.y} width={380} role="dialog"
+        label={`${timedPanel.date} 的更多小时日程`} onClose={() => setTimedPanel(null)}
+      >
+        <div className="event-detail-list">
+          <header>{timedPanel.date} · {timeInZone(
+            grid.days.find((day) => day.date === timedPanel.date)!.startTimestamp + timedPanel.minute * 60000,
+            grid.timeZone,
+          ).slice(11, 16)} 附近的 {timedPanel.ids.length} 项日程</header>
+          {timedPanel.ids.map((id) => (
+            <button key={id} onClick={() => { setTimedPanel(null); openRow(id); }}>
+              <EventSummary info={describe(rowFor(id)!)} detailed />
+            </button>
+          ))}
         </div>
       </Popover>}
-      <table className="hourly-print-agenda">
+      {window.native?.printMode && <table className="hourly-print-agenda">
         <caption>详细日程 · {grid.timeZone}</caption>
         {grid.days.map((day) => (
           <tbody key={day.date}>
@@ -444,7 +567,7 @@ export function TimeGrid({ now, page, view, rows, openRow, addRow, updateView, i
             )}
           </tbody>
         ))}
-      </table>
+      </table>}
     </section>
   );
 }

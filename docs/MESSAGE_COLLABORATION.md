@@ -1,5 +1,170 @@
 # Message collaboration API
 
+## Native conversation, published direct messages and explicit group publication
+
+All native Agent text, reasoning, tool calls/results and completion events belong
+only to that employee's full Company native conversation. The same is true of every
+group/shared input, channel input and silent/awareness read: these inputs and their
+exact Aexus wrapped prompts are recorded in Company and are never projected into a
+Messages direct conversation.
+
+Messages direct conversations are an independent published ledger. A direct entry
+exists only when the user or Secretary explicitly calls `direct.send`, or when the
+authenticated employee explicitly calls `direct.post`. Native output alone never
+publishes a direct message. Do not call `session.send/enqueue` on yourself, or rely
+on ordinary output, to reply to the user: `session.send/enqueue` assign native work
+and do not publish a direct message.
+
+Only an explicit authenticated `chat.post` or `agents_company_discussion_post`
+call publishes a group reply. `direct.post` addresses only the caller's own user
+conversation; it never assigns work to another Agent, posts to a group, or fans out
+to group members. When the user asks in a group for a private answer, call
+`direct.post`. When the user asks for a group summary and private details, publish
+only the intended summary through the group API and send the private details with
+`direct.post`. Assistant text, JSON, reasoning, tool results and completion events
+never become group messages by themselves.
+
+Every group publication reaches current recipients once. User mentions/replies
+select work recipients; unmentioned members and recipients of employee reports
+read silently, with no tools or automatic follow-up work. Reading acknowledgments
+are internal protocol, not user-visible private speech. A new deliberate task or
+API publication remains possible; there is no recursive relay of native answers.
+Stable client request IDs deduplicate retries, and membership/mute/revocation are
+rechecked by Core.
+
+Current scope: group chat only. Channels are read-only news feeds: member/role,
+moderation, notice and post-count writes are rejected; legacy records remain
+readable for compatibility and active count rules are paused. Old channel examples
+below describe retained compatibility records, not supported channel workflows.
+Employees use [channel fetch/search](CHANNELS.md#read-only-employee-channel-api)
+without joining or saving.
+
+## Published direct-message API
+
+### User and Secretary input: `direct.send`
+
+`direct.send {employee,text?,images?,files?,mode?,clientMessageId?,replyTo?,replyQuote?,replyConversation?,replyTextOnly?,viewId?}`
+publishes one user-authored entry in the employee's direct-message ledger and
+dispatches or queues the matching work in that employee's existing native session.
+
+| Field | Meaning |
+| --- | --- |
+| `employee` | Required exact employee ID. |
+| `text` | Optional text, up to 100,000 characters. |
+| `images`, `files` | Optional own workspace paths, combined at most 16 attachments. |
+| `mode` | `enqueue` (default), `send` or `steer`. `send` dispatches immediately in the existing native session; `enqueue` queues it; `steer` appends to the active native turn and rejects attachments. |
+| `clientMessageId` | Optional stable retry key up to 160 characters. Core generates one when omitted; persist an explicit key to retry safely and query acceptance. |
+| `replyTo`, `replyQuote`, `replyConversation`, `replyTextOnly`, `viewId` | Existing reply/view references, validated by Core. |
+
+Only the user or Secretary may call `direct.send`. An Agent cannot use it on
+itself; an employee replies with `direct.post`. The entry carries delivery evidence
+`preparing`, `queued`, `accepted`, `failed` or `interrupted`.
+`direct.send-status {employee,clientMessageId}` reads that acceptance without
+reopening an engine or replaying work. An identical retry with the same key and content returns the same
+receipt; changed content with that key is rejected.
+
+### Employee publication: `direct.post`
+
+`direct.post {text?,images?,files?,replyTo?,replyQuote?,clientMessageId}` is an
+authenticated employee's explicit message to the user as itself. It supports
+combined or separate text, images and files, at most 16 attachments, and requires a
+stable `clientMessageId` (1–160 characters).
+
+- Different `clientMessageId` values create separate messages, so an employee may
+  send several text, image and file messages in sequence.
+- Retrying an unchanged call with the same ID returns the same message. Reusing the
+  ID for different content is rejected.
+- `direct.post` only publishes to the caller's own user conversation. It never
+  addresses a peer, assigns work, triggers another Agent, or publishes to a group.
+- An employee cannot supply another author, and the user or Secretary cannot spoof
+  an employee's publisher identity.
+
+`direct.post` is communication with the user, not a workspace write. It is allowed
+during a normal native work turn in Plan, Ask and `dontAsk` modes without a
+file-write approval. Other generic API writes still follow the engine's Ask/Full
+access and planning rules. Initialization and silent/awareness reading cannot
+publish.
+
+### History and read state
+
+`direct.history {employee,limit?,before?,around?}` reads only the published ledger.
+`limit` is 1–500 (default 200); `before` selects entries below a direct sequence,
+and `around` centers a page on an exact direct message ID. It returns
+`{items,revision,latestIncoming,readSequence,nextBefore}`. It never includes native
+output, shared inputs, wrapper prompts or silent reads, and querying does not mark
+anything read.
+
+`direct.acknowledge {employee,messageId}` acknowledges one exact published incoming
+employee message. A stale message ID never acknowledges a newer post; reading the
+ledger or querying an entry does not acknowledge it. Native Company unread state
+remains the separate `session.acknowledge`/`lastReply` record.
+
+### Attachments and preserved media
+
+Attachment paths are resolved in the employee's own workspace on its execution host
+at post time. At most 16 image/file attachments may accompany one entry.
+
+- For a local employee, Core copies the media into the private direct-media store
+  while sending and checks that the source did not change during the copy. The sent
+  media remains readable after the source file is edited, moved or deleted.
+- For a remote employee, only metadata is published. Bytes remain lazily on the
+  original execution host and each read rechecks the current workspace/host binding
+  and the recorded size/modification version. Core never silently downloads a
+  remote file to the Mac.
+- A changed, unavailable or moved remote source is reported as unavailable; ask the
+  sender to publish it again rather than substituting another file.
+
+Published attachments use opaque `@direct/…` references. They are read-only through
+the workspace APIs; destination writes and arbitrary-path substitution are
+rejected.
+
+### Company provenance for native input
+
+The full Company conversation displays the exact Aexus-owned wrapper and origin for
+newly captured work and read inputs: `from [groupname]` for group/shared input,
+`from [Private · name]` (or `from [Private]`) for private input, and `[Channel · name]`
+for channel input. Read-phase inputs are marked `Read silently`, and the expandable
+**System wrapper prompt** shows the wrapper verbatim. Existing raw histories are
+preserved unchanged; the application does not claim to reconstruct wrapper or
+origin metadata that was never stored for older entries.
+
+### Permission boundaries
+
+Existing roles, transcript-reading scope, workspace boundaries and credentials are
+unchanged. The user and Secretary may administer a readable employee's private
+input, published history and read state through `direct.send`, `direct.history`,
+`direct.send-status` and `direct.acknowledge`. A Secretary still publishes only
+through its own authenticated employee identity (`direct.post`) and cannot spoof
+another employee as publisher.
+
+```sh
+# User or Secretary input; the default mode is enqueue.
+agents direct send --employee EMPLOYEE_ID --text "Please review the draft." \
+  --client-message-id dm-input-1 --json
+# Dispatch immediately in the existing native session.
+agents direct send --employee EMPLOYEE_ID --text "Answer now." \
+  --mode send --client-message-id dm-input-2 --json
+# Steer the active turn; steer rejects attachments.
+agents direct send --employee EMPLOYEE_ID --text "Also check the appendix." \
+  --mode steer --client-message-id dm-input-3 --json
+agents direct send-status --employee EMPLOYEE_ID --client-message-id dm-input-1 --json
+agents direct history --employee EMPLOYEE_ID --limit 50 --before 120 --json
+agents direct history --employee EMPLOYEE_ID --around dm_MESSAGE_ID --limit 20 --json
+agents direct acknowledge --employee EMPLOYEE_ID --message-id dm_MESSAGE_ID --json
+```
+
+```json
+{"command":"direct.post","args":{"text":"The first pass is attached.","clientMessageId":"dm-reply-1"}}
+{"command":"direct.post","args":{"images":["/work/shot-1.png"],"clientMessageId":"dm-reply-2"}}
+{"command":"direct.post","args":{"files":["/work/report.pdf"],"text":"Full source.","clientMessageId":"dm-reply-3"}}
+```
+
+In a multi-message exchange, the user may send text plus images/files once with
+`direct.send`; the employee then sends a text answer, images and a file as separate
+`direct.post` calls with distinct stable IDs. Each call becomes its own published
+ledger entry, and retrying any call with its original ID returns that same entry.
+
+
 ## Scope and authority
 
 Message groups and channels use independent Agent offices: `owner`, `admin`, `member`, displayed as **Owner / Admin / Member** in every interface language. Company offices remain Employee / Manager / Governor / Secretary. Owning a conversation never grants Company employee-control, Team deletion, credentials, or Plan access. The human user retains administration and recovery access.
@@ -61,17 +226,18 @@ The catalog describes available locations and access. It does not mandate where 
 
 ## File permissions
 
-| Caller | Own member subtree | Direct files at conversation root | Other members' folders |
+| Caller | Group shared root and all member folders | Channel own named subfolder | Channel root and peer folders |
 | --- | --- | --- | --- |
-| Member / Admin / Owner Agent | Read/write/create/move/trash/restore | Read | Read |
-| Agent with Company Secretary office, currently a member | Same | Read/write/create/move/trash/restore | Read |
-| Human user | Full | Full | Full |
+| Current member Agent (Member / Admin / Owner) | Read/create/upload/edit/delete | Read/create/edit/delete | Read |
+| User or Secretary (no membership required) | Full | Full | Full |
 
-The Secretary root-file exception is explicit Company authority, separate from conversation governance. A Secretary who is not a current member cannot use it. A Member Secretary may maintain root files without being Admin; a Company Employee who owns the group cannot. The exception permits direct regular files only, not arbitrary shared directories or another employee's subtree.
+Group membership alone grants equal rights: every current group member may read, create, upload, edit and delete content at the shared root and inside any peer member folder. Conversation Owner/Admin office grants no additional file authority. In channels, an Agent member's writes remain limited to its own named subfolder; the user and Secretary administer all channel content without joining. Ordinary employees require current membership; the user and Secretary retain global authority. The member copy API does not permit writing another employee's private Company workspace.
 
-`conversation.file` supports `list`, `read`, `image`, `info`, `chunk`, `write`, `mkdir`, `move`, `trash`, and `restore`. Paths are relative to the shared root and own writes use the returned `memberDirectory` prefix. User originals and peer files never need to be moved in order to work on an editable copy. Host-managed metadata, parent traversal and escaped symlinks are rejected. Root-file trash receipts created by Secretary use `root:TRASH_ID`; restore rechecks the Secretary office, original direct-file destination and stored file type. Use returned IDs unchanged.
+Named member directory identities (`members[].directory`, `memberDirectory`, `memberPath`) and host-managed metadata are protected in every conversation: they cannot be renamed, replaced, moved, trashed or overwritten by an upload. Group root-file trash uses a `root:TRASH_ID` receipt; restore rechecks current membership and the original direct-file scope.
 
-`conversation.copy` handles explicit existing-file copies into an own member workspace or personal Company workspace. `conversation.transfer` reports/cancels those copy jobs. Reading/writing a workspace does not change native engine permissions or OS identity. These are Core API boundaries, not a claim that arbitrary trusted same-account shell processes are an OS sandbox.
+`conversation.file` supports `list`, `read`, `image`, `info`, `chunk`, `write`, `mkdir`, `move`, `trash`, and `restore`. Paths are relative to the shared root. In a group, any member may write any permitted shared path. In a channel, an Agent's writes use the returned `memberDirectory` prefix. User originals and peer files never need to be moved in order to work on an editable copy. Host-managed metadata, parent traversal and escaped symlinks are rejected. Use returned IDs unchanged. Text writes are limited to 4 MiB.
+
+`conversation.copy` handles explicit existing-file copies into a writable shared destination or the caller's personal Company workspace. `conversation.transfer` reports/cancels those copy jobs. `conversation.upload` copies a personal workspace file into a group shared path: files up to 2 GiB, images included in a message up to 10 MiB. Reading/writing a workspace does not change native engine permissions or OS identity. These are Core API boundaries, not a claim that arbitrary trusted same-account shell processes are an OS sandbox.
 
 ## Complete published entries and attachments
 
@@ -93,12 +259,16 @@ News attachments use `image:MEDIA_ID` and `document:FILE_ID`. Message attachment
 | --- | --- |
 | `conversation`, `entryId`, `attachmentId` | Exact source identities from `conversation.entry`. |
 | `clientRequestId` | Required stable key for one unchanged copy request, max 160 characters. |
-| `workspace` | Optional destination ID from `workspace.catalog`. Omitted selects this conversation's own member workspace. |
+| `workspace` | Optional destination ID from `workspace.catalog`. Omitted selects the employee's own Company execution workspace (`company:EMPLOYEE_ID`). |
 | `employee` | Human-user selection; an Agent can specify only itself or omit. The employee must belong to the source conversation. |
 | `path` | Optional relative subdirectory within that employee's destination workspace; default `.`. |
 | `name` | Optional destination filename, not a path. |
 
-The default is only the default destination of this copy command; it does not select a workspace for subsequent tasks. Agents may explicitly choose any own catalog entry.
+The default is only the default destination of this copy command; it does not select a workspace for subsequent tasks. Agents may explicitly choose any own catalog entry, including a joined Message member workspace, but never a peer's private Company workspace.
+
+The human user or Secretary may instead use `conversation.download-local` with an explicit absolute destination file path on the Mac/Core host. It streams the published source directly to that path; an existing file is refused unless `overwrite:true` is explicitly supplied. The GUI's save-as dialog remains the user-facing equivalent and keeps its normal overwrite confirmation.
+
+Remote sources and destinations execute on the employee's execution host. Core streams bounded chunks between hosts; it does not build one giant in-renderer Blob or proxy the whole file through memory.
 
 The response is an asynchronous receipt `{id,state,bytes,totalBytes,workspace,workspacePath,…}`. Query `conversation.download-status {id}` until `completed`, `failed`, `cancelled` or `interrupted`; only `completed` supplies a committed file path. `queued` and `running` are not completed downloads. `{id,cancel:true}` cancels the caller's own copy. Another Agent cannot read or cancel its receipt.
 
@@ -121,7 +291,35 @@ agents conversation download channel:CHANNEL_ID --entry-id POST_ID \
   --client-request-id magazine-company-copy-1 --json
 ```
 
-The GUI's **Copy to Agent workspace** button chooses the same employee/catalog destination and uses these same APIs. Agent-authored group/channel replies may explicitly include visible shared `@workspace/…` attachment references with a nonempty caption. Private files are not automatically published.
+The GUI's **Copy to Agent workspace** button chooses the same employee/catalog destination and uses these same APIs. Agent-authored group replies may explicitly include shared `@workspace/…` attachments with optional text. Private files are not automatically published.
+
+## Edit and upload a shared group file
+
+The standard native workflow keeps shared content intact until an explicit upload:
+
+1. `conversation.entry {conversation,id}` returns the message and its attachment descriptors. Use the returned `attachmentId`; never guess one from a filename.
+2. `conversation.download` copies the chosen attachment to the employee's own Company execution workspace by default. Poll `conversation.download-status {id}` until `completed`; only then use the committed path. The receipt's `sourceVersion` identifies the shared source version that was copied.
+3. Modify the downloaded personal file with normal workspace tools.
+4. `conversation.upload {conversation,from,path,clientRequestId,expectedVersion?}` copies a personal workspace file to a group shared path. `from` is `{"employee":"self","path":"RELATIVE_PERSONAL_FILE"}`; `path` is relative to the shared root. New files must not exist. To overwrite, pass `expectedVersion`: use the download receipt's `sourceVersion` if the target is unchanged, otherwise read the current target with `conversation.file --operation info` and use its `version`.
+5. Poll `conversation.upload-status {id}` until `completed`; only `completed` means the shared file committed.
+6. Publish explicitly if recipients need the file: `chat.post` with `images`/`files` containing the returned `@workspace/…` paths. Text is optional. Uploading never posts a message itself.
+
+A new file without `expectedVersion` never replaces an existing shared file. An update fails if the current shared version differs from `expectedVersion`; the newer shared file is preserved. Inspect the current file, reconcile the personal copy, then retry with a fresh `clientRequestId`. Reusing a request key with different arguments is rejected. Upload receipts are durable; after a Core restart an in-flight request becomes `interrupted` and is not replayed. Uploads never copy into another employee's private workspace.
+
+```sh
+agents conversation entry group:GROUP_ID --id MESSAGE_ID --json
+agents conversation download group:GROUP_ID --entry-id MESSAGE_ID \
+  --attachment-id ATTACHMENT_ID --client-request-id edit-1 --json
+agents conversation download-status DOWNLOAD_ID --json
+agents conversation file group:GROUP_ID --operation info --path 'shared/brief.txt' --json
+agents conversation upload --conversation group:GROUP_ID \
+  --from '{"employee":"self","path":"brief.txt"}' \
+  --path 'shared/brief.txt' --expected-version CURRENT_VERSION \
+  --client-request-id upload-1 --json
+agents conversation upload-status UPLOAD_ID --json
+agents chat post GROUP_ID --files '["@workspace/shared/brief.txt"]' \
+  --text 'Updated brief.' --json
+```
 
 ## Per-Agent post-count rules
 
@@ -133,7 +331,7 @@ Counting starts after configuration. Saving or resuming starts a fresh counter f
 
 A configured rule replaces per-post automatic reading for that member. A paused rule stays quiet; removing a rule restores ordinary per-post awareness. This avoids waking the same employee once per article and again at the configured threshold. It does not change how other unconfigured members receive news.
 
-At threshold, the saved prompt and **exact counted post IDs** are frozen into a durable batch. The channel gets an explicitly marked automatic request retaining its actual configuring author. Only the target employee receives that batch as work; model output remains private unless it deliberately calls a publication API. Use `channel.message-post` with the returned request message ID to publish a result. The batch itself does not invent a summary or assert completion.
+At threshold, the saved prompt and **exact counted post IDs** are frozen into a durable batch. The channel gets an explicitly marked automatic request retaining its actual configuring author. Only the target employee receives that batch as work; model output remains only in the Company native conversation unless it deliberately calls a publication API (`direct.post` for the user's direct conversation, or a group/channel publication API). Use `channel.message-post` with the returned request message ID to publish a result. The batch itself does not invent a summary or assert completion.
 
 `channel.post-trigger-history {id,employee?,offset?,limit?}` reports actual delivery states and message IDs. `channel.post-trigger-batch {id,batchId,offset?,limit?}` returns the exact batch and complete current posts, with explicit unavailable entries when retention or removal has affected a post. Page with the returned offset/hasMore; do not substitute a shifting latest-N feed. A batch can contain more than one page.
 
@@ -155,6 +353,6 @@ These example rules are paused until explicitly enabled. Users edit prompts in *
 
 ## Verification
 
-`node test/message-collaboration-core-test.mjs` exercises real authenticated Core/CLI calls with disposable native and SSH fixtures, including streamed PDF/image data, Secretary root restrictions, independent roles/workspaces, exact-count work and Plan isolation.
+`node test/message-collaboration-core-test.mjs` exercises real authenticated Core/CLI calls with disposable native and SSH fixtures, including streamed PDF/image data, Secretary global file authority, group/peer versus channel-own write boundaries, independent roles/workspaces, exact-count work and Plan isolation.
 
 `node test/message-collaboration-ui-test.mjs` builds an isolated application and exercises the real browser and hidden Electron UI, with screenshot checks for roles, document destinations, per-member rules and batch history. Fixtures do not call paid providers or use production state. Actual installed application behavior must be checked separately from a source build.

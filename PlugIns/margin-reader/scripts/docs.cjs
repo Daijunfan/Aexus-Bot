@@ -15,18 +15,20 @@ workspace: required
 
 ## Purpose
 
+选文工具栏提供高亮、摘录到脑图、内联批注和复制；单次 inMap、annotationStyle、note、tags 覆盖在同一次摘录事务中保存，不改默认预设。数据库以独立表格工作区呈现当前学习集或整个授权文库，支持两级分组、保存筛选与排序方向、跨页选择、原子批量编辑和回源定位。标题、标签、批注与显示转录可直接编辑；摘录原文和 PNG 保持不变，版本冲突保留草稿而不覆盖新数据。
+
 0.9.4统一移动、选择与父子关系工具的主题拖放预览；拖到目标主体修改父主题，拖出脑图松开取消，重叠旧位置不再挡住目标。保留完整资料封面、并排阅读与原文定位。公开接口和员工权限不变，见 docs/DRAG_COVER_FINISH.md。
 
 0.9.3修复 Ctrl/Cmd+S 与退出，增加原文拖入、可撤销的所选节点删除、区域、大纲和主题任务时间图。新命令为 study.cards.remove、study.mindmap.tasks.plan/export、study.mindmap.zone.move；全部复用当前授权工作区的 Core，独立主题不要求原文来源。见 docs/MINDMAP_USABILITY.md。
 
-0.9.2增加完整资料封面与统一主题拖放：主题A拖到B后B成为父主题，后代跟随；总览缩略节点也可直接操作。study.cards.move的expandParent可在同一次撤销操作中展开目标。界面提供文档阅读与无限脑图，可单独查看或并排阅读，并自由交换左右和调整分栏宽度；卡片盒、学习大纲和复习面板已退休，旧数据与API保留兼容。CLI-first、本地优先的文档阅读器。PDF 原页阅读，DOC/DOCX、EPUB、MOBI/KF8 和常见文本/图片读取；公开网页正文与图片离线保存；真实文件树、大文件夹视图；原文目录提取、自定义章节、缩进、退级、排序、全文搜索和阅读位置保存。
+0.9.2增加完整资料封面与统一主题拖放：主题A拖到B后B成为父主题，后代跟随；总览缩略节点也可直接操作。study.cards.move的expandParent可在同一次撤销操作中展开目标。界面提供文档阅读与无限脑图，可单独查看或并排阅读，并自由交换左右和调整分栏宽度；旧卡片盒、学习大纲和复习面板在此版本退休，旧数据与API保留兼容；当前数据库入口提供新的表格整理工作区。CLI-first、本地优先的文档阅读器。PDF 原页阅读，DOC/DOCX、EPUB、MOBI/KF8 和常见文本/图片读取；公开网页正文与图片离线保存；真实文件树、大文件夹视图；原文目录提取、自定义章节、缩进、退级、排序、全文搜索和阅读位置保存。
 v0.7.0 提供图层/压感/套索、脑图手写、文档对照、笔记本/页面组合、留白、复合卡片、牌组/遮挡/挖空/参数训练，并保留学习集、摘录与独立笔记卡、标签检索、关联、大纲/卡片/脑图视图、撤销重做、离线 FSRS 复习、PDF 手写与文档书签；不含 OCR 或 DRM 解密。
 
 ## Workspace
 
 独立运行时必须提供已有目录：\`node cli.cjs --workspace /absolute/library ...\`，也可使用 AGENTS_WORKSPACE。所有 API 路径均相对此目录，使用 / 分隔。根目录用 . 表示。
-宿主 createPlugin 传入的 workspace 就是完整授权范围。不会读取父目录、同级员工或全局文库。路径穿越、绝对路径、软链接、硬链接、.git、.agents-company 和 .margin-reader 业务访问均被拒绝。保留目录名同时防止大小写、Unicode 兼容写法、尾随点/空格和元数据流别名绕过；公开列表、递归目录操作、备份清单与变更监听使用同一规则。
-Work Team 的实际根目录由宿主提供；开发环境与打包环境的位置可能不同，不要自行拼接或假定固定路径。员工入口固定到其获授权的子目录，能够操作此范围内全部已声明功能，但不会因此取得 Team 根目录、同级员工或其他 Team 的内容。员工 mailbox 使用宿主授予的身份，不回退到用户全局凭据，也不回退到独立运行时或另一个工作区。\n用户查看员工成果时，使用 agents plugin open margin-reader --employee EMPLOYEE_ID 打开同一授权文库；省略作用范围的侧栏入口、Team 根目录和员工目录不是同一份学习集状态。
+宿主 workspace 是文库边界，员工还必须获得具体文档或学习集的阅读、修改、新增权限。用户或 Secretary 在插件“授权人员”管理；Secretary 默认全权。普通员工使用 agents plugin resources --id margin-reader 发现内容，再通过 agents plugin call margin-reader METHOD --params JSON 调用。无需插件团队，不回退到用户凭据或其他工作区。
+阅读不能修改；文档新增允许添加书签和目录，学习集新增允许添加卡片；顶层新增允许上传新文档或创建学习集，不开放已有未授权原件。新资源自动向创建者授权。全库设置、备份、历史和全局删除等仍由用户或 Secretary 操作。旧 Work 目录与 mailbox 保持原位兼容。路径穿越、软链接、硬链接及 .git、.agents-company、.margin-reader 等私有元数据访问继续拒绝。
 \`import FILE --to relative/path\` 在调用者已经有权限的 CLI 进程内读取 FILE，随后使用 import.begin/chunk/finish API 上传；运行时没有任意外部文件读取 API。原始来源文件不会移动或删除。
 
 ## Quick start
@@ -54,10 +56,11 @@ serve 只输出本机令牌 URL，不自动打开浏览器。关闭时 Ctrl+C。
 \`\`\`sh
 agents plugin install /absolute/path/to/margin-reader/dist-plugin
 agents plugin describe margin-reader
-agents plugin call margin-reader fs.list --team 'Reader Team' --params '{"path":"."}'
+agents plugin resources --id margin-reader
+agents plugin call margin-reader fs.list --params '{"path":"."}'
 agents plugin open margin-reader
-# 员工使用自身的固定作用范围入口：
-margin-reader help study.card.create\nmargin-reader schema study.search\nmargin-reader api fs.tree --data '{}' 
+# 员工使用自身认证身份和获授权的原生文档 ID：
+agents plugin call margin-reader document.content --params '{"id":"AUTHORIZED_DOCUMENT_ID"}'
 \`\`\`
 
 API 返回完整 JSON-RPC 2.0：\`{"jsonrpc":"2.0","id":"request-id","result":{...}}\`。CLI 失败返回 error 且退出码非零。\`--data @file.json\` 或 \`--data -\` 可读取 JSON 文件/标准输入。\`--text\` 仅把 document.content 的正文输出为纯文本。
@@ -159,7 +162,7 @@ study.cards.group 创建带原始卡片 ID 的摘要父节点；study.cards.merg
 study.search 在当前工作区的活动学习集中按标题、正文、笔记和标签查找卡片；query 须为 1–1000 字符的非空文本。limit 默认为 500（1–500），offset 默认为 0；返回 cards、total、offset、limit、hasMore、truncated 和 nextOffset。继续传 nextOffset，直到 null，可读取超过 500 条的全部结果，不会静默截断。分页不修改状态，也不是跨请求的锁定快照；并发编辑期间应按 cardId 去重并重新查询。study.card.reference 保留目标 set/card UUID，通过来源跳转可回到对应子脑图。study.card.render 返回 Markdown/公式的消毒 HTML，并给出文字中命中其他卡片标题的 titleLinks；重复标题返回候选，不擅自选择。文本和公式渲染不执行脚本或下载外部图片。
 标题词典支持以中文或英文分号分隔关键词别名；相同卡片的重复别名不产生虚假的多候选。study.card.render 会检查全部候选词条，不按标题长度只取前 1000 个。单次卡片正文、笔记和评论合计最多生成 200 处自动链接；linkStatus 返回 complete、rendered、limit 和 dictionaryTerms。达到上限保留完整文字并显示提示，剩余词条可由 study.catalog / library.search 检索。大小写不敏感匹配仍按原始 UTF-16 文本位置链接，不因 İ 等扩展小写字符偏移。
 document.search 的流式结果除章节、锚点外，返回精确 textOffset；跳转可以直接使用 locator。snippet 的 matchOffset、matchLength 对应返回的原始文字。library.search 的定位只使用未被否定的正文搜索项。
-大文库脑图保留完整布局，只挂载近视口节点；卡片盒与大纲每页 100 张，可跳页或全量检索。CLI 数据、导出、批量操作和稳定 ID 不因界面分页而截断。
+大文库脑图保留完整布局，只挂载近视口节点；数据库每页 100 张，可跨页选择或选择全部筛选结果。保存视图保留 filter、groupBy、sort 和 direction；CLI 数据、导出、批量操作和稳定 ID 不因界面分页而截断。
 
 study.deck.* 管理本地牌组及可恢复归档。review.configure 可指定 deckId、cloze（用 {{答案}} 标记）、occlusions（图片上的归一化矩形）；普通摘录图在翻面前隐藏，遮挡题只显示带遮罩的图片。review.stats 返回当前活动卡片的历史次数、每日计数和观察到的回忆成功率。review.settings 设置目标记忆保持率、最长间隔和当前牌组。review.optimize 使用固定版本 @open-spaced-repetition/binding 0.5.0 离线训练，至少需要 50 个跨日观察；训练期间出现其他编辑会拒绝保存并保留原参数。训练结果也可撤销。
 

@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {create,expect}=require('./ui-session.cjs');
 (async()=>{const f=await create('xmind-drag-ui');let failure;try{
- const {page,api}=f,out=(await fs.readFile(path.join(__dirname,'../artifacts/xmind-rebuild-current.txt'),'utf8')).trim();
+ const {page,api}=f,out=f.output;
  let set=await api('study.create',{title:'拖拽几何与拓扑'});const get=async()=>set=await api('study.get',{setId:set.id});const change=async(method,p={})=>{await get();return set=await api(method,{setId:set.id,expectedRevision:set.revision,...p});};
  await change('study.mindmap.outline.import',{text:'项目规划\n  调研\n    访谈\n    文献\n  设计\n    原型\n    评审\n  实现\n    编码\n    验证'});
  const ids=Object.fromEntries(set.cards.map(c=>[c.title,c.id])),node=title=>page.locator(`.mindmap-topic[data-card-id="${ids[title]}"]`);
@@ -26,8 +26,12 @@ const {create,expect}=require('./ui-session.cjs');
  f.pass('Dropping onto another topic reparents the existing branch and a single undo restores every original topic ID and parent');
  await zoom(.9);b=await begin('文献');dest=await node('访谈').boundingBox();await page.mouse.move(dest.x+dest.width*.5,dest.y-4,{steps:14});await expect(node('访谈')).toHaveAttribute('data-mm-drop','before');await page.mouse.up();await expect.poll(async()=>(await get()).cards.filter(c=>c.parentId===ids['调研'])[0].id).toBe(ids['文献']);await rev();
  await undo();
- b=await begin('调研');dest=await node('访谈').boundingBox();const invalidRevision=(await get()).revision;await page.mouse.move(dest.x+dest.width/2,dest.y+dest.height/2,{steps:14});await expect(node('访谈')).toHaveAttribute('data-mm-drop','invalid');await page.mouse.up();await expect(page.locator('#study-board')).not.toHaveAttribute('data-topic-dragging','true');assert.equal((await get()).revision,invalidRevision);
- f.pass('Sibling insertion has a visible pre-drop marker; moving an ancestor into its descendant is rejected without a state revision');
+ const rotationBefore=structuredClone((await get()).cards),rotationRevision=set.revision;
+ b=await begin('调研');dest=await node('访谈').boundingBox();await page.mouse.move(dest.x+dest.width/2,dest.y+dest.height/2,{steps:14});await expect(node('访谈')).toHaveAttribute('data-mm-drop','child');await page.mouse.up();await expect(page.locator('#study-board')).not.toHaveAttribute('data-topic-dragging','true');await expect.poll(async()=>(await get()).revision).toBe(rotationRevision+1);await rev();
+ assert.deepEqual(set.cards.map(c=>c.id).sort(),rotationBefore.map(c=>c.id).sort());
+ for(const card of set.cards){const prior=rotationBefore.find(c=>c.id===card.id),parentId=card.id===ids['调研']?ids['访谈']:card.id===ids['访谈']?rotationBefore.find(c=>c.id===ids['调研']).parentId:prior.parentId;assert.equal(card.parentId,parentId);const seen=new Set();let ancestor=card;while(ancestor){assert(!seen.has(ancestor.id),'A descendant drop created a parent cycle');seen.add(ancestor.id);ancestor=set.cards.find(c=>c.id===ancestor.parentId);}}
+ assert.deepEqual((await api('study.map.geometry',{setId:set.id})).positions.map(p=>p.cardId).sort(),set.cards.map(c=>c.id).sort());await undo();assert.deepEqual(set.cards,rotationBefore);
+ f.pass('Sibling insertion has a visible marker; a descendant drop rotates the existing tree in one revision without cycles, and one undo restores every card');
  await zoom(.9);b=await begin('访谈');await page.mouse.move(b.x+b.width/2+55,b.y+b.height/2+45,{steps:10});await expect(node('访谈')).toHaveAttribute('data-mm-dragging','true');await change('study.card.update',{cardId:ids['设计'],note:'另一处的合法修改'});const remoteRevision=set.revision;dest=await node('设计').boundingBox();await page.mouse.move(dest.x+dest.width/2,dest.y+dest.height/2,{steps:10});await page.mouse.up();await expect(page.locator('#toast')).toContainText('修改');await rev();assert.equal(set.revision,remoteRevision);assert.equal(set.cards.find(c=>c.id===ids['设计']).note,'另一处的合法修改');assert.equal(set.cards.find(c=>c.id===ids['访谈']).parentId,ids['调研']);
  f.pass('A remote edit during a held drag rejects the stale drop, restores the displayed topics and never retries over newer data');
  await zoom(.9);await node('调研').locator('header strong').click();await node('实现').locator('header strong').click({modifiers:['Shift']});await expect(page.locator('.mindmap-topic.multi-selected')).toHaveCount(2);b=await begin('调研');await page.mouse.move(b.x+b.width/2+30,b.y+b.height/2+25,{steps:12});await expect(page.locator('.mindmap-topic[data-mm-dragging]')).toHaveCount(6);await page.keyboard.press('Escape');await page.mouse.up();await page.locator('#study-map-viewport').click({position:{x:8,y:8}});

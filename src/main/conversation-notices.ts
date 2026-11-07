@@ -1,3 +1,4 @@
+import {isAppAdministrator} from './application-authority'
 import fs from 'node:fs'
 import path from 'node:path'
 import {DatabaseSync,type SQLInputValue} from 'node:sqlite'
@@ -36,6 +37,7 @@ const history=(conversation:string,id?:string)=>all('SELECT data FROM occurrence
 function publicNotice(job:RecordNotice):ConversationNotice{const {credentialHash,requestKey,fingerprint,deleted,...value}=job;return value}
 const announce=(conversation:string)=>emitter('conversation:controls',{conversation})
 function authority(job:RecordNotice){
+ if(job.conversation.startsWith('channel:'))throw Error('Channels do not support group notifications')
  requireConversation(job.conversation,'admin',job.createdBy)
  if(job.createdBy.kind==='agent'&&job.credentialHash&&!credentialActive(job.createdBy.employeeId,job.credentialHash))throw Error('Notification creator credential was revoked')
  return requireConversationPublisher(job.conversation,job.publisherId)
@@ -54,7 +56,7 @@ function spec(value:unknown):NoticeSpec{
  return {name:value.name,text:value.text,publisherId:value.publisherId,rule:noticeRule(value.rule),enabled:value.enabled}
 }
 const revision=(job:RecordNotice,value:unknown)=>{if(!Number.isSafeInteger(value)||value!==job.revision)throw Error('Notification changed; reload before saving')}
-function validatePublisher(conversation:string,publisherId:string,caller:RequestContext){requireConversationPublisher(conversation,publisherId);if(caller.principal.kind==='agent'&&caller.principal.employeeId!==publisherId)throw Error('Agents publish their own notifications; choose your own employee ID')}
+function validatePublisher(conversation:string,publisherId:string,caller:RequestContext){requireConversationPublisher(conversation,publisherId);if(!isAppAdministrator(caller.principal)&&caller.principal.kind==='agent'&&caller.principal.employeeId!==publisherId)throw Error('Agents publish their own notifications; choose your own employee ID')}
 /** Public dispatcher is separate from conversation files and from every Plan command. */
 export function conversationControlRequest(command:string,args:Record<string,any>){
  if(!CONVERSATION_CONTROL_APIS.has(command))throw Error('Unknown conversation control command')
@@ -62,6 +64,7 @@ export function conversationControlRequest(command:string,args:Record<string,any
  const op=command.slice('conversation.'.length);fields(args,['conversation',...allowed[op]])
  const current=requireConversation(args.conversation,op==='policy'?'read':'admin'),conversation=current.conversation,caller=requestContext()
  if(op==='policy')return conversationPolicy(conversation)
+ if(current.kind==='channel'&&!['audit','notice-list','notice-get','notice-history'].includes(op))throw Error('Channels are read-only feeds without members, roles, moderation or group notifications')
  if(op==='role'){const result=changeConversationRole(args);if(current.kind==='channel')syncConversationChannelMembers(current.id);return result}
  if(op==='member'){const result=changeConversationMember(args);if(current.kind==='channel')syncConversationChannelMembers(current.id);return result}
  if(op==='audit')return conversationAudit(args)

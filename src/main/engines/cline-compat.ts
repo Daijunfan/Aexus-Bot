@@ -1,3 +1,4 @@
+import {nativeClineConnection,copyNativeConnection} from './native-config'
 import {DOCUMENTATION_TOOL} from '../documentation-tool'
 import {API_TOOL} from '../api-tool'
 import {DISCUSSION_TOOL} from '../discussion-tool'
@@ -54,11 +55,15 @@ export async function prepareClineCompatibility(directory:string,remote?:RemoteL
   fs.mkdirSync(images,{recursive:true,mode:0o700});fs.mkdirSync(settings,{recursive:true,mode:0o700})
   const file=path.join(settings,'providers.json'),upstreamFile=path.join(directory,'company-upstream.json')
   const selection=processProvider('cline'),providerId=selection.provider,selectedModel=model||selection.model
-  const config=readJson(file),provider=config.providers?.[providerId]?.settings??{},previous=readJson(upstreamFile)
+  const native=selection.native?nativeClineConnection():undefined
+  if(native){copyNativeConnection(native.file,file);copyNativeConnection(path.join(native.root,'settings/global-settings.json'),path.join(settings,'global-settings.json'))}
+  if(native)copyNativeConnection(path.join(native.root,'settings/models.json'),path.join(settings,'models.json'))
+  if(native&&!['deepseek','openai-compatible'].includes(native.provider))throw Error('The active native Cline provider is not supported by this adapter: '+native.provider)
+  const config=readJson(file),provider=native?.settings??config.providers?.[providerId]?.settings??{},previous=readJson(upstreamFile)
   const prior=typeof provider.baseUrl==='string'&&!provider.baseUrl.includes('/agents-company-relay/')?provider.baseUrl:(!previous.provider||previous.provider===providerId?previous.baseUrl:undefined)
   // Only Core/operator configuration may select a custom upstream. Legacy local test profiles
   // can still use loopback for the official provider, but cannot override a configured gateway.
-  const target=new URL(selection.baseUrl||prior||'https://api.deepseek.com')
+  const target=new URL(selection.baseUrl||(!selection.native?prior:undefined)||'https://api.deepseek.com')
   if(target.username||target.password||target.search||target.hash||!(target.protocol==='https:'&&(!!selection.baseUrl||target.hostname==='api.deepseek.com')||target.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(target.hostname)))throw Error('Unsupported Cline provider endpoint')
   const prefix='/agents-company-relay/'+randomUUID(),active=new Set<http.ClientRequest>(),mcpRequests=new Map<unknown,AbortController>()
   const server=http.createServer(async(request,response)=>{
@@ -109,7 +114,7 @@ export async function prepareClineCompatibility(directory:string,remote?:RemoteL
   const mcpServer=bridge?{command:remote?.server.command??process.execPath,args:[path.join(directory,remote?'company-mcp.py':'company-mcp.cjs')],env:remote?{}:{ELECTRON_RUN_AS_NODE:'1'}}:undefined
   try{
     writeJson(upstreamFile,{provider:providerId,baseUrl:target.toString().replace(/\/$/,'')})
-    config.version??=1;config.providers??={};config.providers[providerId]??={};config.providers[providerId].settings={...provider,provider:providerId,model:selectedModel,baseUrl}
+    config.lastUsedProvider=providerId;config.version??=1;config.providers??={};config.providers[providerId]??={};config.providers[providerId].settings={...provider,provider:providerId,model:selectedModel,baseUrl}
     // Native schema requires this metadata, including profiles created by older app versions.
     for(const entry of Object.values(config.providers) as any[])entry.updatedAt??=new Date().toISOString()
     config.providers[providerId].updatedAt=new Date().toISOString()
@@ -147,7 +152,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
   }catch(error){server.closeAllConnections();server.close();throw error}
   let closing:Promise<void>|undefined
   return {
-    provider:providerId,model:selectedModel,managedReasoning:selection.managedReasoning,baseUrl:target.toString().replace(/\/$/,''),
+    native:selection.native,models:selection.models,provider:providerId,model:selectedModel,managedReasoning:selection.managedReasoning,baseUrl:target.toString().replace(/\/$/,''),
     mcpServer,
     stage(input:ImageInput[]){
       if(!input.length)return undefined

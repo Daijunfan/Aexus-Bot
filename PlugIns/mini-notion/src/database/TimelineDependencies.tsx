@@ -4,18 +4,21 @@ import { MenuItem, Popover } from '../ui';
 import type { Page } from '../types';
 
 type Connection = { from: string; x: number; y: number } | null;
+export type TimelineBarPosition = { left: number; right: number; y: number };
 type Edge = { from: string; to: string; title: string; path: string; overlap: boolean };
 export function TimelineDependencies({
   container,
   rows,
   refresh,
   connection,
+  positions,
   readOnly = false,
 }: {
   container: RefObject<HTMLDivElement | null>;
   rows: Page[];
   refresh: unknown;
   connection: Connection;
+  positions?: Map<string, TimelineBarPosition>;
   readOnly?: boolean;
 }) {
   const { command, notify } = useWorkspace();
@@ -29,26 +32,31 @@ export function TimelineDependencies({
       if (!grid) return;
       const rect = grid.getBoundingClientRect();
       const labelWidth = grid.querySelector('.timeline-name-header')!.getBoundingClientRect().width;
-      const bars = new Map(
-        Array.from(grid.querySelectorAll<HTMLElement>('[data-timeline-id]')).map((bar) => [
-          bar.dataset.timelineId!,
-          bar.getBoundingClientRect(),
-        ]),
+      const bars = positions || new Map(
+        Array.from(grid.querySelectorAll<HTMLElement>('[data-timeline-id]')).map((bar) => {
+          const bounds = bar.getBoundingClientRect();
+          return [bar.dataset.timelineId!, {
+            left: bounds.left - rect.left - labelWidth,
+            right: bounds.right - rect.left - labelWidth,
+            y: bounds.top + bounds.height / 2 - rect.top,
+          }] as const;
+        }),
       );
+      const titles = new Map(rows.map((row) => [row.id, row.title || '无标题']));
       const next: Edge[] = [];
       for (const row of rows)
         for (const from of row.blockedBy || []) {
           const a = bars.get(from),
             b = bars.get(row.id);
           if (!a || !b) continue;
-          const x1 = a.right - rect.left - labelWidth,
-            y1 = a.top + a.height / 2 - rect.top;
-          const x2 = b.left - rect.left - labelWidth,
-            y2 = b.top + b.height / 2 - rect.top;
+          const x1 = a.right,
+            y1 = a.y;
+          const x2 = b.left,
+            y2 = b.y;
           next.push({
             from,
             to: row.id,
-            title: `${rows.find((row) => row.id === from)?.title || '无标题'} → ${row.title || '无标题'}`,
+            title: `${titles.get(from) || '无标题'} → ${row.title || '无标题'}`,
             overlap: x1 >= x2,
             path: `M${x1} ${y1} H${x1 + 12} V${(y1 + y2) / 2} H${x2 - 12} V${y2} H${x2 - 3}`,
           });
@@ -58,7 +66,7 @@ export function TimelineDependencies({
       const origin = connection && bars.get(connection.from);
       setDrawing(
         origin && connection
-          ? `M${origin.right - rect.left - labelWidth} ${origin.top + origin.height / 2 - rect.top} L${connection.x - rect.left - labelWidth} ${connection.y - rect.top}`
+          ? `M${origin.right} ${origin.y} L${connection.x - rect.left - labelWidth} ${connection.y - rect.top}`
           : '',
       );
     };
@@ -66,7 +74,7 @@ export function TimelineDependencies({
     const observer = new ResizeObserver(measure);
     if (container.current) observer.observe(container.current);
     return () => observer.disconnect();
-  }, [container, rows, refresh, connection]);
+  }, [container, rows, refresh, connection, positions]);
   const remove = (edge: Edge) => {
     if (readOnly) return;
     try {
@@ -94,7 +102,7 @@ export function TimelineDependencies({
           aria-label={`移除依赖 ${edge.title}`}
           onClick={() => remove(edge)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === 'Delete' || event.key === 'Backspace') {
+            if (event.key === 'Enter' || event.key === ' ' || event.key === 'Delete' || event.key === 'Backspace') {
               event.preventDefault();
               remove(edge);
             }

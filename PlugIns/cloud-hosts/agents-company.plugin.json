@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "cloud-hosts",
   "name": "Cloud Hosts",
-  "version": "1.2.2",
+  "version": "2.0.0",
   "description": "云主机、SSH 账号与连接状态管理",
   "runtime": "runtime.cjs",
   "renderer": "ui/index.html",

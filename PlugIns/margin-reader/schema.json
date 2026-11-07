@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "pluginId": "margin-reader",
-  "version": "0.9.4",
+  "version": "0.11.0",
   "transport": "JSON-RPC 2.0",
   "commands": [
     {
@@ -896,6 +896,14 @@
           "description": "Outline width.",
           "minimum": 200,
           "maximum": 480
+        },
+        "outlineSide": {
+          "type": "string",
+          "description": "Place the non-overlapping contents pane to the left or right of the document.",
+          "enum": [
+            "left",
+            "right"
+          ]
         },
         "pdfMode": {
           "type": "string",
@@ -3811,6 +3819,28 @@
           "description": "Highlight color.",
           "required": true
         },
+        "inMap": {
+          "type": "boolean",
+          "description": "Override automatic map placement for this capture without changing the saved preset."
+        },
+        "annotationStyle": {
+          "type": "string",
+          "description": "Annotation style for this capture.",
+          "enum": [
+            "highlight",
+            "underline",
+            "strike",
+            "box"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "description": "Initial excerpt note, at most 20000 characters."
+        },
+        "tags": {
+          "type": "array",
+          "description": "At most 30 unique text tags, each 1–60 characters."
+        },
         "title": {
           "type": "string",
           "description": "Optional card title."
@@ -4642,6 +4672,14 @@
         "sort": {
           "type": "string",
           "description": "Sort criterion."
+        },
+        "direction": {
+          "type": "string",
+          "description": "Saved sort direction; default asc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
         }
       }
     },
@@ -6196,13 +6234,21 @@
     },
     {
       "method": "study.map.geometry",
-      "description": "Read deterministic card positions, branch connections and map dimensions without opening a GUI.",
+      "description": "Read deterministic card positions, branch connections and map dimensions without opening a GUI. JSON DTO: topics is a plain array of {cardId,...topicStyle,box,prefix,lines}, fixing the former Map serialized as {}. Internal layoutStudy topics remains a Map. positions contains {cardId,x,y,width,height,imageBounds,viewVisible,placementReason}; scope,total,positioned report coverage. placementReason is view, expanded-projection, depth-continuation or overflow-placement. all may reflow visible cards; viewVisible means membership in the original view, never permission to unhide model objects. Supplemental parent links carry projection:true and placementReason:parent-continuation; all links report viewVisible in all scope and existing hidden flags remain. Geometry links are layout branches, not study.get().links business relationships. Card identity, source and parent data remain in study.get at the matching revision, without duplicated content. all is opt-in and can cost substantially more for large hidden maps.",
       "agentAccess": "workspace",
       "options": {
         "setId": {
           "type": "string",
           "description": "Study UUID.",
           "required": true
+        },
+        "scope": {
+          "type": "string",
+          "description": "Read-only scope; default view preserves current focus, collapse and ink visibility. all expands a temporary projection and positions every model card without saving expansion or changing revision.",
+          "enum": [
+            "view",
+            "all"
+          ]
         }
       }
     },
@@ -8073,6 +8119,10 @@
         "expandParent": {
           "type": "boolean",
           "description": "Expand the destination parent in the same undo transaction, so a dropped branch remains visible."
+        },
+        "rotateDescendant": {
+          "type": "boolean",
+          "description": "When dropping an ancestor onto a descendant, promote that descendant to the old parent in the same transaction, preventing cycles."
         },
         "side": {
           "type": "string",

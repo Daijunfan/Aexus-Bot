@@ -1,3 +1,4 @@
+import {AppSelect} from '../components/AppSelect'
 import {useDeferredValue,useEffect,useRef,useState} from 'react'
 import {Icon} from '../components/Icon'
 import {MessageMenu} from '../components/MessageMenu'
@@ -19,7 +20,7 @@ export function EmojiPicker({anchor,onClose,onSelect}:{anchor:{x:number;y:number
  const label=(item:Emoji)=>item[language==='zh-CN'?2:1],save=(next:typeof prefs)=>{setPrefs(next);try{localStorage.setItem('message-emoji',JSON.stringify(next))}catch{}}
  const choose=(item:Emoji)=>{const emoji=variant(item);save({...prefs,recent:[emoji,...prefs.recent.filter(value=>value!==emoji)].slice(0,32)});onSelect(emoji)}
  return <MessageMenu anchor={anchor} onClose={onClose} label={uiText('Emoji picker')} className="emoji-picker" nativeKeys>
-  <header className="emoji-heading"><strong>{uiText('Emoji')}</strong><select aria-label={uiText('Emoji skin tone')} value={prefs.tone} onChange={event=>save({...prefs,tone:Number(event.target.value)})}>{tones.map((tone,index)=><option key={tone} value={index}>{['✋','✋🏻','✋🏼','✋🏽','✋🏾','✋🏿'][index]} {uiText(tone)}</option>)}</select></header>
+  <header className="emoji-heading"><strong>{uiText('Emoji')}</strong><AppSelect aria-label={uiText('Emoji skin tone')} value={prefs.tone} onChange={event=>save({...prefs,tone:Number(event.target.value)})}>{tones.map((tone,index)=><option key={tone} value={index}>{['✋','✋🏻','✋🏼','✋🏽','✋🏾','✋🏿'][index]} {uiText(tone)}</option>)}</AppSelect></header>
   <label className="emoji-search"><Icon name="search"/><input autoFocus value={query} aria-label={uiText('Search emoji')} placeholder={uiText('Find an emoji…')} onChange={event=>setQuery(event.target.value)}/>{query&&<button aria-label={uiText('Clear search')} onClick={()=>setQuery('')}><Icon name="close"/></button>}</label>
   <nav className="emoji-tabs" aria-label={uiText('Emoji categories')}>{groups.map(([id,title,icon])=><button key={id} aria-label={uiText(title)} title={uiText(title)} aria-pressed={!search&&group===id} onClick={()=>{setGroup(id);setQuery('')}}><Icon name={icon}/></button>)}</nav>
   <div ref={body} className="emoji-body"><div className="emoji-section-title">{search?uiText('{0} results',[selected.length]):uiText(groups.find(([id])=>id===group)![1])}</div>

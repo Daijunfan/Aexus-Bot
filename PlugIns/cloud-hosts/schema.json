@@ -1,13 +1,15 @@
 {
   "schemaVersion": 1,
   "pluginId": "cloud-hosts",
-  "version": "1.2.2",
+  "version": "2.0.0",
   "transport": "JSON-RPC 2.0",
   "commands": [
     {
       "method": "hosts.list",
       "description": "列出所有云主机，密码默认隐藏",
-      "options": {}
+      "options": {},
+      "mutates": false,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.get",
@@ -17,7 +19,9 @@
           "type": "string",
           "required": true
         }
-      }
+      },
+      "mutates": false,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.create",
@@ -70,13 +74,10 @@
         "vm": {
           "type": "object",
           "description": "VM 资产：hypervisorId,name,projectDirectory,state,access,notes；无 SSH 时明确标注，不伪造连通性"
-        },
-        "desktop": {
-          "type": "object",
-          "description": "protocol:rdp|vnc,address,port,viaHostId?,username?,quality:balanced|sharp|fast"
         }
       },
-      "mutates": true
+      "mutates": true,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.update",
@@ -91,7 +92,8 @@
           "required": true
         }
       },
-      "mutates": true
+      "mutates": true,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.remove",
@@ -102,7 +104,8 @@
           "required": true
         }
       },
-      "mutates": true
+      "mutates": true,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.check",
@@ -113,7 +116,8 @@
           "required": true
         }
       },
-      "mutates": true
+      "mutates": false,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.directories",
@@ -126,7 +130,9 @@
         "path": {
           "type": "string"
         }
-      }
+      },
+      "mutates": false,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.credentials",
@@ -140,7 +146,9 @@
           "type": "boolean",
           "description": "false 仅返回密码，不读取已登记 SSH 文件"
         }
-      }
+      },
+      "mutates": false,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.fingerprints",
@@ -150,7 +158,9 @@
           "type": "string",
           "required": true
         }
-      }
+      },
+      "mutates": false,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.trust",
@@ -165,7 +175,8 @@
           "type": "string",
           "required": true
         }
-      }
+      },
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.exec",
@@ -186,7 +197,8 @@
         "timeout": {
           "type": "number"
         }
-      }
+      },
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.terminal-open",
@@ -206,7 +218,8 @@
           "type": "number"
         }
       },
-      "mutates": true
+      "mutates": true,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.terminal-list",
@@ -216,7 +229,9 @@
           "type": "string",
           "required": true
         }
-      }
+      },
+      "mutates": false,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.terminal-read",
@@ -237,7 +252,9 @@
           "type": "number",
           "description": "等待新输出或退出，0–15000ms，默认 0"
         }
-      }
+      },
+      "mutates": false,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.terminal-input",
@@ -256,7 +273,8 @@
           "required": true
         }
       },
-      "mutates": true
+      "mutates": true,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.terminal-resize",
@@ -279,7 +297,8 @@
           "required": true
         }
       },
-      "mutates": true
+      "mutates": true,
+      "agentAccess": "workspace"
     },
     {
       "method": "hosts.terminal-close",
@@ -294,58 +313,8 @@
           "required": true
         }
       },
-      "mutates": true
-    },
-    {
-      "method": "hosts.desktop-list",
-      "description": "List active remote desktop transports",
-      "options": {
-        "id": {
-          "type": "string",
-          "required": true
-        }
-      }
-    },
-    {
-      "method": "hosts.desktop-open",
-      "description": "Open configured RDP or VNC transport; does not imply desktop login",
-      "options": {
-        "id": {
-          "type": "string",
-          "required": true
-        }
-      },
-      "mutates": true
-    },
-    {
-      "method": "hosts.desktop-launch",
-      "description": "Launch native RDP client on the Core machine",
-      "options": {
-        "id": {
-          "type": "string",
-          "required": true
-        },
-        "session": {
-          "type": "string",
-          "required": true
-        }
-      },
-      "mutates": true
-    },
-    {
-      "method": "hosts.desktop-close",
-      "description": "Close desktop transport and SSH forward",
-      "options": {
-        "id": {
-          "type": "string",
-          "required": true
-        },
-        "session": {
-          "type": "string",
-          "required": true
-        }
-      },
-      "mutates": true
+      "mutates": true,
+      "agentAccess": "workspace"
     }
   ]
 }

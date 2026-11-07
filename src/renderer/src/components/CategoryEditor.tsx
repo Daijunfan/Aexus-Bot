@@ -9,7 +9,7 @@ import {useDialogFocus} from '../office/useDialogFocus'
 import {Icon} from './Icon'
 import {BackButton} from './BackButton'
 import {useMessenger} from './useMessenger'
-export type FolderConversation={key:string;title:string;description:string;avatar?:ReactNode;archived?:boolean;kind?:CategoryEntry['kind'];platform?:string;enabled?:boolean}
+export type FolderConversation={key:string;title:string;description:string;avatar?:ReactNode;archived?:boolean;kind?:CategoryEntry['kind'];platform?:string;enabled?:boolean;botKind?:CategoryEntry['botKind']}
 
 export function ConversationFolderEditor({folder,conversations,onClose,onSaved}:{folder?:ConversationFolder;conversations:FolderConversation[];onClose:()=>void;onSaved:(id:string)=>void}){
  useI18n()
@@ -19,7 +19,7 @@ export function ConversationFolderEditor({folder,conversations,onClose,onSaved}:
  useDialogFocus('.conversation-folder-editor',true,()=>document.getElementById('message-folder-'+id)??document.getElementById('message-folder-add'))
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
  useEffect(()=>{const key=(event:KeyboardEvent)=>{if(event.key==='Escape'&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();if(!busy.current)onClose()}};window.addEventListener('keydown',key,true);return()=>window.removeEventListener('keydown',key,true)},[onClose])
- const entry=(item:FolderConversation):CategoryEntry=>({key:item.key,kind:item.kind??item.key.split(':')[0] as CategoryEntry['kind'],platform:item.platform,enabled:item.enabled})
+ const entry=(item:FolderConversation):CategoryEntry=>({key:item.key,kind:item.kind??item.key.split(':')[0] as CategoryEntry['kind'],platform:item.platform,enabled:item.enabled,botKind:item.botKind})
  const known=new Set(conversations.map(item=>item.key)),choices:FolderConversation[]=[...conversations,...selected.filter(key=>!known.has(key)).map(key=>({key,title:uiText('Unavailable conversation'),description:key,enabled:false}))]
  const selection={conversations:selected,include,excluded},checked=(item:FolderConversation)=>inCategory(selection,entry(item)),chosen=choices.filter(checked)
  const scope=choices.filter(item=>mode==='custom'||matchesCategory(mode==='platform'?platform:mode as CategoryInclude,entry(item))),shown=scope.filter(item=>(item.title+' '+item.description).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
@@ -34,7 +34,7 @@ export function ConversationFolderEditor({folder,conversations,onClose,onSaved}:
  return createPortal(<div ref={surface} className="group-editor-overlay"><div className="group-editor-backdrop" onClick={close}/><section className="group-editor conversation-folder-editor" role="dialog" aria-modal="true" aria-label={uiText(folder?'Edit category':'Create category')} aria-busy={saving}>
   <header><BackButton disabled={saving} ariaLabel="Close category editor" onClick={close}/><div><span>{uiText('YOUR CONVERSATIONS')}</span><h2>{uiText(folder?'Edit category':'Create category')}</h2></div></header>
   <div className="category-presets" role="group" aria-label={uiText('Category type')}>{[['custom','Custom selection','checklist'],['private','All private chats','person'],['groups','All groups','organization'],['platform','Social platform','radio-tower']].map(([value,label,icon])=><button key={value} type="button" disabled={saving} aria-pressed={mode===value} onClick={()=>change(value)}><Icon name={icon}/><span>{uiText(label)}</span></button>)}</div>
-  {mode==='platform'&&<label className="category-platform">{uiText('Platform')}<select aria-label={uiText('Social platform')} disabled={saving} value={platform} onChange={event=>{const next=event.target.value as CategoryInclude;setPlatform(next);change('platform',next)}}><option value="telegram">Telegram</option><option value="x">X</option><option value="youtube">YouTube</option></select><small>{uiText('Each channel or author appears as a separate social element.')}</small></label>}
+  {mode==='platform'&&<div className="category-platform"><span>{uiText('Platform')}</span><div className="category-platform-choices" role="group" aria-label={uiText('Social platform')}>{[['telegram','Telegram'],['x','X'],['youtube','YouTube']].map(([value,label])=><button type="button" key={value} disabled={saving} aria-pressed={platform===value} onClick={()=>{setPlatform(value as CategoryInclude);change('platform',value as CategoryInclude)}}>{label}</button>)}</div></div>}
   <label>{uiText('Category name')}<input autoFocus name="conversation-folder-name" value={name} maxLength={80} disabled={saving} placeholder={uiText('e.g. Daily reading')} onChange={event=>{named.current=true;setName(event.target.value)}} onKeyDown={event=>{if(event.key==='Enter'&&!event.nativeEvent.isComposing){event.preventDefault();void save()}}}/></label>
   <p className="group-editor-note">{uiText(include?'New matching conversations are included automatically.':'Mix any conversations in a category. A conversation can belong to more than one.')}</p>
   <label className="group-member-search"><Icon name="search"/><input aria-label={uiText('Search category conversations')} placeholder={uiText('Search conversations…')} value={query} onChange={event=>setQuery(event.target.value)}/></label>

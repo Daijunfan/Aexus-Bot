@@ -29,38 +29,114 @@ export function makePage(overrides: Partial<Page> = {}): Page {
 }
 
 export function descendants(pages: Page[], id: string): Set<string> {
-  const found = new Set([id]);
-  for (let changed = true; changed;) {
-    changed = false;
-    for (const page of pages)
-      if (
-        ((page.parentId && found.has(page.parentId)) || (page.subItemOf && found.has(page.subItemOf))) &&
-        !found.has(page.id)
-      ) {
-        found.add(page.id);
-        changed = true;
+  const children = new Map<string, number[]>();
+  pages.forEach((page, index) => {
+    for (const parent of new Set([page.parentId, page.subItemOf])) {
+      if (!parent) continue;
+      const siblings = children.get(parent) || [];
+      siblings.push(index);
+      children.set(parent, siblings);
+    }
+  });
+  // Preserve the original scan order without rescanning the entire workspace:
+  // a forward edge is found in the same pass, a backward edge in the next one.
+  const passes = new Map([[id, 0]]);
+  for (let pass = 0, pending = [-1]; pending.length; pass++) {
+    const next: number[] = [];
+    while (pending.length) {
+      const index = pending.pop()!;
+      const parent = index < 0 ? id : pages[index].id;
+      if (passes.get(parent) !== pass) continue;
+      for (const child of children.get(parent) || []) {
+        const childId = pages[child].id;
+        const discovered = pass + Number(child < index);
+        if (discovered >= (passes.get(childId) ?? Infinity)) continue;
+        passes.set(childId, discovered);
+        (discovered === pass ? pending : next).push(child);
       }
+    }
+    pending = next;
   }
-  return found;
+  const order = pages.map((_page, index) => index).filter(index => pages[index].id !== id && passes.has(pages[index].id));
+  order.sort((a, b) => passes.get(pages[a].id)! - passes.get(pages[b].id)! || a - b);
+  return new Set([id, ...order.map(index => pages[index].id)]);
+}
+
+const indexedPages = new WeakMap<Page[], Map<string, Page>>();
+/** Workspace updates replace the pages array, so each immutable snapshot shares one index. */
+export function pageIndex(pages: Page[]) {
+  let index = indexedPages.get(pages);
+  if (!index) { index = new Map(pages.map(page => [page.id, page])); indexedPages.set(pages, index); }
+  return index;
 }
 
 export function ancestors(pages: Page[], id: string): Page[] {
   const result: Page[] = [];
   const seen = new Set([id]);
-  const first = pages.find((p) => p.id === id);
+  const index = pageIndex(pages);
+  const first = index.get(id);
   let parentId = first?.subItemOf || first?.parentId;
   while (parentId && !seen.has(parentId)) {
     seen.add(parentId);
-    const parent = pages.find((p) => p.id === parentId);
+    const parent = index.get(parentId);
     if (!parent) break;
-    result.unshift(parent);
+    result.push(parent);
     parentId = parent.subItemOf || parent.parentId;
   }
-  return result;
+  return result.reverse();
 }
 
+/** Fast internal-page index for render projections over large workspaces. */
+export function internalPageIds(pages: Page[]): Set<string> {
+  const children = new Map<string, string[]>();
+  const internal = new Set<string>();
+  const stack: string[] = [];
+  for (const page of pages) {
+    if (page.syncedSource) internal.add(page.id);
+    if (page.templateFor) stack.push(page.id);
+    const parent = page.subItemOf || page.parentId;
+    if (parent) {
+      const siblings = children.get(parent) || [];
+      siblings.push(page.id); children.set(parent, siblings);
+    }
+  }
+  const visited = new Set<string>();
+  while (stack.length) {
+    const id = stack.pop()!;
+    if (visited.has(id)) continue;
+    visited.add(id); internal.add(id);
+    stack.push(...(children.get(id) || []));
+  }
+  return internal;
+}
+
+const indexedTemplatePages = new WeakMap<Page[], Set<string>>();
+function templatePageIds(pages: Page[]): Set<string> {
+  let ids = indexedTemplatePages.get(pages);
+  if (ids) return ids;
+  const children = new Map<string, string[]>();
+  const pending: string[] = [];
+  for (const page of pages) {
+    if (page.templateFor) pending.push(page.id);
+    const parent = page.subItemOf || page.parentId;
+    if (parent) {
+      const siblings = children.get(parent) || [];
+      siblings.push(page.id);
+      children.set(parent, siblings);
+    }
+  }
+  ids = new Set<string>();
+  while (pending.length) {
+    const id = pending.pop()!;
+    if (ids.has(id)) continue;
+    ids.add(id);
+    pending.push(...(children.get(id) || []));
+  }
+  indexedTemplatePages.set(pages, ids);
+  return ids;
+}
 export function isTemplatePage(page: Page, pages: Page[]): boolean {
-  return !!page.templateFor || ancestors(pages, page.id).some((parent) => parent.templateFor);
+  return templatePageIds(pages).has(page.id);
 }
 export function isInternalPage(page: Page, pages: Page[]): boolean {
   return !!page.syncedSource || isTemplatePage(page, pages);
@@ -262,7 +338,7 @@ export function plainText(value: unknown): string {
   if (typeof value === 'string') return value;
   if (Array.isArray(value)) {
     const inline = value.every(
-      (item) => typeof item === 'string' || (item && ['text', 'link', 'pageMention', 'inlineMath'].includes(item.type)),
+      (item) => typeof item === 'string' || (item && ['text', 'link', 'pageMention', 'inlineMath', 'customEmoji'].includes(item.type)),
     );
     return value.map(plainText).join(inline ? '' : ' ');
   }
@@ -271,6 +347,7 @@ export function plainText(value: unknown): string {
     if (obj.type === 'bookmark') return [obj.props && (obj.props as Record<string, unknown>).title, obj.props && (obj.props as Record<string, unknown>).description, obj.props && (obj.props as Record<string, unknown>).url].filter(Boolean).join(' ');
     if (obj.type === 'equation' || obj.type === 'inlineMath') return String((obj.props as Record<string, unknown>)?.expression || '');
     if (obj.type === 'pageMention') return String((obj.props as Record<string, unknown>)?.title || '');
+    if (obj.type === 'customEmoji') return `:${String((obj.props as Record<string, unknown>)?.name || '')}:`;
     return [obj.text, obj.content, obj.children, obj.rows, obj.cells]
       .filter((v) => v !== undefined)
       .map(plainText)

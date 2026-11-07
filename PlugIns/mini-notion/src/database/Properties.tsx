@@ -1,4 +1,4 @@
-import {AppSelect} from '../components/AppSelect';
+import { AppSelect } from '../components/AppSelect';
 import { ButtonControl } from '../actions/Buttons';
 import { MousePointer2 } from 'lucide-react';
 import { useState } from 'react';
@@ -25,7 +25,7 @@ import {
 import type { Page, Property, PropertyType, StatusGroup } from '../types';
 import { useWorkspace } from '../store';
 import { MenuItem, Modal, PageIcon, Popover } from '../ui';
-import { readProperty, isTemplatePage } from '../model';
+import { readProperty, isTemplatePage, pageIndex } from '../model';
 import { relationIds } from './relations';
 import { computeProperty } from './propertiesModel';
 import { DateInput } from './DateInput';
@@ -77,6 +77,13 @@ export function tagTone(value: string, index = 0) {
   if (value === '中') return 'yellow';
   return ['purple', 'orange', 'pink', 'blue', 'green', 'yellow'][index % 6];
 }
+export function optionTone(value: string, column?: Property, options = column?.options || []): string {
+  const group = column?.type === 'status' ? statusGroup(column, value) : undefined;
+  return column?.optionColors?.[value] ||
+    (group ? { todo: 'gray', doing: 'blue', done: 'green' }[group]
+      : tagTone(value, Math.max(0, options.indexOf(value))));
+}
+
 export function Tag({
   value,
   options = [],
@@ -87,11 +94,7 @@ export function Tag({
   column?: Property;
 }) {
   const group = column?.type === 'status' ? statusGroup(column, value) : undefined;
-  const color =
-    column?.optionColors?.[value] ||
-    (group
-      ? { todo: 'gray', doing: 'blue', done: 'green' }[group]
-      : tagTone(value, Math.max(0, options.indexOf(value))));
+  const color = optionTone(value, column, options);
   return (
     <span className={`tag tag-${color} ${group ? 'status-tag' : ''}`}>
       {group && <i className={`status-dot status-${group}`} />} {value}
@@ -103,11 +106,13 @@ export function PropertyValue({
   column,
   page,
   disabled = false,
+  wrap = false,
   onOptionsChange,
 }: {
   column: Property;
   page: Page;
   disabled?: boolean;
+  wrap?: boolean;
   onOptionsChange?: (options: string[]) => void;
 }) {
   const { patch, workspace, navigate, create, command, notify } = useWorkspace();
@@ -174,29 +179,32 @@ export function PropertyValue({
         propertyId={column.id}
       />
     );
-  if (column.type === 'formula') {
+  if (column.type === 'formula' || column.type === 'rollup') {
     const result = computeProperty(page, column, workspace!.pages);
     return (
       <span
         className={`property-computed ${result.ok ? '' : 'formula-error'}`}
         title={!result.ok ? result.error : undefined}
       >
-        {result.ok ? <FormulaResult value={result.value} /> : `⚠ ${result.error}`}
-      </span>
-    );
-  }
-  if (column.type === 'rollup') {
-    const result = readProperty(page, column, workspace!.pages);
-    return (
-      <span className="property-computed">
-        {Array.isArray(result) ? result.join('、') || '空' : String(result)}
+        {result.ok ? (
+          column.type === 'rollup' &&
+          column.calculation?.startsWith('percent_') &&
+          typeof result.value === 'number' ? (
+            `${result.value.toLocaleString('zh-CN', { maximumFractionDigits: 2 })}%`
+          ) : (
+            <FormulaResult value={result.value} />
+          )
+        ) : (
+          `⚠ ${result.error}`
+        )}
       </span>
     );
   }
   if (column.type === 'relation') {
     const ids = relationIds(page, column, workspace!.pages);
-    const related = workspace!.pages.filter((p) => ids.includes(p.id) && !p.trashedAt);
-    const choices = workspace!.pages.filter(
+    const index = pageIndex(workspace!.pages);
+    const related = ids.map(id => index.get(id)!);
+    const choices = picker ? workspace!.pages.filter(
       (p) =>
         p.parentId === column.relationTo &&
         !p.trashedAt &&
@@ -204,7 +212,7 @@ export function PropertyValue({
         (isTemplatePage(page, workspace!.pages) || !isTemplatePage(p, workspace!.pages)) &&
         (!column.system || p.id !== page.id) &&
         p.title.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
-    );
+    ) : [];
     const select = (id: string) =>
       change(
         ids.includes(id)
@@ -409,6 +417,17 @@ export function PropertyValue({
         )}
       </div>
     );
+  if (column.type === 'text' && wrap)
+    return <textarea
+      className="property-input"
+      aria-label={column.name}
+      rows={1}
+      style={{ fieldSizing: 'content', resize: 'none', display: 'block', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+      placeholder="空"
+      disabled={disabled}
+      value={typeof value === 'string' ? value : ''}
+      onChange={(event) => change(event.target.value)}
+    />;
   return (
     <input
       className="property-input"
@@ -781,12 +800,23 @@ export function PropertyEditor({
                   onChange={(e) => setCalculation(e.target.value as Property['calculation'])}
                 >
                   {[
-                    ['count', '计数'],
-                    ['show', '显示原始值'],
+                    ['count', '计数全部'],
+                    ['show_original', '显示原始值'],
+                    ['show', '显示唯一值'],
+                    ['count_values', '计数非空值'],
+                    ['count_unique', '计数唯一值'],
+                    ['empty', '计数空记录'],
+                    ['count_not_empty', '计数非空记录'],
+                    ['percent_empty', '空记录百分比'],
+                    ['percent_filled', '非空记录百分比'],
                     ['sum', '求和'],
                     ['average', '平均值'],
+                    ['median', '中位数'],
                     ['min', '最小值'],
                     ['max', '最大值'],
+                    ['range', '极差'],
+                    ['earliest_date', '最早日期'],
+                    ['latest_date', '最晚日期'],
                   ].map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}

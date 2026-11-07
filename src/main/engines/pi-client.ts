@@ -1,3 +1,5 @@
+import {nativePiConnection,copyNativeConnection} from './native-config'
+import {nativeToolResult} from '../native-tool-result'
 import fs from 'node:fs'
 import path from 'node:path'
 import {StringDecoder} from 'node:string_decoder'
@@ -16,11 +18,13 @@ type CoreTool={tool:{name:string;description:string;inputSchema:Record<string,un
 export function piClient(options:{discussion?:CoreTool;documentation?:CoreTool;api?:CoreTool;cwd:string;directory:string;workRoot?:string;employeeId?:string;sessionFile?:string;model?:string;remoteLaunch?:RemoteLaunch;tunnelTools?:TunnelTool[];onTunnelCall?:(request:TunnelToolCall)=>Promise<unknown>;env?:NodeJS.ProcessEnv;onEvent?:(event:any)=>void;onPermission?:(request:{toolName:string;toolCallId:string;input:Record<string,unknown>})=>Promise<boolean>}){
   fs.mkdirSync(options.directory,{recursive:true,mode:0o700})
   const provider=processProvider('pi'),modelsFile=path.join(options.directory,'models.json')
+  const native=provider.native?nativePiConnection():undefined
+  if(native){for(const file of ['settings.json','models.json','auth.json'])copyNativeConnection(path.join(native.root,file),path.join(options.directory,file))}
   const models=fs.existsSync(modelsFile)?JSON.parse(fs.readFileSync(modelsFile,'utf8')):{}
-  if(provider.baseUrl){
+  if(provider.baseUrl&&!native){
     models.providers={...models.providers,[provider.provider]:{baseUrl:provider.baseUrl,api:'openai-completions',apiKey:'$DEEPSEEK_API_KEY',models:[{id:provider.model}]}}
     atomicJson(modelsFile,models,true)
-  }else if(models.providers?.['agents-company']){
+  }else if(!native&&models.providers?.['agents-company']){
     delete models.providers['agents-company'];atomicJson(modelsFile,models,true)
   }
 
@@ -28,11 +32,11 @@ export function piClient(options:{discussion?:CoreTool;documentation?:CoreTool;a
   fs.writeFileSync(policy,`export default function(pi){pi.on('tool_call',async(event,ctx)=>{const allowed=await ctx.ui.confirm('Agents Company tool permission',JSON.stringify({toolName:event.toolName,toolCallId:event.toolCallId,input:event.input}));if(!allowed)return {block:true,reason:'Declined by Agents Company permission policy'};});}\n`,{mode:0o600})
   const coreTools=[{descriptor:options.discussion,title:'Agents Company discussion'},{descriptor:options.documentation,title:'Agents Company documentation'},{descriptor:options.api,title:'Agents Company API'}].filter((item):item is {descriptor:CoreTool;title:string}=>!!item.descriptor)
   const discussion=path.join(options.directory,'company-discussion.mjs')
-  if(coreTools.length)fs.writeFileSync(discussion,`export default function(pi){for(const {tool,title} of ${JSON.stringify(coreTools.map(item=>({tool:item.descriptor.tool,title:item.title})))} ){pi.registerTool({name:tool.name,label:tool.name,description:tool.description,parameters:tool.inputSchema,async execute(toolCallId,input,signal,_update,ctx){if(signal?.aborted)throw Error('Interrupted');const reply=await ctx.ui.input(title,JSON.stringify({toolCallId,input}));if(reply===undefined||signal?.aborted)throw Error('Core tool cancelled');const value=JSON.parse(reply);if(value.isError)throw Error(value.error);return {content:[{type:'text',text:JSON.stringify(value.result)}],details:undefined}}});}}\n`,{mode:0o600})
-  const env={...engineProcessEnvironment('pi',childEnv(options.cwd,options.workRoot)),...options.env,PI_CODING_AGENT_DIR:options.directory,PI_OFFLINE:'1'}
-  const secrets=Object.entries(env).filter(([k,v])=>/key|token|password/i.test(k)&&v&&v.length>8).map(([,v])=>v!)
+  if(coreTools.length)fs.writeFileSync(discussion,`export default function(pi){for(const {tool,title} of ${JSON.stringify(coreTools.map(item=>({tool:item.descriptor.tool,title:item.title})))} ){pi.registerTool({name:tool.name,label:tool.name,description:tool.description,parameters:tool.inputSchema,async execute(toolCallId,input,signal,_update,ctx){if(signal?.aborted)throw Error('Interrupted');const reply=await ctx.ui.input(title,JSON.stringify({toolCallId,input}));if(reply===undefined||signal?.aborted)throw Error('Core tool cancelled');const value=JSON.parse(reply);if(value.isError)throw Error(value.error);return {content:value.content??[{type:'text',text:JSON.stringify(value.result)}],details:undefined}}});}}\n`,{mode:0o600})
+  const env={...engineProcessEnvironment('pi',childEnv(options.cwd,options.workRoot)),...options.env,PI_CODING_AGENT_DIR:options.directory}
+  const secrets=Object.entries(env).filter(([k,v])=>/key|token|password/i.test(k)&&v&&v.length>8).map(([,v])=>v!).concat(native?.apiKey?[native.apiKey]:[])
   const redact=(text:string)=>secrets.reduce((value,secret)=>value.replaceAll(secret,'[redacted]'),text)
-  const args=['--mode','rpc','--offline','--provider',provider.provider,'--model',options.model||provider.model,'--thinking','off','--session-dir',path.join(options.directory,'sessions'),'--no-extensions','--no-skills','--no-prompt-templates','--no-themes','--no-approve','--extension',policy,...(coreTools.length?['--extension',discussion]:[]),...(options.remoteLaunch?['--no-builtin-tools','--no-context-files','--system-prompt',options.remoteLaunch.instructions,'--extension',preparePiTunnel(options.directory,options.tunnelTools??[],coreTools.map(item=>item.descriptor.tool.name))]:[]),...(options.sessionFile?['--session',options.sessionFile]:[])]
+  const args=['--mode','rpc','--provider',provider.provider,'--model',options.model||provider.model,...(provider.thinkingLevel?['--thinking',provider.thinkingLevel]:[]),'--session-dir',path.join(options.directory,'sessions'),'--no-approve','--extension',policy,...(coreTools.length?['--extension',discussion]:[]),...(options.remoteLaunch?['--no-builtin-tools','--no-context-files','--system-prompt',options.remoteLaunch.instructions,'--extension',preparePiTunnel(options.directory,options.tunnelTools??[],coreTools.map(item=>item.descriptor.tool.name))]:[]),...(options.sessionFile?['--session',options.sessionFile]:[])]
   const processOptions={cwd:options.cwd,env,stdio:['pipe','pipe','pipe'] as ['pipe','pipe','pipe'],windowsHide:true,detached:process.platform!=='win32'}
   const child=options.employeeId?spawnEmployeeProcess(options.employeeId,engineExecutable('pi'),args,processOptions):spawn(engineExecutable('pi'),args,processOptions)
   let sequence=0,stderr='',closed=false,buffer='';const decoder=new StringDecoder('utf8')
@@ -51,7 +55,7 @@ export function piClient(options:{discussion?:CoreTool;documentation?:CoreTool;a
     }else if(message.type==='extension_ui_request'){
       const coreTool=message.method==='input'?coreTools.find(item=>item.title===message.title)?.descriptor:undefined
       if(coreTool){
-        void Promise.resolve().then(()=>{const request=JSON.parse(message.placeholder);if(typeof request.toolCallId!=='string')throw Error('Core tool call ID required');return coreTool.call(request.input,request.toolCallId)}).then(result=>{if(!closed)send({type:'extension_ui_response',id:message.id,value:JSON.stringify({result})})}).catch(error=>{if(!closed)send({type:'extension_ui_response',id:message.id,value:JSON.stringify({isError:true,error:redact(String(error))})})})
+        void Promise.resolve().then(()=>{const request=JSON.parse(message.placeholder);if(typeof request.toolCallId!=='string')throw Error('Core tool call ID required');return coreTool.call(request.input,request.toolCallId)}).then(result=>{if(!closed){const content=nativeToolResult(result).content;send({type:'extension_ui_response',id:message.id,value:JSON.stringify(content.some(item=>item.type==='image')?{content}:{result})})}}).catch(error=>{if(!closed)send({type:'extension_ui_response',id:message.id,value:JSON.stringify({isError:true,error:redact(String(error))})})})
       }else if(message.method==='input'&&message.title==='Agents Company Tunnel'){
         void Promise.resolve().then(()=>{if(!options.onTunnelCall)throw Error('Tunnel is unavailable');return options.onTunnelCall(JSON.parse(message.placeholder))}).then(result=>{if(!closed)send({type:'extension_ui_response',id:message.id,value:JSON.stringify(result)})}).catch(error=>{if(!closed)send({type:'extension_ui_response',id:message.id,value:JSON.stringify({isError:true,content:[{type:'text',text:redact(String(error))}]})})})
       }else if(message.method==='confirm'&&message.title==='Agents Company tool permission'){

@@ -3,7 +3,10 @@ body[data-product=read-map] #workspace{grid-template-columns:var(--explorer) 1px
 body[data-product=read-map] .workspace>.main-pane{grid-column:3;grid-row:1;min-width:0}
 body[data-product=read-map] #study-pane,body[data-product=read-map] #outline-divider{display:none!important}
 body[data-product=read-map] #outline-pane{display:none!important}
-body[data-product=read-map] .workspace.reading.outline-open #outline-pane{display:flex!important;position:fixed;right:0;top:150px;bottom:0;width:280px;border-left:1px solid var(--line);box-shadow:var(--shadow);z-index:35}
+/* The contents lives inside the reading viewport and always consumes its own width. */
+body[data-product=read-map] .workspace.reading.outline-open #outline-pane{display:flex!important;position:relative;inset:auto;right:auto;top:auto;bottom:auto;flex:0 0 min(var(--outline),42%);width:min(var(--outline),42%);min-width:0;max-width:480px;border-left:1px solid var(--line);box-shadow:none;z-index:auto}
+body[data-product=read-map] #workspace.reading.outline-open #outline-divider{display:block!important;flex:0 0 5px;width:5px;position:relative;cursor:col-resize}
+body[data-product=read-map] #workspace[data-outline-side=left].reading.outline-open #outline-pane{border-left:0;border-right:1px solid var(--line)}
 body[data-product=read-map] .mobile-outline-toggle{display:inline-flex}
 body[data-product=read-map] #workspace.reader-immersive{grid-template-columns:minmax(0,1fr)}
 body[data-product=read-map] .reader-immersive>.explorer,body[data-product=read-map] .reader-immersive>#explorer-divider{display:none}
@@ -70,3 +73,19 @@ body[data-product=read-map] .top-actions #reader-appearance-open{font-size:12px}
 body[data-product=read-map] .study-ink-toolbar{max-width:calc(100% - 24px)}
 @media(max-width:1050px){#study-home .study-home-header{padding:10px 13px}#study-home .study-home-header>div:first-child{max-width:35%}#study-board .mm-tool-labeled>span{display:none}#study-board .mindmap-toolbar{padding:4px 8px}#study-board .mm-active-tools{gap:0}.study-primary-tabs button{min-width:56px}}
 @media(max-width:760px){body[data-product=read-map] #workspace{grid-template-columns:minmax(0,1fr)}body[data-product=read-map] .workspace>.explorer,body[data-product=read-map] .workspace>#explorer-divider{display:none}body[data-product=read-map] .workspace>.main-pane{grid-column:1}#study-home .study-home-header{gap:6px}#study-home .study-home-header>div:nth-child(2) #study-edit-set{display:none}#study-home .study-home-header>div:first-child{max-width:40%}#study-home .study-home-header h1{font-size:15px}#study-home .study-home-header p{display:none}#study-board .study-edit-tools #card-inspector-open{font-size:0}#study-board .study-edit-tools{margin-right:0}#study-board #map-find-toggle{font-size:11px;padding:4px}#study-board #mm-new-child span{display:none}.study-primary-tabs button{padding:6px 10px!important;min-width:45px}}
+
+/* A TOC is a flex sibling of paper at every width, never a PDF overlay. */
+body[data-product=read-map] #reader-view .reader-viewport{display:flex;min-width:0;overflow:hidden;align-items:stretch}
+body[data-product=read-map] #reader-view .reader-viewport>#reader-scroll{flex:1 1 0;min-width:0;width:0}
+body[data-product=read-map] #workspace.reading.outline-open #reader-view .reader-viewport>#outline-pane{position:static!important;inset:auto!important;transform:none!important;box-shadow:none!important;flex:0 1 min(var(--outline),42%);width:min(var(--outline),42%);max-width:480px;min-width:0;min-height:0;overflow:hidden;z-index:auto}
+body[data-product=read-map] #workspace.reading.outline-open #reader-view .reader-viewport>#outline-divider{flex:0 0 5px;position:relative;touch-action:none;z-index:1}
+body[data-product=read-map] #workspace.reading:not(.outline-open) #reader-view .reader-viewport>#outline-pane,body[data-product=read-map] #workspace.reading:not(.outline-open) #reader-view .reader-viewport>#outline-divider{display:none!important}
+#outline-side-controls{display:flex;gap:3px;align-items:center;justify-content:flex-end;flex-shrink:0;padding:0 10px 7px;min-height:30px}
+#outline-side-controls button{border:1px solid var(--line);border-radius:6px;min-width:27px;height:26px;padding:2px 5px;font-size:15px;line-height:1;color:var(--muted);background:var(--surface)}
+#outline-side-controls button[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+@media(max-width:900px){body[data-product=read-map] #workspace.reading.outline-open #reader-view .reader-viewport>#outline-pane{flex-basis:min(var(--outline),40%);width:min(var(--outline),40%)}}
+
+/* UX audit: existing mindmap action search */
+.map-more-body>#map-action-search{box-sizing:border-box;grid-column:1/-1;position:sticky;top:-10px;z-index:5;width:100%;min-height:33px;margin:0 0 4px;padding:7px 10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;font-size:12px;color:var(--text)}
+.map-more-body>#map-action-search:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.map-more-body [hidden]{display:none!important}

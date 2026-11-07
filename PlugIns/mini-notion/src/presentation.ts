@@ -1,14 +1,15 @@
 import type { CSSProperties } from 'react';
 
 /** Cover URLs never become CSS class names. All previews use the same crop. */
-export function coverPresentation(cover?: string | null, position = 50) {
+export function coverPresentation(cover?: string | null, position = 50, nativeImage = false) {
   const image = !!cover && /^(asset:|https?:\/\/|data:image\/)/i.test(cover);
   const preset = cover && /^[a-z]+(?:-[a-z]+)?$/.test(cover) ? cover : '';
   return {
     className: image ? 'cover-custom' : preset ? `cover-${preset}` : '',
     style: {
       backgroundPosition: `center ${Math.max(0, Math.min(100, position))}%`,
-      ...(image ? { backgroundImage: `url(${JSON.stringify(cover)})` } : {}),
+      '--cover-position': `${Math.max(0, Math.min(100, position))}%`,
+      ...(image && !nativeImage ? { backgroundImage: `url(${JSON.stringify(cover)})` } : {}),
     } as CSSProperties,
   };
 }

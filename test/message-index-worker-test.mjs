@@ -16,11 +16,11 @@ try{
  const [a,b]=await Promise.all([client.queryMessageIndex('search',[source('employee:a')],{},options),client.queryMessageIndex('search',[source('employee:b')],{'employee:b/m1199':{hidden:true}},options)])
  assert.equal(a.total,1200);assert.equal(b.total,1199);assert.ok(a.rows.every(row=>row.conversation==='employee:a'));assert.ok(b.rows.every(row=>row.conversation==='employee:b'));assert.ok(b.rows.every(row=>row.id!=='m1199'))
  checks.push('Concurrent clients keep independent allowed sources, hidden flags, counts and rows')
- const before=loads;await client.closeMessageIndex();const restarted=await client.queryMessageIndex('search',[source('employee:a')],{},options);assert.equal(loads,before);assert.deepEqual(restarted,a)
+ const before=loads;await client.closeMessageIndex();const restarted=await client.queryMessageIndex('search',[source('employee:a')],{},options);assert.equal(loads,before+1);assert.deepEqual(restarted,a);assert.equal(fs.existsSync(path.join(temp,'cache/message-index.sqlite')),false)
  const running=client.queryMessageIndex('search',[source('group:c')],{},options),closing=client.closeMessageIndex()
  await assert.rejects(client.queryMessageIndex('search',[source('group:d')],{},options),/closing/)
  assert.equal((await running).total,1200);await closing
- checks.push('Restart reuses persisted projections, orderly close drains its accepted query, and no new query starts during shutdown')
+ checks.push('Restart rebuilds RAM projections without a disk copy, orderly close drains its accepted query, and no new query starts during shutdown')
  const broken={id:'group:broken',version:'broken',read:()=>{throw Error('Original source unavailable')}}
  await assert.rejects(client.queryMessageIndex('search',[broken],{},options),/Original source unavailable/)
  assert.equal((await client.queryMessageIndex('search',[source('group:broken')],{},options)).total,1200)

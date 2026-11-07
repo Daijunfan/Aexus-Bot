@@ -1,4 +1,16 @@
-# Secretary：Plan 与 GUI/API 对齐
+# Secretary：全局软件助手与 GUI/API 对齐
+
+## 全局操作约定
+
+Secretary 通过自己的身份执行用户可在界面完成的业务操作；`operator` API 权限分类包含 Secretary，不需要 operator token。无需加入群组或获得频道阅读授权。优先调用业务 API，完成后回读确认；不要因为旧文档提到“用户专属”而让用户亲自操作。
+
+- 频道：`channel.list/get/context` 发现完整频道、作者与读接口；`channel.fetch-text/fetch-images/search` 读取；`channel.access` 管理阅读人员，携带当前 revision。
+- 私聊：`direct.send` 代表用户发送输入（默认 `enqueue`，可选 `send`/`steer`）；`direct.history` 只读已发布账本；`direct.acknowledge` 确认确切已读；`direct.send-status` 用同一 `clientMessageId` 读取接受状态。员工（包括 Secretary 自己）回复用户只能以自身认证身份调用 `direct.post`，不能对自己调用 `direct.send`；原生正文、思考和工具只属于 Company 完整会话。
+- 排序：先 `messenger.state` 读取 `orders[scope]`，再 `messenger.reorder {scope,order,expectedOrder}`。频道用 `channel:ID`，分类用分类 ID；保存的是用户实际使用的同一列表。冲突时回读，不覆盖其他窗口。
+- 管理：Company、群组、文件、头像、收藏下载、订阅、主机、插件和 Plan 使用同一 Core dispatcher。Secretary 可管理其他员工的资源和合法排期；Worker 保留原直属归属和完全干净的原生上下文。
+- 阅读与工作分开：查询不会标记用户已读、启动任务或自动收藏下载。只有显式修改 API 才产生对应效果，仍遵守原生 Ask/Full access、planning 和参数/版本校验。
+
+Secretary 任免与 Agent 身份签发仍由用户掌握；Secretary 不冒充用户或其他 Agent。客户端上传、下载和播放许可仍绑定真实发起者，不能捏造另一台浏览器未上传的文件。
 
 ## 任务处理入口
 
@@ -7,7 +19,7 @@
 - `agents_company_documentation`：真实身份、共享索引、Core 单命令 schema、插件单方法 schema。
 - `agents_company_api {command,args?}`：以本人已绑定凭据调用现有 Core dispatcher。与 UI、CLI 使用同一业务实现和目标权限检查，无需 shell。
 
-共享场景中的 `agents_company_discussion_post` 保留其窄范围发布用途；不把它作为通用任务工具。初始化仅允许读取身份和索引；静默阅读阶段不开放通用操作。查询不触发模型、任务或已读确认。修改遵循 Ask/Full access 和原生 planning 设置，批准后复核当前轮次与身份。
+共享场景中的 `agents_company_discussion_post` 保留其窄范围发布用途；不把它作为通用任务工具。给用户发私聊使用 `direct.post`，它只发布调用者自己的私聊且不派发工作；正常原生工作轮次可在 Plan/Ask/dontAsk 模式直接调用，不需要文件写入批准。其他写入仍遵循 Ask/Full access 和原生 planning 设置。初始化仅允许读取身份和索引；静默阅读阶段不开放通用操作，也不能发布。查询不触发模型、任务或已读确认，批准后复核当前轮次与身份。
 
 ### Plan 最短闭环
 
@@ -60,18 +72,18 @@
 | Calendar/Timeline/Planner、图表、活动流 | `plan.calendar/timeline/analytics/feed` |
 | 保存、命名、布局/分组/筛选/排序/时区选项、删除用户数据库视图 | `plan.views/view-create/view-update/view-delete` |
 
-来源为已删除员工的旧任务仍是可管理记录。Secretary 可列出、读详情、看保留历史、暂停、删除或编辑停用记录；改派时必须提交当前合法目标。记录访问和清理不放宽执行资格。其他在职 Secretary 的任务仍受同级排期限制；不可运行的任务不会因为能查询到而获得运行权限。
+来源为已删除员工的旧任务仍是可管理记录。Secretary 可列出、读详情、看保留历史、暂停、删除或编辑停用记录；改派时必须提交当前合法目标。记录访问和清理不放宽执行资格。Secretary 也可管理其他在职 Secretary 的合法排期；缺失或不可用的目标不会因为能查询记录而恢复执行资格。
 
 ## 其他界面对照
 
 | 区域 | 规范入口与边界 |
 | --- | --- |
 | Company：Team、员工、形象、位置、关系、资料 | `group.*`、`card.*`、`office.*`、`room.*`、`connector.*`、`management.*`、`team-view.*`；保留职级与生命周期限制 |
-| 私聊：发现、正文、排队、停止、设置 | `session.*`、`config.*`；使用真实稳定员工身份 |
-| 群组、成员、禁言和固定通知 | `chat.*` / `conversation.policy/role/mute/silence/notice-*`；要求实际会话 Owner/Admin，Company Secretary 无豁免；解散要求 Owner；公开发言继续检查成员及委派 |
-| 频道、发布引擎、来源、头像、管理员、订阅、文章 | `channel.*`；不冒充用户/其他作者，不绕过成员或发布身份 |
-| 分类、排序、归档与偏好 | `messenger.*`；保留本人阅读与跨会话分享的用户专属边界 |
-| 个人/共享/会话工作区 | `workspace.*`、`conversation.*`、`transfer.*`；不绕过本人目录、共享原件与其他成员目录的权限 |
+| 私聊：用户输入、已发布正文、状态、已读与原生工作 | `direct.send/history/send-status/acknowledge` 管理用户输入与已发布账本；`session.*`、`config.*` 管理原生工作、排队、停止与设置；员工发布仅用自身身份 `direct.post` |
+| 群组、成员、禁言和固定通知 | `chat.*` / `conversation.policy/role/mute/silence/notice-*`；普通员工要求实际 Owner/Admin；Secretary 无需加入可全局管理，显式发布保留真实作者 |
+| 频道、发布引擎、来源、头像、管理员、订阅、文章 | `channel.*`；普通员工需要阅读授权；Secretary 默认全局访问，保留真实发布身份 |
+| 分类、排序、归档与偏好 | `messenger.*`；读取并修改用户实际使用的同一分类、排序、阅读与分享状态 |
+| 个人/共享/会话工作区 | `workspace.*`、`conversation.*`、`transfer.*`；Secretary 可全局管理，普通员工保持自身目录范围；稳定成员目录及路径边界不变 |
 | 设置、主机、后台终端 | `settings.*`、`host.*`、`terminal.*`；主机和原生引擎权限独立生效 |
 | 插件 | 文档工具读 `plugin/ID/command/METHOD`，执行 `plugin.call {id,method,employee?/team?/workspace?,params}`，使用当前授权工作区 |
 
@@ -79,7 +91,7 @@
 
 ## 保留的用户专属边界
 
-人类阅读确认、修改用户作者消息、跨会话引用/转发授权、用户/员工凭据签发与撤销、客户端上传下载/媒体许可、频道根目录原件导入（channel.file-download）、模拟用户点击以及 Secretary 任免保留既有限制。Secretary作为实际成员可以通过conversation.file维护会话根直属文件，仍不能修改他人成员目录；conversation.download可将已发布附件复制到本人选定工作区，区别于旧channel.file-download的共享根导入。权限、引擎执行许可、工作目录和成员资格不能通过通用工具自报；无权限时返回真实拒绝。
+Secretary 任免及 Agent 身份凭据签发由用户掌握。其他 GUI 业务 API 向 Secretary 开放，并保留实际 Agent principal、客户端许可、修订和参数校验。Secretary 可代用户管理私聊输入、已发布历史与已读，但 `direct.post` 只能以 Secretary 自己的认证身份发布，不能冒充其他员工。授权、文件、已读和转发等修改只在显式 API 调用时发生，不因查询自动执行。
 
 ## 接口精简与兼容
 

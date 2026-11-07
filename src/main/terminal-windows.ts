@@ -5,14 +5,17 @@ import type {ChildProcessWithoutNullStreams} from 'node:child_process'
 import type {RemoteTarget} from '../shared/remote'
 import {childEnv,resolveBinary} from './exec'
 import {tunnelConfig} from './tunnel'
+import {nativeWorkerEnv} from './native-worker-env'
 const requireModule=createRequire(__filename)
 /** A ConPTY driver exposes the same JSON-line contract as the POSIX broker. */
-export function windowsTerminal(cwd:string,remote:RemoteTarget|undefined,cols:number,rows:number):ChildProcessWithoutNullStreams{
+export function windowsTerminal(cwd:string,remote:RemoteTarget|undefined,cols:number,rows:number,program?:string[]):ChildProcessWithoutNullStreams{
   let pty:typeof import('node-pty')
   try{pty=requireModule('node-pty')}catch{throw Error('Windows 交互终端需要 node-pty / ConPTY。请安装本机平台发行包或运行 npm rebuild node-pty；不会回退成无交互命令。')}
-  const env={...childEnv(),TERM:'xterm-256color'} as Record<string,string>
+  if(program&&remote)throw Error('Windows Core 的远程原生 Worker 暂不支持；不会回退到本机')
+  const env={...(program?nativeWorkerEnv():childEnv()),TERM:'xterm-256color'} as Record<string,string>
   for(const key of Object.keys(env))if(env[key]===undefined)delete env[key]
   let command=resolveBinary('powershell'),args=['-NoLogo','-NoProfile']
+  if(program){command=program[0];args=program.slice(1)}
   if(remote){
     const target=tunnelConfig(remote)
     command=resolveBinary('ssh');args=['-tt','-o','StrictHostKeyChecking=yes','-o','ServerAliveInterval=15','-o','ConnectTimeout=10']

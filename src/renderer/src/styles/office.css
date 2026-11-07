@@ -151,3 +151,15 @@ input, select { color: var(--fg); }
 .initialization-status>.spinner{display:inline-block;margin-right:12px}
 .initialization-status strong{font-size:18px}
 .initialization-status p,.initialization-status small{color:var(--fg-dim)}
+
+/* Compact creation forms; full options remain available when needed. */
+.appearance-actions{display:flex;gap:10px;flex-wrap:wrap}.employee-advanced-settings{border:1px solid var(--border,#dce0e8);border-radius:14px;padding:14px;margin:16px 0}.employee-advanced-settings>summary{cursor:pointer;font-weight:600}.employee-advanced-settings[open]>summary{margin-bottom:16px}.employee-form .avatar-options{max-height:340px;overflow:auto;overscroll-behavior:contain}
+
+.engine-provider-catalog{margin:12px 0 16px;padding:14px;background:var(--bg-alt);border:1px solid var(--border-soft);border-radius:12px}
+.engine-provider-catalog>header{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}.engine-provider-catalog>header>span{font-size:11px;color:var(--fg-faint)}
+.engine-provider-catalog>p{font-size:12px;color:var(--accent);margin:8px 0 12px}.engine-provider-catalog>p>small{color:var(--fg-dim)}
+.engine-provider-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--border-soft);font-size:12px}.engine-provider-row>span:first-child{flex:1;min-width:0}
+.engine-provider-row strong{font-size:12px;font-weight:600}.engine-provider-row b{display:inline-block;margin-left:8px;padding:2px 6px;border-radius:5px;background:var(--accent);color:var(--button-ink);font-size:9px}
+.engine-provider-row code,.engine-provider-row small{display:block;overflow-wrap:anywhere;color:var(--fg-faint);font-size:10px;margin-top:4px}.engine-provider-row code{white-space:normal}
+.engine-provider-credential{flex:none;color:var(--fg-dim);font-size:10px;text-align:right}.engine-provider-credential>small{font-family:ui-monospace,monospace}
+.engine-provider-row[data-active=true] strong{color:var(--accent)}.engine-provider-catalog summary{cursor:pointer;font-size:10px;color:var(--fg-dim);padding:5px 0}.engine-provider-files{margin-top:8px}.engine-provider-files>code{display:block;margin:5px 0;font-size:10px;overflow-wrap:anywhere}.engine-provider-files>small{display:block;font-size:10px;color:var(--fg-faint);margin:8px 0}.engine-saved-providers{margin-top:5px}.engine-provider-error{color:var(--red);font-size:11px}

@@ -1,7 +1,9 @@
 """Host adapter: JSON in/out, without changing global CLI or SSH configuration."""
+import sys
+# Runtime imports must not change a signed application bundle.
+sys.dont_write_bytecode = True
 import json
 from pathlib import Path
-import sys
 
 # Resolve bundled sibling modules even with the Windows embedded Python runtime.
 sys.path.insert(0, str(Path(__file__).resolve().parent))

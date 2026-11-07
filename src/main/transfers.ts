@@ -6,14 +6,15 @@ import type {FileLocation,TransferJob} from '../shared/transfers'
 import {workspaceFiles} from './files'
 import {remoteFiles,closeRemote} from './tunnel'
 
-export type FileEndpoint={root:string;path:string;remote?:RemoteTarget;name?:string;referencePrefix?:string;validate?:(operation:string,args:Record<string,unknown>)=>void|Promise<void>}
+export type FileEndpoint={root:string;path:string;remote?:RemoteTarget;name?:string;referencePrefix?:string;replace?:boolean;read?:(operation:string,args:Record<string,any>)=>any|Promise<any>;commit?:(args:Record<string,unknown>)=>unknown|Promise<unknown>;changed?:()=>void;validate?:(operation:string,args:Record<string,unknown>)=>void|Promise<void>}
 type Task={job:TransferJob;source:FileEndpoint;target:FileEndpoint;cancelled:boolean;done?:Promise<void>}
 const tasks=new Map<string,Task>(),CHUNK=256*1024
 let stopping=false
 const join=(a:string,b:string)=>[a==='.'?'':a,b].filter(Boolean).join('/')
 async function request(task:Task,end:FileEndpoint,side:string,op:string,args:Record<string,unknown>){
   await end.validate?.(op,args)
-  return end.remote?remoteFiles(`transfer-${task.job.id}-${side}`,end.remote,op,args):Promise.resolve(workspaceFiles(end.root,op,args))
+  const result=op==='copy-commit'&&end.commit?await end.commit(args):end.read&&['copy-info','copy-read'].includes(op)?await end.read(op,args):end.remote?await remoteFiles(`transfer-${task.job.id}-${side}`,end.remote,op,args):workspaceFiles(end.root,op,args)
+  if(op==='copy-commit')end.changed?.();return result
 }
 export const listTransfers=()=>[...tasks.values()].map(t=>({...t.job})).reverse()
 export function getTransfer(id:string){const t=tasks.get(id);if(!t)throw Error('Unknown transfer');return {...t.job}}
@@ -46,7 +47,7 @@ async function copy(task:Task){
     const sourceInfo=await call(source,'from','copy-info',{path:source.path})
     if(!sourceInfo.exists)throw Error('源文件不存在')
     if(sourceInfo.directory&&needsDirectoryName(job.name,source.path)){job.name=directoryName(job.name);destination=join(target.path,job.name)}
-    if((await call(target,'to','copy-info',{path:destination})).exists)throw Error('目标已有同名文件，请先重命名；源文件未移动')
+    if((await call(target,'to','copy-info',{path:destination})).exists&&!target.replace)throw Error('目标已有同名文件，请先重命名；源文件未移动')
 
     const pathApi=source.remote?(source.remote.os==='windows'?path.win32:path.posix):path
     if(JSON.stringify(source.remote?{...source.remote,directory:undefined}:null)===JSON.stringify(target.remote?{...target.remote,directory:undefined}:null)){

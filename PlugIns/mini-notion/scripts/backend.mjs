@@ -16,7 +16,7 @@ fs.mkdirSync('dist-cli', { recursive: true });
 fs.writeFileSync('dist-cli/claude-protocol.json', JSON.stringify(nativeControls, null, 2));
 
 await build({
-  entryPoints: { server: 'src/backend/server.ts', client: 'src/backend/client.ts', cli: 'src/cli/main.ts' },
+  entryPoints: { server: 'src/backend/server.ts', client: 'src/backend/client.ts', cli: 'src/cli/main.ts', delta: 'src/core/stateDelta.ts' },
   bundle: true,
   platform: 'node',
   format: 'cjs',

@@ -141,16 +141,20 @@ async function pdf(document: string | { workspace: Workspace; dataDirectory: str
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-notion-pdf-'));
   const input = path.join(directory, typeof document === 'string' ? 'page.html' : 'page.json');
   write(input, typeof document === 'string' ? document : JSON.stringify(document));
+  const bundledRuntime = path.join(__dirname, '..', 'pdf-runtime');
+  const bundledPath = path.join(bundledRuntime, 'path.txt');
   const executable =
-    process.env.MINI_NOTION_EXECUTABLE ||
-    (process.versions.electron ? process.execPath : require('electron'));
+    (fs.existsSync(bundledPath)
+      ? path.join(bundledRuntime, fs.readFileSync(bundledPath, 'utf8').trim())
+      : process.env.MINI_NOTION_EXECUTABLE || (process.versions.electron ? process.execPath : require('../../electron/runtime.cjs').electronRuntime().executable));
+  const bundledApp = path.join(__dirname, '..', 'pdf-app');
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
   try {
     await new Promise<void>((resolve, reject) => {
       const child = spawn(
         executable,
-        [path.join(__dirname, '..'), '--mini-notion-pdf', input, output, directory],
+        [fs.existsSync(bundledApp) ? bundledApp : path.join(__dirname, '..'), '--mini-notion-pdf', input, output, directory],
         { env, stdio: ['ignore', 'ignore', 'pipe'] },
       );
       let error = '';

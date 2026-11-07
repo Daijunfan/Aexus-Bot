@@ -1,13 +1,15 @@
 import {memo,useContext,useEffect,useRef,useState,type CSSProperties} from 'react'
-import {currentAvatar,isFateAvatar,type AvatarKind} from '../../../shared/office'
+import {DEFAULT_AVATAR,isFateAvatar,type AvatarKind} from '../../../shared/office'
 import {EmployeePortrait} from './EmployeePortrait'
 import {Mascot} from '../office/Mascot'
 import {CanvasMotion} from '../office/motion'
 import {motionAllowed} from '../chat/surfaceMotion'
 import portraits from '../assets/pets/portraits/manifest.json'
+import {avatarFraming} from '../../../shared/avatar-framing'
+import {useDisplayedAvatar} from './AvatarCatalog'
 
 export type MessageAvatarState='idle'|'working'|'responding'|'attention'
-const crops=new Map(portraits.map(portrait=>[portrait.id,portrait.crop]))
+const crops=new Map(portraits.map(portrait=>[portrait.id,portrait]))
 const visibleAvatars=new Map<Element,(visible:boolean)=>void>()
 let observer:IntersectionObserver|undefined
 function watchAvatar(element:Element,update:(visible:boolean)=>void){
@@ -23,17 +25,18 @@ export function useMessageAvatarMotion(){
   return enabled
 }
 
-export const MessageListAvatar=memo(function MessageListAvatar({avatar='fireball',color,state}:{avatar?:AvatarKind;color?:string;state:MessageAvatarState}){
+export const MessageListAvatar=memo(function MessageListAvatar({avatar=DEFAULT_AVATAR,color,state,continuous=false}:{avatar?:AvatarKind;color?:string;state:MessageAvatarState;continuous?:boolean}){
   const allowed=useContext(CanvasMotion),root=useRef<HTMLSpanElement>(null),[visible,setVisible]=useState(false),[engaged,setEngaged]=useState(false),[playing,setPlaying]=useState(false)
-  const kind=currentAvatar(avatar),active=state==='working'||state==='responding',crop=crops.get(kind),source=isFateAvatar(kind)?2:1
-  const scale=crop?224/Math.max(crop.width,crop.height):1
-  const framing=crop?{'--avatar-width':192*source*scale/256*100+'%','--avatar-height':208*source*scale/256*100+'%','--avatar-left':(16+(224-crop.width*scale)/2-crop.left*scale)/256*100+'%','--avatar-top':(16-crop.top*scale)/256*100+'%'} as CSSProperties:undefined
+  const display=useDisplayedAvatar(avatar,color),kind=display.avatar,active=state==='working'||state==='responding',portrait=crops.get(kind)
+  const frame=portrait?avatarFraming(portrait.crop,portrait.frame):undefined
+  const framing=frame?{'--avatar-width':frame.width,'--avatar-height':frame.height,'--avatar-left':frame.left,'--avatar-top':frame.top} as CSSProperties:undefined
   useEffect(()=>{const element=root.current;if(!element)return;return watchAvatar(element,setVisible)},[])
   useEffect(()=>{const row=root.current?.closest('button');if(!row)return;const enter=()=>setEngaged(true),leave=()=>setEngaged(row.matches(':hover,:focus-visible'));row.addEventListener('pointerenter',enter);row.addEventListener('pointerleave',leave);row.addEventListener('focus',enter);row.addEventListener('blur',leave);return()=>{row.removeEventListener('pointerenter',enter);row.removeEventListener('pointerleave',leave);row.removeEventListener('focus',enter);row.removeEventListener('blur',leave)}},[])
   useEffect(()=>{
     if(!allowed||!visible||state==='attention'||!active&&!engaged){setPlaying(false);return}
-    setPlaying(true);const timer=setTimeout(()=>setPlaying(false),active?1800:900)
+    setPlaying(true);if(continuous&&active)return
+    const timer=setTimeout(()=>setPlaying(false),active?1800:900)
     return()=>clearTimeout(timer)
-  },[allowed,visible,state,active,engaged])
-  return <span ref={root} className="message-list-avatar" data-avatar-state={state} data-avatar-playing={playing&&allowed&&visible||undefined} aria-hidden="true"><EmployeePortrait avatar={avatar} color={color}/>{playing&&allowed&&visible&&<span className="message-avatar message-avatar-live" style={framing}><Mascot kind={kind} color={color} working={active} pose={active?(state==='responding'?'wave':'type'):'pickup'} compact={!isFateAvatar(kind)}/></span>}</span>
+  },[allowed,visible,state,active,engaged,continuous])
+  return <span ref={root} className="message-list-avatar" data-avatar-state={state} data-avatar-playing={playing&&allowed&&visible||undefined} aria-hidden="true"><EmployeePortrait avatar={kind} color={display.color}/>{playing&&allowed&&visible&&<span className="message-avatar message-avatar-live" style={framing}><Mascot kind={kind} color={display.color} working={active} pose={active?(state==='responding'?'wave':'type'):'pickup'} compact={!isFateAvatar(kind)}/></span>}</span>
 })

@@ -1,5 +1,5 @@
 /* Shared chat surface: pearl paper, lavender ink, grouped bubbles and finite motion. */
-.message-stage{--thread-width:880px;--message-paper:var(--bg-elev);--message-outgoing:var(--theme-outgoing,#eee2ff);isolation:isolate;background:var(--theme-wash,#d8c9ee)}
+.message-stage{--thread-width:880px;--message-paper:var(--bg-elev);--message-outgoing:var(--theme-outgoing,#eee2ff);isolation:isolate;background:transparent}
 .message-wallpaper{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:linear-gradient(125deg,color-mix(in srgb,var(--theme-wash,#d8c9ee) 91%,var(--accent)),var(--theme-wash-alt,#ebe0f8) 52%,var(--theme-wash,#d8c9ee))}
 .message-wallpaper-mesh{position:absolute;inset:0;background:radial-gradient(ellipse at 6% 24%,var(--theme-wash-alt,#ebe0f8),transparent 51%),radial-gradient(ellipse at 96% 76%,color-mix(in srgb,var(--theme-wash,#d8c9ee) 87%,var(--accent)),transparent 56%);opacity:.58}
 .message-wallpaper-pattern{position:absolute;inset:0;display:block;color:color-mix(in srgb,var(--accent,#7953ce) 72%,var(--fg,#293343));opacity:.16}

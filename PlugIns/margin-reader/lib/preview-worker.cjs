@@ -1,6 +1,7 @@
 'use strict';
 const { parentPort, workerData } = require('node:worker_threads');
 const path = require('node:path');
+const os = require('node:os');
 const fs = require('node:fs/promises');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const { safePath, readBounded, assert, version, LIMITS } = require('./safety.cjs');
@@ -84,10 +85,23 @@ async function articleCover(bytes, args) {
     return result(canvas,title,{ hasImage: Boolean(image), excerpt: text.slice(0,240) });
   } finally { dom.window.close(); }
 }
+const BOOK_FORMATS=new Set(['epub','mobi','azw','azw3','kf8','doc','docx','odt','rtf','fb2']);
+async function bookCover(bytes,args){
+  const resourceDir=await fs.mkdtemp(path.join(os.tmpdir(),'margin-reader-cover-'));
+  try{
+    const doc=await require('./parsers.cjs').parseDocument({bytes,filename:args.filename,workspace:args.workspace,resourceDir});
+    const section=doc.sections.find(section=>section.html&&section.text?.trim())||doc.sections[0];
+    if(!section?.html)throw Error('No readable book section for preview');
+    const title=require('./safety.cjs').escapeHtml(doc.title||path.basename(args.filename));
+    const html='<h1>'+title+'</h1>'+section.html;
+    return articleCover(Buffer.from(html),{...args,format:'html'});
+  }finally{await fs.rm(resourceDir,{recursive:true,force:true});}
+}
 async function main(args) {
   const file = await safePath(args.workspace,args.filename), st = await fs.stat(file);
   assert(version(st) === args.expectedVersion,'CONFLICT','Preview source changed before rendering.');
-  const bytes = args.pdfBytes?Buffer.from(args.pdfBytes):await readBounded(file,args.format === 'pdf' ? LIMITS.file : LIMITS.html);
+  const bytes = args.pdfBytes?Buffer.from(args.pdfBytes):await readBounded(file,args.format === 'pdf' || BOOK_FORMATS.has(args.format) ? LIMITS.file : LIMITS.html);
+  if(BOOK_FORMATS.has(args.format))return bookCover(bytes,args);
   if (args.format === 'pdf') return pdfCover(bytes,args.filename,args.page);
   if (IMAGE_MIME['.'+args.format]) {
     const img = await loadImage(bytes), scale = Math.min(360/img.width,480/img.height);

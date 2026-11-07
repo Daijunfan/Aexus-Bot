@@ -32,7 +32,9 @@ export class ReaderRenderer {
       style.textContent = FLOW_STYLE + `:host{font-size:${settings.fontSize}px;line-height:${settings.lineHeight}}`;
       const body = document.createElement('article');
       // This HTML is already sanitized by the shared Core. A shadow root isolates document IDs.
-      body.innerHTML = content.html;
+      // Match Core's full-document HTML parse: leading whitespace before the
+      // first tag is not part of body.textContent or its excerpt offsets.
+      body.innerHTML = content.html.replace(/^\s+(?=<)/u, '');
       shadow.append(style, body);this.flowKey=flowKey;this.flowRequested=null;
       shadow.addEventListener('click', event => {
         const anchor = event.composedPath().find(el => el?.tagName === 'A');

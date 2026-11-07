@@ -48,8 +48,18 @@ for(const name of ['proper-lockfile','jszip','@blocknote/server-util','@blocknot
 fs.copyFileSync('dist-cli/claude-protocol.json',path.join(out,'backend/claude-protocol.json'));
 await buildUI({configFile:false,root,base:'./',plugins:[react()],build:{outDir:path.join(out,'ui'),emptyOutDir:true,chunkSizeWarningLimit:2200}});
 const require=createRequire(import.meta.url);
+// PDF exports use the same renderer in a private, hidden worker. Carry its
+// runtime so deleting the standalone app cannot break the plugin's CLI.
+const {executable:electronExecutable,distribution:electronDistribution}=require('../electron/runtime.cjs').electronRuntime();
+fs.cpSync(electronDistribution,path.join(out,'pdf-runtime'),{recursive:true,verbatimSymlinks:true});
+fs.writeFileSync(path.join(out,'pdf-runtime/path.txt'),path.relative(electronDistribution,electronExecutable)+'\n');
+fs.mkdirSync(path.join(out,'pdf-app'),{recursive:true});
+fs.writeFileSync(path.join(out,'pdf-app/package.json'),JSON.stringify({name:'mininotion-pdf-worker',version,main:'main.cjs'})+'\n');
+fs.writeFileSync(path.join(out,'pdf-app/main.cjs'),"require('./pdf.cjs')\n");
+fs.writeFileSync(path.join(out,'pdf-app/pdf.cjs'),fs.readFileSync('electron/pdf.cjs','utf8').replace('../dist/index.html','../ui/index.html'));
+fs.copyFileSync('electron/pdf-preload.cjs',path.join(out,'pdf-app/pdf-preload.cjs'));
 const {pluginCommands,agentGuide}=require(path.join(out,'runtime.cjs'));
-const schema={schemaVersion:1,pluginId:'mininotion',version,transport:'JSON-RPC 2.0',commands:pluginCommands.map(command=>({...command,agentAccess:command.method.startsWith('assistant.')?'operator':'workspace'})),profile:{workspaceRequired:true,agentRuntime:false,exports:['md','html','json','csv']}};
+const schema={schemaVersion:1,pluginId:'mininotion',version,transport:'JSON-RPC 2.0',commands:pluginCommands.map(command=>({...command,mutates:!!command.mutates,agentAccess:command.method.startsWith('assistant.')?'operator':'workspace'})),profile:{workspaceRequired:true,agentRuntime:false,exports:['md','html','json','csv','pdf']}};
 fs.writeFileSync(path.join(out,'schema.json'),JSON.stringify(schema,null,2)+'\n');
 const table=pluginCommands.map(c=>`| \`${c.method}\` | ${c.mutates?'write':'read'} | ${c.description.replaceAll('|','/')} |`).join('\n');
 const agentWorkflow=agentGuide().topics.map(topic=>`### Agent guide: ${topic}\n\n${agentGuide(topic).markdown}\n`).join('\n');

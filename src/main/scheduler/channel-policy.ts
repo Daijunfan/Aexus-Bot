@@ -1,3 +1,4 @@
+import {canReadChannel} from '../channel-access'
 import {one} from '../channel-store'
 import {readStore} from '../store'
 import {rolePolicy} from '../../shared/roles'
@@ -18,8 +19,8 @@ export function validateScheduleChannels(employeeId:string,scope:NonNullable<Del
   if(!row||JSON.parse(row.config).kind!=='employees')throw Error('Publishing schedules require an employee channel')
  }
  if(scope.eventChannelId){
-  const members=admins(scope.eventChannelId),caller=principal.kind==='agent'?readStore().sessions.find(card=>card.id===principal.employeeId):undefined
-  if(principal.kind==='agent'&&!rolePolicy(caller?.managementRole).appAdministrator&&!members.includes(principal.employeeId))throw Error('Event source channel is outside your membership')
+  if(!one('SELECT id FROM channels WHERE id=?',scope.eventChannelId))throw Error('Scheduled channel is unavailable')
+  if(!canReadChannel(scope.eventChannelId,{kind:'agent',employeeId})||!canReadChannel(scope.eventChannelId,principal))throw Error('Channel event source requires current reading access for planner and target')
   if(scope.channelId===scope.eventChannelId)throw Error('A publishing schedule cannot listen to its own destination channel')
  }
 }

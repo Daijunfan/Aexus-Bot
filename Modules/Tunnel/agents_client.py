@@ -1,8 +1,10 @@
 """Small identity-scoped CLI transport. Command parsing stays in the Mac's existing CLI."""
+import sys
+# Runtime imports must not change a signed application bundle.
+sys.dont_write_bytecode = True
 import json
 import pathlib
 import socket
-import sys
 
 CONFIG = json.loads(__AGENTS_CONFIG__)
 

@@ -22,7 +22,7 @@ try{
  const args={id:group.id,text:'Good morning',clientMessageId:'greeting-once'},sent=await rpc('chat.send',args);await idle()
  assert.equal(sent.broadcast,true);assert.ok(sent.deliveries.every(d=>d.mode==='work'))
  let messages=(await history()).messages;assert.equal(messages.length,4);assert.equal(messages[0].text,'Good morning')
- for(const p of people){assert.equal(messages.filter(m=>m.author.kind==='agent'&&m.author.employeeId===p.id).length,1);assert.deepEqual((await f.status(p.id)).lastReply,baseline.get(p.id).reply);assert.equal((await transcript(p)).items.filter(item=>item.role==='user'&&item.text==='Good morning').length,1);assert.ok((await transcript(p)).text.includes('Complete private work log'));assert.equal((await rpc('session.list')).sessions.find(s=>s.id===p.id).threadId,baseline.get(p.id).native)}
+ for(const p of people){assert.equal(messages.filter(m=>m.author.kind==='agent'&&m.author.employeeId===p.id).length,1);assert.notEqual((await f.status(p.id)).lastReply.id,baseline.get(p.id).reply.id);assert.equal((await transcript(p)).items.filter(item=>item.role==='user'&&item.text==='Good morning').length,1);assert.ok((await transcript(p)).text.includes('Complete private work log'));assert.equal((await rpc('session.list')).sessions.find(s=>s.id===p.id).threadId,baseline.get(p.id).native)}
  assert.ok(messages.slice(1).every(m=>!m.acknowledgmentOf&&m.deliveries.every(d=>d.mode==='awareness'&&d.readAt&&d.status==='completed')))
  assert.ok(!messages.some(m=>/^(null|undefined)$/.test(m.text)||m.text.includes('do not need')))
  const settled=JSON.stringify(messages);await new Promise(resolve=>setTimeout(resolve,900));assert.equal(JSON.stringify((await history()).messages),settled,'no further public messages or delivery churn after one awareness wave')
@@ -34,15 +34,15 @@ try{
  checks.push('Null, whitespace, placeholder strings and --silent cannot create a message, delivery wave or unread change')
  // Group/user read and private/user read are independent in both directions.
  assert.equal((await rpc('chat.get',{id:group.id})).unread,true)
- await rpc('session.acknowledge',{employee:b.id,replyId:baseline.get(b.id).reply.id});assert.equal((await rpc('chat.get',{id:group.id})).unread,true)
+ const currentReplies=new Map(await Promise.all(people.map(async p=>[p.id,(await f.status(p.id)).lastReply])));await rpc('session.acknowledge',{employee:b.id,replyId:currentReplies.get(b.id).id});assert.equal((await rpc('chat.get',{id:group.id})).unread,true)
  await rpc('chat.acknowledge',{id:group.id,messageId:messages.at(-1).id});assert.equal((await rpc('chat.get',{id:group.id})).unread,false)
- for(const p of people)assert.ok((await f.status(p.id)).lastReply.readAt)
+ assert.ok((await f.status(b.id)).lastReply.readAt);for(const p of [a,c])assert.equal((await f.status(p.id)).lastReply.readAt,undefined)
  for(const p of people)fs.rmSync(path.join(f.control,p.id+'.work-post.json'))
  await rpc('session.send',{employee:b.id,text:'New private question'});await f.received(b.id,'New private question');await f.until(async()=>!(await f.status(b.id)).busy,'new private response')
  const privateUnread=(await f.status(b.id)).lastReply;assert.equal(privateUnread.readAt,undefined);assert.equal((await rpc('chat.get',{id:group.id})).unread,false)
  const explicit=await rpc('chat.post',{id:group.id,text:'One deliberate useful group update.',replyTo:sent.id,clientMessageId:'explicit-update'},tokens.get(a.id));await idle();assert.equal((await rpc('chat.get',{id:group.id})).unread,true);assert.deepEqual((await f.status(b.id)).lastReply,privateUnread)
  await rpc('chat.acknowledge',{id:group.id,messageId:explicit.id});assert.deepEqual((await f.status(b.id)).lastReply,privateUnread)
- checks.push('Group reads cannot clear private unread, private reads cannot clear group unread, and shared work preserves previous private reply identity')
+ checks.push('Group reads cannot clear private unread, private reads cannot clear group unread, and native group-work speech produces independent private replies; awareness preserves existing private reply identity')
  // Mentions still control formal work; non-targets only learn the shared context.
  const before=new Map(await Promise.all(people.map(async p=>[p.id,(await transcript(p)).items.length])))
  const targeted=await rpc('chat.send',{id:group.id,text:'Only the Manager should perform this task.',mentions:[a.id],clientMessageId:'targeted'});await idle()

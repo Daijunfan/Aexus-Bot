@@ -1,10 +1,11 @@
 import { surfacePosition } from './presentation';
-import { memo, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type ButtonHTMLAttributes } from 'react';
+import { lazy, Suspense, memo, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type ButtonHTMLAttributes } from 'react';
 import { createPortal } from 'react-dom';
-import { File, X, Check, ChevronRight, icons } from 'lucide-react';
+import { File, X, Check, ChevronRight } from 'lucide-react';
 import { useContext } from 'react';
 import { AppearanceTheme } from './appearance';
-import { parseIcon, iconColors } from './core/icons';
+import { parseIcon } from './core/icons';
+const SymbolIcon = lazy(() => import('./components/SymbolIcon').then(module => ({ default: module.SymbolIcon })));
 
 type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { label: string; active?: boolean };
 export function IconButton({ children, label, active, className = '', ...props }: IconButtonProps) {
@@ -19,13 +20,12 @@ export const PageIcon = memo(function PageIcon({ icon, size = 18 }: { icon?: str
   const theme = useContext(AppearanceTheme);
   const glyph = parseIcon(icon);
   if (glyph) {
-    const Glyph = icons[glyph.name as keyof typeof icons];
-    return <Glyph size={size} strokeWidth={1.8} className="page-symbol" style={{ color: iconColors[glyph.color][theme] }} aria-hidden="true" />;
+    return <Suspense fallback={<File size={size} strokeWidth={1.8} className="page-default-icon page-symbol-pending" aria-hidden="true" />}><SymbolIcon {...glyph} size={size} theme={theme} /></Suspense>;
   }
   if (icon && /^(asset:|https?:\/\/|data:image\/)/i.test(icon))
     return failed === icon
       ? <File size={size} strokeWidth={1.8} className="page-default-icon" aria-hidden="true" />
-      : <img className="page-image-icon" src={icon} width={size} height={size} alt="" draggable={false} onError={() => setFailed(icon)} />;
+      : <img className="page-image-icon" decoding="async" loading="lazy" src={icon} width={size} height={size} alt="" draggable={false} onError={() => setFailed(icon)} />;
   return icon ? (
     <span className="page-emoji" style={{ fontSize: size }} aria-hidden="true">
       {icon}
@@ -93,7 +93,7 @@ export function Popover({
   useEffect(() => {
     const dismiss = (event: KeyboardEvent) => {
       const layers = document.querySelectorAll('.popover-layer');
-      if (event.key === 'Escape' && !document.querySelector('.app-select-menu') && ref.current?.parentElement === layers[layers.length - 1]) {
+      if (event.key === 'Escape' && !event.isComposing && event.keyCode !== 229 && !document.querySelector('.app-select-menu') && ref.current?.parentElement === layers[layers.length - 1]) {
         event.preventDefault();
         event.stopPropagation();
         onClose();
@@ -127,9 +127,20 @@ export function Popover({
       className="popover-layer"
       onMouseDown={onClose}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) {
           e.stopPropagation();
           onClose();
+        }
+        if (role === 'dialog' && e.key === 'Tab') {
+          const controls = Array.from(
+            ref.current?.querySelectorAll<HTMLElement>(
+              'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+            ) || [],
+          ).filter(element => element.getClientRects().length);
+          if (controls.length && (e.shiftKey ? document.activeElement === controls[0] : document.activeElement === controls.at(-1))) {
+            e.preventDefault();
+            controls[e.shiftKey ? controls.length - 1 : 0].focus();
+          }
         }
         if (
           role === 'menu' && (e.key === 'ArrowDown' || e.key === 'ArrowUp') &&

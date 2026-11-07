@@ -1,350 +1,124 @@
-# Margin Reader
+# MarginReader
 
-## 0.9.4 节点拖放与资料封面验收
+独立、本地优先的 CLI 阅读与知识整理工具：导入文档、检索、带来源摘录、层级脑图、笔记、FSRS 复习和可交换导出。终端工作区 TUI 提供阅读与大纲联动；无需 Avalon/AgentsCompany、账号、模型或图形窗口完成本地任务。
 
-主题A拖进B的主体后，B成为父主题，后代跟随。移动、选择与父子关系工具共用子树预览；拖出脑图区松开取消，回到画布可继续。修复重叠旧位置遮挡有效目标，并核对取消、折叠目标、原文回源与完整封面。
+当前版本 0.9.4。CLI 与 TUI 共用现有公共 runtime 契约。可选 `serve` 提供本机浏览器阅读器；宿主插件兼容保留，但不是独立安装前提。产品仍有明确的兼容性和人体工学差距，详见 [验收范围](docs/CLI_PRODUCT_ACCEPTANCE.md) 与 [竞品差距](docs/COMPETITIVE_GAPS.md)。本项目与 MarginNote、XMind 无隶属关系。
 
-[交互规则与验证范围](docs/DRAG_COVER_FINISH.md)。全量检查：`npm run test:deep-audit`、`npm run test:agent-acceptance`。
+## 安装
 
-0.9.3 的保存、删除、原文拖入、区域、大纲和任务视图改进及验收边界见 [MINDMAP_USABILITY.md](docs/MINDMAP_USABILITY.md)。
+需要 Node.js **>=22.13.0** 和 npm。先查看 Node/npm 版本；目前只在验收记录列出的实际平台测试，不将 `engines` 当作全平台保证。
 
-## 0.9.2 完整封面与直接节点拖放
-
-资料改为完整封面架，保留原比例、两行标题和精简元信息。拖动主题到另一个主题时，目标成为父节点，子树一起移动；目标本体与外侧排序区域明确区分。总览缩略节点也可直接拖放，不再当作画布空白。绿色目标框及文字提示显示结果，折叠目标展开与重排共用一次撤销，原文和笔记保留。
-
-[使用、官方参照与验证](docs/TOPIC_DRAG_AND_COVERS.md)。`npm run test:topic-covers` 验证资料封面、鼠标拖放、合批总览、取消及可恢复结构。
-
-## 0.9.1 并排阅读
-
-学习集点击“并排”同时显示文档与无限脑图，点击“⇄”交换左右。中线可拖动，左右方向键微调，双击或Enter恢复均分。重新打开保留模式、顺序与比例；单击原文来源和切换PDF/HTML保持并排。文档、脑图仍可单独使用，学习卡片和复习面板不会重新出现。
-
-[并排阅读说明与CLI](docs/SPLIT_READING.md)。`npm run test:split-reading` 验证真实输入、原文定位、重开、命令同步和缺失文档。
-
-## 当前版本 0.9：文档阅读与无限脑图
-
-界面只保留“文档”“脑图”两个主视图，退休卡片盒、学习大纲、复习和学习仪表板。原文、摘录、主题、备注、图片及历史继续保留；旧数据和员工接口保持兼容。
-
-脑图支持没有内容边界的双指平移、指针焦点缩放、负坐标自由主题、54种骨架、完整分支拖拽、混合结构和可编辑内容。阅读占满主页面，PDF／HTML准确回源保留；后台页码保存不抢回已经切换的页面。
-
-当前功能、快捷键与验证范围见 [READ_MAP_WORKSPACE.md](docs/READ_MAP_WORKSPACE.md)。下列0.8及更早章节作为开发记录保留，不代表当前仍提供学习／复习界面。
-
-
-Avalon 的独立、CLI-first 本地阅读与学习插件。提供文库、学习集、彩色摘录图片卡片和跨文档脑图；支持本地 FSRS 复习；不包含 OCR 或 DRM 解密。
-
-v0.1.1：已修复大分块上传和博客保存。在 Mac 上使用用户下载的《AI Systems Performance Engineering》（22,817,987 字节、1,061 页、516 个目录项）完成真实 UI 导入；文件 SHA-256 一致，翻页、搜索、目录跳转和重开通过。英文博客 CLI 与中文博客 UI 导入及断外网重开均通过。验证记录见 [REPAIR_STATUS.md](REPAIR_STATUS.md)。
-
-## 0.8.0 本地脑图设计与直接操作
-
-新增54种分组骨架、分级样式编辑、自定义分支配色和可导入导出的本地设计库。骨架缩略图使用真实布局，配色独立切换；这些是自主实现的样式方案，数量相同不表示逐像素复制商业客户端。
-
-支持自由主分支定位、智能辅助线、主题宽度拖拽、浮动主题对齐与均匀分布、按层级展开折叠、连线和节点同步过渡、大图合批拖动、保留拓扑的搜索、自动避让关系线。中心按Enter建立主分支，Cmd/Ctrl+Enter插入父主题，复制粘贴进入选中的主题，均通过公开Core执行并可撤销。
-
-公式和化学式使用本地矢量路径；演示支持自动分页、逐步展开和多种版式。增加可搜索中文的矢量PDF、保留可编辑文字及演讲者笔记的PPTX。原文回源、图片摘录、笔记、手写和员工工作区权限继续复用原有数据。
-
-完整说明和已测边界见 [MINDMAP_COMPLETION.md](docs/MINDMAP_COMPLETION.md) 与 [XMIND_COVERAGE.md](docs/XMIND_COVERAGE.md)。`npm run test:mindmap-completion`、`npm run test:xmind`、`npm run test:deep-audit` 和 `npm run test:agent-acceptance` 可复现专项与整包检查。
-
-
-## 原生脑图骨架与拖拽修复
-
-按16张XMind官方原图重构：12种独立布局骨架、15个方向结构选项、真实树形表格和矩阵、共同主轴鱼骨与时间轴、混合结构避让。拖动保持画布缩放，支持子树移动、同级插入、跨侧与可撤销整理。实际截图及参照说明见 `docs/XMIND_VISUAL_REFERENCE.md`；专项入口 `npm run test:xmind`。
-
-## 2026-10-02 默认主题节点与摘录预览
-
-新建和未配置显示方式的学习集现在直接显示紧凑主题脑图：白色画布、浅色实心圆角节点、柔和曲线与形状贴合选中态。原图和长正文移入悬浮预览与详情面板，标题默认两行；完整内容与原文定位仍保留。已有明确的资料卡片设置继续生效，顶部按钮可随时切回；CLI 创建时传 `mapMode:"cards"` 可直接选择资料卡片。
-
-修改通过同一 Core 默认解析与几何接口，无需重写旧文库。专项测试 `npm run test:topics` 验证真实默认、PDF单击回源、原图完整性、长标题、旧坐标避让和显示方式切换。
-
-## 2026-10-02 思维导图工作台
-
-学习集脑图新增“思维导图”入口：13种可混合结构、12套自制配色、31种主题轮廓，支持格式、标记、任务字段、关系控制点、外框、概要、原位键盘编辑、快速大纲、查找替换、笔记总览、主题演示和完整图像导出。原始摘录卡片及PDF／HTML回源继续保留。
-
-新增模块的几何、样式、分组、替换、模板和文件交换都通过同一公开Core接口，带版本检查和撤销。大型图使用完整模型及合批缩略总览，不裁掉导出、命中与搜索范围。JSON `.xmind` 文件可检查、独立导入和多画布导出；旧XML、加密及商业扩展不声称无损兼容。
-
-使用方法与测试入口见 [MINDMAP_STUDIO.md](docs/MINDMAP_STUDIO.md)。对照官方文档的已实现、部分实现及未验收内容见 [XMIND_COVERAGE.md](docs/XMIND_COVERAGE.md)；数量相同不代表商业客户端全套功能和动画已经逐项完全一致。
-
-## 2026-10-01 书页动画与双文库
-
-分页新增书页旋转、纸背和阴影动画，并修复惯性后新手势无法再次翻页、快速输入排队与取消后的状态问题。分页保留一个真实页面和最多三个缓存页面；连续竖向滚动保持原有布局。动画可关闭，系统减少动态优先。
-
-左栏分为可点击的“学习集”和“我的文库”，各自显示目录树。学习集支持嵌套文件夹、拖放移动、重命名、空文件夹回收恢复及缩略图／列表。学习集中的资料展示真实 PDF 和 HTML 缩略图、文件路径、大小以及页数或文章摘要。完整说明见 [BOOK_LIBRARY.md](docs/BOOK_LIBRARY.md)。
-
-## 2026-10-01 原位编辑、自定义主题与可恢复备份
-
-选中卡片后按 F2 或“详情”，在不离开阅读区域的面板中修改标题、显示正文、笔记、标签和颜色；Cmd/Ctrl Enter 保存。并发冲突和延迟返回不会覆盖编辑草稿，关闭/导航前须保存或明确放弃。草稿当前仅驻留窗口内存。Cmd/Ctrl K 可搜索工具，学习工具按场景分类；阅读栏保持单行并支持横向与键盘访问。
-
-在学习集中打开 PDF，点击“文本框”后单击原页，或在空白处右键创建；拖入纯文本先确认再保存。折叠显示使用原始页坐标，取消不新建卡片，原始 PDF 和摘录截图保留。
-
-“外观”新增自定义强调色、柔光色、背景浓度和本地主题文件导入/导出，带只读预检与外观版本冲突检查。主题只包含安全 JSON，不执行 CSS 或导入字体文件。“备份 / 版本”新增可暂停任务，复制从已提交的 4 MiB 块续做，完整验证后发布；清理检查点不会删除原件或已完成备份。
-
-完整语义、测试入口和剩余边界见 [INTERACTION_COMPLETION.md](docs/INTERACTION_COMPLETION.md)。进程结束恢复、整文件哈希重做和预留空目录的故障窗口分别说明，不能把任务续做等同于物理断电全面验收。
-
-## 2026-09-30 大文库备份、正文词典与安全加固
-
-复现并修复 `.MARGIN-READER` 等大小写别名绕过私有目录保护的问题，公开路径、列表、递归目录操作、备份与事件监听统一按保留名称的规范化写法校验。实体原文拖选现在避免未就绪重排，惯性手势按输入发生时间识别，防止处理延迟造成重复翻页；对应失败和修复后的断言均保留在验收记录中。
-
-新增分块本地备份：在「本地备份」里先预估容量和可用空间，再创建 `.mrbackup` 目录包。4 MiB 块流式读写、逐块及整文件校验，支持加密，恢复只写新文件夹；旧版 ZIP 继续兼容。分块模式必须搬运整个目录。已验证超过 1 GiB 数据的完整往返，详细规模、耗时和内存记录见 [本轮加固与验收](docs/LOCAL_HARDENING.md)。中途断点续传、真实断电与外置盘热拔插尚未验收。
-
-新增 PDF 文字层 / 流式正文的个人词典下划线，单击查阅卡片、同名候选、原位编辑以及显式跳转；无需 OCR，不改变原始文字节点，拖选摘录仍可用。字典来源可细分到子脑图并独立着色，支持同工作区其它学习集。密集词条通过「后续词条」分组读取，CLI 提供完整匹配和候选分页。配置位于「字典」；关闭正文词条不会删除已有标注。
-
-`npm run test:deep-audit` 包含新增界面回归。单项为 `npm run test:dictionary`、`npm run test:backup-stream`、`npm run test:backup-stream-ui`；`npm run test:backup-large` 会在临时文库写入约 1.125 GiB 测试数据并要求至少 5 GiB 可用空间，结束后删除测试数据。
-
-## 2026-09-30 深度审计与性能修复
-
-本轮发现并修复万张卡片全量渲染阻塞、卡片盒正文被压缩裁切、工具区挤占空间、字典遗漏短词条及 Unicode 搜索定位偏移。10,000 张文字卡片同机测试中，界面就绪从约 89.2 秒降至三次中位数约 237 毫秒；这属于本插件前后对比，不包含 MarginNote 性能比较。图、文字、图片引用和导出数据没有因视口加载/分页被截断。
-
-原版包迁移、同库独立多窗口、系统级深链、Obsidian 同步和实体笔设备仍有明确缺口。GB 级备份已在后续增量中加入流式格式与实测，不能据此推断断点续传或外置盘断连也已完成。完整审计及证据边界见 [docs/DEEP_AUDIT.md](docs/DEEP_AUDIT.md)，最终运行清单见 [docs/deep-audit-results.json](docs/deep-audit-results.json)。
+从本地已构建 tarball 安装到独立目录（POSIX shell）：
 
 ```sh
-npm run test:deep-audit   # 构建、核心、完整无头界面与隐藏原生/员工链路
-npm run test:large-map   # 万张卡片、末页、搜索、焦点和 CLI 定位
-npm run test:annotations # 多页标注、取消/恢复和精确搜索
-npm run test:performance # 当前版本的同机合成性能样本
+mkdir -p "$HOME/marginreader-local"
+npm install --prefix "$HOME/marginreader-local" /absolute/path/to/marginreader-0.9.4.tgz \
+  --ignore-scripts --no-audit --no-fund
+"$HOME/marginreader-local/node_modules/.bin/margin-reader" --help
 ```
 
-## 员工全链路与实时同步
+后续示例假定该 `node_modules/.bin` 已加入 PATH。安装会由 npm 下载目标 OS/架构的依赖，包括 native 可选依赖；发布时从 lock 生成的 npm-shrinkwrap 固定传递版本。它不是完全离线安装包。安装后本地工作流不需要外网。没有发布到 npm，包名归属未核验；请勿将这里的名称理解为注册表可用性承诺。
 
-员工使用宿主加入 PATH 的 `margin-reader` 启动器，无需额外安装 CLI 或手工填写工作区。新宿主将启动器及通信目录放在该员工的独立运行目录，并通过 `agents api docs plugin/margin-reader/index` 和 `plugin/margin-reader/command/METHOD` 按需提供公开文档；旧宿主的工作区内 `.agents-company/bin/margin-reader` 入口继续兼容。请使用实际宿主提供的启动器和环境，不自行猜测磁盘路径。`help METHOD` / `schema METHOD` 可直接查询单个命令及完整参数，不必一次读取整个 schema。身份必须来自当前员工；宿主退出、凭据丢失、返回错配或超时都会明确报错，不切换到用户身份或偷偷创建独立文库。
+源码开发：`npm ci --ignore-scripts --no-audit --no-fund`，然后 `node cli.cjs --help`。npm tarball 由 [独立发布流程](docs/RELEASING.md) 生成；不要分发本机 node_modules 冒充跨平台包。
 
-已修复员工通信目录引发的 `events.json` 通知循环；CLI 返回文库、折叠/展开 PDF、重新解析正文、编辑目录和切换主题会更新同作用范围的已打开窗口。全局学习卡片检索支持标签以及 `limit` / `offset` 分页，用 `nextOffset` 继续，直到 `null`，不再静默丢弃第 500 条之后的结果。
+## 五分钟 CLI 上手
 
-“全部功能”仍遵守 Avalon 的授权目录：员工不能访问父目录、同级员工或其他 Team。查看该员工的学习集和文档，请使用 `agents plugin open margin-reader --employee EMPLOYEE_ID`；默认侧栏文库、Team 根目录与员工文库不是一份共享数据库。实际目录由宿主提供，不应自行推算。
-
-复现本轮完整验收：
+以下例子使用自制资料和已有空目录；没有默认用户文库回退。POSIX shell 中设置工作区：
 
 ```sh
-npm run test:agent-acceptance
-# 也可以分别执行：
-npm run test:employee
-npm run test:team-ui
+export MR_WORKSPACE="$(mktemp -d)"
+margin-reader --workspace "$MR_WORKSPACE" mkdir Books
+margin-reader --workspace "$MR_WORKSPACE" api fs.write \
+  --data '{"path":"Books/start.md","content":"# 本地学习\n\n中文与 English offline reading.\n\n## 下一步\n\n整理知识。"}'
+margin-reader --workspace "$MR_WORKSPACE" document open Books/start.md
 ```
 
-该流程先构建本插件，再运行 Core、宿主、真实员工凭据/启动器、浏览器及隐藏的主页面建队/原生窗口测试；测试引擎是本地协议 fixture，不发送模型请求。浏览器缓存不在测试进程 HOME 下时，可用 `PLAYWRIGHT_EXECUTABLE_PATH` 指向已有 Chromium 可执行文件。结果位于 `artifacts/agent-acceptance/`，说明见 [AGENT_ACCEPTANCE.md](AGENT_ACCEPTANCE.md)。构建仅生成 `dist-plugin/`，不会替换正在运行的真实应用或移动个人文库。
-
-## 持续对标验收（2026-09-30）
-
-复习工作流新增：标题/完整卡片/自定义问题、完整背面实时同步、正反面文字/图片/音频/手写批注、文字和图像同号组共同揭示、跨重开保留揭示进度。旧卡的自定义答案和独立分组排程保持，切换或临时移除分组会保留历史排程。当前文库的新卡默认值可在「牌组与统计」调整；已有卡片规则不会被批量改写。背面修改使用同一卡片编辑器，原 PDF/摘录截图不改写。
-
-`study.review.render` 是正反面内容的公共读取入口。普通复习界面统一使用持久化 Core 会话，空格揭示、数字评分、方向键切换；评论和手写仍走公共版本化 API。对应验证：`npm run test:review-faces`、`npm run test:review-faces:native`，已加入完整验收链。新增独立文字/图片强调、自由组名和从四类标记生成题目。生成会保留卡片原文与排程；缺少坐标映射的旧数据会明确提示。已补齐图片裁剪/旋转及复合摘录追加、删除、重选后的强调/遮罩映射。自动出题规则现已随源标记、正文、图层和笔记本变化在同一 Core 事务中同步，保留排程；手工改题会退出自动同步。旧 PDF 摘录现可经像素核验修复定位，生成荧光笔题目时会自动尝试；原图保持不变，无法验证的项目明确保留。图片手写现可跟随裁剪、旋转与卡片尺寸变化，复用擦除、套索、撤销和导出；竖向复习图片限制显示高度且保持比例。当前仍需完善手写批注画布高亮遮挡、引用卡图片绑定、复合图外层留白笔迹迁移和原版编辑交互，不把局部验收等同于该官方章节全部完成。
-
-整笔橡皮现在可沿拖动路径连续擦除多笔，支持擦除后自动回到原笔刷；折叠区、隐藏/锁定笔记本和不可见复习面的笔迹得到保护。嵌入笔记的手势不会误写到 PDF 背景，套索也能选择只有两个端点的长直线。
-
-手写图形辅助已共用 Core 与界面预览代码：支持近似直线自动拉直、始终直线，以及自由手写停笔后的常用闭合图形整理。未匹配笔画保留原采样；界面传递原始轨迹，避免闭合形状被二次处理。
-
-完整目标与尚未完成的项目见 [官方 77 篇文档审计](docs/MARGINNOTE_COVERAGE.md)。旧版本汇总不能代替逐项验收，当前目标仍在推进。
-
-新增本地音视频文档：导入 MOV/MP4/M4V/MP3/M4A/WAV/Ogg/WebM，保存播放时间、速度与书签；用「摘录时间片段」创建原画面/波形笔记，再从卡片跳回原片段。需要 Core 主机安装 FFmpeg 和 ffprobe，插件不自行下载或再分发这些工具。原始文件保留，媒体格式和编解码器兼容性需按平台测试。
-
-「阅读视图 → 演示触点」提供实际点击/触摸/笔尖反馈，不自动录屏或联网。验证入口为 `node tests/av-ui.cjs` 与 `node tests/presentation-pointers-ui.cjs`；普通验收仍使用 `npm run test:agent-acceptance`。
-
-## 深度本地学习（v0.7.0）
-
-OCR 按用户要求不做；其余工作围绕本地阅读、整理与复习展开，不需要联网或模型。
-
-- **阅读与页面**：多文档标签、双文档独立滚动与定位、分页缩略图、可恢复折叠；组合多个原件的页面，重排、插入空白页、裁剪、旋转，生成可继续批注的新 PDF。
-- **笔记与手写**：空白/横线/方格 PDF 笔记本；附带原文位置的留白卡片，页边、页后展开与折叠标记三种显示；手写图层的新建、显隐、锁定、重命名、合并和撤销；笔事件压感、套索选笔迹并移动/改色/换层。
-- **摘录与脑图**：任意多边形套索摘录；脑图空白画布自由书写、卡片随动手写；Shift 多选后建立摘要或复合卡片，原始摘录和图片保留；向右/向下/放射布局、子树聚焦、跨学习集引用及标题关联。
-- **卡片与复习**：安全的 Markdown/KaTeX 公式阅读；牌组命名、归档和恢复；`{{答案}}` 挖空、拖框遮挡图片、复习统计、自定义记忆保持率；至少 50 次跨日复习后，可在本机训练个性化 FSRS 参数。
-
-业务仍统一走 93 个公开 CLI/Core 命令。页面编辑保留原件，笔记、笔迹、图层、关联、牌组和训练参数纳入共享状态与版本冲突检查。新增写入不依赖浏览器存储。
-
-入口：阅读工具栏的「对照 / 页面 / 笔记本」、学习栏的「留白 / 套索摘录」、手写栏的「图层 / 套索」、脑图栏的「摘要 / 合并 / 聚焦子脑图 / 引用卡片 / 牌组与统计」。卡片菜单提供 Markdown/公式阅读与图像遮挡；脑图笔在卡片上书写时自动绑定卡片，在空白处书写时使用画布坐标。
-
-验收范围与实现语义见 [LOCAL_PARITY.md](LOCAL_PARITY.md)，复现步骤见 [VERIFICATION.md](VERIFICATION.md)。
-
-## 本地学习工作台（v0.6.0）
-
-- 脑图、大纲、卡片盒、复习四种视图，可按文字、颜色和标签筛选。
-- 独立笔记卡、子卡片、正文/笔记/标签编辑；同集跨分支单向或双向关联。
-- 持久化撤销/重做，最多 30 步 / 8 MiB 元数据，覆盖卡片编辑、摘录、关联、手写和复习评分。
-- 本地 FSRS 复习：编辑正反面、翻面、自评、下次到期安排、暂停与恢复。无需网络、API key 或模型。
-- PDF 手写、颜色和粗细、整笔橡皮擦；缩放和重开保持页内定位，原 PDF 不改写。保存失败时保留当前笔画，可明确重试。
-- 文档书签、重命名、可恢复删除，原文变化时明确标记定位失效。
-- 拖动原文/学习面板分隔线调整比例，重开后恢复。
-
-所有持久功能均来自公开 CLI/API。验证：`npm run test:workbench`、`npm test`、`npm run test:ui`、`npm run test:host`。
-
-对照目标是 macOS MarginNote 4；0.7.0 的具体语义与验收范围见 [LOCAL_PARITY.md](LOCAL_PARITY.md)。功能测试通过不等价于对商业软件每个像素、参数与硬件行为作百分百相同的保证。
-
-## 学习集、摘录与脑图（v0.5.0）
-
-左侧「学习集」旁的 ＋ 可创建学习集，在集内用「添加文件」勾选文库中的文档。同一原件可以加入多个学习集；成员关系保存为稳定文档 ID，不重复复制原件。移除成员只移除关联，不删除原件、其他学习集或已有摘录。
-
-在学习集中打开 PDF 或流式文档，用鼠标选择文字后会自动出现六色面板。点击颜色即由共享 Core 生成 PNG、保存原文定位和文字，并在右侧脑图中生成卡片。PDF 保存实际原页裁切图；HTML、Word、EPUB 等流式文档保存选中文字的排版图片与 UTF-16 选区偏移。PDF 的「框选摘录」也可捕获图表和扫描内容，扫描图片不会自动 OCR。
-
-卡片拖到另一张卡片上时显示接收高亮，松手后成为其子卡片，连带子树一起移动；拖到空白处移到顶层。支持展开/折叠、Tab 缩进、Shift+Tab 提升级别、缩放及滚动浏览。来源按钮可切换到原文件的摘录位置；三点菜单可编辑标题、笔记、颜色、提升层级或恢复性删除。学习集首页展示全幅脑图；阅读时展示原文与脑图分栏，可临时切换到章节目录。
-
-高亮和卡片按学习集独立保存，不会出现在引用同一文档的其他学习集中。文件通过文库重命名/移动后保持 ID；原文内容改变时旧截图保留，失效定位会标记，不套用到新内容。删除卡片或学习集进入各自回收站，可恢复。导出 JSON 可携带所有 PNG、文字、笔记、成员和关系。
-
-新增的所有业务操作都声明在 `study.*` CLI/API 中；图像生成不依赖窗口，也不上传浏览器截图。`captureId` 保证相同保存请求重试不生成重复卡片；学习集版本冲突会保留错误并要求明确重试。存储位于 `.margin-reader/state.json` 的 studySets 和 `.margin-reader/study-assets/<setId>/<cardId>.png`，完整备份必须包含这两部分，不能把 study-assets 当缓存清理。
-
-为控制资源：一次添加最多 500 份，单集最多 10000 份文件/10000 张活动卡片，层级最多 64 层；一次 PDF 摘录最多 12 页，单图最大 8 MiB，捕获任务最多 90 秒。同一个文库可创建多个学习集。加密 PDF 需先在文库中用密码打开；生成原页裁切图时也需在本次读取期间提供密码，密码不持久化。
-
-验证入口：`npm run test:study`、`npm run test:study:native`。测试使用本机真实 1061 页 PDF、离线 HTML、真实鼠标输入、隔离工作区，不改动用户原件。
-
-## 单击阅读与批量选择（v0.4.0）
-
-根目录不显示「返回」卡片，也不占位；进入子文件夹后才显示固定的返回卡片。普通模式下单击文件即可阅读，单击文件夹即可进入。三点菜单仍只操作对应文件，不触发阅读。
-
-顶部常态仅显示「选择」。进入后，卡片/列表出现复选框，点击文件只勾选，不打开。选中至少一项才显示移动、复制、移入回收站；仅选中一项时额外显示重命名。支持全选、取消全选、Shift 连续选择、Command/Ctrl 点击选择和 Escape 退出。切换大图标/列表或刷新保留当前选择，切换文件夹则清空，避免跨目录误操作。
-
-批量操作通过公共 `fs.batch` 实现，单次最多 500 项。先检查整批文件版本和目标冲突，再在同一个工作区锁中使用原文件管理实现执行；一般执行错误会回滚先前完成项，不覆盖目标文件。删除均进入可恢复回收站。异常断电仍需依靠完整文库备份，不能视为跨文件系统的断电事务。来源发生变化时，请取消对话框后重新勾选该文件，不会在刷新时偷偷接受新版本。
-
-验证入口：`npm run test:selection` 与 `npm run test:selection:native`。
-
-## 文库视图（v0.3.0 起）
-
-大图标展示 PDF 第一页的真实封面；HTML 使用正文标题、首张可用本地图片和摘要生成缩略图。缩略图由无窗口 Core 的 `document.preview` 生成，按文件版本缓存；不会为浏览封面而打开文档、改变阅读位置或索引整本书。仅为可见卡片请求预览，同时最多两个任务，缓存有数量和内存上限。损坏、加密或不支持预览的文件保留格式图标，不影响文件管理。
-
-「返回」是一张与文件卡片相同大小的独立导航卡片，固定在左上角，滚动文件时仍可点击。点击只返回一级；v0.4.0 起在文库根目录隐藏卡片，不能越出授权工作区。左侧文件树增至 14px 字号、20px 图标、至少 37px 行高。
-
-大图标、紧凑列表和文件树的文件及文件夹均有常显三点菜单；列表菜单固定在最右侧。菜单支持打开、重命名、移动、复制和移入可恢复回收站，并保留右键、键盘导航及 Escape 关闭。
-
-拖动时，目标文件夹的卡片与左侧树行同时高亮，松手前显示「松开移动到…」或「松开导入到…」。无效的自身/子目录目标显示红色拒绝状态。拖入文件夹后保留当前视图；外部导入通过 `import.finish` 的 `activate:false` 完成，全部写操作仍使用现有 CLI/Core API。
-
-验证：`npm run test:library`、`npm run test:library:native`；原生验证使用真实 Avalon 应用、隔离临时文库及隐藏窗口。详情见 [VERIFICATION.md](VERIFICATION.md)。
-
-## PDF 阅读模式（v0.2.0）
-
-阅读工具栏可切换「连续滚动」和「逐页翻页」。连续模式右侧始终显示可拖动的竖向进度条；翻页模式改为底部横向进度条。Mac 双指上下滚动支持 0.25–4 倍速度；横向手势及其惯性合并为一次翻页。长单页可上下平移，到边缘后新的竖向手势继续翻页；键盘左右方向键、Page Up / Page Down 也可翻页。
-
-默认适合宽度，四周仅保留 8 像素阅读边距，取消旧版缩放上限；也可选适合整页或专注阅读，隐藏两侧面板。窗口和侧栏尺寸变化自动重新适配，不裁剪、不拉伸原 PDF。PDF 缩放与其他文档的文字字号分开保存，跨模式及重开恢复阅读位置。
-
-全部设置通过 `settings.set` 和 `reader.position.set` 暴露给 CLI；参数见 [API.md](API.md)。连续阅读只为可见与相邻页保留画布，上限 7 页，同时渲染上限 2 页，避免一次性创建千页画布。验证入口 `npm run test:pdf-modes` 使用默认文库中那本 1,061 页的实际 PDF，在隔离临时目录测试，不修改原件；通过 `PDF_MODES_NATIVE=1 PDF_MODES_PLUGIN_ROOT=/absolute/installed/plugin` 验证实际宿主原生窗口。
-
-## 功能
-
-- **阅读**：PDF 原始页面与可选文字层；DOC、DOCX、EPUB、MOBI/AZW/KF8、Markdown、HTML、TXT、RTF、ODT、FB2，以及常见文本和图片。原始文件保留，正文与目录索引独立保存。
-- **离线网页**：输入公开博客或文档链接，自动提取正文、保存原 URL/时间与可下载图片，生成自包含 HTML。直接 PDF/EPUB/Word 下载链接也可导入。
-- **文件管理**：左侧可展开文件树 + 大文件夹/文件卡片视图，也提供列表。新建文件夹、重命名、移动、复制、拖放导入和可恢复回收站；操作对应真实磁盘文件。
-- **可编辑目录**：提取 PDF/EPUB 自带目录及正文标题；添加、修改、删除、排序、增加/减少缩进、任意换父章节、拖动排序、点击跳转。Tab 缩进，Shift+Tab 退级，Alt+上下箭头排序。按住 Option/Alt 拖到章节上可以设为子章节。原件不被改写。
-- **阅读辅助**：全文检索、页码/章节导航、阅读位置保存、主题（浅色/深色/护眼）、字号、侧栏宽度、便携内容导出。
-
-## 架构与契约
-
-```text
-CLI / 员工 mailbox / Renderer RPC
-                │
-       schema.json 参数校验
-                │
-       runtime.cjs request()
-                │
- 文件服务 · 解析器 · 可编辑目录 · 阅读位置
-                │
-真实文件 + .margin-reader/state.json + 可重建缓存
-```
-
-CLI 与 UI 不存在平行实现。UI 只调用公共 API 并渲染，未使用 localStorage/宿主私有业务接口。UI 的所有持久化操作都可以用 `api METHOD --data JSON` 完整执行。
-
-当前 247 个 API 命令和完整参数在 [API.md](API.md) / [schema.json](schema.json)，历史版本段落中的命令数量只描述当时版本。`scripts/contracts.cjs` 是 manifest/schema 的源文件；`scripts/docs.cjs` 生成契约手册。
-
-## 构建
-
-需要 Node >=22.13。固定依赖版本与锁文件已包含。
+复制 open 输出的 `result.id` 为 DOCUMENT_ID：
 
 ```sh
-cd PlugIns/margin-reader
-npm ci --ignore-scripts
-npm run build:plugin
+margin-reader --workspace "$MR_WORKSPACE" document read DOCUMENT_ID --text
+margin-reader --workspace "$MR_WORKSPACE" document search DOCUMENT_ID offline
+margin-reader --workspace "$MR_WORKSPACE" study create '学习集'
+margin-reader help study.note.create
+margin-reader help study.card.create
+margin-reader help study.review.configure
+margin-reader help study.mindmap.export
 ```
 
-独立产物在 `dist-plugin/`，包含运行依赖和 PDF 渲染器，不依赖宿主的 node_modules。宿主构建脚本可自动发现本插件：
+写入操作使用最新 `result.revision`，不会在冲突时悄悄重试。`help METHOD` / `schema METHOD` 给出准确参数，`commands keyword` 搜索友好命令；`api METHOD --data JSON|@file|-` 保留脚本兼容。默认输出 JSON-RPC，失败非零退出。完整例子、类型化选项和 shell 补全见 [CLI_REFERENCE](docs/CLI_REFERENCE.md)。
+
+本地 PDF 导入不会移动外部原件：
 
 ```sh
-npm run build:plugin -- --out ../../build/plugins/margin-reader
+margin-reader --workspace "$MR_WORKSPACE" import /absolute/path/book.pdf --to Books/book.pdf
+margin-reader --workspace "$MR_WORKSPACE" tree
 ```
 
-`build:plugin` 不修改宿主源码，不构建或替换其他插件。构建生成的 `ui/vendor/` 不纳入源码 Git；依赖许可证保留在产物中。
-
-## 排查已安装版本与卡片回源
-
-当源码中的回源测试通过、当前应用中单击仍只选中卡片时，先运行 `npm run diagnose:loaded`。它仅调用宿主的 `plugin list` 和 `plugin windows`，比较实际注册包、既有窗口正在提供的脚本与 `dist-plugin/` 的 SHA-256；不会安装、关闭窗口或修改文库，也不打印含访问令牌的窗口 URL。返回码 2 表示软件文件、既有视图脚本或工作区映射存在差异。只核对版本号不够，同为 0.7.0 的旧副本也可能缺少回源操作。
-
-用户目录 `~/AgentsCompany/plugins/margin-reader` 可以覆盖应用包内的插件。重新构建源码或更新应用包，不会自动清除此覆盖。不能直接删除旧覆盖项：旧包的 `source-location.json` 可能维持着当前默认文库位置，而应用内的便携包没有这个文件。更新时必须核对并保持原有文库映射。更新正在运行的实例须先取得授权、检查运行任务并备份旧包和文库，再按宿主规范停止使用、替换插件并重新加载；不得热替换运行中的后端或覆盖文档。
-
-`npm run test:card-source` 使用隔离临时文库，检查单击卡片标题／图片、同页不同位置、重复回源、跨 PDF、大纲／卡片盒及逐页模式。验收要求标注实际落在 PDF 视口内，每次只发送一次鼠标点击，不能只检查 DOM 中存在标注。测试已纳入标准员工验收。
-
-## 接入 Avalon
+## 终端工作区 TUI
 
 ```sh
-node ../../bin/agents plugin install \
-  ./dist-plugin
+margin-reader tui --help
+margin-reader --workspace "$MR_WORKSPACE" tui
 ```
 
-安装使用宿主的标准命令；默认工作区、Work Team 绑定、员工入口与窗口生命周期均沿用宿主机制。不要把员工 API 指向父目录或其他 Team。相同插件的不同工作区相互隔离。
+`tui --help` 无需工作区即可查看启动要求和主要键位。进入交互终端后，按 `?` 查看完整快捷键，Tab 切换文库、阅读和知识面板，`g` 切换空间脑图。TUI 通过公共 runtime 读取完整学习集和布局，支持查找折叠分支中的卡片、定位来源、恢复原地图视角。其能力与终端要求见 [TERMINAL_WORKSPACE](docs/TERMINAL_WORKSPACE.md) 和 [TERMINAL_VISUALS](docs/TERMINAL_VISUALS.md)。
 
-当前构建仅写入本插件的 `dist-plugin/`；不会自动替换已安装插件或正在运行的应用。请以实际宿主加载目录为准；历史复制到用户插件目录的记录不表示本轮产物已安装。测试不启动收费模型会话。
+本轮针对连续阅读与编辑打磨了以下已有操作：
 
-本目录遵循 Avalon 父仓库的版本管理；开发修改限定在本插件目录。插件名称和 SVG 图标为独立作品，不代表 MarginNote 官方或其商业产品。蓝白图标参考其阅读器视觉，在插件界面与 favicon 中使用。宿主现有插件栏只显示名称首字母，当前协议没有自定义图标字段；此插件不会擅自修改宿主协议。
+- 长章节首次排版后复用当前文本布局；切换内容或改变终端宽度时重排，缓存容量有上限。
+- 上下翻行与翻页保留视觉列；中文、组合音标和 emoji 按完整字素移动。调整窗口宽度后仍保留源文位置。
+- 回到摘录来源时显示完整原选区，Esc 恢复原学习集、卡片、阅读位置和地图视角。跨学习集来源打开失败时保留原界面上下文。
+- 地图或复习全屏中，Tab / Shift-Tab 先返回分栏并切换到实际可见的文库/阅读面板，保留地图视角、选区、草稿和复习会话。知识大纲与地图可按 Space 编辑标题；输入框内的空格和复习中的揭示操作保持各自语义。
+- 多行括号粘贴只修改草稿，中文与 emoji 保留，CRLF 归一为换行；检查后按 Enter 保存。Ctrl-J 可直接插入换行，粘贴中的回车和命令字母不会触发快捷键。
+- 非 TTY 或 `TERM=dumb` 启动 TUI 时，在初始化 Core 前返回 `TTY_REQUIRED` 和非零退出码。管道与自动化使用普通 CLI 子命令。
 
-## CLI 独立使用
+基础终端以文字、来源位置和层级/空间大纲呈现知识；原页像素、图像协议、字体和输入硬件仍受实际终端能力约束。源码中的空间脑图、回源及退出恢复已通过本轮真实 OS PTY 验收；安装包与跨平台能力分别验收，不从文字界面推定原页、自由画布或手写体验等同于商业 GUI。
 
-```sh
-mkdir -p /tmp/reader-library
-node cli.cjs --workspace /tmp/reader-library mkdir Books
-node cli.cjs --workspace /tmp/reader-library import /path/to/book.pdf --to Books/book.pdf
-node cli.cjs --workspace /tmp/reader-library tree
-node cli.cjs --workspace /tmp/reader-library open Books/book.pdf
-# 用上一步 result.id 替换 ID
-node cli.cjs --workspace /tmp/reader-library read ID --page 1 --text
-node cli.cjs --workspace /tmp/reader-library search ID '关键词'
-node cli.cjs --workspace /tmp/reader-library api toc.list --data '{"id":"ID"}'
-node cli.cjs --workspace /tmp/reader-library api toc.add \
-  --data '{"id":"ID","expectedRevision":1,"title":"自定义章节","locator":{"page":1}}'
-node cli.cjs --workspace /tmp/reader-library url https://example.com --folder Books
-```
+0.9 旧浏览器界面撤下了卡片盒、学习大纲、复习及学习仪表板入口；旧数据和公共 API 保留。新 TUI 是独立入口，不代表这些旧 GUI 面板已恢复。
 
-所有命令均可不打开窗口执行。错误返回 JSON-RPC error 和非零退出码。支持 `--data @params.json`、`--data -`。已有工作区不能省略、不会自动扩大到父级。受沙箱限制的员工通过宿主 mailbox 执行，不读取用户全局控制凭据。
+### 同机长文性能证据
 
-需要查看 UI 时：
+2026-10-18，在 Apple M5 Pro、macOS arm64、Node 26.5.0 上，用相同脚本、文本、真实 `string-width` 和 132 × 36 视口，分别运行修改前后源码。以下每项为 24 次热导航与完整帧生成的毫秒数，首次排版单独计量：
 
-```sh
-node cli.cjs --workspace /tmp/reader-library serve
-```
+| 合成章节（UTF-16 长度） | 修改前 p50 | 修改前 p95 | 修改后 p50 | 修改后 p95 |
+| --- | ---: | ---: | ---: | ---: |
+| 英文 270,000 | 297.022 | 542.797 | 1.678 | 2.227 |
+| 中英、emoji、组合音标 252,000 | 209.396 | 391.789 | 1.038 | 1.626 |
 
-命令输出仅限本机访问的随机令牌 URL，手动打开即可。Ctrl+C 关闭服务。宿主中则由 Avalon 管理渲染服务及窗口。
+修改后首次排版的 p50 分别为 28.904 ms 和 19.779 ms（各 3 次）。原始报告为 `artifacts/cli-polish-20261018/tui-baseline.json` 与 `tui-after.json`，复跑方法见 [终端验收说明](docs/TERMINAL_WORKSPACE.md#verification-and-evidence)。此测试只计阅读呈现，不计文件解析、Core 请求、PDF 图片解码或物理终端输出耗时。
 
-## 数据与安全
+## 格式、平台与可选依赖
 
-用户文档在真实文件夹中；内部 `.margin-reader/` 保存目录、阅读位置、缓存、待完成上传和回收站。备份整个工作区才能包含自定义目录。原件单独复制不会携带目录编辑信息。
-
-目录更新要求 `expectedRevision`，文本覆盖要求 `expectedVersion`。文件锁跨进程串行写入，JSON 原子替换、fsync 与失败回滚避免常见冲突。外部编辑文档后重新解析，保留自定义目录并标记失效定位。缓存可重建，状态损坏不会自动清空。突发断电不是跨文件 ACID 事务，重要资料仍应备份。
-
-禁止越界路径、符号链接、硬链接和 Git/宿主元数据操作。导入只复制，不移动外部原件。网页拒绝内网、环回、云元数据地址及 DNS 重绑定；重定向逐次校验，不使用登录 Cookie，不执行网页脚本。HTML 清理后隔离渲染，图片保存为安全栅格格式，解析在受内存和时间限制的 Worker 中运行。
-
-## 兼容性边界
-
-| 格式/来源 | 本版本行为 |
+| 能力 | 依赖与边界 |
 | --- | --- |
-| PDF | 看原页、文字层、页码和原目录；扫描 PDF 可看，但没有 OCR 搜索文字 |
-| DOC | 已验证旧 Word 二进制解析；正文/脚注文字，不承诺原始版式、图片和标题样式 |
-| DOCX | 流式正文、标题、表格与常见内嵌图片，不是 Word 逐像素排版 |
-| EPUB | EPUB2 NCX / EPUB3 nav 原目录、章节、内链和可内嵌栅格图片 |
-| MOBI/AZW/AZW3/KF8 | 非 DRM 电子书解析；不同出版器生成的变体需用具体文件验证 |
-| RTF | macOS 使用系统 textutil；其他平台返回清楚的依赖缺失错误 |
-| ODT/FB2 | 结构化文字阅读，复杂排版不保留 |
-| 网页 | 公开静态正文提取和离线 HTML；登录、付费墙、验证码、复杂客户端渲染不绕过 |
+| PDF、DOC/DOCX、EPUB、MOBI/KF8、文本、HTML、常见图片 | 本地解析；MOBI parser 固定 0.4.6；不含 DRM 解密或 OCR |
+| 终端阅读 PDF | 使用已有文字层；扫描 PDF 不能凭空产生可检索文字 |
+| RTF | 需 macOS textutil；其他平台明确不支持 |
+| 朗读、系统词典 | macOS say、Python3、DictionaryServices；其他平台有能力限制 |
+| 音视频 | 需另装 FFmpeg/ffprobe；不会作为基础阅读的必需项自动安装 |
+| PNG、摘录渲染 | canvas native 包须匹配 OS/CPU；不建议省略 optional dependencies |
+| 中文矢量 PDF | 需兼容本地字体；缺字会明确报错。栅格导出同样依赖可用字形，转换格式不能保证修复缺字 |
+| XMind | 公开 JSON ZIP 检查/导入/导出；旧 XML、加密、未知私有扩展不保证无损 |
+| Windows/Linux/macOS x64 | 规划验收平台；没有对应实机记录时保持未测 |
 
-默认原文件最大 512 MiB，分块上传 4 MiB；解析最长 120 秒、归档展开有上限。大量图片或极大文档可能触及资源限制，原件仍保留。网页图片抓取失败会给出警告，不伪装为完整下载。当前不含 OCR、DRM 破解或 MarginNote 私有数据库导入。
+## 可靠性与可选兼容入口
 
-## 验证
+所有业务路径限于明确的工作区；持久更改通过公共 Core，保留版本冲突、可恢复删除与有界撤销。导出拒绝覆盖已有目标。复习正面只定义问题，默认知识背面同步；移出复习不删除知识卡。安装包测试核验原件 hash、重启、冲突和来源定位，但不能代替真实断电、硬盘故障或硬件输入验收。
+
+可选 `margin-reader --workspace "$MR_WORKSPACE" serve` 仅输出本机随机令牌 URL，不自动开窗口；Ctrl+C 停止。不要公开该 URL。宿主环境下继续使用宿主授予的 workspace/mailbox；员工身份绝不自动回退为独立用户。
+
+## 开发与测试
 
 ```sh
 npm run check
-npm test
-npm run test:ui
-npm run test:host
-# 显式联网验证公开网页及真实 MOBI/AZW3（测试下载会自动删除）
-npm run test:live
+npm run test:release   # 临时源码副本：check、npm test、安全预检和日志
+npm run test:package   # pack → 干净本地安装 → 安装后 OS 断网业务闭环
 ```
 
-单元/契约测试使用隔离临时工作区与合成文档。UI 测试使用无头 Playwright（默认可复用宿主已有测试依赖，也可设置 PLAYWRIGHT_MODULE 指定安装），不打开可见窗口。宿主集成测试使用临时控制目录，不创建模型员工，不改动真实团队。截图和验证输出位于忽略的 artifacts/。
+`test:package` 目前以 macOS sandbox-exec 做系统级网络隔离；无该机制的平台明确 blocked，不计为 pass。网络依赖安装在断网业务阶段之前执行。验收报告以 `overall: passed|partial|failed` 区分结果；适用源码或安装包通过但 required legacy gates blocked 时，整体为 partial，不称完整回归通过。独立发布报告在 `artifacts/cli-product-20261018/`，本轮终端性能与真实 PTY 证据在 `artifacts/cli-polish-20261018/`；只使用自制临时夹具，不扫描 Downloads 或用户 default 文库。
 
-v0.1.1 验证：25 组无窗口测试、16 项界面检查、12 项宿主集成检查，以及真实本地书籍和中英文博客的验收。旧版 [VERIFICATION.md](VERIFICATION.md) 保留历史记录；本次见 [REPAIR_STATUS.md](REPAIR_STATUS.md)。
+`build:plugin` 是旧宿主可选构建，会生成源目录内契约和 vendor，并复制当前平台 node_modules；不得当作常规 npm 发布。`test:agent-acceptance` / `test:deep-audit` 依赖旧宿主、Electron/Playwright，独立流程先预检，不绕过失败断言。历史真实书籍/用户文件测试本轮不运行。详见 [CONTRIBUTING](CONTRIBUTING.md)。
 
-```sh
-# 必须在拥有本地下载书籍的 Mac 上显式运行
-npm run test:acceptance
-npm run test:blog-ui
-```
+## 许可证与历史
 
-第三方组件与来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+原始代码使用 [MIT](LICENSE)；分发依赖和生成资产的许可见 [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md)。旧 README 完整保存在源码 [docs/HISTORY.md](docs/HISTORY.md)，其中安装路径、历史测试与旧 GUI 描述不是当前独立包的承诺；历史私有材料不进入 npm 包。

@@ -54,7 +54,7 @@ try{
  await page.screenshot({path:path.join(out,'exact-folder-tree.png'),animations:'disabled'});
  pass('each sidebar level matches its own physical folder; nested native pages and legacy tables open without promotion');
  const db=await api('database.create',{parentId:note.id,title:'架构模块视图',color:'blue',view:'table'});
- await api('record.create',{databaseId:db.id,title:'Node Core 分析',color:'white',values:{status:'已完成',date:'2026-09-29'},blocks:[{type:'paragraph',content:'源码证据与错误路径说明'}]});
+ await api('record.create',{databaseId:db.id,title:'Node Core 分析',color:'white',values:{status:'已完成',date:new Date().toISOString().slice(0,10)},blocks:[{type:'paragraph',content:'源码证据与错误路径说明'}]});
  for(const type of ['board','gallery','list','calendar'])await api('view.create',{databaseId:db.id,type,name:type});
  await api('page.open',{pageId:db.id});
  for(const view of await api('view.list',{databaseId:db.id})){

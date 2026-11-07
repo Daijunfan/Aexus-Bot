@@ -36,3 +36,10 @@ __pycache__/
 /promo_avalon_*/
 /publish/
 /Avalon_Live_Views_*.zip
+
+# Local publishing outputs and user-provided visual references are not application source.
+/Marketing/
+/posts/
+
+# Social collectors are maintained in their independent open-source repository.
+/Collectors/

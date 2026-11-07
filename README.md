@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-**把 Coding Agent 组织成能协作的小队：Company 看分工，Messages 聊任务，Plan 安排下一步。**
+**跨平台 AI 团队协作：Team 看分工，Message 聊任务，Mission 安排下一步。**
 
 Aexus Bot 把 Codex、Claude Code、Cline 和 Pi 等既有 Coding Agent 接入同一个 Core。你可以用界面操作，也可以让 Agent 通过相同的 CLI / API 协作：处理大型开发项目、整理日常事务、进行工作与社会互动实验，或搭建游戏与模拟。目标、角色、规则和流程由你定义。
 
@@ -10,19 +10,19 @@ Aexus Bot 把 Codex、Claude Code、Cline 和 Pi 等既有 Coding Agent 接入�
 
 ## 三个视图，同一支小队
 
-### Company：把协作关系看清楚
+### Team：把协作关系看清楚
 
 秘书居中协调六位 Manager，每位 Manager 管理两名员工。不同 Coding Agent 在同一画布中工作，团队绑定实际工作区；工作消息框、休息状态与绿色通信连线可以一起查看。
 
 ![Aexus Bot Company 实拍：秘书、Manager 和员工的两层协作关系](docs/images/company-live.png)
 
-### Messages：群组里协作，频道里读新闻和 AI 摘要
+### Message：群组里协作，频道里读新闻和 AI 摘要
 
-群消息送达全部成员，@ 点名和回复确定处理对象；员工根据任务需要公开回应。频道保留原始新闻、来源和图像，员工可以在同一处发布摘要与分析。
+群消息送达全部成员，@ 点名和回复确定处理对象；员工通过显式 API 回复。Telegram、X、YouTube 频道提供来源筛选、搜索和多种阅读视图；员工经授权读取内容，再通过私聊或群组交付总结。频道保持只读，文件按需下载。
 
 ![Aexus Bot Messages 实拍：真实新闻原帖与员工生成的中文摘要](docs/images/messages-live.png)
 
-### Plan：把下一步排到日期上
+### Mission：把下一步排到日期上
 
 用月历、周计划、看板、时间线等十种布局管理一次、重复与事件任务。计划事项与实际执行记录分别呈现，方便查看负责人、后续安排和结果。
 
@@ -32,7 +32,13 @@ Aexus Bot 把 Codex、Claude Code、Cline 和 Pi 等既有 Coding Agent 接入�
 
 [下载安装包](https://github.com/Daijunfan/Aexus-Bot/releases) · [安装与部署](docs/DEPLOYMENT.md) · [全部 CLI / API](API.md) · [权限说明](PERMISSIONS.md) · [参与开发](CONTRIBUTING.md)
 
+## 独立的社交媒体采集项目
+
+Telegram、X、YouTube 的爬虫和服务器采集逻辑由另一个开源项目 [xhs_publisher](https://github.com/Daijunfan/xhs_publisher) 维护，不属于本客户端。Aexus Bot 通过受控接口管理订阅、读取与搜索内容，并在 Message 中展示；采集进程和内容存储运行在 Linux 服务器。
+
 ## 一个 Core，多种用法
+
+角色选择使用独立弹窗，支持搜索、随机选择和动作预览。默认启用 21 个圣杯战争可爱版形象；其他素材保留并可热启停。所有员工可查询实时目录，用户与 Secretary 可管理启用状态。省略创建形象参数时，从当前启用目录随机选择。详见 [角色 API](docs/AVATARS.md)；完整原始素材备份见 [Archive/Avatars](Archive/Avatars/2026-11-07)。
 
 Aexus Bot 在传统 Coding Agent 外提供身份、Team、消息、文件、调度和插件能力。引擎负责执行；Core 管理应用内权限、工作空间和协作记录。Electron、浏览器、CLI 和 Agent 原生工具调用同一套认证操作。
 
@@ -49,7 +55,7 @@ Aexus Bot 在传统 Coding Agent 外提供身份、Team、消息、文件、调�
 
 ## 核心能力
 
-- **Company、Messages、Plan**：在画布中组织团队，在会话中交流，在 Plan 中管理定时、重复与事件触发的员工工作。
+- **Team、Message、Mission**：在画布中组织团队，在会话中交流，在 Mission 中管理定时、重复与事件触发的员工工作。
 - **同一身份与工作空间**：员工跨视图保留原身份、引擎和目录；群组、频道拥有各自的成员关系与共享文件边界。
 - **文件与资产**：查找工作资料、查看和编辑文件、使用交互终端，并在授权范围内传输文件。
 - **本地与远端**：Team 绑定实际主机和目录。“本机”始终指运行 Core 的机器，浏览器中的文件需要上传。
@@ -76,11 +82,13 @@ Secretary 协助用户管理应用与插件，Governor 跨 Team 组织工作，M
 
 模型服务商和编码引擎分别配置。Cline / Pi 暂不支持云端原生执行；具体图片、恢复、审批和运行设置以[引擎适配文档](docs/ENGINE_ADAPTERS.md)与实际能力查询为准。
 
+引擎默认读取各自原生 CLI / VS Code 扩展的配置。设置中会显示完整服务列表、模型、当前选择和密钥配置状态，并自动刷新；不会为 Bot 另建一套默认连接配置。
+
 **员工引擎在创建时确定。** 使用另一引擎需要重新创建员工；同一引擎内可调整其支持的模型和运行设置。引擎程序及 Claude SDK 控制库单独安装，兼容的已有安装可以复用。模型账号、额度和费用由所选服务商提供。
 
 三个插件的完整源码在 `PlugIns/`，包含各自 CLI、命令 schema 与运行时：
 
-- **Cloud Hosts**：SSH 主机、连接状态和远程桌面入口。
+- **Cloud Hosts**：SSH 主机、连接状态和交互终端。
 - **MiniNotion**：本地笔记、数据库、计划、日历和知识组织。
 - **Margin Reader**：文档阅读、摘录和资料整理。
 
@@ -153,3 +161,5 @@ npm run test:release-engines
 项目代码采用 **GNU GPL v3**。第三方代码与素材保留各自许可、声明及审核记录；项目 GPL 不额外授予第三方品牌素材的权利。单独安装的 Coding Agent 程序与模型服务遵守各自条款。
 
 见 [LICENSE](LICENSE)、[LICENSING.md](LICENSING.md) 和[第三方声明](THIRD_PARTY_NOTICES.md)。
+
+插件不再绑定团队。打开插件，通过“授权人员”按 MiniNotion 页面、Margin Reader 文档/学习集或 Cloud Hosts 主机给员工配置阅读、修改、新增权限；Secretary 默认全权并可通过相同 CLI/API 管理授权。

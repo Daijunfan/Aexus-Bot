@@ -1,3 +1,4 @@
+import {isAppAdministrator} from './application-authority'
 import fs from 'node:fs'
 import path from 'node:path'
 import {assetCatalog,assetLocation,assetReference,locateAsset} from './assets'
@@ -15,14 +16,14 @@ import type {AssetInfo} from '../shared/asset-schema'
 type Resolve=(location:FileLocation,destination:boolean)=>FileEndpoint
 /** Physical paths are opt-in information, never row subtitles or implicit host probes. */
 export async function assetInfo(id:string,call:(command:string,args:Record<string,any>)=>Promise<any>,resolve:Resolve):Promise<AssetInfo>{
- if(requestContext().principal.kind!=='operator')throw Error('Only the user may inspect all company assets')
+ if(!isAppAdministrator())throw Error('Only the user or Secretary may inspect all company assets')
  const catalog=assetCatalog(),located=await locateAsset(id,catalog,call),node=located.node
  const base={node,host:node.host,readOnly:!!node.readOnly,logicalLocation:located.breadcrumbs.map(item=>item.name),fileCount:node.fileCount}
  if(node.document){
   const post=liveChannelPost(node.document.postId),file=projectChannelDocuments(post).find(file=>file.id===node.document!.fileId)
   if(!file)throw Error('Published file no longer exists; refresh the file list')
   const engine=channelEngine(post.channel_id),storage=engine.kind==='external'?engine.fileStorage:undefined,host=storage?getCloudHost(storage.hostId):undefined,paths=host?.os==='windows'?path.win32:path.posix
-  return {...base,host:storage?assetHost({mode:'cloud',hostId:storage.hostId}):undefined,verified:'metadata',bytes:file.bytes,modifiedAt:post.published_at,readOnly:true,...(storage?{physicalPath:paths.join(storage.directory,file.sha256.slice(0,2),file.sha256),workspacePath:storage.directory,address:host!.host,port:host!.port??22}:{}),note:'Cloud metadata only; no original downloaded or host connection opened.'}
+  return {...base,host:storage?assetHost({mode:'cloud',hostId:storage.hostId}):undefined,verified:'metadata',bytes:file.bytes,modifiedAt:post.published_at,readOnly:true,...(storage&&file.sha256?{physicalPath:paths.join(storage.directory,file.sha256.slice(0,2),file.sha256),workspacePath:storage.directory,address:host!.host,port:host!.port??22}:{}),note:'Cloud metadata only; no original downloaded or host connection opened.'}
  }
  if(!node.location||node.directory&&node.location.asset?.startsWith('published:channel:'))return {...base,verified:'virtual',note:'This collection groups existing files and has no single physical directory.'}
  const ref=assetReference(node.location.asset!,node.location.path),end=resolve(assetLocation(ref.asset,ref.path),false),context=requestContext(),paths=end.remote?.os==='windows'?path.win32:path

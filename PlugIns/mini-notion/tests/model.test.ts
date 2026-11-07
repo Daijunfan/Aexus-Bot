@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ancestors,
+  internalPageIds,
+  isInternalPage,
   descendants,
   duplicatePage,
   makePage,
@@ -27,6 +29,17 @@ const sample = (): Workspace => ({
     makePage({ id: 'grandchild', title: '细节', parentId: 'child' }),
     makePage({ id: 'other', title: '独立页面' }),
   ],
+});
+
+test('indexed ancestry and internal projection retain deep-tree behavior', () => {
+  const pages = Array.from({length: 800}, (_,i) => makePage({id:`node-${i}`,parentId:i?`node-${i-1}`:null}));
+  pages[200].templateFor = 'some-database';
+  pages[20].syncedSource = true;
+  const internal = internalPageIds(pages);
+  for (const page of pages) assert.equal(internal.has(page.id),isInternalPage(page,pages),page.id);
+  assert.equal(ancestors(pages,'node-799').length,799);
+  assert.equal(internal.has('node-199'),false);
+  assert.equal(internal.has('node-700'),true);
 });
 
 test('move preserves a tree and prevents a cycle', () => {

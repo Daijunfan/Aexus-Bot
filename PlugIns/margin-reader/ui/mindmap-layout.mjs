@@ -4,7 +4,7 @@ import {mapStyle,topicStyle,topicBox,numberLabel,branchRoute} from './mindmap-st
 const bounds=rows=>({x:Math.min(...rows.map(p=>p.x)),y:Math.min(...rows.map(p=>p.y)),right:Math.max(...rows.map(p=>p.x+p.width)),bottom:Math.max(...rows.map(p=>p.y+p.height))});
 const overlap=(a,b,pad=10)=>a.x<b.x+b.width+pad&&a.x+a.width+pad>b.x&&a.y<b.y+b.height+pad&&a.y+a.height+pad>b.y;
 export function layoutMindmap(input,options={}){
- const config=mapStyle(options.mindmap),scope=options.focusId||options.submapId,all=new Map(input.map(c=>[c.id,c])),children=new Map();
+ const config=mapStyle(options.mindmap),styles={theme:config,textColors:new Map()},scope=options.focusId||options.submapId,all=new Map(input.map(c=>[c.id,c])),children=new Map();
  for(const c of input){const parent=all.has(c.parentId)?c.parentId:null;if(!children.has(parent))children.set(parent,[]);children.get(parent).push(c);}
  const descendants=id=>{const ids=new Set(),todo=[id];while(todo.length){const n=todo.pop();if(ids.has(n))continue;ids.add(n);for(const c of children.get(n)||[])todo.push(c.id);}return ids;};
  const allowed=scope?descendants(scope):null;
@@ -14,15 +14,15 @@ export function layoutMindmap(input,options={}){
  const childRows=c=>c.collapsed||c.submap&&c.id!==scope?[]:(children.get(c.id)||[]).filter(n=>n.inMap!==false&&(!allowed||allowed.has(n.id)));
  function build(card,inherited,depth,branch,path,forcedWidth,inheritedColor,table){
   const colorCard=inheritedColor&&!card.mindmap?.branchColor?{...card,mindmap:{...card.mindmap,branchColor:inheritedColor}}:card;
-  const style={...topicStyle(colorCard,options.mindmap,depth,branch),...(forcedWidth?{width:forcedWidth}:{})},prefix=depth&&path.length?numberLabel(path.at(-1),path,style.numbering):'';
+  const style={...topicStyle(colorCard,options.mindmap,depth,branch,styles),...(forcedWidth?{width:forcedWidth}:{})},prefix=depth&&path.length?numberLabel(path.at(-1),path,style.numbering):'';
   const numbered=prefix?(config.numberPrefix||'')+prefix.trimEnd()+(config.numberSuffix||'')+' ':'';
   const size=topicBox(card,style,config,numbered),structure=card.mindmap?.structure||inherited;
-  if(structure.startsWith('tree-table')){const widths=[],start=depth;const scan=(c,d)=>{const s=topicStyle(c,options.mindmap,d,branch);widths[d-start]=Math.max(widths[d-start]||0,topicBox(c,s,config).width);for(const next of childRows(c))scan(next,d+1);};scan(card,depth);table={widths,start};}
+  if(structure.startsWith('tree-table')){const widths=[],start=depth;const scan=(c,d)=>{const s=topicStyle(c,options.mindmap,d,branch,styles);widths[d-start]=Math.max(widths[d-start]||0,topicBox(c,s,config).width);for(const next of childRows(c))scan(next,d+1);};scan(card,depth);table={widths,start};}
   const n={card,style,...size,structure,x:0,y:0,w:size.width,h:size.height,placements:[]};
   const rows=depth<64?childRows(card):[],gap=config.spacing,distance=config.branchSpacing;
   const split=structure==='mindmap',left=new Set();
   if(split){let a=0,b=0;rows.forEach((c,i)=>{const fixed=c.mindmap?.side;if(fixed==='left'||fixed!=='right'&&(config.autoBalance?b<a:i%2===1)){left.add(c.id);b+=descendants(c.id).size;}else a+=descendants(c.id).size;});}
-  const equalWidth=config.sameLevelWidth&&rows.length?Math.max(...rows.map((c,i)=>{const s=topicStyle(c,options.mindmap,depth+1,depth===0?i:branch);return topicBox(c,s,config,numberLabel(i+1,[...path,i+1],s.numbering)).width;})):null;
+  const equalWidth=config.sameLevelWidth&&rows.length?Math.max(...rows.map((c,i)=>{const s=topicStyle(c,options.mindmap,depth+1,depth===0?i:branch,styles);return topicBox(c,s,config,numberLabel(i+1,[...path,i+1],s.numbering)).width;})):null;
   const nodes=rows.map((c,i)=>{const inherit=split?(left.has(c.id)?'logic-left':'logic-right'):structure==='timeline-horizontal'?(i%2?'org-down':'org-up'):structure==='timeline-vertical'?(i%2?'logic-right':'logic-left'):structure.startsWith('fishbone')?(i%2?'rib-down':'rib-up'):structure.startsWith('rib-')||structure==='matrix'?'logic-right':structure.startsWith('tree-table')||structure.startsWith('table-cell')?(structure.endsWith('down')?'table-cell-down':'table-cell-right'):structure.startsWith('tree-')?'logic-right':structure;return build(c,inherit,depth+1,depth===0?i:branch,[...path,i+1],table?.widths[depth+1-table.start]||equalWidth,depth&&config.colorMode!=='level'?style.accent:undefined,table);});
   n._children=nodes;
   if(arrangeSpecial(n,nodes,config))return n;

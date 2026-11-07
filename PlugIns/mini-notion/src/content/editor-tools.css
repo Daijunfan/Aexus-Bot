@@ -1,3 +1,48 @@
+/* Default 250ms toolbar and 150ms submenu fades compound, leaving text
+   actions faint just when the user needs them. Show them on the first frame. */
+.bn-root div:has(> .selection-toolbar),
+.selection-more-menu {
+  transition-duration: 0ms !important;
+  transition-delay: 0ms !important;
+}
+.selection-toolbar .bn-formatting-toolbar {
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 1px;
+  max-width: calc(100vw - 20px);
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 10px 34px #0003, 0 2px 8px #0002;
+}
+.selection-toolbar .bn-button, .selection-toolbar .block-comment-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 31px;
+  height: 31px;
+  min-width: 31px;
+  padding: 5px;
+  border-radius: 7px;
+  transition: background-color 100ms ease, color 100ms ease;
+}
+.selection-toolbar .bn-button svg { width: 17px; height: 17px; }
+.selection-toolbar :is(.bn-button, .block-comment-button):hover { background: var(--hover); }
+.selection-toolbar .bn-button[data-selected], .selection-toolbar .bn-button[aria-pressed="true"] { background: var(--selected); color: var(--blue); }
+.selection-toolbar-divider { height: 20px; border-left: 1px solid var(--line); margin-inline: 4px; }
+.selection-toolbar :is(.bn-button, .block-comment-button):focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.selection-link-remove { display: inline-flex; align-items: center; justify-content: center; gap: 6px; align-self: flex-end; margin-top: 5px; padding: 6px 9px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+.selection-link-remove:hover { background: var(--hover); color: var(--text); }
+.selection-link-remove:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.selection-more-menu { min-width: 218px; max-height: min(420px, calc(100vh - 24px)); overflow-y: auto; }
+@media (max-width: 440px) {
+  .selection-toolbar .bn-formatting-toolbar { gap: 0; padding: 3px; }
+  .selection-toolbar .bn-button, .selection-toolbar .block-comment-button { width: 28px; height: 28px; min-width: 28px; padding: 4px; }
+  .selection-toolbar-divider { margin-inline: 2px; }
+}
 /* Keep BlockNote's selection/focus behavior; turn its color samples into solid swatches. */
 .bn-color-picker-dropdown .bn-color-icon { font-size: 0 !important; width: 20px !important; height: 20px !important; }
 .bn-color-picker-dropdown [data-test^="text-color-"] .bn-color-icon { background: currentColor !important; }
@@ -23,13 +68,13 @@
 .slash-category-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 270px; overflow-y: auto; padding-block: 8px; }
 .slash-category-choices input { width: auto; }
 .selection-ai-chat { position: fixed; z-index: 300; width: min(380px, calc(100vw - 16px)); max-height: calc(100vh - 16px); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--text); box-shadow: var(--shadow); overflow: hidden; font-size: 13px; }
-.selection-ai-chat header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.selection-ai-chat header { display: flex; flex-shrink: 0; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .selection-ai-chat header span { flex: 1; min-width: 0; color: var(--muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11px; }
 .selection-ai-chat button { display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; padding: 4px; }
 .selection-ai-settings { padding: 10px 12px; border-bottom: 1px solid var(--line); overflow: auto; max-height: 230px; flex-shrink: 0; }
 .selection-ai-settings label { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; font-size: 12px; }
 .selection-ai-settings select, .selection-ai-settings textarea { width: 100%; }
-.selection-ai-messages { min-height: 54px; max-height: 250px; overflow-y: auto; padding: 12px; overscroll-behavior: contain; }
+.selection-ai-messages { min-height: 0; max-height: 250px; overflow-y: auto; padding: 12px; overscroll-behavior: contain; }
 .selection-ai-user { padding: 8px 10px; border-radius: 8px; background: var(--hover); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 90px; overflow-y: auto; }
 .selection-ai-reply { line-height: 1.6; overflow-wrap: anywhere; }
 .selection-ai-reply pre { overflow-x: auto; padding: 8px; background: var(--hover); border-radius: 6px; }

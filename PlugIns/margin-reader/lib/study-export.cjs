@@ -27,6 +27,15 @@ function createExports(store){
       const filter=p.filter?require('./study-organize.cjs').checkedFilter(p.filter):null;
       set.cards=set.cards.filter(c=>(!ids||ids.has(c.id))&&(!filter||require('./study-organize.cjs').matches(c,filter))&&(!p.reviewOnly||require('./study-review.cjs').enabled(c)));
       S.assert(set.cards.length<=2000,'TOO_LARGE','Export at most 2000 cards per file; use a complete MRPKG for larger studies.');
+      if(p.format==='md'&&p.expanded===false){
+        // The existing 'expanded' option applies to Markdown as well as PDF.
+        // Match the map's actual visibility, including collapsed topics and
+        // focus, folded zones and nested submaps.
+        const {layoutMindmap}=await import('../ui/mindmap-layout.mjs');
+        const view=layoutMindmap(set.cards,{...set.map,mindmap:{...set.map?.mindmap,enabled:true}});
+        set.cards=set.cards.filter(card=>view.positions.has(card.id));
+      }
+
       if(p.format==='apkg')S.assert(set.cards.reduce((n,c)=>n+require('./study-review.cjs').variants(c).length,0)<=10000,'TOO_LARGE','Export at most 10000 review questions.');
       const available=new Set(set.cards.map(c=>c.id));set.cards.forEach(c=>{if(!available.has(c.parentId))c.parentId=null;});
       let mediaBytes=0;

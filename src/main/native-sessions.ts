@@ -24,7 +24,7 @@ export async function withCodexSessionApi<T>(action:(call:Call)=>Promise<T>,opti
   const releaseStartup=await acquireCodexStartup(options.nativeRemote)
   try{
   const executor=options.remote&&!options.nativeRemote?await openCodexExecutor(options.remote):undefined
-  const child=options.nativeRemote?spawnRemoteAgent(options.nativeRemote,'codex',['app-server','--listen','stdio://']):spawn(engineExecutable('codex'),['app-server','--stdio',...(options.remote?nativeExecutionConfig():[]),...(options.configArgs??[]),'--disable','memories','--disable','chronicle','-c','memories.generate_memories=false','-c','model_reasoning_effort="low"'],{cwd:options.remote?APP_HOME:options.cwd,env:{...childEnv(),...engineEnvironment('codex'),...(executor?{CODEX_EXEC_SERVER_URL:executor.url}:{})},stdio:['pipe','pipe','pipe']})
+  const child=options.nativeRemote?spawnRemoteAgent(options.nativeRemote,'codex',['app-server','--listen','stdio://']):spawn(engineExecutable('codex'),['app-server','--stdio',...(options.remote?nativeExecutionConfig():[]),...(options.configArgs??[])],{cwd:options.remote?APP_HOME:options.cwd,env:{...childEnv(),...engineEnvironment('codex'),...(executor?{CODEX_EXEC_SERVER_URL:executor.url}:{})},stdio:['pipe','pipe','pipe']})
   let sequence=0,stderr=''
   const pending=new Map<number,{resolve:(value:any)=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>()
   const fail=(error:Error)=>{for(const request of pending.values()){clearTimeout(request.timer);request.reject(error)}pending.clear()}
@@ -82,7 +82,7 @@ function removeLines(file:string,ids:Set<string>,key:string) {
 }
 
 export async function deleteNativeSessions(refs:NativeSession[]):Promise<void> {
-  for(const ref of refs)if(!(ref.engine==='cline'?/^[A-Za-z0-9_-]{1,128}$/:/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i).test(ref.id))throw new Error(`无效的 ${ref.engine} 原生会话 ID，未移除员工`)
+  for(const ref of refs)if(!(['cline','opencode','kilo'].includes(ref.engine)?/^[A-Za-z0-9_-]{1,128}$/:/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i).test(ref.id))throw new Error(`无效的 ${ref.engine} 原生会话 ID，未移除员工`)
   const allOwned=refs.filter(ref=>ref.ownership!=='external')
   for(const profile of new Set(allOwned.flatMap(ref=>ref.profile?[ref.profile]:[]))){if(!path.resolve(profile).startsWith(path.join(APP_HOME,'agent-access')+path.sep))throw Error('Invalid isolated engine profile');fs.rmSync(profile,{recursive:true,force:true})}
   const owned=allOwned.filter(ref=>!ref.profile)

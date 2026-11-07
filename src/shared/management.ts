@@ -1,7 +1,7 @@
 import {rolePolicy,type ManagementRole} from './roles'
 export type {ManagementRole} from './roles'
 export type PrincipalRef={kind:'operator'}|{kind:'agent';employeeId:string}
-export type Delegation={requestedBy:PrincipalRef;relationId?:string;globalGrantId?:string;requestId:string;credentialHash?:string;selfSchedule?:true;channelTrigger?:{channelId:string;entryId:string;batchId:string;employeeId:string};schedule?:{channelId?:string;eventChannelId?:string};groupNotice?:{groupId:string;messageId:string;employeeId:string};channelNotice?:{channelId:string;entryId:string;employeeId:string}}
+export type Delegation={requestedBy:PrincipalRef;relationId?:string;globalGrantId?:string;requestId:string;credentialHash?:string;selfSchedule?:true;channelTrigger?:{channelId:string;entryId:string;batchId:string;employeeId:string};schedule?:{channelId?:string;eventChannelId?:string;eventRule?:import('./scheduler').ScheduleRule};groupNotice?:{groupId:string;messageId:string;employeeId:string};channelNotice?:{channelId:string;entryId:string;employeeId:string}}
 export type RequestContext={principal:PrincipalRef;requestId:string;credentialHash?:string;clientId?:string}
 export type ManagementRelation={id:string;managerId:string;employeeId:string;state:'pending'|'active';requestedBy:PrincipalRef;approvedBy?:PrincipalRef;createdAt:number;updatedAt:number;origin?:'binding'}
 /** Explicit visual overrides, including disabled creation lines. Never used for authorization. */
@@ -47,7 +47,7 @@ export function hasGlobalRole(_access:ManagementAccess|undefined,card:ManagedIde
   return !!card&&!card.deleting&&rolePolicy(card.managementRole).scope==='global'
 }
 
-export type CurrentTask={messageId:string;delegation:Delegation;startedAt:number;runId?:string;viewId?:string;sourceView?:import('./message-source').MessageSourceView;chat?:import('./chat-groups').SharedTaskContext}
+export type CurrentTask={messageId:string;delegation:Delegation;startedAt:number;runId?:string;viewId?:string;sourceView?:import('./message-source').MessageSourceView;directMessageId?:string;chat?:import('./chat-groups').SharedTaskContext}
 
 /** Live communication or a running task with authenticated delegation; never completed-call replay.
  * highlighted is a short visual cue, independent of this record's actual lifetime. */

@@ -5,6 +5,7 @@ import { useWorkspace } from '../store';
 import { IconButton, PageIcon } from '../ui';
 import type { DatabaseView, Page } from '../types';
 import { subItemDisplay, type HierarchyRow } from './structure';
+import { subItemsFor } from './relations';
 
 export function RecordTitle({
   entry,
@@ -24,7 +25,7 @@ export function RecordTitle({
   const signals = eventSignals(row, workspace!.pages);
   const nested = database.database?.subItems && subItemDisplay(view) === 'nested';
   const childCount = database.database?.subItems
-    ? workspace!.pages.filter((page) => page.subItemOf === row.id && !page.trashedAt).length
+    ? subItemsFor(row.id, workspace!.pages).length
     : 0;
   return (
     <div className="record-title-tree" style={{ paddingLeft: entry.depth * 18 }}>
@@ -76,7 +77,7 @@ export function RecordTitle({
 }
 export function SubitemPreview({ row, onOpen }: { row: Page; onOpen: (id: string) => void }) {
   const { workspace } = useWorkspace();
-  const children = workspace!.pages.filter((page) => page.subItemOf === row.id && !page.trashedAt);
+  const children = subItemsFor(row.id, workspace!.pages);
   if (!children.length) return null;
   return (
     <div className="card-subitems">

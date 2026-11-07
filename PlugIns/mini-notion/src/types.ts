@@ -4,6 +4,7 @@ import type { PersonValue } from './database/formula';
 import type { AppearanceColor, AppAppearance, PageAppearance, PageColor, ViewAppearance } from './core/appearance';
 export type { PersonValue } from './database/formula';
 export type FileValue = { id: string; name: string; url: string; size?: number; mimeType?: string };
+export type CustomEmoji = { id: string; name: string; url: string; keywords?: string };
 export type StatusGroup = 'todo' | 'doing' | 'done';
 export type JsonBlock = {
   id?: string;
@@ -143,7 +144,7 @@ export type Property = {
   relationTo?: string;
   relationProperty?: string;
   targetProperty?: string;
-  calculation?: 'count' | 'sum' | 'average' | 'min' | 'max' | 'show';
+  calculation?: Aggregate | 'show' | 'show_original' | 'count_not_empty' | 'earliest_date' | 'latest_date';
   formula?: string;
   button?: ButtonConfig;
   system?: 'parentItem' | 'subItems' | 'blockedBy' | 'blocking';
@@ -169,11 +170,19 @@ export type FilterOperator =
   | 'on_or_after';
 export type FilterRule = { id: string; property: string; operator: FilterOperator; value: string };
 export type FilterGroup = { id: string; conjunction: 'and' | 'or'; rules: (FilterRule | FilterGroup)[] };
+export type ConditionalColorRule = {
+  id: string;
+  filter: FilterGroup;
+  color: AppearanceColor;
+  targetProperty?: string;
+};
 export type SortRule = { id: string; property: string; direction: 'asc' | 'desc' };
 export type Aggregate =
-  'count' | 'count_values' | 'count_unique' | 'empty' | 'percent_filled' | 'sum' | 'average' | 'min' | 'max';
+  'count' | 'count_values' | 'count_unique' | 'empty' | 'percent_filled' | 'percent_empty' |
+  'sum' | 'average' | 'median' | 'min' | 'max' | 'range';
 export type DatabaseView = {
   appearance?: ViewAppearance | null;
+  conditionalColors?: ConditionalColorRule[];
   id: string;
   name: string;
   type: ViewType;
@@ -183,15 +192,23 @@ export type DatabaseView = {
   collapsedItems?: string[];
   filters?: FilterGroup;
   sorts?: SortRule[];
+  /** Per-view manual record order. Property sorts take precedence when enabled. */
+  manualOrder?: string[];
   groupBy?: string;
   subGroupBy?: string;
   hideEmptyGroups?: boolean;
+  /** Board columns use subtle property-option colors unless explicitly disabled. */
+  colorColumns?: boolean;
+  /** Newly created empty categories stay visible without changing hideEmptyGroups. */
+  revealedGroups?: string[];
   hiddenGroups?: string[];
   collapsedGroups?: string[];
   groupOrder?: string[];
   hiddenProperties?: string[];
   propertyOrder?: string[];
   columnWidths?: Record<string, number>;
+  columnWrap?: Record<string, boolean>;
+  frozenThrough?: string | null;
   calculations?: Record<string, Aggregate>;
   wrapCells?: boolean;
   cardSize?: 'small' | 'medium' | 'large';
@@ -312,6 +329,7 @@ export type Workspace = {
   automationClocks?: Record<string, { cursor: number; error?: string }>;
   spaces?: Record<string, Space>;
   settings: {
+    customEmojis?: CustomEmoji[];
     appearance?: AppAppearance | null;
     theme: 'light' | 'dark' | 'system';
     sidebarWidth: number;
@@ -333,7 +351,11 @@ export type Version = { id: string; at: number; page: Page };
 export type NativeAPI = {
   rendererReady?: () => Promise<void>;
   folderMode?: boolean;
+  hostAssistant?: boolean;
+  startupContent?: 'home' | 'page' | 'file' | 'database';
+  printMode?: boolean;
   loadDraft?: () => Promise<any>;
+  loadSerialized?: () => Promise<string>;
   saveDraft?: (draft:any) => Promise<void>;
   workspaceURL?: (path:string) => string;
   api: (
@@ -341,7 +363,7 @@ export type NativeAPI = {
     params?: Record<string, any>,
     id?: string,
   ) => Promise<import('./core/protocol').ApiResponse>;
-  onState: (callback: (event: import('./core/protocol').StateEvent) => void) => () => void;
+  onState: (callback: (event: Extract<import('./core/protocol').ServiceEvent,{type:'state'|'delta'}>) => void) => () => void;
   onUI: (callback: (event: import('./core/protocol').UiEvent) => void) => () => void;
   onAgent: (callback: (event: import('./core/protocol').AgentEventMessage) => void) => () => void;
   uploadToSpace: (

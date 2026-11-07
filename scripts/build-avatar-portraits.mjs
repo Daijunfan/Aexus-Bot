@@ -18,10 +18,10 @@ for(const id of [...Object.keys(SPRITE_REST_FRAMES),...FATE_AVATARS]){
   const top=y0,bottom=Math.min(height,y0+Math.ceil((y1-y0+1)*fraction))
   let left=width,right=-1
   for(let y=top;y<bottom;y++)for(let x=x0;x<=x1;x++)if(data[(y*width+x)*4+3]>48){left=Math.min(left,x);right=Math.max(right,x)}
-  const crop={left:Math.max(0,left-3),top:Math.max(0,top-3),width:Math.min(width,right+4)-Math.max(0,left-3),height:Math.min(height,bottom+3)-Math.max(0,top-3)}
-  const image=await sharp(data,{raw:info}).extract(crop).resize(224,224,{fit:'contain',position:'top',background:'#00000000'}).extend({top:16,bottom:16,left:16,right:16,background:'#00000000'}).webp({lossless:true}).toBuffer()
+  const crop={left,top,width:right-left+1,height:bottom-top}
+  const image=await sharp(data,{raw:info}).extract(crop).resize(256,256,{fit:'cover',position:'top'}).webp({lossless:true}).toBuffer()
   fs.writeFileSync(path.join(out,id+'.webp'),image)
-  report.push({id,crop,width:256,height:256,bytes:image.length})
+  report.push({id,crop,frame:{width,height},width:256,height:256,bytes:image.length})
 }
 // Legacy Clawd stays renderable for saved identities; it is not reintroduced into the picker.
 await sharp(path.join(root,'clawd.svg')).resize(220,220,{fit:'contain',background:'#00000000'}).extend({top:18,bottom:18,left:18,right:18,background:'#00000000'}).webp({lossless:true}).toFile(path.join(out,'clawd.webp'))

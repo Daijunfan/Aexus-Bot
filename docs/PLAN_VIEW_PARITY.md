@@ -1,5 +1,10 @@
 # Plan database layouts: parity, API design and interactive review
 
+The main Plan toolbar contains search and a task count. Team, employee, tag, state,
+priority, grouping and sorting selectors are removed from the browsing surface.
+Saved-view filters and Core/CLI query options still apply; Clear filters appears
+only when the selected view or search has an active filter.
+
 ## Scope and reference
 
 The reference is this repository's source-versioned MiniNotion plugin, `PlugIns/mini-notion/src/database/viewTypes.ts`, not an assumed external product version. Its ten layout IDs are `table`, `board`, `timeline`, `calendar`, `plan`, `list`, `gallery`, `chart`, `feed`, and `form`. Plan now implements all ten. A regression compares the actual source catalogs so adding another MiniNotion layout cannot silently leave Plan behind.

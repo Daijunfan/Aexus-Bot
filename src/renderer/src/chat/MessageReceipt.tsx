@@ -1,7 +1,8 @@
+import {formatMessageClock,formatMessageDateTime} from '../message-time'
 import {useLayoutEffect,useRef,useState} from 'react'
 import type {OutboundReceipt} from '../../../shared/types'
 import type {ChatDelivery} from '../../../shared/chat-groups'
-import {translate as uiText,useI18n,interfaceLocale} from '../i18n'
+import {translate as uiText,useI18n} from '../i18n'
 import {Icon} from '../components/Icon'
 import {MessageMenu} from '../components/MessageMenu'
 import {playMessageMotion} from './surfaceMotion'
@@ -10,7 +11,7 @@ type Milestones={deliveredAt?:number;readAt?:number}
 const receiptState=({deliveredAt,readAt}:Milestones)=>readAt!==undefined?'read':deliveredAt!==undefined?'delivered':'sent'
 const stateLabel={sent:'Sent',delivered:'Delivered',read:'Read'} as const
 function ReceiptTimes({deliveredAt,readAt}:Milestones){
-  return <span className="message-receipt-times">{([['Delivered',deliveredAt,'Not yet delivered'],['Read',readAt,'Not yet read']] as const).map(([label,value,pending])=><span key={label}><span>{uiText(label)}</span>{value===undefined?<small>{uiText(pending)}</small>:<time dateTime={new Date(value).toISOString()} title={new Date(value).toLocaleString(interfaceLocale())}>{new Date(value).toLocaleTimeString(interfaceLocale(),{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</time>}</span>)}</span>
+  return <span className="message-receipt-times">{([['Delivered',deliveredAt,'Not yet delivered'],['Read',readAt,'Not yet read']] as const).map(([label,value,pending])=><span key={label}><span>{uiText(label)}</span>{value===undefined?<small>{uiText(pending)}</small>:<time dateTime={new Date(value).toISOString()} title={formatMessageDateTime(value,true)}>{formatMessageClock(value,true)}</time>}</span>)}</span>
 }
 
 /** These are transport/recipient milestones, independent of task progress or inbound read marks. */

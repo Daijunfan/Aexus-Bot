@@ -19,6 +19,9 @@ try{
  fixture=fixture.replace(marker,hook+marker);const fixtureFile=path.join(temp,'api-process.cjs');fs.writeFileSync(fixtureFile,fixture,{mode:0o755});f=await fixtureCore({CLINE_BIN:fixtureFile,PI_BIN:fixtureFile},entry)
  const rpc=async(cmd,args={})=>{const r=await f.request(null,cmd,args);assert.ok(r.ok,r.error);return r.data}
  await rpc('group.add',{name:'API adapters'})
+ const reader=await f.create('Native authorized reader','API adapters'),sources=[]
+ for(const plugin of ['x','youtube','telegram'])sources.push(await rpc('channel.source-add',{plugin,locator:'@nativeapi',name:plugin}))
+ await rpc('channel.publish',{sourceId:sources[0].id,externalId:'api-fixture',publishedAt:Date.now()-1000,title:'Native API news',body:'Full synthetic news, no paid model.'})
  for(const engine of ['cline','pi']){
   await rpc('engine.configure',{engine,patch:{apiKey:'fixture-only-not-a-real-key'}})
   const card=await rpc('card.create',{title:engine+' Secretary',group:'API adapters',managementRole:'secretary',engine,model:'deepseek-flash'});await f.ready(card.id)
@@ -29,7 +32,9 @@ try{
   const query=await call('plan.query',{filter:{search:job.id}});assert.equal(query.rows[0].id,job.id);assert.equal(query.rows[0].employee.role,'secretary')
   const updated=await call('schedule.update',{id:job.id,expectedRevision:job.revision,patch:{name:engine+' UPDATED'}});assert.equal(updated.id,job.id)
   assert.equal((await call('schedule.get',{id:job.id})).name,engine+' UPDATED');await call('schedule.delete',{id:job.id,expectedRevision:updated.revision});assert.equal((await call('plan.query',{filter:{search:job.id}})).total,0)
-  assert.deepEqual(await rpc('terminal.list'),[]);checks.push(engine+' registered native transport: plan.query → schedule.update → get → delete → query, real employee identity and revisions')
+  const access=await call('channel.access',{id:sources[0].channelId});await call('channel.access',{id:sources[0].channelId,employeeIds:[reader.id],expectedRevision:access.revision});assert.deepEqual((await rpc('channel.access',{id:sources[0].channelId})).employeeIds,[reader.id]);assert.equal((await call('channel.fetch-text',{id:sources[0].channelId,limit:1})).messages[0].title,'Native API news')
+  const state=await call('messenger.state'),order=(engine==='cline'?sources:[...sources].reverse()).map(source=>'channel:'+source.channelId);await call('messenger.reorder',{scope:'all',order,expectedOrder:state.orders?.all??[]});assert.deepEqual((await rpc('messenger.state')).orders.all,order)
+  assert.deepEqual(await rpc('terminal.list'),[]);checks.push(engine+' registered native transport: plan.query → schedule.update → get → delete → query, real employee identity/revisions, native channel authorization/fetch and user-visible channel order')
  }
  const out=path.join(root,'artifacts/secretary-plan-api');fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'process-adapters.json'),JSON.stringify({passed:true,checks,providerCalls:0},null,2));console.log('PASS '+checks.join('; '))
 }finally{await f?.close();fs.rmSync(temp,{recursive:true,force:true})}

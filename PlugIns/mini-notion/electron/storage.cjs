@@ -27,14 +27,18 @@ function validateWorkspace(data) {
     ids.add(page.id);
   }
   const pagesById = new Map(data.pages.map(page => [page.id, page]));
+  const validated = new Set();
   for (const page of data.pages) {
-    const seen = new Set([page.id]);
+    if (validated.has(page.id)) continue;
     let parentId = page.parentId;
-    while (parentId) {
+    if (!parentId) { validated.add(page.id); continue; }
+    const seen = new Set([page.id]);
+    while (parentId && !validated.has(parentId)) {
       if (seen.has(parentId) || !ids.has(parentId)) throw new Error('工作空间的页面层级无效。');
       seen.add(parentId);
       parentId = pagesById.get(parentId).parentId;
     }
+    for (const id of seen) validated.add(id);
   }
   return data;
 }

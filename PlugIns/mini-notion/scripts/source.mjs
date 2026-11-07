@@ -32,6 +32,8 @@ for (const file of [
   'CLI.md',
   'LICENSE',
   'THIRD_PARTY_NOTICES.md',
+  'UNICODE-LICENSE.txt',
+  'KATEX-LICENSE.txt',
 ])
   await add(file);
 for (const file of ['src', 'package.json', 'LICENSE'])

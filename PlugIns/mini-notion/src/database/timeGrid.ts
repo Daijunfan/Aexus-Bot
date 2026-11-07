@@ -43,19 +43,49 @@ export function arrangeTimeEvents(events: TimeGridEvent[], minimumMinutes = 0) {
   finish();
   return events;
 }
+// Show a bounded number of lanes when hundreds of meetings overlap; every hidden
+// record remains accessible through a time-local overflow group.
+export function compactTimeEvents(events: TimeGridEvent[], maxLanes = 4, bucketMinutes = 30) {
+  const visible: TimeGridEvent[] = [];
+  const buckets = new Map<number, TimeGridEvent[]>();
+  let columns = 1;
+  for (const event of events) {
+    columns = Math.max(columns, Math.min(maxLanes, event.columns));
+    if (event.columns <= maxLanes || event.column < maxLanes - 1) {
+      visible.push(event);
+      continue;
+    }
+    const minute = Math.floor(event.minuteStart / bucketMinutes) * bucketMinutes;
+    const bucket = buckets.get(minute) || [];
+    bucket.push(event);
+    buckets.set(minute, bucket);
+  }
+  return {
+    visible,
+    overflow: Array.from(buckets, ([minute, hidden]) => ({ minute, hidden })),
+    columns,
+  };
+}
 export function timeGridProjection(page: Page, view: DatabaseView, rows: Page[], today = new Date()) {
   const timeZone = view.timeZone || localTimeZone(),
     period = viewPeriod(view, today);
   const fields = scheduleFields(page, view);
-  const timed = rows.flatMap((row) => {
+  const timed: { id: string; start: number; end: number; hasEnd: boolean }[] = [];
+  const allDayRanges: { id: string; start: string; end: string }[] = [];
+  for (const row of rows) {
     const value = dateParts(propertyDateValue(row, fields.start));
-    if (!value || !hasTime(value.start)) return [];
+    if (!value) continue;
+    if (!hasTime(value.start)) {
+      const range = scheduledRange(row, fields.start, fields.end);
+      allDayRanges.push({ id: row.id, ...range });
+      continue;
+    }
     const times = scheduledTimes(row, fields.start, fields.end);
-    if (!Number.isFinite(times.startTimestamp)) return [];
+    if (!Number.isFinite(times.startTimestamp)) continue;
     const hasEnd = Number.isFinite(times.endTimestamp) && times.endTimestamp > times.startTimestamp;
     const end = hasEnd ? times.endTimestamp : times.startTimestamp + 30 * 60000;
-    return [{ id: row.id, start: times.startTimestamp, end, hasEnd }];
-  });
+    timed.push({ id: row.id, start: times.startTimestamp, end, hasEnd });
+  }
   const instant = (value: number) =>
     Temporal.Instant.fromEpochMilliseconds(value).toZonedDateTimeISO(timeZone);
   const days = period.dates.map((date) => {
@@ -95,13 +125,9 @@ export function timeGridProjection(page: Page, view: DatabaseView, rows: Page[],
           columns: 1,
         })),
     );
-    const allDay = rows
-      .filter((row) => {
-        const parts = dateParts(propertyDateValue(row, fields.start));
-        const range = scheduledRange(row, fields.start, fields.end);
-        return parts && !hasTime(parts.start) && range.start <= date && range.end >= date;
-      })
-      .map((row) => row.id);
+    const allDay = allDayRanges
+      .filter((range) => range.start <= date && range.end >= date)
+      .map((range) => range.id);
     return { date, startTimestamp, endTimestamp, minutes, hours, allDay, events };
   });
   return {

@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {create,expect}=require('./ui-session.cjs'),F=require('./xmind-fixture.cjs'),C=require('../ui/mindmap-catalog.json');
 (async()=>{const f=await create('xmind-structures-ui');let failure;try{
- const {page,api}=f,out=(await fs.readFile(path.join(__dirname,'../artifacts/xmind-rebuild-current.txt'),'utf8')).trim();
+ const {page,api}=f,out=f.output;
  let set=await api('study.create',{title:'复杂思维导图 · 原生结构验收'});const get=async()=>set=await api('study.get',{setId:set.id});const change=async(method,p={})=>{await get();return set=await api(method,{setId:set.id,expectedRevision:set.revision,...p});};
  await change('study.mindmap.outline.import',{text:F.outline()});const before=set.cards.map(c=>[c.id,c.parentId,c.title]);await api('study.open',{setId:set.id});await page.goto(f.server.url);await page.locator('body[data-ready=true]').waitFor();await page.click('#study-zoom-fit');
  await expect(page.locator('.mindmap-topic')).toHaveCount(53);await expect(page.locator('.mindmap-topic[data-topic-depth="2"][data-topic-shape=underline]')).toHaveCount(12);

@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto'
+import {requireSavedChannelEntry} from './channel-content-policy'
 import {one,all,run,transaction,changed,liveChannelPost,projectChannelPost} from './channel-store'
 import {requireConversation,controlChanged} from './conversation-policy'
 import {channelMemberIds} from './channel-members'
@@ -25,22 +26,11 @@ function authority(rule:Rule){
 }
 function cancelPending(rule:Rule,reason:string){for(const row of all("SELECT data FROM channel_post_batches WHERE rule_id=? AND json_extract(data,'$.state')='pending'",rule.id)){const batch=JSON.parse(row.data) as PostBatch;batch.state='cancelled';batch.error=reason;saveBatch(batch)}}
 function disable(rule:Rule,reason:string){rule.enabled=false;rule.disabledReason=reason;rule.pendingIds=[];rule.revision++;rule.updatedAt=Date.now();save(rule);cancelPending(rule,reason)}
-export function reconcilePostTriggers(){for(const rule of rules().filter(rule=>rule.enabled))try{authority(rule)}catch(cause){disable(rule,(cause as Error).message);changed('channels',{channelIds:[rule.channelId]})}}
+export function reconcilePostTriggers(){for(const rule of rules().filter(rule=>rule.enabled)){disable(rule,'Channels are read-only feeds; use explicit channel fetch APIs');changed('channels',{channelIds:[rule.channelId]})}}
 /** Called in the same transaction that accepts a genuinely new post. No model or Plan call. */
 export function recordPostForTriggers(channelId:string,postId:string,publisherId?:string){
- const configured=rules(channelId),configuredIds=new Set(configured.map(rule=>rule.employeeId))
- if(Number(run('INSERT OR IGNORE INTO channel_post_events VALUES(?,?,?)',postId,channelId,Date.now()).changes))for(const rule of configured){
-  if(!rule.enabled||rule.employeeId===publisherId)continue
-  try{authority(rule)}catch(cause){disable(rule,(cause as Error).message);continue}
-  rule.pendingIds.push(postId)
-  if(rule.pendingIds.length===rule.everyPosts){
-   const batch:PostBatch={id:'cpb_'+randomUUID(),ruleId:rule.id,channelId,employeeId:rule.employeeId,ruleRevision:rule.revision,prompt:rule.prompt,postIds:rule.pendingIds,createdBy:rule.createdBy,credentialHash:rule.credentialHash,createdAt:Date.now(),state:'pending'}
-   run('INSERT INTO channel_post_batches VALUES(?,?,?,?,?)',batch.id,rule.id,channelId,rule.employeeId,JSON.stringify(batch));rule.pendingIds=[]
-  }
-  save(rule)
- }
- // A saved count rule replaces per-post awareness for that Agent, including while paused.
- return channelMemberIds(channelId).filter(id=>id!==publisherId&&!configuredIds.has(id))
+ // Reading a feed never schedules or notifies employees. Old rule/history records are retained.
+ return [] as string[]
 }
 export function validatePostTriggerDelegation(delegation:Delegation,targetId:string){
  const grant=delegation.channelTrigger
@@ -58,6 +48,7 @@ function readScope(channelId:string,employee?:string){
  return {scope,employee:admin?employee:principal.kind==='agent'?principal.employeeId:undefined,admin}
 }
 export function postTriggerRequest(command:string,args:Record<string,any>){
+ if(['channel.post-trigger-set','channel.post-trigger-remove'].includes(command))throw Error('Channels do not support employee post-count tasks')
  const reading=command==='channel.post-trigger-list'||command==='channel.post-trigger-history'||command==='channel.post-trigger-batch'
  if(!reading)requireConversation('channel:'+args.id,'admin')
  const scope=readScope(args.id,args.employee)
@@ -71,7 +62,7 @@ export function postTriggerRequest(command:string,args:Record<string,any>){
  if(command==='channel.post-trigger-batch'){
   const batch=parse<PostBatch>(one('SELECT data FROM channel_post_batches WHERE id=? AND channel_id=?',String(args.batchId),args.id))
   if(!batch||scope.employee&&batch.employeeId!==scope.employee)throw Error('Unknown post batch for this caller')
-  return {id:batch.id,channelId:batch.channelId,employeeId:batch.employeeId,prompt:batch.prompt,total:batch.postIds.length,offset,hasMore:offset+limit<batch.postIds.length,posts:batch.postIds.slice(offset,offset+limit).map(id=>{try{const row=liveChannelPost(id);if(row.channel_id!==batch.channelId)throw Error('Post moved to another channel');const {saved:_,savedAt:__,...post}=projectChannelPost(row);return {id,available:true,post,entryApi:{command:'conversation.entry',args:{conversation:'channel:'+batch.channelId,id}}}}catch(error){return {id,available:false,error:(error as Error).message}}})}
+  return {id:batch.id,channelId:batch.channelId,employeeId:batch.employeeId,prompt:batch.prompt,total:batch.postIds.length,offset,hasMore:offset+limit<batch.postIds.length,posts:batch.postIds.slice(offset,offset+limit).map(id=>{try{if(requestContext().principal.kind==='agent')requireSavedChannelEntry(batch.channelId,id);const row=liveChannelPost(id);if(row.channel_id!==batch.channelId)throw Error('Post moved to another channel');const {saved:_,savedAt:__,...post}=projectChannelPost(row);return {id,available:true,post,entryApi:{command:'conversation.entry',args:{conversation:'channel:'+batch.channelId,id}}}}catch(error){return {id,available:false,error:(error as Error).message}}})}
  }
  if(typeof args.employee!=='string'||command==='channel.post-trigger-set'&&!scope.scope.members.includes(args.employee))throw Error('Choose a current channel member')
  const current=rules(args.id).find(rule=>rule.employeeId===args.employee)

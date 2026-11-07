@@ -1,23 +1,29 @@
-import {AppSelect} from '../../components/AppSelect';
+import { AppSelect } from '../../components/AppSelect';
 import { isSelectProperty } from '../propertySchema';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { useWorkspace } from '../../store';
 import { PageIcon } from '../../ui';
 import { aggregateRows, groupRows } from '../model';
 import type { ViewProps } from './types';
 import type { Aggregate } from '../../types';
+import { WindowedCards } from './WindowedCards';
 
 const colors = ['#8f77b5', '#5b9cc2', '#86a58a', '#d9aa62', '#c78280', '#8c9eaa', '#b889a7'];
 export function ChartView({ page, view, rows, updateView, openRow }: ViewProps) {
   const { workspace } = useWorkspace();
   const [selected, setSelected] = useState<string | null>(null);
   const db = page.database!;
+  const numericColumns = db.columns.filter((column) =>
+    column.type === 'number' || column.type === 'rollup' || column.type === 'formula');
   const field = view.chartGroup || db.columns.find((c) => isSelectProperty(c))?.id || 'title';
   const metric = view.chartValue || 'title';
   const aggregation = view.chartAggregation || 'count';
-  const groups = groupRows(rows, field, db, workspace!.pages, { ...view, hideEmptyGroups: true });
-  const values = groups.map((group) => aggregateRows(group.rows, metric, aggregation, db, workspace!.pages));
+  const groups = useMemo(() => groupRows(rows, field, db, workspace!.pages, { ...view, hideEmptyGroups: true }),
+    [rows, field, db, workspace!.pages, view]);
+  const values = useMemo(() => groups.map(group => aggregateRows(group.rows, metric, aggregation, db, workspace!.pages)),
+    [groups, metric, aggregation, db, workspace!.pages]);
+  const selectedGroup = groups.find(group => group.key === selected);
   const low = Math.min(0, ...values);
   const high = Math.max(0, ...values);
   const range = Math.max(1, high - low);
@@ -69,13 +75,22 @@ export function ChartView({ page, view, rows, updateView, openRow }: ViewProps) 
         <AppSelect
           aria-label="图表计算"
           value={aggregation}
-          onChange={(e) => updateView({ chartAggregation: e.target.value as Aggregate })}
+          onChange={(e) => {
+            const chartAggregation = e.target.value as Aggregate;
+            updateView({
+              chartAggregation,
+              ...(chartAggregation !== 'count' && !numericColumns.some(column => column.id === view.chartValue)
+                && numericColumns[0] ? { chartValue: numericColumns[0].id } : {}),
+            });
+          }}
         >
           <option value="count">记录数量</option>
           <option value="sum">求和</option>
           <option value="average">平均值</option>
+          <option value="median">中位数</option>
           <option value="min">最小值</option>
           <option value="max">最大值</option>
+          <option value="range">极差</option>
         </AppSelect>
         {aggregation !== 'count' && (
           <AppSelect
@@ -84,16 +99,17 @@ export function ChartView({ page, view, rows, updateView, openRow }: ViewProps) 
             onChange={(e) => updateView({ chartValue: e.target.value })}
           >
             <option value="title">选择属性</option>
-            {db.columns
-              .filter((c) => c.type === 'number' || c.type === 'rollup' || c.type === 'formula')
-              .map((c) => (
-                <option value={c.id} key={c.id}>
-                  {c.name}
-                </option>
-              ))}
+            {numericColumns.map((column) => (
+              <option value={column.id} key={column.id}>
+                {column.name}
+              </option>
+            ))}
           </AppSelect>
         )}
       </div>
+      {aggregation !== 'count' && !numericColumns.length && (
+        <p className="chart-notice">请先添加数值、汇总或公式属性，再进行图表计算。</p>
+      )}
       {kind === 'donut' && low < 0 && (
         <p className="chart-notice">圆环图展示正值的占比；负值保留在图例中，可切换到柱状图查看。</p>
       )}
@@ -189,13 +205,18 @@ export function ChartView({ page, view, rows, updateView, openRow }: ViewProps) 
                   aria-label={`${group.label} ${values[i]}`}
                   onClick={() => setSelected(selected === group.key ? null : group.key)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') setSelected(group.key);
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelected(current => current === group.key ? null : group.key);
+                    }
                   }}
                   className="chart-mark"
                 >
                   <title>
                     {group.label}: {values[i]}
                   </title>
+                  <polygon points={`${x - step * 0.45},20 ${x + step * 0.45},20 ${x + step * 0.45},255 ${x - step * 0.45},255`}
+                    fill="transparent" pointerEvents="all" />
                   {kind === 'bar' ? (
                     <rect
                       x={x - step * 0.28}
@@ -209,7 +230,7 @@ export function ChartView({ page, view, rows, updateView, openRow }: ViewProps) 
                   ) : (
                     <circle
                       cx={x}
-                      cy={Math.min(zero, valueY)}
+                      cy={valueY}
                       r={selected === group.key ? 6 : 4}
                       fill={colors[0]}
                     />
@@ -231,17 +252,24 @@ export function ChartView({ page, view, rows, updateView, openRow }: ViewProps) 
           </svg>
         </div>
       )}
-      {selected !== null && groups.some((group) => group.key === selected) && (
+      {selectedGroup && (
         <div className="chart-drilldown">
-          <h4>{groups.find((group) => group.key === selected)?.label} · 记录</h4>
-          {groups
-            .find((group) => group.key === selected)
-            ?.rows.map((row) => (
-              <button key={row.id} onClick={() => openRow(row.id)}>
+          <h4>{selectedGroup.label} · 记录</h4>
+          {selectedGroup.rows.length > 100 ? (
+            <WindowedCards rows={selectedGroup.rows} enabled className="chart-drilldown-rows"
+              layoutKey={view.id} estimatedHeight={36} footer={null}>
+              {row => <button key={row.id} className="chart-drilldown-row" data-record-id={row.id}
+                onClick={() => openRow(row.id)}>
                 <PageIcon icon={row.icon} />
                 {row.title || '无标题'}
-              </button>
-            ))}
+              </button>}
+            </WindowedCards>
+          ) : selectedGroup.rows.map(row => (
+            <button key={row.id} data-record-id={row.id} onClick={() => openRow(row.id)}>
+              <PageIcon icon={row.icon} />
+              {row.title || '无标题'}
+            </button>
+          ))}
         </div>
       )}
     </div>

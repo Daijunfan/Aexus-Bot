@@ -7,10 +7,13 @@ import {listPlugins,pluginFile} from './plugins/registry'
 
 const coreDocuments=[
  ['core/api','API.md'],['core/permissions','PERMISSIONS.md'],['core/plan','PLAN.md'],
+ ['core/avatars','docs/AVATARS.md'],
  ['core/scheduler','SCHEDULER.md'],['core/architecture','ARCHITECTURE.md'],
  ['core/conversation-workspaces','docs/CONVERSATION_WORKSPACES.md'],
  ['core/conversation-controls','docs/CONVERSATION_CONTROLS.md'],
  ['core/message-collaboration','docs/MESSAGE_COLLABORATION.md'],
+ ['core/bot-workers','docs/BOT_WORKERS.md'],['core/event-tasks','docs/EVENT_TASKS.md'],
+ ['core/channels','docs/CHANNELS.md'],['core/channel-filters','docs/CHANNEL_FILTERS.md'],
  ['core/secretary-api','docs/SECRETARY_API_PARITY.md']
 ] as const
 
@@ -46,12 +49,13 @@ function materialize(){
   '## 三个 Core 视图','',
   '| 视图 | 负责内容 | API 入口 |',
   '| --- | --- | --- |',
-  '| Company | Team、员工、关系与画布 | `group.*`、`card.*`、`management.*`、`office.*`、`team-view.*` |',
-  '| Messages | 私聊、群聊、新闻频道与讨论 | `session.*`、`chat.*`、`channel.*`、`messenger.*`、`conversation.*` |',
-  '| Plan | 员工任务的计划、排期与运行记录 | `plan.*`、`schedule.*` |','',
+  '| Agents | Team、员工、关系与画布 | `group.*`、`card.*`、`management.*`、`office.*`、`team-view.*` |',
+  '| Message | 私聊、群聊、外部 Worker、新闻频道与讨论 | `bot.*`、`direct.*`、`session.*`、`chat.*`、`channel.*`、`messenger.*`、`conversation.*` |',
+  '| Plan | 员工任务的计划、排期与运行记录 | `plan.*`、`schedule.*`、`monitor.*` |','',
   '**Plan 是 Core 视图，不是 MiniNotion 插件。** Core Plan 操作同一套调度记录；MiniNotion 是独立的笔记/数据库软件，插件命令不能替代 `agents plan` 或 `agents schedule`。','',
   '`describe` 仅查询 Core 命令，例如 `agents api describe schedule.create --all --json`；不接收插件方法名或文档 ID。`--all` 只扩展公开文档发现，不授予执行权限；实际身份用 `agents auth whoami --json` 查询。','',
   '群组 Owner / Admin / Member 与 Company 职位独立。先读 `conversation.policy` 获取实际职位和可执行动作。固定正文通知、静音与禁言只由会话 Owner/Admin 配置；通知使用 `conversation.notice-*`，不调用模型、不进入 Plan。频道按新增帖数触发成员提示词使用 `channel.post-trigger-*`，会调用成员但不进入 Plan；Plan 排期继续使用 `schedule.*`。`workspace.catalog` 列出本人所有工作区；`conversation.entry/download/download-status` 读取完整公开帖子并复制附件到本人工作区。完整界限见 `agents api docs core/message-collaboration`。','',
+  '外部 Dot/Grok Worker 委派与授权见 `core/bot-workers`。Grok 可执行原生 X 任务；Dot 可以分多次、长间隔回复。委派前先用 `schedule.*` 保存持续的 message.received 计划，不把确认消息或安静间隔当结束。软件事件与程序监控见 `core/event-tasks`。','',
   '## 查询与操作','',
   '正式任务可直接使用 `agents_company_api`，参数 `command` 为已有 Core 命令，`args` 为该命令的参数对象。它以当前员工身份调用同一 API，无需 shell；写操作遵循当前 Ask/Full access，原生 planning 模式只读。初始化和静默阅读不可操作。','',
   'Plan 先调用 `{"command":"plan.query","args":{}}`：读取真实任务 ID/revision、完整规则、时间、人员职位/Team、target.exists、allowedActions。Secretary 也能看到员工已删除的任务；未知旧身份为 null。分页用 offset/limit。删除使用 schedule.delete 的 id 或 ids，带上 expectedRevision 或逐 ID 的 expectedRevisions；随后再查 plan.query 确认。','',

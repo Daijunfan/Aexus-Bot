@@ -1,4 +1,5 @@
 import { $, escape, icon, run, bytesLabel, parentPath, baseName, joinPath } from './dom.js';
+import { toggleSidebarBranch } from './sidebar-disclosure.js';
 // Presentation and keyboard actions only; all file mutations remain in Library/Core.
 export class LibraryView {
   moreButton(entry) {
@@ -11,32 +12,78 @@ export class LibraryView {
     more.addEventListener('click', event => { event.stopPropagation(); this.showMenu(entry, more); });
     more.addEventListener('keydown', event => event.stopPropagation());
   }
+  treeRows() { return [...$('file-tree').querySelectorAll('.tree-row')]; }
+  focusTreeRow(path) {
+    const rows = this.treeRows(), target = rows.find(row => row.dataset.path === path);
+    if (!target) return;
+    for (const row of rows) row.tabIndex = row === target ? 0 : -1;
+    this.treeFocusPath = path;
+    target.focus({ preventScroll: true });
+  }
+  toggleFolder(path) {
+    this.treeFocusPath = path;
+    toggleSidebarBranch({
+      expanded: this.expanded, id: path,
+      findRow: () => this.treeRows().find(row => row.dataset.path === path),
+      render: () => this.renderTree()
+    });
+  }
   renderTree() {
-    const renderKey=JSON.stringify([this.tree,this.folder,this.activePath,[...this.expanded].sort()]);
-    if(this.treeRenderKey===renderKey&&$('file-tree').childElementCount)return;
+    const renderKey = JSON.stringify([this.tree, this.folder, this.activePath, [...this.expanded].sort()]);
+    if (this.treeRenderKey === renderKey && $('file-tree').childElementCount) return;
+    const firstFocus = this.treeFocusPath || this.activePath || this.tree[0]?.path;
     const walk = (entries, level) => entries.map(entry => {
       const folder = entry.kind === 'folder', expanded = this.expanded.has(entry.path);
-      return `<div class="tree-row ${folder ? 'folder' : ''} ${entry.path === this.activePath || !this.activePath && entry.path === this.folder ? 'active' : ''} ${!folder && !entry.readable ? 'unreadable' : ''}" data-path="${escape(entry.path)}" role="treeitem" tabindex="0" aria-level="${level + 1}" ${folder ? `aria-expanded="${expanded}"` : ''} title="${escape(entry.path)}" style="padding-left:${5 + level * 16}px"><button class="twisty" tabindex="-1" aria-label="展开或折叠">${folder ? icon(expanded ? 'chevron-down' : 'chevron-right') : ''}</button>${icon(folder ? 'folder' : 'file')}<span class="tree-label">${escape(entry.name)}</span>${this.moreButton(entry)}</div>${folder && expanded ? walk(entry.children || [], level + 1) : ''}`;
+      const active = entry.path === this.activePath || !this.activePath && entry.path === this.folder;
+      return `<div class="tree-row ${folder ? 'folder' : ''} ${active ? 'active' : ''} ${!folder && !entry.readable ? 'unreadable' : ''}" data-path="${escape(entry.path)}" role="treeitem" tabindex="${entry.path === firstFocus ? 0 : -1}" aria-level="${level + 1}" aria-current="${active ? 'page' : 'false'}" ${folder ? `aria-expanded="${expanded}"` : ''} title="${escape(folder ? entry.path + ' · 单击展开或收起' : entry.path)}" style="padding-left:${5 + level * 16}px"><span class="twisty" aria-hidden="true">${folder ? icon(expanded ? 'chevron-down' : 'chevron-right') : ''}</span>${icon(folder ? 'folder' : 'file')}<span class="tree-label">${escape(entry.name)}</span>${this.moreButton(entry)}</div>${folder && expanded ? walk(entry.children || [], level + 1) : ''}`;
     }).join('');
     $('file-tree').innerHTML = walk(this.tree, 0) || '<div class="blank-state">这里还没有文件</div>';
-    for (const row of $('file-tree').querySelectorAll('.tree-row')) {
+    for (const row of this.treeRows()) {
       const entry = this.find(row.dataset.path);
       row.addEventListener('click', run(event => {
-        if (event.target.closest('.file-more')) return;
-        if (event.target.closest('.twisty') && entry.kind === 'folder') { this.expanded.has(entry.path) ? this.expanded.delete(entry.path) : this.expanded.add(entry.path); this.renderTree(); return; }
+        if (event.target.closest('.file-more') || event.detail > 0 && Date.now() < (this.drag.suppressClickUntil || 0)) return;
+        if (entry.kind === 'folder') return this.toggleFolder(entry.path);
+        if (event.detail > 1) return;
         return this.open(entry);
       }));
+      row.addEventListener('focus', event => {
+        if (event.target === row) {
+          for (const other of this.treeRows()) other.tabIndex = other === row ? 0 : -1;
+          this.treeFocusPath = entry.path;
+        }
+      });
       row.addEventListener('keydown', event => {
         if (event.target.closest('.file-more')) return;
-        if (event.key === 'Enter') { event.preventDefault(); run(() => this.open(entry))(); }
-        if (event.key === 'F2') { event.preventDefault(); this.action('rename', entry); }
-        if ((event.shiftKey && event.key === 'F10') || event.key === 'ContextMenu') { event.preventDefault(); this.showMenu(entry, row.querySelector('.file-more')); }
-        if (entry.kind === 'folder' && ['ArrowLeft','ArrowRight'].includes(event.key)) { event.preventDefault(); event.key === 'ArrowRight' ? this.expanded.add(entry.path) : this.expanded.delete(entry.path); this.renderTree(); }
+        if (['Enter', ' '].includes(event.key)) {
+          event.preventDefault();
+          if (entry.kind === 'folder') this.toggleFolder(entry.path);
+          else run(() => this.open(entry))();
+          return;
+        }
+        if (event.key === 'F2') { event.preventDefault(); this.action('rename', entry); return; }
+        if ((event.shiftKey && event.key === 'F10') || event.key === 'ContextMenu') {
+          event.preventDefault(); this.showMenu(entry, row.querySelector('.file-more')); return;
+        }
+        const rows = this.treeRows(), index = rows.indexOf(row);
+        if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+          event.preventDefault();
+          const next = event.key === 'Home' ? rows[0] : event.key === 'End' ? rows.at(-1)
+            : rows[Math.max(0, Math.min(rows.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))];
+          if (next) this.focusTreeRow(next.dataset.path);
+        } else if (event.key === 'ArrowRight' && entry.kind === 'folder') {
+          event.preventDefault();
+          if (!this.expanded.has(entry.path)) this.toggleFolder(entry.path);
+          else if (rows[index + 1]?.dataset.path.startsWith(entry.path + '/')) this.focusTreeRow(rows[index + 1].dataset.path);
+        } else if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          if (entry.kind === 'folder' && this.expanded.has(entry.path)) this.toggleFolder(entry.path);
+          else this.focusTreeRow(parentPath(entry.path));
+        }
       });
       row.addEventListener('contextmenu', event => this.context(event, entry));
       this.bindMore(row, entry); this.drag.bindSource(row, entry); this.drag.bindTarget(row, entry);
     }
-    this.treeRenderKey=renderKey;
+    this.treeRenderKey = renderKey;
   }
   visibleEntries() {
     const normalize=value=>value.normalize('NFKC').toLocaleLowerCase(),query=normalize($('file-filter').value.trim());
@@ -102,7 +149,7 @@ export class LibraryView {
     if (this.menu && this.menuTrigger === trigger && !point) { this.closeMenu(true); return; }
     this.closeMenu(); this.selected = entry;
     const menu = document.createElement('div'); menu.className = 'context-menu file-context-menu'; menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', `${entry.name} 的操作`);
-    menu.innerHTML = [['open','打开','file'],['rename','重命名','edit'],['move','移动到…','folder'],['copy','复制到…','copy'],['trash','移入回收站','trash']].map(([action, title, symbol]) => `<button type="button" data-action="${action}" role="menuitem" class="${action === 'trash' ? 'danger' : ''}">${icon(symbol)}<span>${title}</span></button>`).join('');
+    menu.innerHTML = [['open',entry.kind === 'folder' ? '在主页中浏览' : '打开文档','file'],['rename','重命名','edit'],['move','移动到…','folder'],['copy','复制到…','copy'],['trash','移入回收站','trash']].map(([action, title, symbol]) => `<button type="button" data-action="${action}" role="menuitem" class="${action === 'trash' ? 'danger' : ''}">${icon(symbol)}<span>${title}</span></button>`).join('');
     document.body.append(menu); this.menu = menu; this.menuTrigger = trigger; trigger?.setAttribute('aria-expanded', 'true');
     const box = trigger?.getBoundingClientRect(), x = point?.x ?? (box?.right || 0) - menu.offsetWidth, y = point?.y ?? box?.bottom ?? 0;
     menu.style.left = `${Math.max(8, Math.min(x, innerWidth - menu.offsetWidth - 8))}px`;

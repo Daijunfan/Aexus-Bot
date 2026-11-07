@@ -66,7 +66,9 @@ export const ENGINES: { value: Engine; label: string; hint: string }[] = [
   { value: 'claude', label: 'Claude Agent', hint: 'Anthropic Claude via the Agent SDK' },
   { value: 'codex', label: 'Codex', hint: 'OpenAI Codex CLI' },
   { value: 'cline', label: 'Cline', hint: 'Cline ACP · DeepSeek Flash' },
-  { value: 'pi', label: 'Pi', hint: 'Pi RPC · DeepSeek Flash' }
+  { value: 'pi', label: 'Pi', hint: 'Pi RPC · DeepSeek Flash' },
+  { value: 'opencode', label: 'OpenCode', hint: 'OpenCode ACP · Native configuration' },
+  { value: 'kilo', label: 'Kilo Code', hint: 'Kilo Code ACP · Native configuration' }
 ]
 
 /** Undefined on legacy employees: do not run paid onboarding when upgrading. */
@@ -86,7 +88,8 @@ export const employeeReady = (card: Pick<StoredSession,'initialization'>) =>
   !card.initialization || card.initialization.status === 'ready'
 
 /** Latest published answer and the user's exact-version read receipt. */
-export type EmployeeReply={id:string;itemId:string;text:string;createdAt:number;readAt?:number}
+export type GroupReplyReference={groupId:string;messageId:string;sequence:number}
+export type EmployeeReply={id:string;itemId:string;text:string;createdAt:number;readAt?:number;groupReply?:GroupReplyReference;directReply?:import('./direct-messages').DirectReplyReference}
 
 /** A session as persisted in the app's own store. */
 export type StoredSession = {
@@ -168,6 +171,7 @@ export type TeamView={id:string;name:string;teams:string[];viewport?:Viewport}
 
 export type Store = {
   revision?:number
+  avatarCatalog?:import('./avatars').AvatarCatalogState
   fullAccessDefaultApplied?:boolean
   connectorAnchors?:import('./connector').ConnectorSettings
   access?:ManagementAccess
@@ -207,14 +211,16 @@ export type MessageReply={id:string;role:'user'|'assistant';author?:PrincipalRef
 /** Outgoing evidence belongs to this task; incoming employee reply receipts are separate. */
 export type OutboundReceipt={taskId:string;deliveredAt?:number;readAt?:number}
 export type Item =
-  | { role: 'user'; id: string; createdAt?:number; author?:PrincipalRef; sourceView?:import('./message-source').MessageSourceView; outbound?:OutboundReceipt; text: string; images?:string[];files?:MessageAttachment[];reply?:MessageReply }
-  | { role: 'assistant'; id: string; createdAt?:number; blocks: Block[] }
+  | { role: 'user'; id: string; directSequence?:number; createdAt?:number; author?:PrincipalRef; sourceView?:import('./message-source').MessageSourceView; context?:import('./message-source').NativeInputContext; outbound?:OutboundReceipt;delivery?:{state:string;error?:string}; text: string; images?:string[];files?:MessageAttachment[];reply?:MessageReply }
+  | { role: 'assistant'; id: string; directSequence?:number; author?:PrincipalRef; createdAt?:number; blocks: Block[];images?:string[];files?:MessageAttachment[];reply?:MessageReply }
   | { role: 'notice'; id: string; createdAt?:number; text: string; tone: 'info' | 'error' }
 
 export type ActivityPreview={unread?:boolean;replyId?:string;kind:'speech'|'thinking'|'tool';text:string;detail?:string;tool?:string;running?:boolean}
 
 /** A live session: everything the GUI needs to render one conversation. */
+export type NativeGoal={condition:string;iterations:number;set_at:number;tokens_at_start:number;last_reason?:string}
 export type Session = {
+  goal?:NativeGoal|null
   acknowledging?:boolean
   lastReply?:EmployeeReply
   initialization?: EmployeeInitialization
@@ -266,6 +272,7 @@ export type Approval = {schema?:Record<string,any>;allowNestedForm?:boolean;url?
 
 /** Metadata pushed when a session finishes starting up. */
 export type SessionMeta = {
+  goal?:NativeGoal|null
   sessionId: string
   engine: Engine
   commands: SlashCommand[]

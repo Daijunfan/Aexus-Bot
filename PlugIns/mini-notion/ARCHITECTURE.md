@@ -2,6 +2,11 @@
 
 目标：GUI 与 CLI/API 共用本地操作内核和数据，不复制两套业务逻辑。
 
+1.24 的性能改动继续沿用这些边界，没有新增服务、状态管理框架或持久化副本。页面索引按不可变页面数组复用，公式仅缓存解析树；缓存都可丢弃并从数据重建。侧栏窗口化封装在 `SidebarList`，表格的变高行窗口化封装在 `WindowedTableBody`，两者只控制挂载，查询和业务操作继续使用完整数据。独立 PDF 渲染环境关闭表格窗口化。
+
+条件颜色复用数据库筛选内核，配置属于各自视图；UI 的颜色样式与纯规则计算分开。自定义表情目录属于现有 workspace settings，图片复用附件库；桌面与导入导出共用 `CustomEmojiSpec`，每个行内节点携带必要的名称与图片引用，删除目录项不会破坏已有正文。
+
+
 1.11 的 Agent 接入位于 `src/backend/agent/`：`codex.ts` 使用官方 App Server，`claude.ts` 使用官方 Agent SDK，`runtime.ts` 管理会话、流式事件、交互请求与记录。`environment.ts` 为每个 Workspace 提供物理写入沙箱和固定身份的本地 API gateway；请求身份由连接注入，不能通过清除 token 绕过。主服务的无范围 socket 不向 Agent 进程开放。
 
 引擎的配置、临时文件和本机会话存放在空间内的 `.mininotion-runtime/`。原有插件通过 APFS copy-on-write 副本提供给空间，避免修改全局安装。该私有目录不出现在文件面板或普通文件备份中。`space.sync` 将其他物理文件发现到页面文件记录。Claude 默认使用 SDK 配套二进制；`claudeControl.ts` 透传 SDK 流并复用公开控制请求协议，补充 Query 未包装的原生方法。队列与页面/块引用由服务验证和持久化，UI 与 CLI 使用同一分发器。

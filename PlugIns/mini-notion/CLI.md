@@ -45,8 +45,9 @@ mininotion --workspace /absolute/folder database create --title 日程 --view ca
 原有的 `folder.*` 仍用于原生空间中的文件夹树，与此处的 `fs.*` 不冲突。
 
 宿主通过统一 manifest 和 JSON-RPC 接入同一个后端，不导入独立 App 的个人数据。
-插件模式拒绝 `agent.*`、全库替换/恢复和 PDF 导出，Agent 由宿主提供。
-备份请复制整个 Workspace，文档可导出为 Markdown/HTML/JSON/CSV。
+插件模式拒绝 `agent.*` 和全库替换/恢复，Agent 由宿主提供。
+备份请复制整个 Workspace，文档可导出为 Markdown/HTML/JSON/CSV/PDF。
+PDF 使用插件自带的隐藏渲染进程，不依赖独立 Mini Notion 应用。
 `npm run build:plugin -- --out PATH` 生成包含标准 Markdown 与 schema 的独立软件包。
 普通原生数据模式继续支持既有桌面功能。
 

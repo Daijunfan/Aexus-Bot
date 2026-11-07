@@ -21,8 +21,11 @@ test('smart boards support union/intersection, grouping, pagination, materializa
   assert.equal((await q({filter:{all:[{colors:['red']},{not:{tags:['x']}}]}})).cards[0].title,'C');
   const page=await q({filter:{any:[{colors:['red']},{tags:['x']}]},groupBy:['color','tag'],sort:'title',limit:2});assert.equal(page.total,3);assert.equal(page.nextOffset,2);assert(page.groups.length===2);
   assert.equal((await q({sort:'title',offset:2,limit:2})).cards[0].title,'C');
-  s=await f.change('study.board.save',{title:'Red cards',filter:{colors:['red']},groupBy:['color']});const board=s.boards[0];
-  s=await f.change('study.board.materialize',{boardId:board.id});const refs=s.cards.filter(c=>c.reference);assert.equal(refs.length,2);assert(refs.every(c=>c.reference.setId===s.id));
+  s=await f.change('study.board.save',{title:'Red cards',filter:{colors:['red']},groupBy:['color'],sort:'title',direction:'desc'});const board=s.boards[0];
+  assert.equal(board.direction,'desc');
+  assert.deepEqual((await q({boardId:board.id})).cards.map(c=>c.title),['C','A']);
+  assert.deepEqual((await q({boardId:board.id,direction:'asc'})).cards.map(c=>c.title),['A','C']);
+  s=await f.change('study.board.materialize',{boardId:board.id});const refs=s.cards.filter(c=>c.reference);assert.equal(refs.length,2);assert(refs.every(c=>c.reference.setId===s.id));assert.deepEqual(refs.map(c=>c.title),['C','A']);
   s=await f.change('study.board.remove',{boardId:board.id});assert.equal(s.boards.length,0);s=await f.change('study.undo');assert.equal(s.boards[0].id,board.id);
   await f.error('study.board.query',{setId:s.id,filter:{unknown:true}},'INVALID_PARAMS');
 });

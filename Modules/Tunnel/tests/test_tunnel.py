@@ -47,6 +47,20 @@ class Client:
 
 
 class RoutingTests(unittest.TestCase):
+    def test_bridge_imports_do_not_write_into_installed_code(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for source in commands.ROOT.glob('*.py'):
+                shutil.copy2(source, root / source.name)
+            env = dict(os.environ)
+            env.pop('PYTHONDONTWRITEBYTECODE', None)
+            result = subprocess.run([sys.executable, str(root/'bridge.py'), 'unknown'],
+                                    input=json.dumps({'target': {'host': 'invalid', 'directory': '/tmp', 'os': 'linux'}}),
+                                    capture_output=True, text=True, env=env)
+            self.assertIn('Unknown host operation', result.stderr)
+            self.assertFalse((root/'__pycache__').exists())
+
     def test_linux_distribution_identifier_for_team_icon(self):
         self.assertEqual(remote.linux_distribution('ID=kali\nPRETTY_NAME="Kali GNU/Linux Rolling"\n'),
                          {'distribution': 'kali', 'distributionName': 'Kali GNU/Linux Rolling'})

@@ -1,6 +1,6 @@
 {
   "name": "mini-notion",
-  "version": "1.23.0",
+  "version": "1.26.47",
   "description": "A thoughtful, local-first workspace for macOS",
   "private": true,
   "type": "module",
@@ -29,7 +29,9 @@
     "test:editing-ui": "node scripts/test-editing-ui.mjs",
     "test:workspace": "node scripts/backend.mjs && node --test tests/folder.test.cjs tests/workspace-layout.test.cjs",
     "test:workspace-ui": "node scripts/test-workspace-ui.mjs",
-    "test:contracts": "node scripts/backend.mjs && node scripts/test-contracts.mjs"
+    "test:contracts": "node scripts/backend.mjs && node scripts/test-contracts.mjs",
+    "test:media": "node scripts/test.mjs tests/coalesced-writer.test.ts tests/image-assets.test.ts tests/presentation.test.ts",
+    "test:ux": "npm run build && playwright test tests/selection-database-ux.e2e.ts tests/table-columns.e2e.ts tests/view-operations.e2e.ts"
   },
   "dependencies": {
     "@blocknote/server-util": "^0.54.2",
@@ -98,6 +100,9 @@
         "zip"
       ],
       "identity": "-",
+      "extendInfo": {
+        "LSUIElement": true
+      },
       "darkModeSupport": true,
       "hardenedRuntime": false
     },

@@ -268,6 +268,126 @@
       "integrity": "sha512-m8ArJUtVcQMSe1lLE/Ei7vX/JV7O39sWmWBsXV2NOU70F0qCp8GubA24pT3LnwTmM6LL2xV80/h6sQg85n69ew==",
       "executable": "dist/bundle/cli.js",
       "runtime": "node"
+    },
+    {
+      "engine": "opencode",
+      "platform": "darwin",
+      "arch": "arm64",
+      "package": "opencode-darwin-arm64",
+      "version": "1.19.0",
+      "url": "https://registry.npmjs.org/opencode-darwin-arm64/-/opencode-darwin-arm64-1.19.0.tgz",
+      "integrity": "sha512-Tu13SSLE29V0sM2nKxJXA/IZzTxBf+ctEBrtyDCkhbpAyJIq75YduSbDhfQxUPOMnFEZjU1QxDt8gFieLRnSEg==",
+      "executable": "bin/opencode"
+    },
+    {
+      "engine": "kilo",
+      "platform": "darwin",
+      "arch": "arm64",
+      "package": "@kilocode/cli-darwin-arm64",
+      "version": "7.8.18",
+      "url": "https://registry.npmjs.org/@kilocode/cli-darwin-arm64/-/cli-darwin-arm64-7.8.18.tgz",
+      "integrity": "sha512-OWBw6wkt1ceTNbw0u5CwQjVKz+j3CGCa7VYQHtI3GoRTAcF0yCHC2RWvNNkVcif6WFsdXfvUfClbFMQKnHsjAw==",
+      "executable": "bin/kilo"
+    },
+    {
+      "engine": "opencode",
+      "platform": "darwin",
+      "arch": "x64",
+      "package": "opencode-darwin-x64",
+      "version": "1.19.0",
+      "url": "https://registry.npmjs.org/opencode-darwin-x64/-/opencode-darwin-x64-1.19.0.tgz",
+      "integrity": "sha512-w9c6gz+27M+WfflspaFC8NIldkz74Q0nbD4Go6+U3RNg3CLIvuCrVkI6hubYAyHrLONBm4hXl8pDOJ0DwdDQlQ==",
+      "executable": "bin/opencode"
+    },
+    {
+      "engine": "kilo",
+      "platform": "darwin",
+      "arch": "x64",
+      "package": "@kilocode/cli-darwin-x64",
+      "version": "7.8.18",
+      "url": "https://registry.npmjs.org/@kilocode/cli-darwin-x64/-/cli-darwin-x64-7.8.18.tgz",
+      "integrity": "sha512-F1+/1Y4XugyPVTN/pRxmjVTAnb5lk/EsUVpvUg9HuWG1/2CNEPJOiXTaDcEohvF1rhVULT3dJN8W7MihGNs4ZA==",
+      "executable": "bin/kilo"
+    },
+    {
+      "engine": "opencode",
+      "platform": "linux",
+      "arch": "x64",
+      "package": "opencode-linux-x64",
+      "version": "1.19.0",
+      "url": "https://registry.npmjs.org/opencode-linux-x64/-/opencode-linux-x64-1.19.0.tgz",
+      "integrity": "sha512-+UFxn2AbOqKEISBDqrWk5nHsZrPWBMVZ4H9R7tbnrt1+nYvEGejpg9tyt+QMrpBPYZP7F+D3Ym0vZbZcF7gSSw==",
+      "executable": "bin/opencode"
+    },
+    {
+      "engine": "kilo",
+      "platform": "linux",
+      "arch": "x64",
+      "package": "@kilocode/cli-linux-x64",
+      "version": "7.8.18",
+      "url": "https://registry.npmjs.org/@kilocode/cli-linux-x64/-/cli-linux-x64-7.8.18.tgz",
+      "integrity": "sha512-/8/UiZJP+nLJLYVAcZAOxCXBNEYYdhPlAFLbJZocoD94ti2VG9wIn0JqwvhS++xfLK/zEgJd2WIMZ8gMX0z23Q==",
+      "executable": "bin/kilo"
+    },
+    {
+      "engine": "opencode",
+      "platform": "linux",
+      "arch": "arm64",
+      "package": "opencode-linux-arm64",
+      "version": "1.19.0",
+      "url": "https://registry.npmjs.org/opencode-linux-arm64/-/opencode-linux-arm64-1.19.0.tgz",
+      "integrity": "sha512-XD1qcVN4jEiaYHqtx40p8cEPJxBc1mcB99ksgQ81akZsGGwcNFyG6GH857jVEplbGgdzWiWxDCrSii56sHjmRQ==",
+      "executable": "bin/opencode"
+    },
+    {
+      "engine": "kilo",
+      "platform": "linux",
+      "arch": "arm64",
+      "package": "@kilocode/cli-linux-arm64",
+      "version": "7.8.18",
+      "url": "https://registry.npmjs.org/@kilocode/cli-linux-arm64/-/cli-linux-arm64-7.8.18.tgz",
+      "integrity": "sha512-cxzD2nFA/F9hINYncUjmrgJpts/DMc7I6JJyffGKvhCLoC+djJvGPENC263mBbz6RcTWonf8ADD1aSAYeukisg==",
+      "executable": "bin/kilo"
+    },
+    {
+      "engine": "opencode",
+      "platform": "win32",
+      "arch": "x64",
+      "package": "opencode-windows-x64",
+      "version": "1.19.0",
+      "url": "https://registry.npmjs.org/opencode-windows-x64/-/opencode-windows-x64-1.19.0.tgz",
+      "integrity": "sha512-FsCVPchl5kjXg/UWGOtc2HuD5Fz+o6LtszUVdlVGmfVA+j/o0fSxjcYBHmIAU9/7P3KezAoQ2kL8YNn40O1DwQ==",
+      "executable": "bin/opencode.exe"
+    },
+    {
+      "engine": "kilo",
+      "platform": "win32",
+      "arch": "x64",
+      "package": "@kilocode/cli-windows-x64",
+      "version": "7.8.18",
+      "url": "https://registry.npmjs.org/@kilocode/cli-windows-x64/-/cli-windows-x64-7.8.18.tgz",
+      "integrity": "sha512-9xfrbZ1ep4opUxJPrwjNgfdpXuUu3vSI7EbLpaCxwZCxXRQ7PTMG56nD46o53a1xL1bKzQWx6qQLgaByquDGcQ==",
+      "executable": "bin/kilo.exe"
+    },
+    {
+      "engine": "opencode",
+      "platform": "win32",
+      "arch": "arm64",
+      "package": "opencode-windows-arm64",
+      "version": "1.19.0",
+      "url": "https://registry.npmjs.org/opencode-windows-arm64/-/opencode-windows-arm64-1.19.0.tgz",
+      "integrity": "sha512-2UKfn/9omiVFUbECo5q4tDKxVFsJVojHnOs3aCeGMvSt52PPt4zGK9tZlegAlEUYzmtc/BIaAX86QSEfSGP2iA==",
+      "executable": "bin/opencode.exe"
+    },
+    {
+      "engine": "kilo",
+      "platform": "win32",
+      "arch": "arm64",
+      "package": "@kilocode/cli-windows-arm64",
+      "version": "7.8.18",
+      "url": "https://registry.npmjs.org/@kilocode/cli-windows-arm64/-/cli-windows-arm64-7.8.18.tgz",
+      "integrity": "sha512-R2w/Htze8G8X1OTUqPrOc0SznLiLlpvW7eZ1LAiIUNtv4KJJXva5V41H91EXCBvYglhIFQ6vhFdCD2pCyNpBQg==",
+      "executable": "bin/kilo.exe"
     }
   ],
   "claudeSdk": {

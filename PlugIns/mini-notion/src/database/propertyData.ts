@@ -101,12 +101,13 @@ const recovery = new Set([
   'person.update',
 ]);
 export function finalizeProperties(before: Workspace | null, after: Workspace, method: string): Workspace {
-  const preserve = recovery.has(method),
-    previous = new Map(before?.pages.map((page) => [page.id, page]));
+  const preserve = recovery.has(method);
+  if (!preserve && before?.pages === after.pages && before.uniqueIds === after.uniqueIds) return after;
+  const previous = new Map(before?.pages.map((page) => [page.id, page]));
   const actor = localPerson(after),
     now = Date.now();
   const owners = new Map(after.pages.filter((page) => page.database).map((page) => [page.id, page]));
-  const oldOwners = new Map(before?.pages.filter(page => page.database).map(page => [page.id, page]));
+  const oldOwners = new Map(before?.pages.filter((page) => page.database).map((page) => [page.id, page]));
   let pages = after.pages.map((page) => {
     const old = previous.get(page.id);
     if (old === page) return page;
@@ -180,6 +181,7 @@ export function finalizeProperties(before: Workspace | null, after: Workspace, m
     return next;
   });
   if (pages.every((page, index) => page === after.pages[index])) pages = after.pages;
-  const uniqueIds = JSON.stringify(ledger) === JSON.stringify(after.uniqueIds || {}) ? after.uniqueIds : ledger;
+  const uniqueIds =
+    JSON.stringify(ledger) === JSON.stringify(after.uniqueIds || {}) ? after.uniqueIds : ledger;
   return { ...after, pages, ...(uniqueIds ? { uniqueIds } : {}) };
 }

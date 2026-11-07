@@ -103,3 +103,16 @@
 .mm-drop-status[data-kind=child]{border-color:#278B7670;color:var(--text)}
 .mm-drop-status[data-kind=invalid]{border-color:var(--danger);color:var(--danger)}
 #study-board #study-map-world>.mindmap-topic.mm-dragging,#study-board .mindmap-topic.mm-dragging *{pointer-events:none!important;-webkit-user-drag:none}
+
+
+/* UX audit: screen-sized pointer targets while the mindmap canvas zooms. */
+.mindmap-topic:is(.selected,:hover,:focus-within) :is(.study-card-more,.mm-topic-details,.study-card-collapse,.mm-resize-handle){scale:var(--mm-control-scale,1);transform-origin:center;transition:opacity 120ms ease-out}
+.mindmap-topic:is(.selected,:hover,:focus-within) .study-card-more{right:0;top:calc(-28px * var(--mm-control-scale,1));width:28px;height:28px}
+.mindmap-topic:is(.selected,:hover,:focus-within) .mm-topic-details{right:calc(32px * var(--mm-control-scale,1));top:calc(-28px * var(--mm-control-scale,1));width:28px;height:28px}
+.mindmap-topic:is(.selected,:hover,:focus-within) .study-card-collapse{right:calc(-27px * var(--mm-control-scale,1));width:25px;height:25px}
+.mindmap-topic[data-branch-side=left]:is(.selected,:hover,:focus-within) .study-card-collapse{left:calc(-27px * var(--mm-control-scale,1));right:auto}
+.mindmap-topic[data-branch-side=top]:is(.selected,:hover,:focus-within) .study-card-collapse{left:50%;right:auto;top:calc(-29px * var(--mm-control-scale,1))}
+.mindmap-topic[data-branch-side=bottom]:is(.selected,:hover,:focus-within) .study-card-collapse{left:50%;right:auto;bottom:calc(-29px * var(--mm-control-scale,1));top:auto}
+.mindmap-topic:is(.selected,:hover,:focus-within) .mm-resize-handle{right:calc(-8px * var(--mm-control-scale,1));top:calc(50% - 15px);width:18px;height:30px;min-height:30px!important;border:0;background:transparent}
+.mindmap-topic .mm-resize-handle::after{content:'';position:absolute;top:5px;bottom:5px;left:6px;width:5px;border-radius:5px;background:var(--surface);border:1px solid var(--mm-accent)}
+.mindmap-topic :is(.study-card-more,.mm-topic-details,.study-card-collapse,.mm-resize-handle):focus-visible{outline:2px solid var(--mm-accent);outline-offset:3px}

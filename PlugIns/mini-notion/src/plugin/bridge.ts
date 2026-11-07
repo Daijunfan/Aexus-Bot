@@ -64,7 +64,7 @@ export function installPluginBridge() {
   const download=(href:string,name:string)=>{const a=document.createElement('a');a.href=href;a.download=name;a.click()};
   window.native={
     rendererReady:async()=>{await call('ui.register');window.parent.postMessage({type:'agents-plugin:ready',token},'*')},
-    folderMode:true,workspaceURL,api,
+    folderMode:true,hostAssistant:true,workspaceURL,api,
     onState:fn=>on('state',fn),onUI:fn=>on('ui',fn),onAgent:fn=>on('agent',fn),onCommand:fn=>on('command',fn),onFlush:fn=>on('flush',fn),
     load:async()=>{const [state,info]=await Promise.all([refresh(),call('fs.info')]);return {workspace:state.workspace,dataPath:info.root,version:packageInfo.version}},
     save:async()=>{throw new Error('文件夹插件通过 workspace.patch 保存差异，不支持整体替换工作空间')},

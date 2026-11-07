@@ -1,0 +1,50 @@
+/* Shared media surfaces: stable geometry, native decoding, clear recovery. */
+.loading-surface {
+  width: min(760px, 100%);
+  padding: 72px 48px;
+  margin: 0 auto;
+  color: var(--muted);
+}
+.loading-surface.compact { padding: 20px 0; }
+.loading-surface-label { display: block; margin-bottom: 20px; font-size: 13px; }
+.loading-surface-line { height: 11px; margin: 13px 0; width: 100%; border-radius: 5px; background: var(--hover); }
+.loading-surface-line.short { width: 62%; }
+.card-preview, .gallery-preview, .cover-upload-preview { position: relative; }
+.cover-media { position: absolute; inset: 0; overflow: hidden; background: var(--sidebar); }
+.cover-media img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center var(--cover-position, 50%); }
+.cover-media.is-loading img { opacity: 0; }
+.cover-media img { transition: opacity 160ms ease; }
+.cover-media-error { display: flex; height: 100%; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 16px; color: var(--muted); font-size: 12px; }
+.cover-media-error button { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--menu); }
+.page-cover .cover-actions, .page-cover .cover-drag-hint { z-index: 1; }
+.page-cover.repositioning { touch-action: none; }
+.page-cover.repositioning:focus-visible { outline: 2px solid var(--blue); outline-offset: -3px; }
+.cover-upload-preview { width: 100%; height: 120px; border-radius: 8px; overflow: hidden; background-size: cover; }
+.image-upload-zone { width: 100%; border: 1px dashed var(--strong-line); border-radius: 9px; padding: 20px 12px; text-align: center; background: var(--sidebar); transition: background 120ms, border-color 120ms; }
+.image-upload-zone.dragging, .image-upload-zone:focus-within { border-color: var(--blue); background: var(--selected); }
+.image-upload-zone > p { margin: 12px 0 5px; line-height: 1.5; }
+.image-upload-zone > small { font-size: 11px; color: var(--subtle); }
+.image-upload-zone > button { display: inline-flex; align-items: center; gap: 7px; }
+.icon-picker-link { flex-wrap: wrap; }
+.icon-picker-link > input { flex: 1; min-width: 140px; }
+.image-upload-error { flex-basis: 100%; text-align: left; color: var(--content-red-text); font-size: 12px; margin: 0; }
+.home-show-more { margin-top: 12px; }
+.folder-csv-summary { color: var(--muted); font-size: 12px; }
+.folder-csv > .secondary-button { margin-top: 14px; }
+.file-image-viewer { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--sidebar); }
+.file-image-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; background: var(--menu); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.file-image-toolbar > div { display: flex; align-items: center; gap: 2px; }
+.file-image-toolbar button { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: var(--radius-control); }
+.file-image-toolbar button:hover { background: var(--hover); }
+.file-image-toolbar button:disabled { opacity: .4; }
+.file-image-canvas { overflow: auto; max-height: 70vh; min-height: 220px; padding: 20px; }
+.file-image-canvas.fit { display: flex; align-items: center; justify-content: center; }
+.file-image-canvas img { display: block; object-fit: contain; max-width: 100%; max-height: 65vh; height: auto; border-radius: 2px; box-shadow: 0 2px 12px #0000000f; }
+.file-image-error { display: flex; min-height: 200px; align-items: center; justify-content: center; flex-direction: column; color: var(--muted); }
+.file-image-error > button { display: flex; align-items: center; gap: 6px; }
+@media (prefers-reduced-motion: reduce) { .cover-media img, .image-upload-zone { transition: none; } }
+@media print {
+  .cover-media.is-loading img { opacity: 1; }
+  .cover-media-error, .file-image-toolbar { display: none; }
+  .file-image-canvas { max-height: none; overflow: visible; }
+}

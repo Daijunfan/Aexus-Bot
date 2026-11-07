@@ -27,7 +27,7 @@ export function topicDrop({cards,layout,rootIds,family,point,delta,alt=false,tol
   hit??=movingHit;
   if(!alt&&hit){
     if(roots.has(hit.id))return {kind:'none'};
-    if(family.has(hit.id))return {kind:'invalid',targetId:hit.id,message:'不能把主题移入自己的子主题'};
+    if(family.has(hit.id))return {kind:'child',targetId:hit.id,parentId:hit.id,side:'auto',rotateDescendant:true};
     return {kind:'child',targetId:hit.id,parentId:hit.id,side:'auto'};
   }
   const freelyPlaced=settings.flexibleFloating&&rootIds.every(id=>!byId.get(id)?.parentId);

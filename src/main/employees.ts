@@ -12,6 +12,7 @@ import {copyTranscript,deleteTranscript} from './transcripts'
 import {provisionEmployee,ensureEmployeeBootstrap} from './plugins/documents'
 import {teamSettings,employeeSettings,nativeSessionRefs,type StoredSession} from '../shared/types'
 import {checkCloudNative,cloudNativeTarget} from './cloud-native'
+import {engineDefinition} from '../shared/engines'
 
 type CloneArgs={title:string;cwd?:string;directoryMode?:'default'|'bind'}
 /** Clone configuration + the native conversation, not source files or session ownership. */
@@ -20,6 +21,7 @@ export async function cloneEmployee(id:string,args:CloneArgs){
   let cwd:string|undefined,created=false,native:Partial<StoredSession>={}
   const store=readStore(),stored=store.sessions.find(c=>c.id===id)!,source=executionEmployee(store,stored),config=employeeSettings(store,source)
   try{
+    if(!engineDefinition(source.engine).capabilities.clone)throw Error(`${engineDefinition(source.engine).label} does not support native session cloning`)
     if(source.kind==='cloud-native-worker'){
       cloudNativeTarget(source)
       if(source.engine==='claude')throw new Error('云端 Claude Code 会话克隆尚未提供可靠的原生复制接口；原会话保持不变')

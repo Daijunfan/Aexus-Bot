@@ -1,39 +1,39 @@
 ---
 schema: agents-company.cli/v1
 plugin: cloud-hosts
-version: '1.2.2'
+version: '2.0.0'
 workspace: required
 ---
 # Cloud Hosts CLI API
 
 ## Purpose
 
-统一管理 Avalon 的 SSH 云主机、账号、密码、私钥、系统类型、连接状态及目录浏览。Team 只引用已有主机 ID 和远端工作目录，不再复制账号配置。
+统一管理 Aexus Bot 的 SSH 云主机、账号、密码、私钥、系统类型、连接状态及目录浏览。Team 只引用已有主机 ID 和远端工作目录，不再复制账号配置。
 
-这是宿主服务型插件：独立 CLI、插件 UI 和员工 mailbox 都调用同一套宿主 `host.*` Core API。启动 Avalon 或无窗口运行 `agents serve`，不需要 Electron 窗口。插件不启动自己的 Agent，也不维护第二套 SSH 连接。
+这是宿主服务型插件：独立 CLI、插件 UI 和员工 mailbox 都调用同一套宿主 `host.*` Core API。启动 Aexus Bot 或无窗口运行 `agents serve`，不需要 Electron 窗口。插件不启动自己的 Agent，也不维护第二套 SSH 连接。
 
 ## Workspace
 
-Work Team 自动绑定插件目录下 `workspaces/<Team 名称>`；每位 Worker 的默认同名子目录自动获得本文档、schema 和 `.agents-company/bin/cloud-hosts` 启动器。启动器固定员工自己的工作目录；不要覆盖 `--workspace`。
+无需创建插件 Team。用户或 Secretary 打开插件后，在“授权人员”选择具体主机及员工的阅读、修改、新增权限。员工通过 `agents plugin resources --id cloud-hosts` 发现已授权主机，再使用 `agents plugin call cloud-hosts METHOD --params JSON` 或同一 `host.*` Core API。
 
-**此插件授予共享基础设施管理能力**：`hosts.*` 操作的是整个应用的主机库，不限于当前 Team。文件工作范围仍是员工目录，但该插件的 API 可以修改其他 Team 引用的云主机账号。只有需要管理主机的员工才应加入本插件 Team。密码不会自动加入提示词或文档，只有显式 `hosts.credentials` 返回密码。
+`hosts.*` 共用应用主机库，但普通员工只能操作获授权的主机；职位和目录不授予全库权限。阅读不返回密码；修改允许连接配置和远端操作，显式 credentials 只返回该主机密码，不导出 SSH 凭据文件。顶层新增允许注册新主机并取得新主机权限，不开放其他主机。删除主机仅用户或 Secretary 可执行。Secretary 无需逐项授权。
 
 ## Quick start
 
 ```sh
 # 启动宿主服务（已打开 App 时不需要再次启动）
 agents serve
-# 在员工 Workspace 中，启动器路径可代替 PATH 中的 cloud-hosts
-./.agents-company/bin/cloud-hosts hosts.list
+# 员工使用自身身份，结果按授权过滤
+agents plugin call cloud-hosts hosts.list
 # 创建说明文件（实际密码可添加 password 字段；使用后自行清理敏感输入文件）
 cat > host.json <<'JSON'
 {"name":"GPU Server","host":"user@server.example.com","os":"linux","defaultDirectory":"/home/user"}
 JSON
-./.agents-company/bin/cloud-hosts hosts.create --data @host.json
+agents plugin call cloud-hosts hosts.create --params @host.json
 # 以下 HOST_ID 替换为创建结果 result.id
-./.agents-company/bin/cloud-hosts hosts.check --data '{"id":"HOST_ID"}'
-./.agents-company/bin/cloud-hosts hosts.directories --data '{"id":"HOST_ID","path":"/home/user"}'
-./.agents-company/bin/cloud-hosts hosts.update --data '{"id":"HOST_ID","patch":{"name":"GPU 208"}}'
+agents plugin call cloud-hosts hosts.check --params '{"id":"HOST_ID"}'
+agents plugin call cloud-hosts hosts.directories --params '{"id":"HOST_ID","path":"/home/user"}'
+agents plugin call cloud-hosts hosts.update --params '{"id":"HOST_ID","patch":{"name":"GPU 208"}}'
 # 在宿主中绑定已有主机和已存在目录
 agents group add Research --mode cloud --host-id HOST_ID --remote-dir /home/user/develop
 ```
@@ -81,28 +81,7 @@ agents host terminal-close HOST_ID --terminal TERMINAL_ID
 
 插件方法依次为 `hosts.terminal-open/list/read/input/resize/close`。参数始终包含主机 `id`；已有会话另传 `terminal`。open 可传 directory/cols/rows；input 的 data 可含控制字符；read 返回 output/cursor/reset/running/exitCode，下一次读取使用返回 cursor。可传 waitMs:0–15000，在没有新输出时等待，输出或退出时立即返回；默认 0 保持兼容。长等待返回前再次检查调用权限。终端支持 cd、环境变量、全屏 TUI、Ctrl+C 与 Unicode。切换页面或关闭窗口保留 Shell；使用 terminal-close 明确结束，Core 退出清理全部终端。输出缓存最多保留 256,000 个 UTF-16 单元，分块维护；reset 表示较早输出已淘汰，UI 会提示并显示最近内容。截断不保留孤立的低代理项。输入 API 等待数据写入 PTY 驱动管道后返回；客户端断开会取消其等待中的读取，不终止 Shell。不能将另一台主机的 terminal ID 用于输入。
 
-`hosts.create/update` 可保存 `desktop`（传 null 清除）：
-
-```json
-{"desktop":{"protocol":"rdp","address":"127.0.0.1","port":3389,"viaHostId":"SSH_HOST_ID","username":"desktop-user","quality":"balanced"}}
-```
-
-- protocol 为 rdp 或 vnc；address/port 为桌面服务地址。viaHostId 可指向自己或一个登记的 SSH 跳板主机；省略则从 Core 直接连接。经 SSH 访问 VM 时填写从该 SSH 主机可达的 VM 地址。
-- 不自动安装桌面服务、开启防火墙或更改远端安全策略。Windows 可使用 RDP；Linux 需已有 xrdp/GNOME RDP 或 VNC；macOS 可使用兼容的 VNC 服务。
-- RDP 使用原生客户端独立窗口。macOS 需要 Windows App（com.microsoft.rdc.macos），Windows 使用 mstsc，Linux 通过已配置的 .rdp 文件关联打开。保留证书校验与 NLA，不把密码写入配置。剪贴板、磁盘和打印机重定向默认关闭。登录在原生客户端内完成。
-- VNC 在本机桌面 App 内嵌显示，支持键鼠、适配画面、全屏、Ctrl+Alt+Del、只读及 fast/balanced/sharp 画质。密码仅用于当前握手，不保存；暂不支持需人工公钥确认的 RA2 验证，遇到时明确拒绝。远程 Web 的 VNC 不可使用本机 loopback 网关，需在 Core 所在电脑打开桌面 App。RDP launch 也总是在 Core 电脑启动。
-- 推荐用 SSH 通道保护 VNC。转发和 WebSocket 网关仅监听 127.0.0.1，WebSocket 使用随机会话路径与 Origin 检查；路径是当前连接的访问凭据，不应分享。
-
-```sh
-agents host desktop-open HOST_ID --json
-agents host desktop-list HOST_ID --json
-agents host desktop-launch HOST_ID --session DESKTOP_ID --json
-agents host desktop-close HOST_ID --session DESKTOP_ID --json
-```
-
-对应插件 `hosts.desktop-open/list/launch/close`，参数 `id`，launch/close 另传 `session`。open 返回 transport ID、protocol、state、端点，以及 RDP profile 内容或 VNC wsUrl。建立期间 desktop-list 返回 state=connecting，可以用返回的 session ID 调用 desktop-close 取消；只有端点发布完成才返回 ready。state=ready 仅表示连接通道准备完成，不表示桌面已登录，亦不保证服务协议兼容。VNC 必须完成 RFB 握手才显示桌面已连接；RDP 认证由原生客户端报告。连接失败不自动重试用户命令。断开会清理转发、网关和临时 .rdp 文件；direct RDP 客户端需在客户端内退出。窗口切换保留桌面通道，可在桌面页或 CLI 明确断开；Core 停止统一清理。
-
-这些交互 API 使用原有主机管理权限，仅用户和 Governor；普通 Employee / Manager 的主机发现或凭据读取权限不等于交互控制权限。活动终端、桌面连接会阻止修改或删除其主机与桌面跳板，请先明确结束连接。
+这些交互 API 使用原有主机管理权限，仅用户和 Governor；普通 Employee / Manager 的主机发现或凭据读取权限不等于交互控制权限。活动终端会阻止修改或删除其主机，请先明确结束连接。
 
 ## Files
 
@@ -116,7 +95,7 @@ Team 在 sessions.json 中只保存 `hostId` 和 `directory`。旧版云端 Team
 
 ## Compatibility
 
-契约 agents-company.cli/v1、Node 22+。独立 CLI 依赖本机运行中的 Avalon Core 服务（`agents serve` 即可）；UI 不是依赖。数据由共享平台服务持有，插件代码可独立升级，边界仅为上述公开 API。Linux/macOS/Windows SSH 执行复用宿主 Tunnel，云端 Agent 的命令仍禁止在本机回退执行。
+契约 agents-company.cli/v1、Node 22+。独立 CLI 依赖本机运行中的 Aexus Bot Core 服务（`agents serve` 即可）；UI 不是依赖。数据由共享平台服务持有，插件代码可独立升级，边界仅为上述公开 API。Linux/macOS/Windows SSH 执行复用宿主 Tunnel，云端 Agent 的命令仍禁止在本机回退执行。
 
 ### Employee identities
 

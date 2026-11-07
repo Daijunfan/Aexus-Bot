@@ -13,7 +13,7 @@ export class ChangeStore<T extends Entry> {
   private objects: string;
   private refs = new Map<string, string>();
   private saves = 0;
-  constructor(private directory: string) {
+  constructor(private directory: string, private validate?: (entries: T[]) => void) {
     this.index = path.join(directory, 'changes-index.json');
     this.objects = path.join(directory, 'cache', 'changes');
   }
@@ -22,12 +22,13 @@ export class ChangeStore<T extends Entry> {
       const legacy = path.join(this.directory, 'changes.json');
       const entries = fs.existsSync(legacy) ? JSON.parse(fs.readFileSync(legacy, 'utf8')) : [];
       if (!Array.isArray(entries)) throw new Error('操作历史格式无效');
+      this.validate?.(entries);
       if (entries.length) this.save(entries);
       return entries;
     }
     const value = JSON.parse(fs.readFileSync(this.index, 'utf8')) as Index;
     if (value.format !== 'mininotion.history/v2' || !Array.isArray(value.entries)) throw new Error('操作历史索引无效');
-    return value.entries.map(ref => {
+    const entries = value.entries.map(ref => {
       if (!/^[a-f0-9]{64}$/.test(ref.hash)) throw new Error('操作历史对象标识无效');
       const body = fs.readFileSync(path.join(this.objects, ref.hash + '.json'), 'utf8');
       if (hashOf(body) !== ref.hash) throw new Error('操作历史校验失败');
@@ -35,6 +36,8 @@ export class ChangeStore<T extends Entry> {
       if (entry.id !== ref.id) throw new Error('操作历史身份不一致');
       this.refs.set(entry.id, ref.hash); return entry;
     });
+    this.validate?.(entries);
+    return entries;
   }
   save(entries: T[], changed?: Set<string>) {
     fs.mkdirSync(this.objects, { recursive: true });

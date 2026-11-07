@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');const {create,expect}=require('./ui-session.cjs');
 (async()=>{const f=await create('topic-overview-drag');let error;try{
- const {page,api}=f,out=process.env.MR_TOPIC_COVER_OUTPUT||(await fs.readFile(path.resolve(__dirname,'../artifacts/topic-cover-current.txt'),'utf8')).trim();
+ const {page,api}=f,out=process.env.MR_TOPIC_COVER_OUTPUT||f.output;
  let s=await api('study.create',{title:'总览直接调整层级'}),lines=['中央主题','  完整资料分支'];for(let i=0;i<350;i++)lines.push('    来源 '+i);lines.push('  新的父分支');for(let i=0;i<350;i++)lines.push('    证据 '+i);
  s=await api('study.mindmap.outline.import',{setId:s.id,expectedRevision:s.revision,text:lines.join('\n')});await api('study.open',{setId:s.id});await page.goto(f.server.url);await page.locator('body[data-ready=true]').waitFor();await page.click('#study-zoom-fit');
  const view=page.locator('#study-map-viewport');await expect(view).toHaveAttribute('data-map-detail','overview');const source=s.cards.find(c=>c.title==='完整资料分支'),target=s.cards.find(c=>c.title==='新的父分支'),g=await api('study.map.geometry',{setId:s.id}),original=structuredClone(s.cards),revision=s.revision;

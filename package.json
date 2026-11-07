@@ -126,7 +126,9 @@
     "test:cloud-robustness": "node test/terminal-output-test.mjs && node test/terminal-wait-cancel-test.mjs && node test/cloud-terminal-stress-test.mjs && node test/cloud-connection-lifecycle-test.mjs",
     "test:plan-scenarios": "node test/plan-polish-core-test.mjs && node test/plan-polish-ui-test.mjs && node test/plan-notion-delivery-test.mjs",
     "test:plan-parity": "node test/plan-parity-core-test.mjs && node test/plan-parity-ui-test.mjs",
-    "test:slimming": "node scripts/sync-manager-docs.mjs --check && node test/cli-contract-test.mjs && node test/architecture-boundaries-test.mjs && node test/slimming-domains-test.mjs && node test/message-index-test.mjs && node test/message-index-worker-test.mjs && node test/slimming-read-model-test.mjs && node test/api-documents-test.mjs && node test/slimming-performance-test.mjs"
+    "test:slimming": "node scripts/sync-manager-docs.mjs --check && node test/cli-contract-test.mjs && node test/architecture-boundaries-test.mjs && node test/slimming-domains-test.mjs && node test/message-index-test.mjs && node test/message-index-worker-test.mjs && node test/slimming-read-model-test.mjs && node test/api-documents-test.mjs && node test/slimming-performance-test.mjs",
+    "test:native-workers": "node test/native-worker-core-test.mjs && node test/native-worker-ui-test.mjs",
+    "test:channel-feeds": "node test/channel-fetch-api-test.mjs && node test/channel-fetch-native-test.mjs && node test/platform-channel-ui-test.mjs"
   },
   "build": {
     "appId": "com.agentscompany.app",
@@ -159,6 +161,7 @@
       "SECURITY.md",
       "docs/DEPLOYMENT.md",
       "docs/CHANNELS.md",
+      "docs/CHANNEL_FILTERS.md",
       "engine-downloads.json",
       "PLAN.md",
       "docs/PLAN_SCENARIOS.md",
@@ -167,6 +170,9 @@
       "docs/SECRETARY_API_PARITY.md",
       "docs/CONVERSATION_CONTROLS.md",
       "docs/MESSAGE_COLLABORATION.md",
+      "docs/AVATARS.md",
+      "docs/BOT_WORKERS.md",
+      "docs/EVENT_TASKS.md",
       "docs/FILES_WORKBENCH.md",
       "docs/releases/0.57.0.zh-CN.md",
       "docs/releases/0.58.0.zh-CN.md"
@@ -263,6 +269,7 @@
     "remark-gfm": "^4.0.1",
     "remark-parse": "11.0.0",
     "remark-rehype": "11.1.2",
+    "smol-toml": "1.9.1",
     "tar": "7.5.22",
     "tiny-pinyin": "1.3.2",
     "unified": "11.0.5",

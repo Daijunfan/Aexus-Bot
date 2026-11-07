@@ -1,5 +1,5 @@
 'use strict';
-const assert=require('node:assert/strict'),path=require('node:path'),{expect}=require('../../../node_modules/@playwright/test');
+const assert=require('node:assert/strict'),path=require('node:path'),{expect}=require('./ui-session.cjs');
 exports.exercise=async({page,api,url,output,pass})=>{
 let set=await api('study.create',{title:'Zones on the shared mind map'}),get=async()=>set=await api('study.get',{setId:set.id}),change=async(method,p={})=>{await get();return set=await api(method,{setId:set.id,expectedRevision:set.revision,...p});};
   await change('study.note.create',{title:'First',x:80,y:120});const first=set.cards[0].id;await change('study.note.create',{title:'Child',parentId:first});await change('study.note.create',{title:'Second',x:540,y:140});const second=set.cards.at(-1).id;await change('study.mindmap.configure',{patch:{topicOverlap:true,motion:false}});

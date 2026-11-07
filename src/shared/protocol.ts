@@ -77,13 +77,9 @@ export type {ConnectorAnchor,ConnectorSetting} from './connector'
 // files:false omits file contents for internal SSH askpass. Other host management permissions are unchanged.
 
 // host.terminal-{open,list,read,input,resize,close}: id is the registered host; terminal is its PTY ID.
-// host.desktop-{open,list,launch,close}: id is the host; session is its desktop transport ID.
-// Both use host management authorization. DesktopProfile is persisted by host.create/update.
-export type {DesktopProfile} from './remote'
 
 // host.terminal-read waitMs: 0..15000 (default 0) waits for data or exit; cursor semantics are unchanged.
 
-// host.desktop-list states: connecting, ready, disconnected. desktop-close can cancel a connecting session.
 
-// Engine IDs: codex, claude, cline, pi. Cline/Pi use DeepSeek Flash with Thinking off by default.
+// Engine IDs: codex, claude, cline, pi, opencode, kilo. Cline/Pi use DeepSeek Flash with Thinking off by default.
 // Cline/Pi support Core-local Build and Tunnel cloud workspaces; native-cloud/plugin targets fail before execution.

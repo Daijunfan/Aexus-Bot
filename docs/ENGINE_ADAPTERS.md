@@ -60,11 +60,13 @@ The installer retrieves both the SDK controller and matching native executable f
 
 `cline-client.ts` and `pi-client.ts` own their documented subprocess protocols; their runtime modules normalize text/tool events through `session:agent` and use the existing Core lifecycle/approval/queue contracts. Task cooperation indicators therefore remain tied to actual delegated engine turns. `process-probe.ts` reuses those transports for isolated, explicit OK-only checks.
 
-Cline 3.0.65 uses `CLINE_PROVIDER=deepseek`, `CLINE_MODEL=deepseek-flash`, `CLINE_API_KEY` and `--auto-approve false`; Core handles ACP permission requests. Pi 0.87.1 uses its official RPC JSONL protocol, `--thinking off`, `DEEPSEEK_API_KEY`, isolated `PI_CODING_AGENT_DIR` and a small explicit tool-permission extension connected to Core approvals. Auto-discovered Pi extensions are disabled. Neither adapter delegates company authority to native subagents.
+Cline reads the active provider/model/key from its native `~/.cline/data/settings` (shared with the VS Code extension), passes `--auto-approve false`, and routes ACP permission requests through Core. Pi reads its native `~/.pi/agent` provider/model/auth and default thinking level, using the official RPC JSONL protocol. Native connection files are mirrored into each employee's private runtime without copying native sessions, instructions or permissions. Auto-discovered Pi extensions are disabled. Neither adapter delegates company authority to native subagents. Native directory environment overrides remain supported.
+
+`engine.providers` and Settings show every native provider, Claude model-router route, and saved CC Switch profile. Claude preserves the complete native model picker; native CLI/extension provider configuration is the default source for all engines. Saved profiles are distinct from the current selection, and keys are represented only by configured flags and fingerprints. The UI refreshes on focus and while visible. Explicit application overrides are labeled separately; `inheritNative:true` restores native sharing without deleting an older encrypted key. Changes apply to the next process/session and never interrupt active work.
 
 Supported scope is Core-local Build, Work/plugin directories, or a Cloud Team workspace through the existing MCP Tunnel, with `kind:worker`. Work uses the same assigned directory, authenticated plugin launcher and Core permissions. Cline/Pi cloud-native processes remain unavailable; the creation UI offers an explicit switch to Core-local execution with the same cloud workspace. Text input, Cline Flash images, resume and task lifecycle are supported; unsupported controls are hidden or reject explicitly. CLI discovery may create a disposable native session but performs no model request. Native session data lives beneath the employee's private `agent-access` profile.
 
-Actual request verification: DeepSeek Chat Completions documents `reasoning_effort: "none"` as Thinking off; Cline emits that value. Pi emits `thinking: {type: "disabled"}`. Do not infer Thinking off from absence of visible thought text.
+For the legacy explicit DeepSeek configuration with Thinking off, actual requests were verified: Cline emits `reasoning_effort: "none"`; Pi emits `thinking: {type: "disabled"}`. Native inherited providers retain their own reasoning settings. Do not infer Thinking off from absence of visible thought text.
 
 ### Cloud routing and Cline image compatibility
 
@@ -78,6 +80,11 @@ Creation-time `engine.capabilities` is read-only and available under the existin
 
 Focused verification: `node test/process-transport-test.mjs`, `node test/process-cloud-test.mjs`, and the existing process-engine/Core/UI tests. `test/process-engines-native-test.mjs` accepts optional `AGENTS_TEST_CLINE_BIN` and `AGENTS_TEST_PI_BIN`. It runs the installed executables against a deterministic loopback model and an SSH transport fixture, using temporary profiles and fake keys. It does not call paid models or real user hosts.
 
+`engine-native-config-test.mjs` checks full catalogs, separate credentials, saved profiles and source preservation. `engine-native-ui-test.mjs` checks the actual desktop settings and live refresh. With both native binary variables set, `engine-native-process-test.mjs` verifies installed Cline/Pi inheritance through real outgoing loopback requests, including Pi's native thinking level. All use isolated profiles and fake keys.
+
 ### Provider key ownership
 
 Native Cline/Pi processes receive only their own configured provider credentials. A missing saved key fails explicitly instead of borrowing ANTHROPIC/OPENAI/DEEPSEEK environment values. Claude uses its separate native/Core provider configuration. Core validates custom endpoints and model IDs as before; the compatibility relay pins the Cline Authorization header. Tests use distinct dummy keys and a loopback receiver, never actual paid requests.
+
+
+Native configuration is authoritative for all six engines. An installed native CLI takes precedence over a managed fallback; the managed SDK remains a transport controller, not a second provider configuration. App-only URL/key/model overrides and fixed DeepSeek model menus are retired. Cline/Pi refresh native connection snapshots at process startup while keeping employee histories and Core tool permissions separate. Model probes use the native default unless explicitly given a model.

@@ -50,7 +50,7 @@ const renderer = rendererFiles.map((f) => readFileSync(f, 'utf8')).join('\n')
 
 // ---- what the terminal exposes ----
 
-const server = ['server.ts','channels.ts','conversation-workspaces.ts',...readdirSync(join(ROOT,'src/main/commands')).filter(name=>name.endsWith('.ts')).map(name=>'commands/'+name)].map(file=>readFileSync(join(ROOT,'src','main',file),'utf8')).join('\n')
+const server = ['server.ts','channels.ts','conversation-workspaces.ts','bot-workers.ts','script-monitors.ts',...readdirSync(join(ROOT,'src/main/commands')).filter(name=>name.endsWith('.ts')).map(name=>'commands/'+name)].map(file=>readFileSync(join(ROOT,'src','main',file),'utf8')).join('\n')
 const cli = readFileSync(join(ROOT, 'bin', 'agents'), 'utf8')
 const protocol = readFileSync(join(ROOT, 'src', 'shared', 'api-registry.ts'), 'utf8')
 
@@ -59,7 +59,10 @@ const {MESSAGE_COLLABORATION_APIS}=await import('../src/shared/message-collabora
 if(!server.includes('return messageCollaborationRequest(req.cmd,a,fileEndpoint)'))throw Error('Message collaboration is not dispatched by Core')
 const {CONVERSATION_CONTROL_APIS}=await import('../src/shared/conversation-control-schema.ts')
 if(!server.includes('CONVERSATION_CONTROL_APIS.has(req.cmd)')||!server.includes('return conversationControlRequest(req.cmd,a)'))throw Error('Conversation controls are not dispatched by Core')
+const {CHANNEL_FETCH_APIS}=await import('../src/shared/channel-fetch.ts')
+if(!server.includes('CHANNEL_FETCH_APIS.has(command)')||!server.includes('return fetchChannelMessages(command,args)'))throw Error('Channel fetch APIs are not dispatched by Core')
 const serverCommands = new Set([
+  ...CHANNEL_FETCH_APIS,
   ...CONVERSATION_CONTROL_APIS,...MESSAGE_COLLABORATION_APIS,
   ...[...server.matchAll(/case '([a-z][a-z-]*\.[a-z][a-z-]*)'/g)].map((m) => m[1]),
   ...[...server.matchAll(/(?:req\.cmd|command)\s*===\s*'([a-z][a-z-]*\.[a-z][a-z-]*)'/g)].map((m) => m[1])

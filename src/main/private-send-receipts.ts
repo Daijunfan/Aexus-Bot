@@ -13,7 +13,7 @@ import {readStore} from './store'
 
 export type PrivateSendReceipt={sent:true;status:'accepted'|'queued';employeeId:string;clientMessageId:string;messageId?:string;queueId?:string;id?:string}
 type Receipt={principal:PrincipalRef;clientMessageId:string;fingerprint:string;sourceView?:MessageSourceView|null;phase:'preparing'|'rejected'|'queued'|'dispatching'|'accepted'|'interrupted';boot:string;createdAt:number;messageId?:string;queueId?:string;error?:string}
-export type PrivateSendAttempt={readonly queueId?:string;queued:(id:string)=>void;dispatching:(id:string)=>void;accepted:(id:string)=>void;failed:(error:unknown)=>void;interrupted:(reason:string)=>void}
+export type PrivateSendAttempt={readonly directMessageId?:string;readonly queueId?:string;queued:(id:string)=>void;dispatching:(id:string)=>void;accepted:(id:string)=>void;failed:(error:unknown)=>void;interrupted:(reason:string)=>void}
 type QueueCheck=(employeeId:string,queueId:string)=>boolean
 const boot=randomUUID(),active=new SingleFlight<PrivateSendReceipt>()
 const failure=(message:string,code:'PRIVATE_SEND_UNCERTAIN'|'PRIVATE_SEND_INTERRUPTED')=>Object.assign(Error(message),{code})
@@ -39,16 +39,16 @@ export function lookupPrivateSendReceipt(employeeId:string,clientMessageId:strin
  if(!record||record.phase==='preparing'||record.phase==='rejected')return undefined
  return confirmation(employeeId,record,queued)
 }
-function fingerprint(employeeId:string,args:Record<string,any>){
+function fingerprint(employeeId:string,args:Record<string,any>,literal=false){
  const text=args.text??'',images=args.images===undefined?[]:args.images,files=attachmentPaths(args.files)
  if(typeof text!=='string'||!Array.isArray(images)||images.some(value=>typeof value!=='string')||images.length+files.length>16)throw Error('Invalid private message text or attachments')
- if(text.trimStart().startsWith('/'))throw Error('clientMessageId applies to regular private messages, not slash commands')
+ if(!literal&&text.trimStart().startsWith('/'))throw Error('clientMessageId applies to regular private messages, not slash commands')
  const source=args.replyConversation===`employee:${employeeId}`?undefined:args.replyConversation,quote=args.replyQuote===undefined?undefined:quoteShape(args.replyQuote)
  return createHash('sha256').update(JSON.stringify([text,images,files,args.viewId??null,args.replyTo??null,quote?[quote.text,quote.offset]:null,source??null,source?!!args.replyTextOnly:false])).digest('hex')
 }
 /** Persist before any dispatch; an unfinished dispatch is never automatically repeated. */
-export async function withPrivateSendReceipt(employeeId:string,args:Record<string,any>,work:(attempt:PrivateSendAttempt)=>Promise<unknown>,queued:QueueCheck):Promise<PrivateSendReceipt>{
- readable(employeeId);const identity=identify(employeeId,args.clientMessageId),hash=fingerprint(employeeId,args),sourceView=messageSourceView(args.sourceView)??null,previous=read(employeeId)[identity.key]
+export async function withPrivateSendReceipt(employeeId:string,args:Record<string,any>,work:(attempt:PrivateSendAttempt)=>Promise<unknown>,queued:QueueCheck,literal=false):Promise<PrivateSendReceipt>{
+ readable(employeeId);const identity=identify(employeeId,args.clientMessageId),hash=fingerprint(employeeId,args,literal),sourceView=messageSourceView(args.sourceView)??null,previous=read(employeeId)[identity.key]
  // Legacy records have no source field; confirming them never fabricates historical origin.
  if(previous&&(previous.fingerprint!==hash||Object.hasOwn(previous,'sourceView')&&previous.sourceView!==sourceView))throw Error('Client message ID already used with different private message content or scope')
  const pending=active.get(identity.activeKey)

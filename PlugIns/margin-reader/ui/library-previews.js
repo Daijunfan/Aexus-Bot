@@ -3,23 +3,27 @@ import { api } from './transport.js';
 export class LibraryPreviews {
   constructor() { this.cache = new Map(); this.queue = []; this.running = 0; this.generation = 0; this.bytes = 0; }
   attach(entries, options = {}) {
-    const generation = ++this.generation;
-    this.observer?.disconnect(); this.queue = [];
-    const byPath = new Map(entries.map(entry => [entry.path, entry]));
-    const root=options.root||document.getElementById('files');
-    this.observer = new IntersectionObserver(items => {
-      for (const item of items) if (item.isIntersecting) {
-        this.observer.unobserve(item.target);
-        const entry = byPath.get(item.target.dataset.path);
-        if (entry) { this.queue.push({ card: item.target, entry, generation }); this.drain(); }
-      }
-    }, { root, rootMargin: '160px' });
-    for (const card of root.querySelectorAll(options.selector||'.file-card')) {
-      const entry = byPath.get(card.dataset.path);
-      if (entry?.kind !== 'file' || !/^(pdf|html?|xhtml|md|markdown|txt|png|jpe?g|webp|gif|avif|bmp)$/.test(entry.format)) continue;
-      const key = `${entry.path}:${entry.version}`, cached = this.cache.get(key);
-      if (cached) this.paint(card, cached);
-      else this.observer.observe(card);
+    const root=options.root||document.getElementById('files'),selector=options.selector||'.file-card';
+    const incremental=Boolean(options.incremental&&this.observer&&this.root===root&&this.selector===selector);
+    if(!incremental){
+      this.generation++;this.observer?.disconnect();this.queue=[];
+      this.root=root;this.selector=selector;this.entries=new Map();
+      this.observer = new IntersectionObserver(items => {
+        for(const item of items)if(item.isIntersecting){
+          this.observer.unobserve(item.target);
+          const entry=this.entries.get(item.target.dataset.path);
+          if(entry){this.queue.push({card:item.target,entry,generation:this.generation});this.drain();}
+        }
+      },{root,rootMargin:'160px'});
+    }
+    for(const entry of entries)this.entries.set(entry.path,entry);
+    // Only new cards require observing. In-flight previews persist across scrolls.
+    for(const card of root.querySelectorAll(selector)){
+      if(incremental&&card.dataset.preview!=='pending')continue;
+      const entry=this.entries.get(card.dataset.path);
+      if(entry?.kind!=='file'||!/^(pdf|html?|xhtml|md|markdown|txt|epub|mobi|azw3?|kf8|docx?|odt|rtf|fb2|png|jpe?g|webp|gif|avif|bmp)$/.test(entry.format))continue;
+      const key=entry.path+':'+entry.version,cached=this.cache.get(key);
+      if(cached)this.paint(card,cached);else this.observer.observe(card);
     }
   }
   remember(key, result) {

@@ -1,0 +1,20 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),{spawnSync}=require('node:child_process');
+const {environment}=require('./release-pack.cjs');
+const {overall,legacyPreflight}=require('./release-status.cjs');
+const root=path.resolve(__dirname,'..'),output=path.join(root,'artifacts/cli-product-20261018/checks/run-'+new Date().toISOString().replace(/[:.]/g,'-'));fs.mkdirSync(output,{recursive:true});
+const temp=fs.mkdtempSync(path.join(os.tmpdir(),'marginreader-checks-')),stage=path.join(temp,'source'),home=path.join(temp,'home');fs.mkdirSync(stage);fs.mkdirSync(home);fs.writeFileSync(path.join(home,'empty.npmrc'),'');const env=environment(home);
+const report={platform:process.platform,arch:process.arch,node:process.version,startedAt:new Date().toISOString(),suites:[],blocked:[],notRun:['test:acceptance (Downloads scan)','test:pdf-modes (default-library fixture)','test:live (network scope)','large backup benchmarks (outside scope)']};
+try{
+ for(const name of ['cli.cjs','runtime.cjs','package.json','package-lock.json','schema.json','agents-company.plugin.json','API.md','README.md','LICENSE','THIRD_PARTY_NOTICES.md','AGENTS.md','LOCAL_PARITY.md','AGENT_ACCEPTANCE.md','lib','scripts','tests','docs','tui','terminal-visuals','ui']){const src=path.join(root,name);if(fs.existsSync(src))fs.cpSync(src,path.join(stage,name),{recursive:true,filter:s=>!path.relative(root,s).split(path.sep).some(p=>['vendor','node_modules','artifacts','workspaces','.margin-reader','.agents-company','credentials','.git'].includes(p))});}
+ fs.mkdirSync(path.join(stage,'artifacts'));for(const name of ['completion-current.txt','current-completion-path.txt','read-map-current.txt'])fs.writeFileSync(path.join(stage,'artifacts',name),output+'\n');
+ // Dev tests reuse installed read-only dependencies, never the parent project's modules.
+ fs.symlinkSync(path.join(root,'node_modules'),path.join(stage,'node_modules'),'dir');
+ for(const [suite,args]of [['check',['scripts/check.cjs']],['npm test',['test','--','--test-concurrency=4','--test-timeout=60000']]]){
+  const logfile=path.join(output,suite==='check'?'check.log':'npm-test.log'),fd=fs.openSync(logfile,'w'),started=Date.now(),r=spawnSync(suite==='npm test'?(process.platform==='win32'?'npm.cmd':'npm'):process.execPath,args,{cwd:stage,env,stdio:['ignore',fd,fd],timeout:600000});fs.closeSync(fd);const text=fs.readFileSync(logfile,'utf8');const counts={};for(const key of ['tests','pass','fail','cancelled','skipped','todo']){const match=text.match(new RegExp('(?:# |ℹ )'+key+' (\\d+)'));if(match)counts[key]=Number(match[1]);}
+  report.suites.push({suite,status:r.status,signal:r.signal,error:r.error?.message,seconds:(Date.now()-started)/1000,counts});if(r.status!==0||counts.skipped||counts.todo)process.exitCode=1;
+ }
+ const build=spawnSync(process.execPath,['scripts/build.cjs'],{cwd:stage,env,encoding:'utf8',timeout:300000,maxBuffer:20*1024*1024});fs.writeFileSync(path.join(output,'build-plugin.log'),(build.stdout||'')+'\n'+(build.stderr||''));const tuiCopied=fs.existsSync(path.join(stage,'dist-plugin/tui/index.cjs'));report.suites.push({suite:'isolated optional build:plugin with tui copy',status:build.status,tuiCopied});if(build.status!==0||!tuiCopied)process.exitCode=1;
+ report.blocked.push(...legacyPreflight(root));
+}catch(e){report.error=e.stack;process.exitCode=1;}
+finally{const failed=Number(Boolean(report.error))+report.suites.filter(s=>s.status!==0||s.tuiCopied===false).length,skipped=report.suites.reduce((n,s)=>n+(s.counts?.skipped||0)+(s.counts?.todo||0)+(s.counts?.cancelled||0),0);report.applicableSourceStatus=overall({failed,skipped});report.overall=overall({failed,skipped,blocked:report.blocked.length});report.scope='applicable isolated source suites plus required legacy gates; out-of-scope notRun list is excluded';report.finishedAt=new Date().toISOString();fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(report,null,2)+'\n');fs.rmSync(temp,{recursive:true,force:true});console.log(JSON.stringify({output,...report},null,2));}

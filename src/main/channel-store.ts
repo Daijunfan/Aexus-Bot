@@ -2,12 +2,15 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {DatabaseSync,type SQLInputValue} from 'node:sqlite'
 import {APP_HOME} from '../shared/protocol'
+import {memoryChannelDatabase,metadataMutation,metadataTransaction,closeChannelPersistence} from './channel-persistence'
 import type {ChannelEvent,ChannelPost,ChannelMedia,ChannelDocument} from '../shared/channels'
+import {withoutSummaryHeading} from '../shared/channel-filter'
 export const directory=path.join(APP_HOME,'channels'),mediaDirectory=path.join(directory,'media')
 export type Row=Record<string,any>
+export const archiveSources=new Map<string,Row>(),archiveAvatars=new Map<string,{sha256:string;name:string;mimeType:string;bytes:number}>()
 let connection:DatabaseSync|undefined,emit:(event:ChannelEvent)=>void=()=>{}
 export function setChannelStoreEmitter(handler:typeof emit){emit=handler}
-export function closeChannelStore(){connection?.close();connection=undefined;emit=()=>{}}
+export function closeChannelStore(){connection?.close();connection=undefined;closeChannelPersistence();emit=()=>{}}
 export function db(){
  if(connection)return connection
  fs.mkdirSync(mediaDirectory,{recursive:true,mode:0o700});const file=path.join(directory,'channels.sqlite');connection=new DatabaseSync(file);fs.chmodSync(file,0o600)
@@ -16,6 +19,8 @@ export function db(){
  INSERT OR IGNORE INTO metadata VALUES('revision','0'),('settings','{"enabled":false,"host":"127.0.0.1","port":5152}');
  INSERT OR IGNORE INTO metadata SELECT 'config_revision',value FROM metadata WHERE key='revision';
  CREATE TABLE IF NOT EXISTS channels(id TEXT PRIMARY KEY,name TEXT NOT NULL,kind TEXT NOT NULL,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,admin_ids TEXT NOT NULL DEFAULT '[]',revision INTEGER NOT NULL DEFAULT 1);
+ CREATE TABLE IF NOT EXISTS channel_read_access(channel_id TEXT PRIMARY KEY REFERENCES channels(id) ON DELETE CASCADE,employee_ids TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS channel_aliases(alias TEXT PRIMARY KEY,channel_id TEXT NOT NULL REFERENCES channels(id));
  CREATE TABLE IF NOT EXISTS channel_post_rules(id TEXT PRIMARY KEY,channel_id TEXT NOT NULL,employee_id TEXT NOT NULL,data TEXT NOT NULL,UNIQUE(channel_id,employee_id));
  CREATE TABLE IF NOT EXISTS channel_post_events(post_id TEXT PRIMARY KEY,channel_id TEXT NOT NULL,created_at INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS channel_post_batches(id TEXT PRIMARY KEY,rule_id TEXT NOT NULL,channel_id TEXT NOT NULL,employee_id TEXT NOT NULL,data TEXT NOT NULL);
@@ -47,6 +52,7 @@ export function db(){
  CREATE TABLE IF NOT EXISTS channel_source_owners(source_id TEXT PRIMARY KEY REFERENCES sources(id),employee_id TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS channel_avatars(channel_id TEXT PRIMARY KEY REFERENCES channels(id),name TEXT NOT NULL,mime_type TEXT NOT NULL,data BLOB NOT NULL,sha256 TEXT NOT NULL,updated_at INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS collector_activity(collector_id TEXT PRIMARY KEY REFERENCES collectors(id),last_seen_at INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS collector_sync(collector_id TEXT PRIMARY KEY REFERENCES collectors(id) ON DELETE CASCADE,delivered_revision INTEGER NOT NULL,applied_revision INTEGER,applied_at INTEGER);
 `)
  const columns=new Set((connection.prepare('PRAGMA table_info(channels)').all() as {name:string}[]).map(row=>row.name));if(!columns.has('admin_ids'))connection.exec("ALTER TABLE channels ADD COLUMN admin_ids TEXT NOT NULL DEFAULT '[]'");if(!columns.has('revision'))connection.exec('ALTER TABLE channels ADD COLUMN revision INTEGER NOT NULL DEFAULT 1');
  // Existing content has unknown user-reading history, not fabricated timestamps or retroactive unread.
@@ -57,25 +63,30 @@ export function db(){
  })
  const postColumns=new Set((connection.prepare('PRAGMA table_info(posts)').all() as {name:string}[]).map(row=>row.name));if(!postColumns.has('remote_files'))connection.exec("ALTER TABLE posts ADD COLUMN remote_files TEXT NOT NULL DEFAULT '[]'");if(!postColumns.has('telegram'))connection.exec('ALTER TABLE posts ADD COLUMN telegram TEXT');
  connection.exec('CREATE TABLE IF NOT EXISTS channel_file_imports(post_id TEXT NOT NULL,file_id TEXT NOT NULL,sha256 TEXT NOT NULL,path TEXT NOT NULL,saved_at INTEGER NOT NULL,PRIMARY KEY(post_id,file_id))');
+ connection=memoryChannelDatabase(connection)
+ connection.exec('UPDATE posts SET expires_at=9007199254740991 WHERE state=\'active\';UPDATE media SET expires_at=9007199254740991;')
+ connection.exec('DELETE FROM content_dirty')
  return connection
 }
 export const one=(sql:string,...values:SQLInputValue[])=>db().prepare(sql).get(...values) as Row|undefined
 export const all=(sql:string,...values:SQLInputValue[])=>db().prepare(sql).all(...values) as Row[]
-export const run=(sql:string,...values:SQLInputValue[])=>db().prepare(sql).run(...values)
+export const canonicalChannelId=(id:string)=>String(one('SELECT channel_id FROM channel_aliases WHERE alias=?',id)?.channel_id??id)
+export const run=(sql:string,...values:SQLInputValue[])=>{const memory=db(),result=memory.prepare(sql).run(...values);metadataMutation(memory,sql);return result}
 export const revision=(key='revision')=>Number(one('SELECT value FROM metadata WHERE key=?',key)!.value)
-export function transaction<T>(work:()=>T):T{db().exec('BEGIN IMMEDIATE');try{const value=work();db().exec('COMMIT');return value}catch(error){db().exec('ROLLBACK');throw error}}
-export function changed(kind:ChannelEvent['kind'],details:Omit<ChannelEvent,'kind'|'revision'>={}){run("UPDATE metadata SET value=CAST(value AS INTEGER)+1 WHERE key='revision'");const content=['posts','messages','reads'].includes(kind);if(!content)run("UPDATE metadata SET value=CAST(value AS INTEGER)+1 WHERE key='config_revision'");emit({kind,revision:revision(content?'revision':'config_revision'),...details})}
+export function transaction<T>(work:()=>T):T{return metadataTransaction(db(),work)}
+export function changed(kind:ChannelEvent['kind'],details:Omit<ChannelEvent,'kind'|'revision'>={}){run("UPDATE metadata SET value=CAST(value AS INTEGER)+1 WHERE key='revision'");const content=['posts','messages','reads','avatars','source-order'].includes(kind);if(!content)run("UPDATE metadata SET value=CAST(value AS INTEGER)+1 WHERE key='config_revision'");emit({kind,revision:revision(content?'revision':'config_revision'),...details})}
 
 const channelFailure=(message:string,code:string,status:number)=>Object.assign(Error(message),{code,status})
 const channelKey=(id:unknown)=>{if(typeof id!=='string'||!id.trim()||id!==id.trim())throw Error('Provide a valid post ID');return id}
 export function channelMedia(row:Row):ChannelMedia{return {id:row.id,name:row.name,mimeType:row.mime_type,bytes:row.bytes,sha256:row.sha256}}
 export function projectChannelDocuments(row:Row){
- return (JSON.parse(row.remote_files??'[]') as ChannelDocument[]).map(file=>{const saved=one('SELECT path FROM channel_file_imports WHERE post_id=? AND file_id=? AND sha256=?',row.id,file.id,file.sha256);return {...file,...(saved&&fs.existsSync(saved.path)?{savedPath:path.basename(saved.path)}:{})}})
+ return (JSON.parse(row.remote_files??'[]') as ChannelDocument[]).map(file=>{const saved=one('SELECT path FROM channel_file_imports WHERE post_id=? AND file_id=? AND sha256=?',row.id,file.id,file.sha256??'');return {...file,...(saved&&fs.existsSync(saved.path)?{savedPath:path.basename(saved.path)}:{})}})
 }
 export function projectChannelPost(row:Row):ChannelPost{
+ if(row.plugin==='youtube')row={...row,title:withoutSummaryHeading(row.title??''),body:withoutSummaryHeading(row.body??'')}
  const documents=projectChannelDocuments(row)
  const ids=JSON.parse(row.media_ids) as string[],files=ids.map(id=>one('SELECT * FROM media WHERE id=? AND post_id=?',id,row.id)).filter((value):value is Row=>!!value)
- const avatar=row.plugin==='telegram'?one('SELECT sha256 FROM source_avatars WHERE source_id=?',row.source_id):undefined
+ const avatar=one('SELECT sha256 FROM source_avatars WHERE source_id=?',row.source_id)??archiveAvatars.get(row.source_id)
  return {...(row.telegram?{telegram:JSON.parse(row.telegram)}:{}),...(documents.length?{files:documents}:{}),...(avatar?{sourceAvatar:{sourceId:row.source_id,sha256:avatar.sha256}}:{}),id:row.id,sourceId:row.source_id,externalId:row.external_id,channelId:row.channel_id,sourceName:row.source_name,plugin:row.plugin,title:row.title,body:row.body,...(row.url?{url:row.url}:{}),...(row.author_name?{authorName:row.author_name}:{}),...(row.author_url?{authorUrl:row.author_url}:{}),...(row.avatar_media_id?{avatarMediaId:row.avatar_media_id}:{}),publishedAt:row.published_at,receivedAt:row.received_at,updatedAt:row.updated_at,expiresAt:row.expires_at,contentHash:row.content_hash,saved:row.saved_at!==null,...(row.saved_at!==null?{savedAt:row.saved_at}:{}),media:files.map(channelMedia)}
 }
 export const postSelect='SELECT p.*,s.channel_id,s.name AS source_name,s.plugin FROM posts p JOIN sources s ON s.id=p.source_id'

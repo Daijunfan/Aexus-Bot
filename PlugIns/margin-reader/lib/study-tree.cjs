@@ -6,7 +6,16 @@ function roots(set,ids){
 }
 function move(set,p){
   const chosen=roots(set,p.cardIds),moving=new Set(require('./study-organize.cjs').selected(set,chosen.map(c=>c.id),true).map(c=>c.id)),parentId=p.parentId||null;
-  if(parentId)M.card(set,parentId);assert(!moving.has(parentId),'INVALID_OUTLINE','A branch cannot be moved into itself.');
+  if(parentId)M.card(set,parentId);
+  if(moving.has(parentId)){
+    assert(p.rotateDescendant===true&&chosen.length===1&&parentId!==chosen[0].id,'INVALID_OUTLINE','A branch cannot be moved into itself.');
+    // In one undoable transaction, detach the descendant before reparenting
+    // the ancestor. This turns A→B→C into C→A→B when A drops onto C.
+    const target=M.card(set,parentId),oldParent=chosen[0].parentId||null;
+    target.parentId=oldParent;delete target.position;
+    if(target.mindmap)delete target.mindmap.offset;
+    target.updatedAt=new Date().toISOString();
+  }
   const rootIds=new Set(chosen.map(c=>c.id)),siblings=set.cards.filter(c=>c.parentId===parentId&&!rootIds.has(c.id));
   const index=p.index??siblings.length;assert(Number.isInteger(index)&&index>=0&&index<=siblings.length,'INVALID_PARAMS','Sibling insertion index is out of range.');
   if(p.positions){

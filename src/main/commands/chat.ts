@@ -1,6 +1,8 @@
+import {botGroup,sendBotMessage} from '../bot-workers'
 import { listChatGroups,getChatGroup,createChatGroup,updateChatGroup,muteChatMember,deleteChatGroup,chatHistory,chatContext,sendChatMessage,editChatMessage,postChatMessage,acknowledgeChat,groupAttachment } from '../chat-groups'
 import { getView,setView } from '../presentation'
 export async function chatRequest(command:string,a:Record<string,any>){
+ if(['chat.send','chat.post'].includes(command)&&botGroup(a.id))return (await sendBotMessage(a)).message
  const s=(value:unknown)=>String(value)
  switch(command){
     case 'chat.list': return listChatGroups()

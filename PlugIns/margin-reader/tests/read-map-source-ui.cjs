@@ -3,7 +3,8 @@
 // MR_NAV_PLUGIN_ROOT permits reproducing deployment mismatches without installing.
 const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
 const assert=require('node:assert/strict'),{randomUUID,createHash}=require('node:crypto');
-const {chromium,expect}=require('../../../node_modules/@playwright/test');
+const {chromium,webkit,expect}=require('./ui-session.cjs');
+const useWebKit=process.env.MR_WEBKIT_TEST==='1';
 const {PDFDocument,StandardFonts}=require('pdf-lib');
 const root=path.resolve(__dirname,'..'),pluginRoot=path.resolve(process.env.MR_NAV_PLUGIN_ROOT||path.join(root,'dist-plugin'));
 const digest=b=>createHash('sha256').update(b).digest('hex');
@@ -14,7 +15,7 @@ async function fixture(){
 }
 (async()=>{
  const temp=await fs.mkdtemp(path.join(os.tmpdir(),'mr-card-source-click-')),workspace=path.join(temp,'library');await fs.mkdir(workspace);
- const label=process.env.MR_NAV_LABEL||'candidate';assert(/^[a-z0-9-]+$/.test(label));
+ const label=process.env.MR_NAV_LABEL||(useWebKit?'candidate-webkit':'candidate');assert(/^[a-z0-9-]+$/.test(label));
  const marker=path.join(root,'artifacts/read-map-current.txt');
  const output=await fs.readFile(marker,'utf8').then(s=>s.trim(),()=>path.join(root,'artifacts/card-source-click'));
  assert(path.resolve(output).startsWith(path.join(root,'artifacts')+path.sep));await fs.mkdir(output,{recursive:true});
@@ -37,12 +38,14 @@ async function fixture(){
   };
   const high=await capture(first,'Same page upper source',3,.1),low=await capture(first,'Same page lower source',3,.76),far=await capture(first,'Distant page source',10,.76),other=await capture(second,'Other PDF source',5,.44);
   await api('settings.set',{pdfMode:'continuous',pdfFit:'width'});await api('study.open',{setId:set.id});
-  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||'/Users/djf/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell'});
+  browser=await (useWebKit?webkit:chromium).launch({headless:true,...(useWebKit?{}:{executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||chromium.executablePath()})});
   page=await browser.newPage({viewport:{width:1520,height:1000}});page.setDefaultTimeout(12000);page.on('pageerror',e=>report.browserErrors.push(e.message));
   const calls=[];page.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/rpc')){const body=r.postDataJSON();if(body?.method)calls.push(body.method);}});
   await page.goto(server.url);await page.locator('body[data-ready=true]').waitFor();
+  await page.click('[data-study-view=documents]');await expect(page.locator('#workspace')).toHaveClass(/study-split/);
+  for(const tab of ['documents','map'])await expect(page.locator(`[data-study-view=${tab}]`)).toHaveAttribute('aria-pressed','true');
   const showTarget=async(target,selector)=>{
-   if(await page.locator('#reader-view').isVisible())await page.click('[data-study-view=map]');
+   await expect(page.locator('#workspace')).toHaveClass(/study-split/);
    await expect(page.locator('#study-map-viewport')).toBeVisible();await page.click('#study-zoom-fit');
    await expect(page.locator('#study-board')).not.toHaveAttribute('aria-busy','true');
    const before=calls.length,start=Date.now(),element=page.locator(selector);

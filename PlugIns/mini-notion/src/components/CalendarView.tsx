@@ -2,11 +2,12 @@ import { EventSummary } from './EventSummary';
 import { eventDescription, eventPresenter, eventValue } from '../scheduling/presentation';
 import {AppSelect} from './AppSelect';
 import { isDateProperty } from '../database/propertySchema';
-import { useContext, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AppearanceTheme, recordAppearanceStyle } from '../appearance';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { readProperty } from '../model';
-import { visibleColumns, subItemDisplay } from '../database/model';
+import { visibleColumns, subItemDisplay, conditionalColor } from '../database/model';
+import { conditionalColorStyle } from '../database/conditionalColors';
 import {
   dateKey,
   navigateViewDate,
@@ -48,6 +49,8 @@ export function CalendarView({
   });
   const [dropDate, setDropDate] = useState('');
   const [dayPanel, setDayPanel] = useState<{ date: string; x: number; y: number } | null>(null);
+  const [unplannedOpen, setUnplannedOpen] = useState(false);
+  const [unplannedLimit, setUnplannedLimit] = useState(80);
   const calendar = useRef<HTMLDivElement>(null);
   const currentView = view || localView;
   const changeView = (changes: Partial<DatabaseView>) =>
@@ -64,12 +67,20 @@ export function CalendarView({
       column.id !== endProperty?.id &&
       !(column.system === 'subItems' && db.subItems && subItemDisplay(currentView) === 'card'),
   );
-  const weeks = calendarWeeks(page, currentView, rows);
+  const weeks = useMemo(() => calendarWeeks(page, currentView, rows), [page, currentView, rows]);
   const describe = eventPresenter(workspace!, page, currentView);
-  const byId = new Map(rows.map(row => [row.id, row]));
-  const ranges = new Map(rows.map((row) => [row.id, scheduledRange(row, dateProperty, endProperty)]));
+  const byId = useMemo(() => new Map(rows.map(row => [row.id, row])), [rows]);
+  const ranges = useMemo(() => new Map(rows.map((row) => [row.id, scheduledRange(row, dateProperty, endProperty)])),
+    [rows, dateProperty, endProperty]);
   const readonlyDates = dateProperty?.type !== 'date' || (!!endProperty && endProperty.type !== 'date');
   const today = dateKey(new Date());
+  const dayRows = useMemo(() => dayPanel
+    ? rows.filter((row) => {
+        const range = ranges.get(row.id)!;
+        return range.start && range.start <= dayPanel.date && range.end >= dayPanel.date;
+      })
+    : [], [rows, ranges, dayPanel?.date]);
+  const unplanned = useMemo(() => rows.filter((row) => !ranges.get(row.id)?.start), [rows, ranges]);
   useEffect(() => {
     const showDay = (event: Event) => {
       const { pageId, viewId, date, visible } = (event as CustomEvent).detail;
@@ -141,13 +152,6 @@ export function CalendarView({
     });
   const eventContent = (row: Page, before = false, after = false, detailed = false) =>
     <EventSummary detailed={detailed} info={{ ...describe(row), title: `${before ? '← ' : ''}${row.title || '无标题'}${after ? ' →' : ''}` }} />;
-  const dayRows = dayPanel
-    ? rows.filter((row) => {
-        const range = ranges.get(row.id)!;
-        return range.start && range.start <= dayPanel.date && range.end >= dayPanel.date;
-      })
-    : [];
-  const unplanned = rows.filter((row) => !ranges.get(row.id)?.start);
   return (
     <div className="calendar-view" ref={calendar}>
       <div className="calendar-controls">
@@ -281,7 +285,7 @@ export function CalendarView({
               );
             })}
             <div className="calendar-events">
-              {item.events.map((segment) => {
+              {item.events.filter((segment) => window.native?.printMode || segment.slot < calendarVisibleSlots).map((segment) => {
                 const row = byId.get(segment.id)!;
                 const range = ranges.get(row.id)!;
                 return (
@@ -292,6 +296,7 @@ export function CalendarView({
                     aria-label={`${row.title || '无标题'} ${range.start} 至 ${range.end}`}
                     style={{
                       ...recordAppearanceStyle(row, theme, workspace!.settings.appearance),
+                      ...conditionalColorStyle(conditionalColor(row, currentView, db, workspace!.pages), theme),
                       gridColumn: `${segment.startColumn + 1} / span ${segment.span}`,
                       gridRow: segment.slot + 1,
                     }}
@@ -328,7 +333,7 @@ export function CalendarView({
             </header>
             <div className="calendar-day-list">
               {dayRows.map((row) => (
-                <div className="calendar-day-item" key={row.id} style={recordAppearanceStyle(row, theme, workspace!.settings.appearance)}>
+                <div className="calendar-day-item" key={row.id} style={{ ...recordAppearanceStyle(row, theme, workspace!.settings.appearance), ...conditionalColorStyle(conditionalColor(row, currentView, db, workspace!.pages), theme) }}>
                   <button
                     title={eventDescription(describe(row))}
                     onClick={() => {
@@ -361,9 +366,9 @@ export function CalendarView({
         </Popover>
       )}
       {!!unplanned.length && (
-        <details className="calendar-unplanned">
+        <details className="calendar-unplanned" onToggle={(event) => setUnplannedOpen(event.currentTarget.open)}>
           <summary>无日期 · {unplanned.length} 个页面</summary>
-          {unplanned.map((row) => (
+          {unplannedOpen && unplanned.slice(0, window.native?.printMode ? undefined : unplannedLimit).map((row) => (
             <button
               key={row.id}
               draggable={!readonlyDates && !page.locked && !row.locked}
@@ -374,6 +379,11 @@ export function CalendarView({
               {row.title || '无标题'}
             </button>
           ))}
+          {unplannedOpen && !window.native?.printMode && unplanned.length > unplannedLimit && (
+            <button className="calendar-unplanned-more" onClick={() => setUnplannedLimit(limit => limit + 80)}>
+              显示更多页面（还有 {unplanned.length - unplannedLimit} 个）
+            </button>
+          )}
         </details>
       )}
     </div>

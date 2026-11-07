@@ -60,18 +60,6 @@ Electron window is required. Vendor Coding Agent SDK/program downloads and provi
 explicit setup actions; they are not bundled in this archive. Publish the matching complete source archive alongside an
 approved binary distribution. Both archives have SHA-256 sidecars.
 
-## Remote desktops in the Cloud Hosts plugin
-
-The browser's VNC display connects through an authenticated, view-scoped WebSocket
-relay on the public Core origin. Only an existing Core-created desktop connection
-can become a relay target; there is no arbitrary proxy URL. Logout or closing the
-plugin revokes the viewing ticket. Keyboard/mouse remain subject to the VNC session.
-
-RDP continues to use an operating-system client. In Web mode the plugin offers the
-`.rdp` file and explains which network its address belongs to; it does not silently
-launch a desktop client on the backend server. A backend loopback RDP endpoint needs
-an explicit client-side SSH forward before that profile can be opened locally.
-
 ## Local browser
 
 Do not run two Cores against the same data directory. Stop the local desktop first, or select a separate directory:

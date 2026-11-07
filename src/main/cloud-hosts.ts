@@ -7,7 +7,7 @@ import {APP_HOME,SOCKET_PATH} from '../shared/protocol'
 import {remoteTarget,type RemoteTarget,type CloudHost} from '../shared/remote'
 const directory=path.join(APP_HOME,'cloud-hosts'),file=path.join(directory,'hosts.json'),keyFile=path.join(directory,'credential.key')
 type RecordHost=CloudHost&{secret?:string}
-function load():RecordHost[]{return fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):[]}
+function load():RecordHost[]{return fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')).map(({desktop,...host}:any)=>host):[]}
 function save(hosts:RecordHost[]){fs.mkdirSync(directory,{recursive:true,mode:0o700});const tmp=file+'.tmp';fs.writeFileSync(tmp,JSON.stringify(hosts,null,2)+'\n',{mode:0o600});fs.renameSync(tmp,file)}
 function key(){if(!fs.existsSync(keyFile)){fs.mkdirSync(directory,{recursive:true,mode:0o700});fs.writeFileSync(keyFile,randomBytes(32),{mode:0o600,flag:'wx'})}return fs.readFileSync(keyFile)}
 function encrypt(password:string){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key(),iv),data=Buffer.concat([cipher.update(password,'utf8'),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),data]).toString('base64')}
@@ -35,19 +35,11 @@ function fields(value:Record<string,any>,previous?:RecordHost):RecordHost{
   const {directory:defaultDirectory,credentialId:_credential,...connection}=target
   let vm=value.vm===null?undefined:value.vm?{...previous?.vm,...value.vm}:data.vm
   if(vm){if(!vm.hypervisorId||!vm.name||!vm.projectDirectory||!['running','stopped','paused','unknown'].includes(vm.state)||!['ssh','serial','rdp','unconfigured'].includes(vm.access))throw new Error('VM 需要 hypervisorId/name/projectDirectory/state/access');if(vm.hypervisorId===previous?.id)throw new Error('VM 不能以自己为宿主机');const parent=getCloudHost(vm.hypervisorId);remoteTarget({...parent,directory:vm.projectDirectory});vm={hypervisorId:vm.hypervisorId,name:String(vm.name),projectDirectory:String(vm.projectDirectory),state:vm.state,access:vm.access,...(vm.notes?{notes:String(vm.notes)}:{})}}
-  const desktop=value.desktop===null?undefined:data.desktop
-  if(desktop){
-    if(!['rdp','vnc'].includes(desktop.protocol)||typeof desktop.address!=='string'||!/^[[\w.\]:-]+$/.test(desktop.address)||desktop.address.startsWith('-')||!Number.isInteger(desktop.port)||desktop.port<1||desktop.port>65535)throw Error('桌面需要有效的 protocol、address 和 port')
-    if(desktop.username!==undefined&&(typeof desktop.username!=='string'||/[\r\n\0]/.test(desktop.username)))throw Error('无效桌面用户名')
-    if(desktop.quality!==undefined&&!['balanced','sharp','fast'].includes(desktop.quality))throw Error('无效桌面画质')
-    if(desktop.viaHostId)getCloudHost(desktop.viaHostId)
-  }
-  const desktopFields=desktop?{desktop:{protocol:desktop.protocol,address:desktop.address,port:desktop.port,...(desktop.viaHostId?{viaHostId:desktop.viaHostId}:{}),...(desktop.username?{username:desktop.username}:{}),quality:desktop.quality||'balanced'}}:{}
-  return {...connection,...desktopFields,...(vm?{vm}:{}),id:previous?.id??randomUUID(),name,defaultDirectory,hasPassword:false,createdAt:previous?.createdAt??Date.now(),updatedAt:Date.now(),...(value.password===undefined?{secret:previous?.secret}:value.password?{secret:encrypt(String(value.password))}:{})}
+  return {...connection,...(vm?{vm}:{}),id:previous?.id??randomUUID(),name,defaultDirectory,hasPassword:false,createdAt:previous?.createdAt??Date.now(),updatedAt:Date.now(),...(value.password===undefined?{secret:previous?.secret}:value.password?{secret:encrypt(String(value.password))}:{})}
 }
 export function createCloudHost(value:Record<string,any>){const hosts=load(),host=fields(value);if(host.vm&&hosts.some(h=>h.vm?.hypervisorId===host.vm!.hypervisorId&&h.vm?.name===host.vm!.name&&h.vm?.projectDirectory===host.vm!.projectDirectory))throw new Error('此虚拟机已登记，请更新现有记录');hosts.push(host);save(hosts);return publicHost(host)}
 export function updateCloudHost(id:string,patch:Record<string,any>){const hosts=load(),at=hosts.findIndex(h=>h.id===id);if(at<0)throw new Error('Unknown cloud host');hosts[at]=fields(patch,hosts[at]);save(hosts);return publicHost(hosts[at])}
-export function removeCloudHost(id:string){getCloudHost(id);if(load().some(h=>h.vm?.hypervisorId===id||h.id!==id&&h.desktop?.viaHostId===id))throw new Error('仍有虚拟机或桌面通道引用此宿主机');save(load().filter(h=>h.id!==id));fs.rmSync(path.join(directory,'askpass-'+id+'.py'),{force:true});fs.rmSync(path.join(directory,'known_hosts',id),{force:true});return {removed:true,id}}
+export function removeCloudHost(id:string){getCloudHost(id);if(load().some(h=>h.vm?.hypervisorId===id))throw new Error('仍有虚拟机引用此宿主机');save(load().filter(h=>h.id!==id));fs.rmSync(path.join(directory,'askpass-'+id+'.py'),{force:true});fs.rmSync(path.join(directory,'known_hosts',id),{force:true});return {removed:true,id}}
 export function cloudHostTarget(id:string,directoryOverride?:string):RemoteTarget{
   const host=getCloudHost(id)
   if(host.vm&&host.vm.access!=='ssh')throw new Error('虚拟机尚无已配置 SSH 管理入口；当前 access='+host.vm.access+'，不能冒充已连接主机')
@@ -57,7 +49,7 @@ export function cloudHostTarget(id:string,directoryOverride?:string):RemoteTarge
 export function importCloudHost(name:string,remote:RemoteTarget){
   const {directory:defaultDirectory,credentialId:_credential,...connection}=remote
   const signature=(value:any)=>JSON.stringify(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>String(a).localeCompare(String(b))))
-  const hosts=load(),existing=hosts.find(({id,name,defaultDirectory,hasPassword,createdAt,updatedAt,secret,status,vm,desktop,...candidate})=>signature(candidate)===signature(connection))
+  const hosts=load(),existing=hosts.find(({id,name,defaultDirectory,hasPassword,createdAt,updatedAt,secret,status,vm,...candidate})=>signature(candidate)===signature(connection))
   if(existing)return existing.id
   const host=fields({...connection,name,defaultDirectory});host.id='legacy-'+createHash('sha256').update(signature(connection)).digest('hex').slice(0,20);hosts.push(host);save(hosts);return host.id
 }

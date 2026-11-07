@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto');
-const {expect}=require('../../../node_modules/@playwright/test');
+const {expect}=require('./ui-session.cjs');
 exports.exercise=async({page,api,url,pass,output})=>{
  let set=await api('study.create',{title:'Save, close and edit topics'});
  set=await api('study.mindmap.outline.import',{setId:set.id,expectedRevision:set.revision,text:'Center\n  First\n    Evidence\n  Second'});

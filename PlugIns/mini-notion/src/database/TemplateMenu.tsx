@@ -125,6 +125,14 @@ export function TemplateMenu({
         </>
       ) : (
         <>
+          {view.type === 'board' && (
+            <>
+              <MenuItem icon={<Plus size={15} />} onClick={() => { onNew(defaultId); onClose(); }}>
+                新建记录
+              </MenuItem>
+              <div className="menu-divider" />
+            </>
+          )}
           <div className="picker-heading">选择页面模板</div>
           <MenuItem
             icon={<FileText size={15} />}

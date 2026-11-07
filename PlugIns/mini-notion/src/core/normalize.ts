@@ -96,6 +96,11 @@ export function isSpaceRoot(page: Page): boolean {
 }
 
 export function normalizeWorkspace(workspace: Workspace, migrateLegacyViews = false, previous?: Workspace | null): Workspace {
+  if (!migrateLegacyViews && previous && workspace.pages === previous.pages &&
+      workspace.spaces === previous.spaces && workspace.uniqueIds === previous.uniqueIds) {
+    const revision = workspace.revision || 0;
+    return workspace.revision === revision ? workspace : { ...workspace, revision };
+  }
   const before = new Map(previous?.pages.map(page => [page.id, page]));
   const spaces: Record<string, Space> = { ...(workspace.spaces || {}) };
   const pages: Page[] = workspace.pages.map((page) => {
@@ -117,8 +122,9 @@ export function normalizeWorkspace(workspace: Workspace, migrateLegacyViews = fa
     };
     return { ...page, space: true, folders, files };
   });
+  const roots = new Set(pages.filter(page => page.space).map(page => page.id));
   for (const id of Object.keys(spaces))
-    if (!pages.some((page) => page.id === id && page.space)) delete spaces[id];
+    if (!roots.has(id)) delete spaces[id];
   return finalizeProperties(
     previous || null,
     {

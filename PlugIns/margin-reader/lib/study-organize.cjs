@@ -42,8 +42,10 @@ function checkedFilter(input = {}, depth = 0) {
   return out;
 }
 function matches(card, f) {
-  const values = [card.title,card.text,card.editedText,card.note,...(card.tags||[]),...(card.comments||[]).filter(c=>!c.deletedAt).map(c=>c.text||'')].join('\n').toLocaleLowerCase();
-  if(f.query&&!values.includes(f.query.toLocaleLowerCase()))return false;
+  if(f.query){
+    const values=[card.title,card.text,card.editedText,card.note,...(card.tags||[]),...(card.comments||[]).filter(c=>!c.deletedAt).map(c=>c.text||'')].join('\n').toLocaleLowerCase();
+    if(!values.includes(f.query.toLocaleLowerCase()))return false;
+  }
   if(f.titleKeyword&&!Keywords.terms(card.title).some(t=>t.toLocaleLowerCase()===f.titleKeyword.trim().toLocaleLowerCase()))return false;
   if(f.tags?.length&&!(f.tagMode==='any'?f.tags.some(t=>card.tags?.includes(t)):f.tags.every(t=>card.tags?.includes(t))))return false;
   if(f.colors?.length&&!f.colors.includes(card.color))return false;
@@ -85,7 +87,7 @@ async function query(store,p) {
   if(p.boardId)assert(board,'NOT_FOUND','Saved card board does not exist.');
   const filter=checkedFilter(p.filter||board?.filter||{}),groupBy=p.groupBy||board?.groupBy||[];
   assert(Array.isArray(groupBy)&&groupBy.length<=2&&groupBy.every(k=>['color','tag','keyword','document','chapter','created','updated','kind','inMap'].includes(k)),'INVALID_PARAMS','Choose at most two supported grouping fields.');
-  const cards=sorted(set.cards.map(c=>M.effective(state,set,c)).filter(c=>matches(c,filter)),p.sort||board?.sort||'outline',p.direction||'asc');
+  const cards=sorted(set.cards.map(c=>M.effective(state,set,c)).filter(c=>matches(c,filter)),p.sort||board?.sort||'outline',p.direction||board?.direction||'asc');
   Keywords.grouping([set],cards,groupBy);
   const offset=p.offset||0,limit=p.limit||200;
   const described=await M.describe(store,state,{...set,cards:cards.slice(offset,offset+limit)});
@@ -204,13 +206,13 @@ async function request(store,state,set,method,p,rollback) {
     let board=p.boardId?set.boards.find(b=>b.id===p.boardId):null;if(p.boardId)assert(board,'NOT_FOUND','Board not found.');
     const fields=p.groupBy||[];assert(fields.length<=2&&fields.every(k=>['color','tag','keyword','document','chapter','created','updated','kind','inMap'].includes(k)),'INVALID_PARAMS','Unsupported board groups.');
     Keywords.grouping([set],[],fields);
-    const value={id:board?.id||randomUUID(),title:M.title(p.title),filter:checkedFilter(p.filter||{}),groupBy:fields,sort:p.sort||'outline'};sorted([],value.sort);
+    const value={id:board?.id||randomUUID(),title:M.title(p.title),filter:checkedFilter(p.filter||{}),groupBy:fields,sort:p.sort||'outline',direction:p.direction||'asc'};sorted([],value.sort);
     if(board)Object.assign(board,value);else set.boards.push(value);return;
   }
   if(method==='study.board.remove'){assert(set.boards?.some(b=>b.id===p.boardId),'NOT_FOUND','Board not found.');set.boards=set.boards.filter(b=>b.id!==p.boardId);return;}
   if(method==='study.board.materialize'){
     const board=set.boards?.find(b=>b.id===p.boardId);assert(board,'NOT_FOUND','Board not found.');
-    const rows=sorted(set.cards.filter(c=>matches(c,board.filter)),board.sort);assert(rows.length&&rows.length<=500,'TOO_LARGE','Choose a board with 1–500 matching cards.');
+    const rows=sorted(set.cards.filter(c=>matches(c,board.filter)),board.sort,board.direction||'asc');assert(rows.length&&rows.length<=500,'TOO_LARGE','Choose a board with 1–500 matching cards.');
     Keywords.grouping([set],rows,board.groupBy);
     const root=note(set,p.title||board.title);root.boardSource=board.id;
     const levels=grouped(state,set,rows,board.groupBy);

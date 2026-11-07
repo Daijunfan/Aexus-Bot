@@ -60,3 +60,5 @@ export function installPlugin(source:string):PluginDescriptor {
   fs.cpSync(plugin.directory,directory,{recursive:true,dereference:true})
   return readPlugin(directory)
 }
+
+export function pluginMethodReadOnly(id:string,method:string){const plugin=requirePlugin(id),schema=JSON.parse(readSourceText(pluginFile(plugin.directory,plugin.schema)));return schema.commands.find((command:any)=>command.method===method)?.mutates===false}

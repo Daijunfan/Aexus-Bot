@@ -88,6 +88,38 @@ test('multi-block duplicate and move preserve order, nesting, comments and atomi
     `mininotion://page/${destination.id}#a`,
   );
 });
+test('CLI partial formatting combines inline code, links and colors without changing adjacent styles', async (t) => {
+  const call = await fixture(t);
+  const page = await call('page.create', { title: 'Combined formats', color: 'white', blocks: [
+    { id: 'text', type: 'paragraph', content: [
+      { type: 'text', text: '前文 ', styles: { italic: true } },
+      { type: 'text', text: '局部选区', styles: {} },
+      { type: 'text', text: ' 后文', styles: { underline: true } },
+    ] },
+  ] });
+  const format = styles => call.cli('api', 'block.format', '--data', JSON.stringify({
+    pageId: page.id, blockId: 'text', from: 3, to: 7, styles,
+  }));
+  await format({ bold: true, code: true, textColor: 'red', link: 'https://example.com/selection-test' });
+  const combined = await call('block.get', { pageId: page.id, blockId: 'text' });
+  assert.deepEqual(combined.content, [
+    { type: 'text', text: '前文 ', styles: { italic: true } },
+    { type: 'link', href: 'https://example.com/selection-test', content: [
+      { type: 'text', text: '局部选区', styles: { bold: true, code: true, textColor: 'red' } },
+    ] },
+    { type: 'text', text: ' 后文', styles: { underline: true } },
+  ]);
+  await format({ bold: false, code: false, textColor: null });
+  const cleared = await call('block.get', { pageId: page.id, blockId: 'text' });
+  assert.deepEqual(cleared.content, [
+    combined.content[0],
+    { type: 'link', href: 'https://example.com/selection-test', content: [
+      { type: 'text', text: '局部选区', styles: {} },
+    ] },
+    combined.content[2],
+  ]);
+});
+
 test('search shares exact phrases, title-only, subtree, dates, ordering and match excerpts', async (t) => {
   const call = await fixture(t);
   const root = await call('page.create', { title: 'Projects', color: 'white' });

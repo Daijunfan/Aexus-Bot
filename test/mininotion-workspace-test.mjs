@@ -85,6 +85,8 @@ try{
   assert.equal((await call('record.list',{databaseId:db.id}))[0].id,row.id)
   await bound('file.export',{pageId:grandchild.id,type:'md',output:'Exports/note.md'})
   assert.match(fs.readFileSync(path.join(employee.cwd,'Exports/note.md'),'utf8'),/Authenticated mailbox content/)
+  await bound('file.export',{pageId:grandchild.id,type:'pdf',output:'Exports/note.pdf'})
+  assert.equal(fs.readFileSync(path.join(employee.cwd,'Exports/note.pdf')).subarray(0,5).toString(),'%PDF-')
   await assert.rejects(()=>bound('fs.write',{path:'../escape.txt',content:'no'}))
   assert.ok(!fs.existsSync(path.join(path.dirname(employee.cwd),'escape.txt')))
   pass('credentialed mailbox supports recursive pages, shared editing, board records and packaged export with no inference')

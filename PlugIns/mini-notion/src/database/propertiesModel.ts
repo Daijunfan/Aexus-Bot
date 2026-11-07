@@ -2,20 +2,22 @@ import { dateParts, dateEpoch, dateText } from './dateValue.ts';
 import type { Page, Property, PersonValue, FileValue } from '../types.ts';
 import { relationIds } from './relations.ts';
 import { evaluateFormula, formulaText, type FormulaContext, type FormulaValue } from './formula.ts';
+import { pageIndex } from '../model.ts';
+
+const rollupPageOrder = new WeakMap<Page[], Map<string, number>>();
 
 export function contextFor(page: Page, pages: Page[], chain: Set<string> = new Set()): FormulaContext {
+  const index = pageIndex(pages);
   return {
     pageId: page.id,
-    pageName: (id) => pages.find((page) => page.id === id)?.title || '无标题',
+    pageName: (id) => index.get(id)?.title || '无标题',
     property: (name, targetId = page.id) => {
-      const target = pages.find((page) => page.id === targetId && !page.trashedAt);
-      if (!target) return null;
+      const target = index.get(targetId);
+      if (!target || target.trashedAt) return null;
       if (['名称', 'Name', 'title'].includes(name)) return target.title;
       if (['创建时间', 'Created time'].includes(name)) return new Date(target.createdAt);
       if (['最后编辑时间', 'Last edited time'].includes(name)) return new Date(target.updatedAt);
-      const column = pages
-        .find((p) => p.id === target.parentId)
-        ?.database?.columns.find((c) => c.name === name);
+      const column = index.get(target.parentId || '')?.database?.columns.find((c) => c.name === name);
       if (!column) throw new Error(`未找到属性「${name}」`);
       return rawProperty(target, column, pages, chain);
     },
@@ -42,18 +44,30 @@ function rawProperty(page: Page, column: Property, pages: Page[], chain: Set<str
   if (column.type === 'formula') return evaluateFormula(column.formula || '', contextFor(page, pages, next));
   if (column.type === 'relation') return relationIds(page, column, pages).map((id) => ({ kind: 'page', id }));
   if (column.type === 'rollup') {
-    const relation = pages
-      .find((parent) => parent.id === page.parentId)
+    const index = pageIndex(pages);
+    const relation = index
+      .get(page.parentId || '')
       ?.database?.columns.find((property) => property.id === column.relationProperty);
     const ids = relation ? relationIds(page, relation, pages) : page.values[column.relationProperty || ''];
-    const related = Array.isArray(ids)
-      ? pages.filter((p) => (ids as string[]).includes(p.id) && !p.trashedAt)
-      : [];
+    const selected = new Set(
+      Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [],
+    );
+    const related = [...selected]
+      .map((id) => index.get(id))
+      .filter((page): page is Page => !!page && !page.trashedAt);
+    if (related.length > 1) {
+      let order = rollupPageOrder.get(pages);
+      if (!order) {
+        order = new Map(pages.map((page, index) => [page.id, index]));
+        rollupPageOrder.set(pages, order);
+      }
+      related.sort((a, b) => order!.get(a.id)! - order!.get(b.id)!);
+    }
     if (!column.calculation || column.calculation === 'count') return related.length;
     const values = related.map((target) => {
       if (column.targetProperty === 'title') return target.title;
-      const property = pages
-        .find((p) => p.id === target.parentId)
+      const property = index
+        .get(target.parentId || '')
         ?.database?.columns.find((c) => c.id === column.targetProperty);
       if (
         property?.type === 'number' &&
@@ -66,22 +80,54 @@ function rawProperty(page: Page, column: Property, pages: Page[], chain: Set<str
             ? dateText(target.values[column.targetProperty || ''])
             : (target.values[column.targetProperty || ''] ?? null)) as FormulaValue);
     });
-    if (column.calculation === 'show') {
-      const flattened: FormulaValue[] = [];
-      for (const value of values)
-        if (Array.isArray(value)) flattened.push(...value);
-        else if (value !== null && value !== '') flattened.push(value);
-      return flattened.filter(
-        (value, index) =>
-          flattened.findIndex((other) => JSON.stringify(other) === JSON.stringify(value)) === index,
+    const filled = values.filter(
+      (value) => value !== null && value !== '' && (!Array.isArray(value) || value.length),
+    );
+    if (column.calculation === 'empty') return values.length - filled.length;
+    if (column.calculation === 'count_not_empty') return filled.length;
+    if (column.calculation === 'percent_empty' || column.calculation === 'percent_filled') {
+      const count = column.calculation === 'percent_empty' ? values.length - filled.length : filled.length;
+      return values.length ? (count / values.length) * 100 : 0;
+    }
+    if (['show', 'show_original', 'count_values', 'count_unique'].includes(column.calculation)) {
+      const flattened = filled.flat();
+      if (column.calculation === 'show_original') return flattened;
+      if (column.calculation === 'count_values') return flattened.length;
+      const seen = new Set<string>();
+      const unique = flattened.filter((value) => {
+        const key = JSON.stringify(value);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      return column.calculation === 'count_unique' ? unique.length : unique;
+    }
+    if (column.calculation === 'earliest_date' || column.calculation === 'latest_date') {
+      const dates = values.flatMap((value) =>
+        value instanceof Date
+          ? [value]
+          : value && typeof value === 'object' && !Array.isArray(value) && value.kind === 'dateRange'
+            ? [column.calculation === 'earliest_date' ? value.start : value.end]
+            : [],
+      );
+      if (!dates.length) return null;
+      return dates.reduce((a, b) =>
+        column.calculation === 'earliest_date' ? (a < b ? a : b) : a > b ? a : b,
       );
     }
     const numbers = values.filter(
       (value): value is number => typeof value === 'number' && Number.isFinite(value),
     );
     if (!numbers.length) return null;
-    if (column.calculation === 'min') return Math.min(...numbers);
-    if (column.calculation === 'max') return Math.max(...numbers);
+    if (column.calculation === 'min') return numbers.reduce((a, b) => Math.min(a, b));
+    if (column.calculation === 'max') return numbers.reduce((a, b) => Math.max(a, b));
+    if (column.calculation === 'range')
+      return numbers.reduce((a, b) => Math.max(a, b)) - numbers.reduce((a, b) => Math.min(a, b));
+    if (column.calculation === 'median') {
+      numbers.sort((a, b) => a - b);
+      const middle = Math.floor(numbers.length / 2);
+      return numbers.length % 2 ? numbers[middle] : (numbers[middle - 1] + numbers[middle]) / 2;
+    }
     const sum = numbers.reduce((a, b) => a + b, 0);
     return column.calculation === 'average' ? sum / numbers.length : sum;
   }

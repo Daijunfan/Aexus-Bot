@@ -23,7 +23,7 @@ async function main(){
   await change('study.ink.add',{documentId:doc.id,expectedSourceVersion:doc.sourceVersion,page:1,points:[[.1,.65],[.8,.65]],color:'blue',width:.004});
   await fold('document.region.set',{page:1,start:.2,end:.4});
   await api('study.open',{setId:set.id,documentId:doc.id});await api('settings.set',{pdfFit:'page',pdfZoom:1});
-  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||'/Users/djf/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell'});
+  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||chromium.executablePath()});
   const page=await browser.newPage({viewport:{width:1550,height:1100}});page.on('pageerror',e=>report.errors.push(e.message));await page.goto(server.url);await page.waitForSelector('body[data-ready=true]');await page.waitForSelector('.pdf-page[data-page="1"][data-render-state=ready]');
   const paper=page.locator('.pdf-page[data-page="1"]');await expect(paper.locator('.pdf-fold-bar')).toBeVisible();await expect(paper.locator('[data-note-card] .katex')).toBeVisible();
   await expect(paper.locator('.textLayer span').filter({hasText:'LINE09'})).toHaveCount(0);await expect(paper.locator('.textLayer span').filter({hasText:'LINE25'})).toBeVisible();

@@ -8,7 +8,7 @@ The first source and desktop/server distribution includes all three maintained p
 | MiniNotion | `mini-notion/` | GPL-3.0-only |
 | Margin Reader | `margin-reader/` | MIT |
 
-All source trees are part of the host checkout. Their previous local Git histories were preserved separately during integration; runtime workspaces, dependency directories and build outputs remain excluded. `plugins.lock.json` pins the versions expected by the host.
+All source trees are part of the host checkout. MiniNotion 1.26.47 and Margin Reader 0.11.0 contain the complete migrated desktop project implementations. Cloud Hosts 2.0.0 provides SSH management and terminals. Runtime workspaces, dependency directories and build outputs remain excluded. `plugins.lock.json` pins the versions expected by the host.
 
 ```sh
 npm ci

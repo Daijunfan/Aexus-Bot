@@ -1,8 +1,49 @@
-import {useEffect,type RefObject} from 'react'
+import {useCallback,useEffect,useRef,useState,type RefObject} from 'react'
 import type {EmployeeReply} from '../../../shared/types'
 import {api} from '../api'
 
 type Receipt={key:string;selector:string;command:string;args:Record<string,unknown>}
+
+/** A real downward gesture reaching the tail has the same meaning as Latest messages. */
+export function useReadAtBottom(root:RefObject<HTMLDivElement|null>,key:string,enabled:boolean,onRead:(passive?:boolean)=>Promise<unknown>){
+  const current=useRef({enabled,onRead});current.current={enabled,onRead}
+  const wake=useRef(()=>{}),reading=useRef(new Set<string>()),scope=useRef(key),[error,setError]=useState('');scope.current=key
+  const acknowledge=useCallback(async(passive=false)=>{const id=scope.current;if(reading.current.has(id))return;reading.current.add(id);try{await current.current.onRead(passive);if(scope.current===id)setError('')}catch(cause){if(scope.current===id)setError((cause as Error).message)}finally{reading.current.delete(id)}},[])
+  useEffect(()=>{
+    const area=root.current;if(!area)return
+    let armed=false,pressed=false,moved=false,busy=false,disposed=false,frame=0,timer:ReturnType<typeof setTimeout>|undefined
+    setError('')
+    const clear=()=>{armed=false;clearTimeout(timer);timer=undefined}
+    const visible=()=>{
+      if(!current.current.enabled||document.visibilityState!=='visible'||!document.hasFocus()||!area.clientHeight||area.scrollHeight-area.clientHeight-area.scrollTop>4)return false
+      for(const overlay of document.querySelectorAll<HTMLElement>('[aria-modal="true"],.messenger-menu,.app-select-menu'))if(!overlay.closest('[aria-hidden="true"],[inert]')&&overlay.getBoundingClientRect().height)return false
+      const box=area.getBoundingClientRect(),hit=document.elementFromPoint(box.left+box.width/2,Math.min(innerHeight-1,box.bottom-8))
+      return !!hit&&area.contains(hit)
+    }
+    const check=()=>{
+      if(disposed||!armed||busy||!visible()){clearTimeout(timer);timer=undefined;return}
+      if(timer)return
+      timer=setTimeout(()=>{
+        timer=undefined;if(disposed||!armed||!visible())return
+        armed=false;busy=true
+        void acknowledge(true).finally(()=>{busy=false;if(!disposed&&armed)schedule()})
+      },180)
+    }
+    const schedule=()=>{if(!frame&&!disposed)frame=requestAnimationFrame(()=>{frame=0;check()})};wake.current=schedule
+    const wheel=(event:WheelEvent)=>{if(event.deltaY>0){armed=true;schedule()}else if(event.deltaY<0)clear()}
+    const down=(event:PointerEvent)=>{if(event.button===0){pressed=true;moved=false}}
+    const up=()=>{pressed=false;if(moved)schedule()}
+    const scroll=()=>{if(pressed){armed=true;moved=true}schedule()}
+    const keyboard=(event:KeyboardEvent)=>{if(!event.defaultPrevented&&!event.ctrlKey&&!event.metaKey&&['End','PageDown','ArrowDown',' '].includes(event.key)&&!(event.target as HTMLElement).closest('input,textarea,button,a,[contenteditable]')){armed=true;schedule()}}
+    const focus=()=>{if(document.visibilityState!=='visible'||!document.hasFocus())clear()}
+    const resize=new ResizeObserver(schedule);resize.observe(area)
+    area.addEventListener('wheel',wheel,{passive:true});area.addEventListener('pointerdown',down);area.addEventListener('scroll',scroll,{passive:true});area.addEventListener('keydown',keyboard)
+    window.addEventListener('pointerup',up);window.addEventListener('blur',clear);document.addEventListener('visibilitychange',focus)
+    return()=>{disposed=true;clear();cancelAnimationFrame(frame);resize.disconnect();area.removeEventListener('wheel',wheel);area.removeEventListener('pointerdown',down);area.removeEventListener('scroll',scroll);area.removeEventListener('keydown',keyboard);window.removeEventListener('pointerup',up);window.removeEventListener('blur',clear);document.removeEventListener('visibilitychange',focus)}
+  },[root,key])
+  useEffect(()=>{if(!enabled)setError('');wake.current()},[enabled,onRead])
+  return {error,acknowledge}
+}
 /** One receipt path for every presentation. Observe late-mounted content and retry foreground races. */
 export function useVisibleReceipt(root:RefObject<HTMLDivElement|null>,receipt:Receipt|undefined,enabled:boolean,renderKey?:unknown){
   useEffect(()=>{

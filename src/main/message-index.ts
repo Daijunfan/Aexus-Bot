@@ -24,7 +24,7 @@ function open(){
  if(connection)return connection
  fs.mkdirSync(directory,{recursive:true,mode:0o700})
  for(const target of [directory,file,file+'-wal',file+'-shm'])if(fs.existsSync(target)&&fs.lstatSync(target).isSymbolicLink())throw Error('Message index cannot use a symlink')
- const create=()=>{const db=new DatabaseSync(file);fs.chmodSync(file,0o600);return db}
+ const create=()=>{const db=new DatabaseSync(':memory:');db.exec('PRAGMA temp_store=MEMORY');return db}
  let db=create()
  try{const version=Number(db.prepare('PRAGMA user_version').get()!.user_version);if(version!==0&&version!==2)throw Object.assign(Error('Obsolete message index'),{errcode:26});db.exec(schema)}
  catch(error){db.close();if(![11,26].includes((error as {errcode?:number}).errcode??0))throw error;for(const suffix of ['','-wal','-shm'])fs.rmSync(file+suffix,{force:true});db=create();db.exec(schema)}
