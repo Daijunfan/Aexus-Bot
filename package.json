@@ -148,7 +148,8 @@
     "test:worker-native-harness": "node test/worker-native-harness-test.mjs",
     "test:board-directory": "node test/board-directory-tabs-ui-test.mjs && node test/board-directory-tabs-ui-test.mjs --web",
     "test:group-collaboration": "node test/group-collaboration-core-test.mjs && node test/group-rebuild-ui-test.mjs && node test/group-rebuild-ui-test.mjs --web",
-    "test:worker-workbench": "node test/worker-workbench-core-test.mjs && node test/worker-workbench-ui-test.mjs && node test/worker-workbench-ui-test.mjs --web"
+    "test:worker-workbench": "node test/worker-workbench-core-test.mjs && node test/worker-workbench-ui-test.mjs && node test/worker-workbench-ui-test.mjs --web",
+    "test:desktop-quit": "node test/desktop-quit-ui-test.mjs"
   },
   "build": {
     "appId": "com.agentscompany.app",

@@ -9,7 +9,7 @@ type Record={win:BrowserWindow;state:PluginWindowState;ready:boolean;allowClose:
 export function attachPluginDesktop(main:()=>BrowserWindow|undefined,hidden:boolean,preload:string){
   const records=new Map<string,Record>(),flushes=new Map<string,{owner:number;resolve:()=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout}>()
   const flush=(record:Record)=>new Promise<void>((resolve,reject)=>{
-    if(!record.ready||record.win.webContents.isDestroyed()){resolve();return}
+    if(!record.ready||record.win.webContents.isDestroyed()||record.win.webContents.isCrashed()){resolve();return}
     const id=randomUUID(),timer=setTimeout(()=>{flushes.delete(id);reject(new Error('插件保存尚未完成，请重试关闭'))},12000)
     flushes.set(id,{owner:record.win.webContents.id,resolve,reject,timer})
     record.win.webContents.send('plugin:flush',{id,token:record.state.id})

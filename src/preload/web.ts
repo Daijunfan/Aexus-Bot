@@ -1,5 +1,6 @@
 // Presentation-only bridge for an authenticated remote Web UI. No host API or filesystem.
 import {contextBridge,ipcRenderer} from 'electron'
+contextBridge.exposeInMainWorld('agentsDesktopQuit',{onState:(handler:(state:any)=>void)=>{const listener=(_event:unknown,state:any)=>handler(state);ipcRenderer.on('desktop:quit-state',listener);return()=>ipcRenderer.off('desktop:quit-state',listener)}})
 contextBridge.exposeInMainWorld('agentsDesktopLifecycle',{
   ready:()=>ipcRenderer.send('renderer:ready'),
   onRequest:(handler:(value:any)=>void)=>{

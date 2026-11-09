@@ -729,6 +729,17 @@ flush pending edits before releasing the HTTP view; a failed save keeps the wind
 open and reports the error. `plugin.close` also uses this lifecycle for managed
 windows. `plugin.view` remains the low-level URL-only API for other render clients.
 
+macOS Command+Q is handled before page/editor/terminal shortcuts in every native
+window, including plugin and remote Web shells. It uses the same save-first quit
+transaction as the application menu. Main and plugin saves finish before Core
+shutdown begins. A failed save leaves Core and running tasks available and shows
+an in-window error; save or discard the pending edit and retry. While saving and
+stopping, input is paused and progress is shown inside existing windows. A stale
+browser unload guard cannot cancel the final native close after saves complete.
+Closing the main window still leaves plugin windows usable; quitting the app
+stops its owned execution environment. No new Core permission or page-initiated
+quit operation is exposed by this presentation lifecycle.
+
 Installing a validated package updates the shared catalogue and keeps matching
 Work Team launchers bound to their existing workspaces. `workspace.docs` prepares
 the shared documentation entry and authorized runtime launchers, not workspace manuals.

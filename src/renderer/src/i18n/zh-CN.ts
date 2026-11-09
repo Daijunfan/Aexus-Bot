@@ -3683,4 +3683,10 @@ export const zhCN:Record<string,string> = {
   "Native auto permissions": "原生自动权限",
   "Worker settings are being applied. Wait for the current operation.": "正在应用 Worker 设置，请等待当前操作完成。",
   "Worker is stopping. Wait for it to exit before opening a shell.": "Worker 正在停止，请等待结束后再打开 Shell。",
+  "Could not quit Aexus Bot": "暂时无法退出 Aexus Bot",
+  "Saving before quitting…": "正在保存并退出…",
+  "Stopping tasks and quitting…": "正在停止任务并退出…",
+  "Your drafts and open files are being saved.": "正在保存草稿和已打开的文件。",
+  "Waiting for owned tasks and processes to stop.": "正在等待相关任务和进程结束。",
+  "Save or discard pending changes, then press Command+Q again.": "请先保存或放弃未提交的修改，再按 Command+Q 退出。",
 }

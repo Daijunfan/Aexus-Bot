@@ -7,6 +7,7 @@ function on(channel: string, handler: (payload: any) => void) {
   ipcRenderer.on(channel, listener)
   return () => ipcRenderer.off(channel, listener)
 }
+contextBridge.exposeInMainWorld('agentsDesktopQuit',{onState:(handler:(state:any)=>void)=>on('desktop:quit-state',handler)})
 
 contextBridge.exposeInMainWorld('agents', {
   mode: 'desktop',

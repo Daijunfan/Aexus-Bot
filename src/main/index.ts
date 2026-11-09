@@ -30,6 +30,16 @@ app.setPath('userData', process.env.AGENTS_COMPANY_HOME ? join(process.env.AGENT
 
 let mainWindow:BrowserWindow|undefined
 let pluginDesktop:ReturnType<typeof attachPluginDesktop>|undefined
+let quitting=false,preparingQuit=false
+// Handle the native chord before editors, terminals, frames or ignored menu
+// shortcuts can consume it. Plugin windows use this same quit transaction.
+app.on('web-contents-created',(_event,contents)=>{
+  contents.on('before-input-event',(event,input)=>{
+    if(process.platform==='darwin'&&input.type==='keyDown'&&input.meta&&!input.control&&!input.alt&&!input.shift&&input.key.toLowerCase()==='q'){event.preventDefault();app.quit();return}
+    if(preparingQuit&&input.type==='keyDown')event.preventDefault()
+  })
+  contents.on('will-prevent-unload',event=>{if(quitting)event.preventDefault()})
+})
 setPrimaryWindow(()=>mainWindow)
 const trusted=(event:Electron.IpcMainEvent|Electron.IpcMainInvokeEvent)=>{
   const contents=mainWindow?.webContents,frame=event.senderFrame
@@ -147,6 +157,7 @@ function createWindow() {
   win.webContents.on('will-navigate',(event,url)=>{const expected=REMOTE_WEB_URL||process.env.ELECTRON_RENDERER_URL||new URL(`file://${join(__dirname,'../renderer/index.html')}`).href;if(url!==expected)event.preventDefault()})
   let closing=false
   win.on('close',event=>{
+    if(preparingQuit&&!quitting){event.preventDefault();return}
     if(quitting||closing||!rendererReady(win.webContents))return
     event.preventDefault()
     void askRenderer('flush',{},12000).then(()=>{closing=true;win.close()}).catch(error=>console.error('Workspace save:',error.message))
@@ -157,7 +168,6 @@ function createWindow() {
 }
 
 let stop: (() => Promise<void>) | undefined
-let quitting=false,preparingQuit=false
 app.whenReady().then(() => {
   void session.defaultSession.clearCache()
   if (HEADLESS || HIDDEN) void app.dock?.hide()
@@ -187,9 +197,12 @@ app.on('before-quit', event => {
   event.preventDefault()
   if(preparingQuit)return
   preparingQuit=true
+  const feedback=(phase:'saving'|'stopping'|'blocked',message?:string)=>{for(const window of BrowserWindow.getAllWindows())if(!window.isDestroyed())window.webContents.send('desktop:quit-state',{phase,message})}
   void (async()=>{
+    feedback('saving')
     if(mainWindow&&rendererReady(mainWindow.webContents))await askRenderer('flush',{},12000)
+    feedback('stopping')
     await stop?.();pluginDesktop?.dispose();quitting=true;app.quit()
-  })().catch(error=>{preparingQuit=false;console.error('Workspace save:',error.message)})
+  })().catch(error=>{preparingQuit=false;feedback('blocked',error.message);console.error('Could not quit:',error.message)})
 })
 process.on('SIGTERM', () => app.quit())

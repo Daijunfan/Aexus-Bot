@@ -12,7 +12,7 @@ type Pending = { resolve: (v: unknown) => void; reject: (e: Error) => void; time
 let primaryWindow:()=>BrowserWindow|undefined=()=>BrowserWindow.getAllWindows()[0]
 export function setPrimaryWindow(get:()=>BrowserWindow|undefined){primaryWindow=get}
 const ready = new WeakSet<WebContents>()
-export function rendererReady(contents: WebContents) { return ready.has(contents) }
+export function rendererReady(contents: WebContents) { return !contents.isDestroyed()&&!contents.isCrashed()&&ready.has(contents) }
 export function setRendererReady(contents: WebContents, value: boolean) { value ? ready.add(contents) : ready.delete(contents) }
 
 const pending = new Map<string, Pending>()

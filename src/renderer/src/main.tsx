@@ -1,4 +1,5 @@
 import React from 'react'
+import {installDesktopQuitNotice} from './desktopQuit'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import {CollaborationProvider} from './components/ChatQuestions'
@@ -20,6 +21,7 @@ import './styles/workbench.css'
 import './styles/team-views.css'
 // Lets the CLI inspect what is on screen, so tests can assert rendering.
 document.documentElement.dataset.clientMode=api.mode
+installDesktopQuitNotice()
 installTransientScrollbars()
 installUiInspector((a) => (window as any).agents.answerUi(a))
 
