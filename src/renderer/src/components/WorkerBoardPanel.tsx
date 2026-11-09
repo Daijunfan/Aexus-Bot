@@ -24,6 +24,7 @@ import {AgentApproval} from './AgentApproval'
 import {useNativeWorkerDraft} from './useNativeWorkerDraft'
 import {useDialogFocus} from '../office/useDialogFocus'
 import {retainEqual} from '../snapshot'
+import {readSnapshot} from '../readSnapshot'
 import {useBoardVisible,type BoardDrafts,type SetBoardDrafts} from './AgentBoardPanel'
 
 export function WorkerBoardPanel({worker,owner,enabled,hidden,refresh,preferences}:{worker:NativeWorker;owner?:string;preferences?:import('../../../shared/types').Store['preferences'];enabled:boolean;hidden:boolean;drafts:BoardDrafts;setDrafts:SetBoardDrafts;refresh:()=>Promise<unknown>}){
@@ -38,7 +39,7 @@ export function WorkerBoardPanel({worker,owner,enabled,hidden,refresh,preference
  useEffect(()=>{
   if(!enabled||!visible&&!expanded)return
   let disposed=false,inflight=false,again=false,timer:ReturnType<typeof setTimeout>|undefined
-  const load=async()=>{if(disposed)return;if(inflight){again=true;return}inflight=true;try{const value=await api.call<WorkerSnapshot>('worker.snapshot',{id:worker.id});if(!disposed)setSnapshot(previous=>retainEqual(previous,value))}catch(cause){if(!disposed)setError((cause as Error).message)}finally{inflight=false;if(again&&!disposed){again=false;void load()}}}
+  const load=async()=>{if(disposed)return;if(inflight){again=true;return}inflight=true;try{const value=await readSnapshot<WorkerSnapshot>('worker.snapshot',{id:worker.id});if(!disposed)setSnapshot(previous=>retainEqual(previous,value))}catch(cause){if(!disposed)setError((cause as Error).message)}finally{inflight=false;if(again&&!disposed){again=false;void load()}}}
   loadRef.current=load;void load();const off=api.onEvent(event=>{if(event.channel==='client:connected'||event.channel==='workers:changed'&&(!event.payload?.id||event.payload.id===worker.id)){if(!timer)timer=setTimeout(()=>{timer=undefined;void load()},60)}})
   return()=>{disposed=true;clearTimeout(timer);off();loadRef.current=()=>Promise.resolve()}
  },[enabled,visible,expanded,worker.id])

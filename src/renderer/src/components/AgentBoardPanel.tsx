@@ -9,6 +9,7 @@ import {activeModel,modelEfforts,enginePermissionModes} from '../../../shared/en
 import {draftContent,reuseDraft} from '../../../shared/message-drafts'
 import {api} from '../api'
 import {retainEqual} from '../snapshot'
+import {readSnapshot} from '../readSnapshot'
 import {translate as uiText} from '../i18n'
 import {Turn} from '../chat/Chat'
 import {MessageViewport,type MessageViewportHandle} from '../chat/MessageViewport'
@@ -57,7 +58,7 @@ export function AgentBoardPanel({card,live,enabled,hidden=false,drafts,setDrafts
    inflight=true
    try{
     const id=liveRef.current?.id
-    if(id){const value=await api.call<Session>('session.snapshot',{id});if(!disposed){setSession(previous=>retainEqual(previous,value));setHistory([])}}
+    if(id){const value=await readSnapshot<Session>('session.snapshot',{id});if(!disposed){setSession(previous=>retainEqual(previous,value));setHistory([])}}
     else{const value=await api.call<{items:Item[]}>('session.transcript',{id:card.id});if(!disposed){setSession(undefined);setHistory(previous=>retainEqual(previous,value.items))}}
     if(!disposed)setLoadError('')
    }catch(cause){if(!disposed)setLoadError((cause as Error).message)}

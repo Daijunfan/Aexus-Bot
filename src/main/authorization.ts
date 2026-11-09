@@ -21,6 +21,7 @@ import {assertManagementKind,hasGlobalRole,type Delegation,type RequestContext,t
 import {rolePolicy,roleAllows,isSupervisor,isManagementRole,roleDescription} from '../shared/roles'
 import {employeeSettings,teamSettings,type StoredSession,type Store} from '../shared/types'
 import {readStore} from './store'
+import {employeeIndex} from './employee-index'
 import {employeeAppearance} from '../shared/avatars'
 import {readApiDocument} from './api-documents'
 import {catalog as chatCatalog,messages as chatMessages} from './chat-group-store'
@@ -31,7 +32,7 @@ const delegationValidators:Partial<Record<'missionNotice'|'questionReply',Delega
 export function registerDelegationValidator(kind:'missionNotice'|'questionReply',validate:DelegationValidator){delegationValidators[kind]=validate}
 function validateNotice(kind:'missionNotice'|'questionReply',delegation:Delegation,target:string){const validate=delegationValidators[kind];if(!validate)throw Error('Delegation validation is unavailable: '+kind);validate(delegation,target)}
 
-export const isGlobal=(principal:PrincipalRef)=>{if(principal.kind==='operator')return true;const store=readStore();return hasGlobalRole(store.access,store.sessions.find(card=>card.id===principal.employeeId))}
+export const isGlobal=(principal:PrincipalRef)=>principal.kind==='operator'||hasGlobalRole(undefined,employeeIndex().get(principal.employeeId))
 export function canReadHostCredentials(id:string,principal=requestContext().principal){
   if(isAppAdministrator(principal)||hostRights(id,principal).write)return true
   const caller=callerEmployee(principal)

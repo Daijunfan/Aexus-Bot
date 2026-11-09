@@ -1,0 +1,16 @@
+// The optimization must retain byte reads, corrupt-file rejection, backup identity and durable commits.
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {build} from 'esbuild'
+const root=process.cwd(),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'aexus-json-cache-'))),out=path.join(root,'artifacts/performance-concurrency/atomic'),require=createRequire(import.meta.url);fs.mkdirSync(out,{recursive:true});const bundle=path.join(out,'atomic.cjs');await build({entryPoints:['src/main/atomic-file.ts'],outfile:bundle,bundle:true,platform:'node',format:'cjs',packages:'external',logLevel:'silent'});const {atomicJson}=require(bundle),file=path.join(temp,'history.json'),parse=JSON.parse;let parses=0
+try{
+ atomicJson(file,{revision:0,text:'Long native history. '.repeat(10000)},true);const initial=fs.readFileSync(file,'utf8');JSON.parse=(...args)=>{parses++;return parse(...args)};for(let revision=1;revision<=10;revision++)atomicJson(file,{revision,text:'Long native history. '.repeat(10000)},true);JSON.parse=parse;assert.equal(parses,0,'already validated identical bytes are not parsed on every own checkpoint');assert.equal(JSON.parse(fs.readFileSync(file+'.previous','utf8')).revision,9);assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).revision,10);assert.equal(JSON.parse(initial).revision,0)
+ console.log('PASS repeated own checkpoints preserve exact durable JSON and previous recovery records without reparsing identical known-valid bytes')
+ fs.writeFileSync(file,'{"external":true}');JSON.parse=(...args)=>{parses++;return parse(...args)};atomicJson(file,{revision:11},true);JSON.parse=parse;assert.equal(parses,1);assert.equal(fs.readFileSync(file+'.previous','utf8'),'{"external":true}');const backup=fs.readFileSync(file+'.previous','utf8');fs.writeFileSync(file,'BROKEN external write');assert.throws(()=>atomicJson(file,{revision:12},true));assert.equal(fs.readFileSync(file,'utf8'),'BROKEN external write');assert.equal(fs.readFileSync(file+'.previous','utf8'),backup);assert.ok(!fs.readdirSync(temp).some(name=>name.endsWith('.tmp')));fs.writeFileSync(file,'{"repaired":true}');atomicJson(file,{revision:13},true);assert.equal(JSON.parse(fs.readFileSync(file+'.previous','utf8')).repaired,true)
+ console.log('PASS external valid/corrupt/repaired data is actually reread, checked and never silently overwritten on corruption')
+ const rename=fs.renameSync;fs.renameSync=(from,to)=>{if(to===file)throw Error('Fixture commit failure');return rename(from,to)};try{assert.throws(()=>atomicJson(file,{revision:14},true),/commit failure/)}finally{fs.renameSync=rename}assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).revision,13);atomicJson(file,{revision:15},true);fs.unlinkSync(file);const target=path.join(temp,'target.json');fs.writeFileSync(target,'{"keep":true}');fs.symlinkSync(target,file);assert.throws(()=>atomicJson(file,{changed:true},true),/symlink/);assert.equal(fs.readFileSync(target,'utf8'),'{"keep":true}');assert.ok(!fs.readdirSync(temp).some(name=>name.endsWith('.tmp')))
+ console.log('PASS failed commits cannot poison later validation; symlinks remain rejected and scratch files are removed')
+}finally{JSON.parse=parse;fs.rmSync(temp,{recursive:true,force:true})}

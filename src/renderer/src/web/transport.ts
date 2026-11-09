@@ -53,6 +53,7 @@ export async function logoutWeb(){await flushPlugins();await request('/api/logou
 const headers=()=>({'content-type':'application/json','x-agents-csrf':csrf,'x-agents-client':clientId,'x-request-id':crypto.randomUUID()})
 export function createWebApi():AgentsApi{
   const api:AgentsApi={mode:'web',get platform(){return connection.server?.os as 'macos'|'linux'|'windows'|undefined},filePath:()=>'',rendererReady:()=>lifecycle?.ready(),
+    async snapshot(cmd,args,base){if(!connection.authenticated)throw Error(uiText('Sign in to the Core service first'));try{return await request('/api/rpc',{method:'POST',headers:headers(),body:JSON.stringify({cmd,args,snapshot:{version:1,base}})})}catch(error){if(error instanceof TypeError)throw Error(uiText('Connection lost. The outcome is unknown; check task status before resubmitting.'));throw error}},
     async call(cmd,args){
       if(!connection.authenticated)throw Error(uiText('Sign in to the Core service first'))
       if(!connection.connected&&(cmd.startsWith('view.')&&!['view.get','view.list'].includes(cmd)||['plugin.open','plugin.dismiss'].includes(cmd)))throw Error(uiText('Reconnect to Core before changing views. Your current input is retained.'))

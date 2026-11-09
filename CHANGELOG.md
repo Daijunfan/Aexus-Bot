@@ -2,6 +2,13 @@
 
 > 项目当前名称为 **Aexus Bot**，分享地址：[Daijunfan/Aexus-Bot](https://github.com/Daijunfan/Aexus-Bot)。下文 Avalon / Anexus 为历史发布名称；安装包、命令和历史路径按实际记录保留。
 
+## main — 2026-11-10 performance update
+
+- Reduce repeated full conversation transfers over internal desktop IPC/Web snapshots while retaining complete ordinary Core/CLI results, current metadata and authorization checks.
+- Reuse the employee identity index only while the underlying state-file version matches, accelerating concurrent role/scheduling projections without caching permission decisions.
+- Skip redundant parsing of freshly reread, identical known-valid checkpoint JSON; retain synchronous fsync, recovery copies and corrupt/external-file checks.
+- Preserve existing functions, controls, layout, styling, FIFO/cancel semantics, workspaces and native identities. Validate concurrent streaming, immutable/frozen snapshots, reconnect, revocation and long-history input with isolated protocol fixtures.
+
 ## main — 2026-11-10 quality update
 
 - Add reusable Mission view filters, saved sorting/property/density choices, true global-filter intersections and complete multi-assignee identity display. Preserve local choices during concurrent saved-view edits.

@@ -1,4 +1,5 @@
 import {isAppAdministrator} from '../application-authority'
+import {SnapshotEncoder,snapshotCommand} from '../../shared/snapshot-wire'
 import {apiReadOnly} from '../../shared/api-effects'
 import {mediaResponse} from '../media-response'
 import {mediaAvailable,closeMedia} from '../media'
@@ -53,6 +54,7 @@ export async function startWebServer(options:Options={}){
   const requests=new Map<string,{signature:string;reply:Promise<unknown>;at:number}>()
   // Interactive terminal keystrokes retain replay protection without consuming the UI mutation budget.
   const nativeInputs=new Map<string,{signature:string;reply:Promise<unknown>;at:number}>()
+  const snapshots=new SnapshotEncoder(randomUUID)
   let pendingReads=0
   const sockets=new Set<net.Socket>()
   // Revocation must close already-open HTTP streams as well as future requests.
@@ -212,7 +214,7 @@ export async function startWebServer(options:Options={}){
         if(readOnly)pendingReads++
         const reply=(!coreReceipt?previous?.reply:undefined)??handleRequest(request,current.context)
         if(keepReply&&!previous){const item={signature,reply,at:0};replay.set(key,item);void reply.then(()=>{item.at=Date.now()},()=>{item.at=Date.now()})}
-        try{const result=await reply;if(request.cmd==='messenger.media-open'&&current.session)mediaSessions.set(result.id,{session:current.session,context:current.context});if(request.cmd==='messenger.media-close')mediaSessions.delete(String(request.args?.id));json(res,{ok:true,data:request.cmd==='conversation.file-open'?{...result,reader:projectPluginView(result.reader,current.session??peers.get(current.context.clientId??'')?.session)}:['plugin.open','plugin.windows','plugin.place','plugin.mode','plugin.view'].includes(request.cmd)?projectPluginView(result,current.session??peers.get(current.context.clientId??'')?.session):result})}finally{
+        try{let result=await reply;if(value.snapshot?.version===1&&snapshotCommand(request.cmd))result=snapshots.encode(JSON.stringify([current.session?.id,current.context.principal,current.context.credentialHash,current.context.clientId]),request.cmd,request.args,result,typeof value.snapshot.base==='string'?value.snapshot.base:undefined);if(request.cmd==='messenger.media-open'&&current.session)mediaSessions.set(result.id,{session:current.session,context:current.context});if(request.cmd==='messenger.media-close')mediaSessions.delete(String(request.args?.id));json(res,{ok:true,data:request.cmd==='conversation.file-open'?{...result,reader:projectPluginView(result.reader,current.session??peers.get(current.context.clientId??'')?.session)}:['plugin.open','plugin.windows','plugin.place','plugin.mode','plugin.view'].includes(request.cmd)?projectPluginView(result,current.session??peers.get(current.context.clientId??'')?.session):result})}finally{
           // Read concurrency stays bounded without retaining completed query responses.
           if(readOnly)pendingReads--
           if(['plugin.dismiss','plugin.close'].includes(request.cmd)){const id=String(request.args?.id);grants.delete(id);}
@@ -265,6 +267,6 @@ export async function startWebServer(options:Options={}){
   await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve)})
   const bound=(server.address() as net.AddressInfo).port
   origin=configured?.origin??`http://${host==='::1'?'[::1]':host}:${bound}`
-  const heartbeat=setInterval(()=>{pruneStreams();for(const [id,grant] of mediaSessions)if(!auth.valid(grant.session)||!mediaAvailable(id)){withCaller(grant.context,()=>{try{closeMedia(id)}catch{}});mediaSessions.delete(id)};for(const [id,grant] of grants)if(!auth.valid(grant.session))grants.delete(id);for(const peer of peers.values()){if(!auth.valid(peer.session))peer.socket.close(4001,'Session expired');else peer.socket.ping()}},30000);heartbeat.unref()
-  return {url:origin,port:bound,async close(){clearInterval(heartbeat);auth.clear();for(const peer of peers.values())peer.socket.terminate();wss.close();for(const socket of sockets)socket.destroy();await new Promise<void>(resolve=>server.close(()=>resolve()))}}
+  const heartbeat=setInterval(()=>{snapshots.prune();pruneStreams();for(const [id,grant] of mediaSessions)if(!auth.valid(grant.session)||!mediaAvailable(id)){withCaller(grant.context,()=>{try{closeMedia(id)}catch{}});mediaSessions.delete(id)};for(const [id,grant] of grants)if(!auth.valid(grant.session))grants.delete(id);for(const peer of peers.values()){if(!auth.valid(peer.session))peer.socket.close(4001,'Session expired');else peer.socket.ping()}},30000);heartbeat.unref()
+  return {url:origin,port:bound,async close(){clearInterval(heartbeat);snapshots.clear();auth.clear();for(const peer of peers.values())peer.socket.terminate();wss.close();for(const socket of sockets)socket.destroy();await new Promise<void>(resolve=>server.close(()=>resolve()))}}
 }

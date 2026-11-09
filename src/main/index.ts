@@ -10,6 +10,8 @@ import { writeFileSync } from 'node:fs'
 import {getPreferences} from './store'
 import { startRuntime } from './runtime'
 import { handleRequest, setUiHandler, setViewGuard } from './server'
+import {SnapshotEncoder,snapshotCommand} from '../shared/snapshot-wire'
+import {randomUUID} from 'node:crypto'
 import { askRenderer, resolveUiRequest, rendererReady, setRendererReady, setPrimaryWindow } from './ui'
 import type { Request, Response } from '../shared/protocol'
 
@@ -49,14 +51,16 @@ const trusted=(event:Electron.IpcMainEvent|Electron.IpcMainInvokeEvent)=>{
 }
 const remoteTrusted=(event:Electron.IpcMainEvent)=>{const frame=event.senderFrame;return !!REMOTE_WEB_URL&&event.sender===mainWindow?.webContents&&frame===event.sender.mainFrame&&!!frame&&new URL(frame.url).origin===new URL(REMOTE_WEB_URL).origin}
 const activeWindow=(win:BrowserWindow|undefined)=>!!win&&!win.isDestroyed()&&win.isVisible()&&win.isFocused()&&!win.isMinimized()&&win.webContents.isFocused()
-ipcMain.handle('api:request', async (event, request: Request):Promise<Response> => {
+const desktopSnapshots=new SnapshotEncoder(randomUUID)
+setInterval(()=>desktopSnapshots.prune(),30000).unref()
+ipcMain.handle('api:request', async (event, request: Request&{snapshot?:{version:number;base?:string}}):Promise<Response> => {
   try{
     if(!trusted(event))throw new Error('Untrusted IPC sender')
     // Desktop acknowledgements require the actual native window to be foregrounded.
     const data=['session.acknowledge','chat.acknowledge','channel.acknowledge','direct.acknowledge'].includes(request.cmd)&&!activeWindow(mainWindow)
       ?{acknowledged:false,reason:'window-not-active'}
       :await handleRequest(request,{...operatorContext(),...(request.cmd.startsWith('messenger.media-')?{clientId:'desktop-media-'+event.sender.id}:{})})
-    return {ok:true,data}
+    return {ok:true,data:request.snapshot?.version===1&&snapshotCommand(request.cmd)?desktopSnapshots.encode(String(event.sender.id),request.cmd,request.args,data,request.snapshot.base):data}
   }catch(error){
     return {ok:false,error:error instanceof Error?error.message:String(error),...((error as {code?:string})?.code?{code:(error as {code:string}).code}:{})}
   }

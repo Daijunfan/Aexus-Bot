@@ -1,3 +1,4 @@
+import {readSnapshot} from './readSnapshot'
 import {SlashCommandMenu} from './components/SlashCommandMenu'
 import {PendingQuestions} from './components/ChatQuestions'
 import {TaskQueue} from './components/TaskQueue'
@@ -225,7 +226,7 @@ export default function App() {
   const refresh=useMemo(()=>createRefreshQueue(async(configuration,detail,status)=>{
     const [saved,live]=await Promise.all([configuration?api.call<Store>('session.list'):Promise.resolve(null),status?api.call<Session[]>('session.list',{live:true,summary:true}):Promise.resolve(null)])
     const requested=viewedSession.current
-    const snapshot=detail&&requested&&live?.some(item=>item.id===requested)?await api.call<Session>('session.snapshot',{id:requested}):undefined
+    const snapshot=detail&&requested&&live?.some(item=>item.id===requested)?await readSnapshot<Session>('session.snapshot',{id:requested}):undefined
     if(saved)setStore(previous=>retainEqual(previous,saved))
     if(live)setSessions(previous=>{
       const byId=new Map(previous.map(item=>[item.id,item])),showing=viewedSession.current

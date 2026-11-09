@@ -8,6 +8,7 @@ export type AgentsApi = {
   filePath(file:File):string
   rendererReady(): void
   call<T = any>(cmd: Request['cmd'], args?: Request['args']): Promise<T>
+  snapshot?(cmd:string,args:Request['args'],base?:string):Promise<unknown>
   onEvent(handler: (event: { channel: string; payload: any }) => void): () => void
   onUiRequest(handler: (request: { id: string; op: string; args: Record<string, unknown> }) => void): () => void
   answerUi(answer: { id: string; data?: unknown; error?: string }): void

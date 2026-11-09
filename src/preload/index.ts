@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('agents', {
     if(!reply.ok)throw {message:reply.error,...(reply.code?{code:reply.code}:{})}
     return reply.data
   },error=>{throw {message:error.message.replace(/^Error invoking remote method 'api:request': (?:Error: )?/,'')}}),
+  snapshot: (cmd:string,args:Request['args'],base?:string)=>ipcRenderer.invoke('api:request',{cmd,args,snapshot:{version:1,base}}).then((reply:Response)=>{if(!reply.ok)throw {message:reply.error,...(reply.code?{code:reply.code}:{})};return reply.data},error=>{throw {message:error.message.replace(/^Error invoking remote method 'api:request': (?:Error: )?/,'')}}),
   onEvent: (handler: (event: any) => void) => on('api:event', handler),
   onUiRequest: (handler: (request: any) => void) => on('ui:request', handler),
   answerUi: (answer: unknown) => ipcRenderer.send('ui:response', answer),
