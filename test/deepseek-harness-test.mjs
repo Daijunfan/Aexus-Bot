@@ -18,10 +18,14 @@ const server=http.createServer(async(req,res)=>{
  let raw='';for await(const chunk of req)raw+=chunk
  if(!raw){res.writeHead(404).end();return}
  const body=JSON.parse(raw),messages=body.messages??[],text=messages.flatMap(m=>typeof m.content==='string'?[m.content]:(m.content??[]).filter(c=>c.type==='text').map(c=>c.text)).join('\n'),scenario=text.match(/CASE_[A-Z_]+/g)?.at(-1)??'BOOTSTRAP'
+ const latest=messages.filter(m=>m.role==='user').map(m=>typeof m.content==='string'?m.content:(m.content??[]).filter(c=>c.type==='text').map(c=>c.text).join('\n')).filter(Boolean).at(-1)??''
+ const groupContext=latest.match(/\[Group request\]\n([^\n]+)/)?.[1],groupRequest=groupContext?JSON.parse(groupContext):undefined
  const calls=messages.flatMap(m=>Array.isArray(m.content)?m.content.filter(c=>c.type==='tool_use'):[])
  const find=needle=>body.tools?.find(t=>t.name.includes(needle))?.name
  let name,input
- if(scenario==='BOOTSTRAP'){
+ if(scenario.startsWith('CASE_GROUP_')){
+  if(latest.includes('[Group response stage]')&&groupRequest?.acknowledgment.mode==='work'&&!groupRequest.acknowledgment.muted&&!calls.some(c=>c.input?.messageId===groupRequest.messageId)){name=find('agents_company_discussion_post');input={conversationType:'group',conversationId:groupRequest.groupId,messageId:groupRequest.messageId,text:'DSH group reply '+scenario}}
+ }else if(scenario==='BOOTSTRAP'){
   name=find('agents_company_documentation');const read=calls.filter(c=>c.name===name).map(c=>c.input.operation)
   input={operation:!read.includes('identity')?'identity':!read.includes('index')?'index':null};if(!input.operation)name=undefined
  }else if(scenario==='CASE_PRIVATE'&&!calls.some(c=>c.input?.command==='direct.post')){name=find('agents_company_api');input={command:'direct.post',args:{text:'DSH private reply',clientMessageId:'fixture-private'}}}
@@ -31,7 +35,7 @@ const server=http.createServer(async(req,res)=>{
  else if(scenario==='CASE_DENY'&&!calls.some(c=>c.input?.command?.includes('DENIED_MARKER'))){name=find('bash');input={command:'printf denied > DENIED_MARKER',description:'Fixture denial'}}
  else if(scenario==='CASE_ALLOW'&&!calls.some(c=>c.input?.command?.includes('ALLOWED_MARKER'))){name=find('bash');input={command:'printf allowed > ALLOWED_MARKER',description:'Fixture approval'}}
  else if(scenario==='CASE_CANCEL'&&!calls.some(c=>c.input?.command?.includes('CANCELLED_MARKER'))){name=find('bash');input={command:'sleep 5; printf bad > CANCELLED_MARKER',description:'Fixture cancellation'}}
- requests.push({scenario,tools:body.tools?.map(t=>t.name),model:body.model,effort:body.output_config?.effort,key:req.headers['x-api-key']})
+ requests.push({scenario,phase:groupRequest?.phase,groupMessage:groupRequest?.messageId,tools:body.tools?.map(t=>t.name),model:body.model,effort:body.output_config?.effort,key:req.headers['x-api-key']})
  const content=name?{type:'tool_use',id:'call_'+requests.length,name,input}:{type:'text',text:'DSH_OK '+scenario},stop=name?'tool_use':'end_turn'
  const message={id:'msg_'+requests.length,type:'message',role:'assistant',model:body.model,content:[],stop_reason:null,stop_sequence:null,usage:{input_tokens:1,output_tokens:1}}
  res.writeHead(200,{'content-type':'text/event-stream'})
@@ -105,9 +109,28 @@ try{
  assert.equal(rejected.ok,false);assert.match(rejected.error,/isolation/);assert.equal((await rpc('session.list')).sessions.length,2)
  const activeId=(await f.status(card.id)).sessionId
  await assert.rejects(()=>rpc('config.plan',{id:activeId,enabled:true}),/Plan/)
+ const peer=await f.create('Group peer','Local'),group=await rpc('chat.create',{name:'Harness group',members:[peer.id,card.id]})
+ const history=async()=>(await rpc('chat.history',{id:group.id})).messages
+ const groupTurn=async(scenario,mentions,shouldReply)=>{
+  const sent=await rpc('chat.send',{id:group.id,text:scenario,...(mentions?{mentions}:{})})
+  await f.until(async()=>{const m=(await history()).find(m=>m.id===sent.id),d=m.deliveries.find(d=>d.employeeId===card.id);assert.ok(!['failed','interrupted'].includes(d.status),JSON.stringify(d));return d.status==='completed'&&d.readAt},'Harness group delivery')
+  const replies=(await history()).filter(m=>m.author.employeeId===card.id&&m.replyTo===sent.id)
+  assert.equal(replies.length,shouldReply?1:0,scenario+' publishes exactly the expected explicit reply')
+  if(shouldReply)assert.equal(replies[0].text,'DSH group reply '+scenario)
+  const inputs=(await f.cli('session','transcript','--employee',card.id)).items.filter(i=>i.role==='user'&&i.context?.origin?.messageId===sent.id)
+  assert.equal(inputs.filter(i=>i.context.phase==='read').length,1)
+  assert.equal(inputs.filter(i=>i.context.phase==='work').length,mentions?.includes(peer.id)?0:1)
+  return sent
+ }
+ await groupTurn('CASE_GROUP_BROADCAST',undefined,true)
+ await groupTurn('CASE_GROUP_TARGET',[card.id],true)
+ await groupTurn('CASE_GROUP_AWARENESS',[peer.id],false)
+ await rpc('chat.mute',{id:group.id,member:card.id,muted:true})
+ await groupTurn('CASE_GROUP_MUTED',[card.id],false)
+ assert.equal((await rpc('direct.history',{employee:card.id})).items.length,1,'group replies never leak into private chat')
  assert.ok(requests.every(r=>r.model==='fixture-model'))
  assert.ok(requests.every(r=>r.key==='fixture-deepseek-key'))
  assert.ok(requests.some(r=>r.scenario==='CASE_API'))
- console.log('PASS DeepSeek Harness: discovery without inference, Core initialization/API/private reply/own schedule, approval allow/deny, running command cancellation, effort, fixed identity, same-ID resume; '+requests.length+' loopback calls, zero paid calls')
+ console.log('PASS DeepSeek Harness: discovery without inference, Core initialization/API/private reply/own schedule, group broadcast/mention/awareness/mute, approval allow/deny, running command cancellation, effort, fixed identity, same-ID resume; '+requests.length+' loopback calls, zero paid calls')
 }catch(error){console.error('Requests:',requests.map(({key,tools,...r})=>({...r,tools:tools?.filter(t=>/documentation|api|bash/.test(t))})));throw error}
 finally{await app?.close();await f?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(temp,{recursive:true,force:true})}
