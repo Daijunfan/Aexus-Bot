@@ -27,7 +27,7 @@ export function defaultEmployeeModel(engine:Engine,kind:EmployeeKind='worker'){
 export async function engineModels(engine:Engine,kind:EmployeeKind='worker',team?:string){
   if(!isEngine(engine))throw Error('请选择有效的 Coding Agent')
   if(!['worker','cloud-native-worker'].includes(kind))throw Error('Unknown employee kind')
-  if(isNativeAcp(engine)){if(kind!=='worker')throw Error('OpenCode/Kilo Code currently support Core-local employees only');return discoverNativeAcp(engine)}
+  if(isNativeAcp(engine)){if(kind!=='worker')throw Error('This ACP engine currently supports Core-local employees only');return discoverNativeAcp(engine)}
   if(engine==='cline'||engine==='pi'){if(kind==='cloud-native-worker')throw Error('Use kind:worker for Cline/Pi cloud workspaces through Tunnel; cloud-native execution is not supported');return {models:(await (engine==='cline'?discoverCline():discoverPi())).models,defaultModel:defaultEmployeeModel(engine)}}
   const store=readStore(),config=team?teamSettings(store,team):undefined
   if(kind==='cloud-native-worker'&&(!team||!store.groups.includes(team)||config?.mode!=='cloud'||!config.remote))throw Error('请先选择已绑定云主机的 Cloud Team')

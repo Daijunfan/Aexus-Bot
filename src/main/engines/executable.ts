@@ -13,15 +13,15 @@ export function bundledClaudeBinary(from?:string){
 }
 /** Resolve at call time: install/configure never requires restarting the company. */
 export function engineExecutable(engine:EngineId,preferPaired=engine==='claude'):string{
-  const config=engineConfiguration(engine)
+  const config=engineConfiguration(engine),binary=engine==='deepseek'?'dsh':engine
   const override=process.env[engine.toUpperCase()+'_BIN']
   if(override)return override
   if(config.path)return config.path
-  if(usesNativeConfiguration(engine)){const native=resolveBinary(engine);if(path.isAbsolute(native)&&fs.existsSync(native))return native}
+  if(usesNativeConfiguration(engine)){const native=resolveBinary(binary);if(path.isAbsolute(native)&&fs.existsSync(native))return native}
   if(config.managedPath&&fs.existsSync(config.managedPath))return config.managedPath
   const sdkRoot=config.sdkPath&&fs.existsSync(config.sdkPath)?path.dirname(fs.realpathSync(config.sdkPath)):undefined
   if(engine==='claude'&&preferPaired){const bundled=bundledClaudeBinary(sdkRoot);if(bundled)return bundled}
-  const external=resolveBinary(engine)
+  const external=resolveBinary(binary)
   if(path.isAbsolute(external)&&fs.existsSync(external))return external
   return engine==='claude'?bundledClaudeBinary(sdkRoot)??external:external
 }

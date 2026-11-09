@@ -71,6 +71,7 @@ Secretaries help users administer the application and plugins. Governors organiz
 | --- | --- | --- |
 | Codex | App Server | Core-local and supported SSH / native cloud workspaces |
 | Claude Code | Claude Agent SDK | Core-local and supported SSH / native cloud workspaces |
+| DeepSeek Harness (experimental) | ACP | Core-local; existing `dsh` installation |
 | Cline | ACP | Core-local Build / plugin directories, or remote workspaces through Tunnel |
 | Pi | RPC | Core-local Build / plugin directories, or remote workspaces through Tunnel |
 

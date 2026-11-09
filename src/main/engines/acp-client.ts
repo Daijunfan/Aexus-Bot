@@ -1,3 +1,4 @@
+import {prepareDeepseek} from './deepseek-config'
 import fs from 'node:fs'
 import path from 'node:path'
 import {StringDecoder} from 'node:string_decoder'
@@ -16,7 +17,7 @@ export function nativeAcpClient(options:{engine:NativeAcpEngine;cwd:string;direc
  const {engine,directory}=options
  fs.mkdirSync(directory,{recursive:true,mode:0o700})
  const config=codeConfig(engine),data=path.join(directory,'data')
- copyNativeConnection(config.authFile,path.join(data,engine,'auth.json'))
+ if(engine!=='deepseek')copyNativeConnection(config.authFile,path.join(data,engine,'auth.json'))
  // Override concrete native rules too: a wildcard cannot override an existing edit/bash allow.
  const permission=Object.fromEntries([...new Set(['*','read','edit','glob','grep','list','bash','external_directory','todowrite','question','webfetch','websearch','lsp','doom_loop','skill',...Object.keys(config.data.permission??{})])].map(name=>[name,'ask']))
  permission.task='deny'
@@ -24,10 +25,13 @@ export function nativeAcpClient(options:{engine:NativeAcpEngine;cwd:string;direc
  // each command, including allowing user replies while rejecting planning writes.
  permission['agents-company_*']='ask'
  const nativeContent=JSON.parse(process.env[engine.toUpperCase()+'_CONFIG_CONTENT']||'{}')
+ const dsh=engine==='deepseek'?prepareDeepseek(directory):undefined
  const env={...engineProcessEnvironment(engine,childEnv(options.cwd)),XDG_DATA_HOME:data,XDG_STATE_HOME:path.join(directory,'state'),[engine.toUpperCase()+'_CONFIG_CONTENT']:JSON.stringify({...nativeContent,permission,agent:{...nativeContent.agent,plan:{...nativeContent.agent?.plan,permission:{...nativeContent.agent?.plan?.permission,'agents-company_*':'ask'}}}})}
+ Object.assign(env,dsh?.env)
+ const launchArgs=dsh?.args??['acp','--cwd',options.cwd]
  const processOptions={cwd:options.cwd,env,stdio:['pipe','pipe','pipe'] as ['pipe','pipe','pipe'],windowsHide:true,detached:process.platform!=='win32'}
- const child=options.employeeId?spawnEmployeeProcess(options.employeeId,engineExecutable(engine),['acp','--cwd',options.cwd],processOptions):spawn(engineExecutable(engine),['acp','--cwd',options.cwd],processOptions)
- const secrets=[...Object.entries(env).filter(([name,value])=>/key|token|password/i.test(name)&&value&&value.length>8).map(([,value])=>value!),...Object.values(config.auth).flatMap((a:any)=>[a.key,a.access,a.refresh].filter(v=>typeof v==='string'&&v.length>8)),...Object.values(config.providers).map(p=>codeCredential(p.options?.apiKey)).filter((v):v is string=>!!v&&v.length>8)]
+ const child=options.employeeId?spawnEmployeeProcess(options.employeeId,engineExecutable(engine),launchArgs,processOptions):spawn(engineExecutable(engine),launchArgs,processOptions)
+ const secrets=[...(dsh?.secrets??[]),...Object.entries(env).filter(([name,value])=>/key|token|password/i.test(name)&&value&&value.length>8).map(([,value])=>value!),...Object.values(config.auth).flatMap((a:any)=>[a.key,a.access,a.refresh].filter(v=>typeof v==='string'&&v.length>8)),...Object.values(config.providers).map(p=>codeCredential(p.options?.apiKey)).filter((v):v is string=>!!v&&v.length>8)]
  const redact=(text:string)=>secrets.reduce((value,secret)=>value.replaceAll(secret,'[redacted]'),text)
  let sequence=0,stderr='',closed=false,buffer='';const decoder=new StringDecoder('utf8')
  const pending=new Map<number,{resolve:(value:any)=>void;reject:(error:Error)=>void;timer?:ReturnType<typeof setTimeout>}>()

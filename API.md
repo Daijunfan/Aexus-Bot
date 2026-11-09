@@ -3243,6 +3243,17 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 
 委派前先保存持续的 message.received 事件计划，收到一条确认并不结束等待。程序监测用 monitor.* 管理、输出稳定 ID 的 JSON 行，空闲不调用模型。规则、授权、重启和多段回复约定见 [外部 Worker](docs/BOT_WORKERS.md) 与 [事件任务](docs/EVENT_TASKS.md)。
 
+## DeepSeek Harness engine
+
+The experimental `deepseek` engine uses an existing Core-local `dsh` installation.
+Use `agents engine check --engine deepseek --json` and
+`agents engine models --engine deepseek --json` before creating an employee with
+`--engine deepseek`. Preserve opaque model IDs exactly as returned by discovery.
+Select a CLI with `engine.configure {engine:"deepseek",patch:{path:"/absolute/path/to/dsh"}}`.
+Native API-key connection settings, text, model/effort controls, Core tools and
+same-ID continuation are supported. Plan, images, Auto, strict isolation, remote
+execution and native Worker TUI are unavailable. See `docs/ENGINE_ADAPTERS.md`.
+
 <!-- BEGIN GENERATED CLI COMMAND INDEX -->
 ## 全部 CLI 命令索引
 
@@ -3415,8 +3426,8 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 | <code>agents chat acknowledge</code> | <code>ID --message ID</code> | User or Secretary: explicitly mark group messages read; private receipts remain separate | Shared views / group conversations | operator |
 | <code>agents system info</code> | <code>—</code> | Read Core host OS, architecture and deployment capabilities | 后端信息 | identity |
 | <code>agents system directories</code> | <code>[--path PATH]</code> | Browse directories on the Core host (user or Secretary) | 后端目录选择 | operator |
-| <code>agents engine capabilities</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo</code> | Read adapter capabilities, workspace modes and employee kinds before hiring; no credentials or inference | 创建员工能力检查 | identity |
-| <code>agents engine providers</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo</code> | Read every native provider/router and saved profile with active model, URLs, credential fingerprints and source files; never returns keys | Native engine provider catalog | operator |
+| <code>agents engine capabilities</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek</code> | Read adapter capabilities, workspace modes and employee kinds before hiring; no credentials or inference | 创建员工能力检查 | identity |
+| <code>agents engine providers</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek</code> | Read every native provider/router and saved profile with active model, URLs, credential fingerprints and source files; never returns keys | Native engine provider catalog | operator |
 | <code>agents engine list</code> | <code>—</code> | List registered Coding Agent adapters and public configuration | 引擎管理 | operator |
 | <code>agents engine check</code> | <code>--engine ID [--team NAME] [--force]</code> | Check executable, protocol and authentication without inference | 引擎检测 | operator |
 | <code>agents engine probe</code> | <code>--engine ID --confirm [--model ID]</code> | Explicit, potentially billed OK-only inference on the Core host; temporary workspace and 45s timeout | 引擎测试调用 | operator |
@@ -3484,7 +3495,7 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 | <code>agents schedule trigger</code> | <code>ID --event-id KEY</code> | Submit a deduplicated signal to an event schedule; current caller and original scheduling authority are checked; native channel events cannot be forged | Plan event rule | schedule |
 | <code>agents schedule cancel</code> | <code>ID</code> | Cancel an active run, preserving its history | Plan task editor | schedule |
 | <code>agents settings get</code> | <code>—</code> | Read independent Company, Messages and Plan appearances, shared controls and default employee models | 应用设置 | operator |
-| <code>agents engine models</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo [--kind worker&#124;cloud-native-worker] [--team NAME]</code> | List available models before employee creation, without inference; Cloud Native reads the selected host | 创建员工和默认模型设置 | operator |
+| <code>agents engine models</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek [--kind worker&#124;cloud-native-worker] [--team NAME]</code> | List available models before employee creation, without inference; Cloud Native reads the selected host | 创建员工和默认模型设置 | operator |
 | <code>agents settings set</code> | <code>[--view company&#124;messages&#124;plan &#124; --view-appearance JSON&#124;@file] [--message-wallpaper JSON&#124;@file] [--language en&#124;zh-CN] [--theme violet&#124;blue&#124;mint&#124;teal&#124;cyan&#124;rose&#124;coral&#124;amber&#124;indigo&#124;graphite&#124;custom&#124;white&#124;light&#124;space&#124;black&#124;midnight&#124;sage] [--theme-color #RRGGBB] [--default-permission default&#124;acceptEdits&#124;bypassPermissions] [--explorer-width N] [--asset-drawer-width N] [--terminal-height N] [--page-zoom N] [--zoom-sensitivity N] [--pan-sensitivity N] [--sidebar-width N] [--snap-employees on&#124;off] [--team-overview on&#124;off] [--default-codex-model ID] [--default-claude-model ID] [--default-cline-model ID] [--default-pi-model ID]</code> | Patch independent view appearances and shared settings; legacy theme flags target Messages only | 背景、灵敏度和团队索引 | operator |
 | <code>agents view get</code> | <code>—</code> | Read service-owned navigation, including without a window | 当前面板 | operator |
 | <code>agents view open</code> | <code>home&#124;messages&#124;plan&#124;team&#124;employee&#124;workspace&#124;conversation&#124;initialization&#124;plugin&#124;settings [--name NAME] [--employee ID &#124; --chat GROUP_ID &#124; --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID]</code> | Open a form, workspace, news channel or employee conversation | 打开资料或会话 | operator |

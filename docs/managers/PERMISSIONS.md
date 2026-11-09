@@ -331,3 +331,11 @@ Dot/Grok 不是 Company 员工，不获取 Core token、管理角色或本项目
 
 
 `bot.update/delete/restore` 仅向用户和 Secretary 开放。移除只删除 Aexus 接入与本地授权，不删除原生 Bot；普通同步不会重新接入。`bot.list --include-removed` 也仅限应用管理员。恢复时核对原生身份，恢复历史和外观但不恢复员工授权。员工条目删除复用 `card.remove` 的职位和文件删除边界，在 Agents 和 Message 中移除同一身份。
+
+## DeepSeek Harness 执行边界
+
+实验性 `deepseek` 引擎只在 Core 本地运行。每次工具执行（含嵌套调用）先经过
+Harness 适配器的强制中间件，再由现有 Core 审批回调决定；中间件未加载时 ACP
+不会启动。员工初始化仍只允许本人身份与文档索引读取。原生子 Agent、工作流和
+插件管理工具被禁用；Company 职位、排期和 API 授权仍由 Core 管理。此版本不支持
+Plan、Auto、远端执行或严格进程隔离，不会自动切换执行主机或提升权限。

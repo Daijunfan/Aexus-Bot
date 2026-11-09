@@ -347,7 +347,7 @@ export default function App() {
     { value: 'default', label: 'Read only', hint: 'Inspect files; no file changes' },
     { value: 'acceptEdits', label: 'Workspace write', hint: 'Allow edits within this workspace' },
     { value: 'bypassPermissions', label: 'Full access', hint: 'Run without sandbox restrictions' }
-  ] : PERMISSION_MODES.filter(p=>!active||!['cline','pi','opencode','kilo'].includes(active.engine)||p.value!=='auto'&&(p.value!=='plan'||['cline','opencode','kilo'].includes(active.engine)))
+  ] : PERMISSION_MODES.filter(p=>!active||!['cline','pi','opencode','kilo','deepseek'].includes(active.engine)||p.value!=='auto'&&(p.value!=='plan'||['cline','opencode','kilo'].includes(active.engine)))
   const model=active?activeModel(active.models,active.model):undefined
   const efforts=active?modelEfforts(active.engine,model):[]
   const fastAvailable=active?supportsFast(active.engine,model):false

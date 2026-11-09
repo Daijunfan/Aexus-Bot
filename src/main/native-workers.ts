@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {randomUUID} from 'node:crypto'
 import {APP_HOME} from '../shared/protocol'
-import {isEngine,ENGINE_DEFINITIONS} from '../shared/engines'
+import {isEngine,ENGINE_DEFINITIONS,supportsNativeWorker} from '../shared/engines'
 import type {NativeWorker} from '../shared/native-worker'
 import {atomicJson,readJson} from './atomic-file'
 import {readStore} from './store'
@@ -42,7 +42,7 @@ export function listWorkers(employee?:string){
  return records().filter(w=>employee?w.employee===employee:isAppAdministrator(principal)||principal.kind==='agent'&&w.employee===principal.employeeId).map(present)
 }
 export function createWorker(args:{employee?:string;engine:string;title?:string;cwd?:string}){
- if(!isEngine(args.engine))throw Error('Unsupported native Coding Agent engine')
+ if(!isEngine(args.engine)||!supportsNativeWorker(args.engine))throw Error('This engine does not provide an interactive native Worker; create a Company employee instead')
  const {store,card}=owner(args.employee),effective=executionEmployee(store,card)
  const paths=effective.remote?.os==='windows'?path.win32:effective.remote?path.posix:path
  const value:Record={id:randomUUID(),employee:card.id,title:args.title?.trim()||ENGINE_DEFINITIONS[args.engine].label+' Worker',engine:args.engine,cwd:paths.resolve(card.cwd,args.cwd??'.'),host:effective.remote?.host,createdAt:new Date().toISOString()}
@@ -51,6 +51,7 @@ export function createWorker(args:{employee?:string;engine:string;title?:string;
 }
 export async function startWorker(id:string,cols?:number,rows?:number){
  const value=get(id)
+ if(!supportsNativeWorker(value.engine))throw Error('This engine does not provide an interactive native Worker')
  if(stopping.has(id))throw Error('Worker 正在停止，请稍后重试')
  stopping.add(id)
  try{
@@ -70,6 +71,7 @@ export function inputWorker(id:string,data:string){get(id);return inputTerminal(
 export function resizeWorker(id:string,cols:number,rows:number){get(id);return resizeTerminal(terminal(id).id,cols,rows)}
 export async function stopWorker(id:string,remove=false){
  const value=get(id)
+ if(!supportsNativeWorker(value.engine))throw Error('This engine does not provide an interactive native Worker')
  if(stopping.has(id))throw Error('Worker 正在停止，请稍后重试')
  stopping.add(id)
  try{const t=listTerminals().find(t=>t.worker===id);if(t)await closeTerminal(t.id);get(id);if(remove)atomicJson(file,records().filter(w=>w.id!==id));return remove?true:present(value)}finally{stopping.delete(id)}

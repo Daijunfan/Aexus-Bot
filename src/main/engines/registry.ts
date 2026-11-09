@@ -33,7 +33,7 @@ export async function checkEngine(engine:EngineId,options:{team?:string;force?:b
     const result:EngineHealth={engine,label:definition.label,target:options.team??os.hostname(),installed:false,protocol:'unchecked',authentication:'unknown',ready:false,checkedAt:Date.now(),managed:!!configuration.managedPath,hasApiKey:publicEngineConfiguration(engine).hasApiKey,capabilities:{...definition.capabilities}}
     try{
       if(options.team){
-        if(isNativeAcp(engine))throw Error('OpenCode/Kilo Code currently require a Core-local workspace')
+        if(isNativeAcp(engine))throw Error('This ACP engine currently requires a Core-local workspace')
         if(engine==='cline'||engine==='pi')throw Error('Cline/Pi run on the Core host; check without --team and use kind:worker for Tunnel cloud workspaces')
         const remote=await checkCloudNative(options.team,engine)
         Object.assign(result,{installed:true,protocol:'compatible',authentication:remote.authentication,target:remote.host,version:remote.version,ready:remote.authentication==='configured'})

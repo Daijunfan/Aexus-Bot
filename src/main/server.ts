@@ -924,6 +924,9 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       if(a.permissionMode!==undefined&&!['default','acceptEdits','plan','auto','dontAsk','bypassPermissions'].includes(a.permissionMode))throw Error('Invalid engine permission mode')
       const engine = a.engine ?? 'codex'
       if (!isEngine(engine)) throw new Error('Unknown engine')
+      const creationPermission=a.permissionMode??getPreferences().defaultPermissionMode
+      if(engine==='deepseek'&&['auto','plan'].includes(creationPermission))throw Error('DeepSeek Harness does not support Plan or Auto permission mode; choose Ask or Accept edits')
+      if(engine==='deepseek'&&a.accessMode==='isolated')throw Error('DeepSeek Harness does not support strict process isolation')
       let model=a.model||defaultEmployeeModel(engine,kind)
       if (!String(a.title ?? '').trim()) throw new Error('Employee name is required')
       const avatar=resolveAvatar(a,activeAvatarIds())??randomAvatar(activeAvatarIds()),appearance=employeeFields({...a,avatar,color:a.color??avatarDescription(avatar).color,role:professionValue(a)})
@@ -949,7 +952,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       authorize('card.create',a);
       const employee:StoredSession = { ...appearance,...creationAuthority(requestContext().principal),managementRole:isGlobal(requestContext().principal)?a.managementRole??'employee':'employee',accessMode:isGlobal(requestContext().principal)?a.accessMode??'trusted':callerEmployee()!.accessMode??'trusted',id, title: s(a.title).trim(), engine,kind,workEnvironment:a.workEnvironment,directoryMode:a.directoryMode??(a.cwd?'bind':'default'),localWorkspaceRoot:a.workEnvironment==='local'&&teamSettings(store,a.group).mode==='cloud'?employeeRoot(store,identity):undefined,nativeOrigin:origin,cwd, group: a.group ?? '', createdAt: Date.now(),
         model,
-        thinking: a.thinking??false,effort: engine==='cline'||engine==='pi'?undefined:a.effort??'low', permissionMode:a.permissionMode??getPreferences().defaultPermissionMode }
+        thinking: a.thinking??false,effort: engine==='cline'||engine==='pi'?undefined:a.effort??'low', permissionMode:creationPermission }
       employee.initialization=pendingInitialization()
       ensureEmployeeBootstrap(employee,latest)
       const saved=patchSession(id,employee)

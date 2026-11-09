@@ -88,3 +88,37 @@ Native Cline/Pi processes receive only their own configured provider credentials
 
 
 Native configuration is authoritative for all six engines. An installed native CLI takes precedence over a managed fallback; the managed SDK remains a transport controller, not a second provider configuration. App-only URL/key/model overrides and fixed DeepSeek model menus are retired. Cline/Pi refresh native connection snapshots at process startup while keeping employee histories and Core tool permissions separate. Model probes use the native default unless explicitly given a model.
+
+## DeepSeek Harness (experimental)
+
+`deepseek` launches an existing `dsh --profile acp` on the Core host. Select
+**DeepSeek Harness** when creating an employee, or use `--engine deepseek`.
+`engine.models` discovers opaque native model IDs without inference; pass those
+IDs unchanged. `engine.configure` accepts an existing executable path (or use
+`DEEPSEEK_BIN`). A verified bundled download and native Worker TUI are not yet
+provided. No installed application is replaced by building this adapter.
+
+The adapter reads the native API-key credential and `acp` / `llm-deepseek`
+connection rows from `$DSH_HOME` (default `~/.dsh`). Only those connection settings
+are copied into an employee-private profile under `agent-access/ID/deepseek`.
+Desktop account-login routes, arbitrary native plugins and other provider
+compositions are not supported by this initial integration. Native user settings
+and histories are never modified. API keys remain private and are redacted from
+process diagnostics.
+
+ACP text/thought/tool updates, model/reasoning-effort selection, cancellation,
+HTTP MCP company tools and `session/resume` are supported. Effort `off` maps to
+Core `none`. Every tool body passes through an adapter-owned Harness middleware
+and the Core approval callback, including nested tool dispatch; missing middleware
+prevents the ACP bridge from starting. Native subagent/workflow/plugin tools are
+disabled. Initialization permits only the normal company documentation reads.
+Plan, Auto permission classification, image prompts, steering, cloning, strict
+isolation and remote execution explicitly reject. Normal Company schedules and
+roles remain Core-owned.
+
+Verification: `AGENTS_TEST_DSH_BIN=/absolute/path/to/dsh npm run test:deepseek-harness`.
+This uses the actual installed Harness with a deterministic loopback Messages
+server, temporary credentials, Core state and workspaces. It verifies no-inference
+discovery, identity/index initialization, company API calls, allow/deny decisions,
+running-command cancellation, reasoning effort, fixed employee engine identity
+and same-ID continuation. It never uses paid inference or production employees.

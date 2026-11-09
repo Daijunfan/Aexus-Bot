@@ -107,3 +107,10 @@ Cline and Pi use the existing CLI APIs for text, native resume, tool approvals, 
 OpenCode and Kilo Code inherit native user provider configuration only; no application URL/key override is added. Model discovery reads the real native config options. Both stream text, thoughts and tools, accept images where the selected model supports them, expose native effort choices, resume native sessions in the per-employee data profile, and support build/code vs plan modes. Tool calls follow Core approval modes; native API calls recheck the actual employee identity and permissions. Only the Core-local workspace is supported (a Local workspace inside a Cloud Team is allowed); cloud-native/Tunnel remote workspace execution and strict process isolation are explicitly unsupported, with no silent local fallback. The worker TUI can launch native `opencode`/`kilo` with a clean context; direct ownership is unchanged.
 
 Kilo's current Mac global configuration contains only the official DeepSeek `deepseek-flash` and `deepseek-v4-pro`; new Kilo employees default to Flash / Low, with variants none/low/high/max. Its key references the existing Claude DeepSeek key file; no API secret is documented here.
+
+DeepSeek Harness (`deepseek`, experimental) uses ACP on the Core host with a private
+per-employee DSH profile. It supports text/thought/tool updates, Core approvals,
+company HTTP MCP tools, model/effort selection, interruption and native resume.
+It does not support image input, Plan, Auto classification, steering, cloning,
+strict isolation, remote workspaces or native Worker TUI. Existing API-key native
+configuration is required; no runtime is bundled. See `docs/ENGINE_ADAPTERS.md`.

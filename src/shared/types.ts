@@ -68,6 +68,7 @@ export const ENGINES: { value: Engine; label: string; hint: string }[] = [
   { value: 'cline', label: 'Cline', hint: 'Cline ACP · DeepSeek Flash' },
   { value: 'pi', label: 'Pi', hint: 'Pi RPC · DeepSeek Flash' },
   { value: 'opencode', label: 'OpenCode', hint: 'OpenCode ACP · Native configuration' },
+  { value: 'deepseek', label: 'DeepSeek Harness', hint: 'DeepSeek Harness ACP · Native configuration' },
   { value: 'kilo', label: 'Kilo Code', hint: 'Kilo Code ACP · Native configuration' }
 ]
 

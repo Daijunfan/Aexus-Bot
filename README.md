@@ -77,6 +77,7 @@ Secretary 协助用户管理应用与插件，Governor 跨 Team 组织工作，M
 | --- | --- | --- |
 | Codex | App Server | Core 本地及已支持的 SSH / 云端原生工作区 |
 | Claude Code | Claude Agent SDK | Core 本地及已支持的 SSH / 云端原生工作区 |
+| DeepSeek Harness (experimental) | ACP | Core 本机；复用已安装的 `dsh` |
 | Cline | ACP | Core 本地 Build / 插件目录，或通过 Tunnel 操作远端工作区 |
 | Pi | RPC | Core 本地 Build / 插件目录，或通过 Tunnel 操作远端工作区 |
 

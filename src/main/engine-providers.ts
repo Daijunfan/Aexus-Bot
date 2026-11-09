@@ -55,7 +55,7 @@ export async function engineProviderCatalog(engine:EngineId):Promise<EngineProvi
   files.push(file,path.join(root,'settings.json'),path.join(root,'auth.json'));activeModel=selected?.model;endpoint=selected?.baseUrl
   for(const [id,entry] of Object.entries(data.providers??{}) as [string,any][]){const key=entry.apiKey||auth[id]?.key;profiles.push({id:'native:'+id,name:entry.name||id,source:'native',baseUrl:entry.baseUrl,models:(entry.models??[]).map((m:any)=>m.id),active:native&&id===selected?.id,credential:credential(key),sourceFile:file})}
  }else if(isNativeAcp(engine)){
-  const config=codeConfig(engine),selected=config.model?.split('/')[0]
+  const config=codeConfig(engine),selected=engine==='deepseek'?'deepseek-official':config.model?.split('/')[0]
   files.push(...config.files,...(fs.existsSync(config.authFile)?[config.authFile]:[]));activeModel=config.model
   for(const [id,entry] of Object.entries(config.providers)){
    const auth=config.auth[id],apiKey=codeCredential(entry.options?.apiKey)||auth?.key
@@ -73,6 +73,6 @@ export async function engineProviderCatalog(engine:EngineId):Promise<EngineProvi
  if(!native){const config=engineConfiguration(engine);profiles.forEach(p=>p.active=false);profiles.unshift({id:'app:override',name:'Aexus Bot override',source:'app',active:true,baseUrl:config.baseUrl,models:config.model?[config.model]:[],credential:{configured:!!config.secret,kind:config.secret?'key':'none'},sourceFile:path.join(APP_HOME,'engines/settings.json')});endpoint=config.baseUrl;activeModel=config.model||activeModel}
  for(const profile of profiles)profile.baseUrl=publicUrl(profile.baseUrl)
  endpoint=publicUrl(endpoint)
- const extensions=path.join(os.homedir(),'.vscode/extensions'),extensionId={claude:'anthropic.claude-code-',codex:'openai.chatgpt-',cline:'saoudrizwan.claude-dev-',pi:'',opencode:'sst-dev.opencode-',kilo:'kilocode.kilo-code-'}[engine],extensionInstalled=!!extensionId&&fs.existsSync(extensions)&&fs.readdirSync(extensions).some(name=>name.startsWith(extensionId))
+ const extensions=path.join(os.homedir(),'.vscode/extensions'),extensionId={claude:'anthropic.claude-code-',codex:'openai.chatgpt-',cline:'saoudrizwan.claude-dev-',pi:'',opencode:'sst-dev.opencode-',kilo:'kilocode.kilo-code-',deepseek:''}[engine],extensionInstalled=!!extensionId&&fs.existsSync(extensions)&&fs.readdirSync(extensions).some(name=>name.startsWith(extensionId))
  return {engine,source:native?'native':'app',activeModel,endpoint,profiles,files,updatedAt:Date.now(),clients:{cli:'Native configuration',vscode:extensionInstalled?'Native configuration':'Extension not installed',app:native?'Native configuration':'Explicit application override'}}
 }

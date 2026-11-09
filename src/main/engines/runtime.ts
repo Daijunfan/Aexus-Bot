@@ -5,7 +5,7 @@ import {openClaude} from './claude-runtime'
 import {openNativeAcp} from './opencode-runtime'
 import type {EngineStart} from './contract'
 import type {EngineId} from '../../shared/engines'
-const adapters:Record<EngineId,(context:EngineStart)=>Promise<{sessionId:string;cwd:string;engine:EngineId}>>={codex:openCodex,claude:openClaude,cline:openCline,pi:openPi,opencode:openNativeAcp,kilo:openNativeAcp}
+const adapters:Record<EngineId,(context:EngineStart)=>Promise<{sessionId:string;cwd:string;engine:EngineId}>>={codex:openCodex,claude:openClaude,cline:openCline,pi:openPi,opencode:openNativeAcp,kilo:openNativeAcp,deepseek:openNativeAcp}
 export function openEngine(context:EngineStart){
   const adapter=adapters[context.engine]
   if(!adapter)throw Error('No runtime adapter for '+context.engine)

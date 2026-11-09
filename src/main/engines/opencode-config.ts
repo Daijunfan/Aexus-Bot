@@ -2,13 +2,15 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 
-export type NativeAcpEngine='opencode'|'kilo'
+import {deepseekConfig} from './deepseek-config'
+export type NativeAcpEngine='opencode'|'kilo'|'deepseek'
 /** JSONC strings are consumed as tokens so URLs and quoted comment markers stay intact. */
 export function readCodeJson(file:string):Record<string,any>{
  if(!fs.existsSync(file))return {}
  return JSON.parse(fs.readFileSync(file,'utf8').replace(/"(?:\\.|[^"\\])*"|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*|,\s*(?=[}\]])/g,token=>token.startsWith('"')?token:''))
 }
 export function codeConfig(engine:NativeAcpEngine){
+ if(engine==='deepseek')return deepseekConfig()
  const root=path.join(process.env.XDG_CONFIG_HOME||path.join(os.homedir(),'.config'),engine),files=[path.join(root,engine+'.json'),path.join(root,engine+'.jsonc')]
  let data:Record<string,any>={}
  for(const file of files){const next=readCodeJson(file);data={...data,...next,provider:{...data.provider,...next.provider}}}

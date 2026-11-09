@@ -4,14 +4,14 @@ import {Terminal} from '@xterm/xterm'
 import {FitAddon} from '@xterm/addon-fit'
 import type {NativeWorker} from '../../../shared/native-worker'
 import type {StoredSession,Engine} from '../../../shared/types'
-import {ENGINE_DEFINITIONS} from '../../../shared/engines'
+import {ENGINE_DEFINITIONS,supportsNativeWorker} from '../../../shared/engines'
 import {api} from '../api'
 import {EngineMark} from './EngineMark'
 import '@xterm/xterm/css/xterm.css'
 import '../styles/native-workers.css'
 
 export function EmployeeWorkers({employee}:{employee:StoredSession}){
- const [workers,setWorkers]=useState<NativeWorker[]>([]),[selected,setSelected]=useState(''),[engine,setEngine]=useState<Engine>(employee.engine),[title,setTitle]=useState(''),[cwd,setCwd]=useState(''),[creating,setCreating]=useState(false),[pending,setPending]=useState(false),[error,setError]=useState('')
+ const [workers,setWorkers]=useState<NativeWorker[]>([]),[selected,setSelected]=useState(''),[engine,setEngine]=useState<Engine>(supportsNativeWorker(employee.engine)?employee.engine:'codex'),[title,setTitle]=useState(''),[cwd,setCwd]=useState(''),[creating,setCreating]=useState(false),[pending,setPending]=useState(false),[error,setError]=useState('')
  const refresh=()=>api.call<NativeWorker[]>('worker.list',{employee:employee.id}).then(setWorkers)
  useEffect(()=>{let active=true;const load=()=>api.call<NativeWorker[]>('worker.list',{employee:employee.id}).then(value=>{if(active)setWorkers(value)}).catch(cause=>{if(active)setError(cause.message)});void load();const timer=setInterval(()=>void load(),2000);return()=>{active=false;clearInterval(timer)}},[employee.id])
  const run=async(action:()=>Promise<unknown>)=>{setPending(true);setError('');try{await action();await refresh()}catch(cause){setError((cause as Error).message)}finally{setPending(false)}}
@@ -20,8 +20,9 @@ export function EmployeeWorkers({employee}:{employee:StoredSession}){
  return <section className="profile-section native-workers" data-native-workers>
   <header><h2>Worker</h2><button disabled={pending} onClick={()=>setCreating(!creating)}>创建 Worker</button></header>
   <p className="profile-footnote">直属于 {employee.title} 的原生 Coding Agent。沿用引擎自己的配置与历史，不注入员工身份、协作提示或本软件的工具。</p>
+  {!supportsNativeWorker(employee.engine)&&<p className="profile-footnote">DeepSeek Harness 没有原生终端界面。此处可创建其他引擎的 Worker，请在下方选择引擎。</p>}
   {creating&&<form className="native-worker-form" onSubmit={event=>{event.preventDefault();void run(async()=>{const worker=await api.call<NativeWorker>('worker.create',{employee:employee.id,engine,...(title.trim()?{title:title.trim()}:{}),...(cwd.trim()?{cwd:cwd.trim()}: {})});setCreating(false);setTitle('');setCwd('');setSelected(worker.id)})}}>
-   <label>原生引擎<AppSelect aria-label="Worker engine" value={engine} onChange={event=>setEngine(event.target.value as Engine)}>{Object.entries(ENGINE_DEFINITIONS).map(([id,definition])=><option value={id} key={id}>{definition.label}</option>)}</AppSelect></label>
+   <label>原生引擎<AppSelect aria-label="Worker engine" value={engine} onChange={event=>setEngine(event.target.value as Engine)}>{Object.entries(ENGINE_DEFINITIONS).filter(([id])=>supportsNativeWorker(id as Engine)).map(([id,definition])=><option value={id} key={id}>{definition.label}</option>)}</AppSelect></label>
    <label>名称<input aria-label="Worker name" value={title} placeholder={`${ENGINE_DEFINITIONS[engine].label} Worker`} onChange={event=>setTitle(event.target.value)}/></label>
    <label>工作目录<input aria-label="Worker directory" value={cwd} placeholder={employee.cwd} onChange={event=>setCwd(event.target.value)}/></label>
    <small>留空使用直属员工目录，也可选择其中已有的子目录。创建后由你或直属员工启动。</small>

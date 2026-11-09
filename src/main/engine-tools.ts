@@ -16,7 +16,7 @@ export async function inspectEngine(id:string,section:string){
     if(section==='skills')return {data:[],note:'This adapter does not expose native skills'}
     if(section==='mcp')return {data:isNativeAcp(s.engine)?[{name:'agents-company',transport:'http',status:'configured',tools:['agents_company_documentation','agents_company_api','agents_company_discussion_post']}]:s.remoteLaunch?[{name:'tunnel',transport:'stdio',status:'configured',tools:['execute','read_file','write_file','edit_file','list_files']}]:[],note:'Configured transport only; this is not a live connection probe'}
     if(section==='usage')return {usage:meta.usage??null}
-    if(section==='account')return {provider:isNativeAcp(s.engine)?(s.model??codeConfig(s.engine).model)?.split('/')[0]:processProvider(s.engine).provider,note:'Account and quota inspection is not exposed by this adapter'}
+    if(section==='account')return {provider:s.engine==='deepseek'?'deepseek-official':isNativeAcp(s.engine)?(s.model??codeConfig(s.engine).model)?.split('/')[0]:processProvider(s.engine).provider,note:'Account and quota inspection is not exposed by this adapter'}
     throw Error('Unknown engine section')
   }
   if(section==='capabilities')return {engine:s.engine,sections:['skills','mcp','account','usage','config'],operations:['card.clone','session.enqueue','session.steer','session.background','session.queue','session.export','config.plan','workspace.image','approval.respond',...(s.engine==='codex'?['session.review']:[])],nativeCommands:meta.commands}

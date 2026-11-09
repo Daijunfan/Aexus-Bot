@@ -51,7 +51,7 @@ function validate(input: ScheduleSpec,orphan=false): ScheduleSpec {
   if (typeof a.prompt !== 'string' || !a.prompt.trim()||a.prompt.length>64000) throw new Error('action.prompt must contain 1–64000 characters')
   if (a.model !== undefined && (typeof a.model !== 'string' || !a.model.trim())) throw new Error('model must be a nonempty string')
   if (a.effort !== undefined && !['low', 'medium', 'high', 'xhigh', 'max'].includes(a.effort)) throw new Error('Invalid effort level')
-  if (a.thinking !== undefined && (typeof a.thinking !== 'boolean' || (card?.engine==='codex'||card?.engine==='opencode'||card?.engine==='kilo') || (card?.engine==='cline'||card?.engine==='pi')&&a.thinking)) throw new Error('thinking must be boolean; Cline/Pi support off only, Codex uses effort')
+  if (a.thinking !== undefined && (typeof a.thinking !== 'boolean' || (card?.engine==='codex'||card?.engine==='opencode'||card?.engine==='kilo'||card?.engine==='deepseek') || (card?.engine==='cline'||card?.engine==='pi')&&a.thinking)) throw new Error('thinking must be boolean; Cline/Pi support off only; Codex/OpenCode/Kilo/DeepSeek use effort')
   const channelId=a.channelId??(input.source?.startsWith('channel:')?input.source.slice(8):undefined)
   if(channelId!==undefined&&(typeof channelId!=='string'||!channelId.trim()))throw Error('Use a valid publishing channel ID')
   const rule=validateRule(input.rule)

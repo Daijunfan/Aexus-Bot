@@ -62,8 +62,8 @@ try{
 
  await call('view.open',{kind:'home'});await page.locator('.add-employee').click();await page.locator('.employee-form').waitFor()
  const choices=page.locator('.engine-choices button')
- await expect(choices).toHaveCount(6)
- assert.deepEqual((await choices.evaluateAll(buttons=>buttons.map(button=>button.dataset.engine))).sort(),['claude','cline','codex','kilo','opencode','pi'])
+ await expect(choices).toHaveCount(7)
+ assert.deepEqual((await choices.evaluateAll(buttons=>buttons.map(button=>button.dataset.engine))).sort(),['claude','cline','codex','deepseek','kilo','opencode','pi'])
  for(const [engine,label] of [['opencode','OpenCode'],['kilo','Kilo Code']]){const button=page.locator(`.engine-choices button[data-engine="${engine}"]`);await expect(button).toBeVisible();await expect(button).toContainText(label);await expect(button).toBeEnabled()}
  for(const engine of ['codex','claude','cline','pi']){
   const mark=page.locator(`.engine-choices button[data-engine="${engine}"] .engine-mark`);await expect(mark).toBeVisible()
@@ -75,7 +75,7 @@ try{
   const box=await mark.boundingBox();assert.ok(box.width>14&&Math.abs(box.width-box.height)<.1)
   assert.ok(await mark.evaluate(element=>element.querySelectorAll('path,rect,image').length>0),engine+' mark is not drawable');await mark.evaluate(async element=>{for(const node of element.querySelectorAll('image')){const img=new Image();img.src=node.href.baseVal;await img.decode();if(!img.naturalWidth)throw Error('Native engine artwork failed to load')}})
  }
- checks.push('Creation form offers six choices; the four original marks still render and both new marks are visible')
+ checks.push('Creation form offers seven choices; the four original marks still render and both new marks are visible')
 
  const modelSelect=page.locator('.employee-form select[name="model"]')
  for(const engine of ['opencode','kilo']){

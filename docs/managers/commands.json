@@ -7649,7 +7649,7 @@
   },
   {
     "name": "engine.capabilities",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek",
     "summary": "Read adapter capabilities, workspace modes and employee kinds before hiring; no credentials or inference",
     "gui": "创建员工能力检查",
     "readOnly": true,
@@ -7658,7 +7658,7 @@
   },
   {
     "name": "engine.providers",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek",
     "summary": "Read every native provider/router and saved profile with active model, URLs, credential fingerprints and source files; never returns keys",
     "gui": "Native engine provider catalog",
     "inputSchema": {
@@ -7672,7 +7672,8 @@
             "cline",
             "pi",
             "opencode",
-            "kilo"
+            "kilo",
+            "deepseek"
           ]
         }
       },
@@ -8429,7 +8430,8 @@
                     "cline",
                     "pi",
                     "opencode",
-                    "kilo"
+                    "kilo",
+                    "deepseek"
                   ]
                 },
                 "prompt": {
@@ -8830,7 +8832,8 @@
                     "cline",
                     "pi",
                     "opencode",
-                    "kilo"
+                    "kilo",
+                    "deepseek"
                   ]
                 },
                 "prompt": {
@@ -9320,7 +9323,8 @@
                     "cline",
                     "pi",
                     "opencode",
-                    "kilo"
+                    "kilo",
+                    "deepseek"
                   ]
                 },
                 "prompt": {
@@ -9691,7 +9695,8 @@
                     "cline",
                     "pi",
                     "opencode",
-                    "kilo"
+                    "kilo",
+                    "deepseek"
                   ]
                 },
                 "prompt": {
@@ -10173,7 +10178,7 @@
   },
   {
     "name": "engine.models",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo [--kind worker|cloud-native-worker] [--team NAME]",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek [--kind worker|cloud-native-worker] [--team NAME]",
     "summary": "List available models before employee creation, without inference; Cloud Native reads the selected host",
     "gui": "创建员工和默认模型设置",
     "readOnly": true,
@@ -11490,7 +11495,8 @@
             "cline",
             "pi",
             "opencode",
-            "kilo"
+            "kilo",
+            "deepseek"
           ]
         },
         "model": {
