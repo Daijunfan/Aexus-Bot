@@ -9,6 +9,7 @@ import {workCodexConfig} from './scope'
 export async function inspectEngine(id:string,section:string){
   const s=getLive(id);if(!s)throw new Error('请先打开员工会话')
   const meta=sessionInfo(id)!
+  if(s.engine==='chatgpt')return section==='capabilities'?{...engineCapabilities(s.engine),sections:['config'],operations:[],nativeCommands:[]}:section==='config'?meta:{data:[]}
   if(s.engine!=='claude'&&s.engine!=='codex'){
     const capabilities=engineCapabilities(s.engine)
     if(section==='capabilities')return {...capabilities,sections:['mcp','usage','config'],operations:['config.model','session.enqueue','session.queue','session.export','approval.respond',...(capabilities.capabilities.effort?['config.effort']:[]),...(capabilities.capabilities.images?['workspace.image']:[]),...(capabilities.capabilities.plan?['config.plan']:[]),...(capabilities.capabilities.steer?['session.steer']:[])],nativeCommands:meta.commands}

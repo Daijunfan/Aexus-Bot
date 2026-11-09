@@ -1234,6 +1234,31 @@
       ]
     ]
   },
+  "direct.chatgpt-recover": {
+    "fields": [
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ],
+      [
+        "messageId",
+        "message-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "action",
+        "action",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
   "direct.acknowledge": {
     "fields": [
       [

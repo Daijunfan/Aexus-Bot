@@ -15,6 +15,7 @@ const reason=(cause:unknown)=>cause instanceof Error?cause.message:String((cause
 /** Explicit published private history only; refresh merges by ID and paging stays in memory. */
 export function useDirectMessages(employeeId:string|undefined,enabled:boolean,around?:string){
  const [items,setItems]=useState<Item[]>([]),[ready,setReady]=useState(false),[error,setError]=useState('')
+ const [draftReply,setDraftReply]=useState<{employee:string;messageId:string;text:string}>()
  const [latestIncoming,setLatestIncoming]=useState<DirectHistory['latestIncoming']>()
  const [readSequence,setReadSequence]=useState(0),[nextBefore,setNextBefore]=useState<number|null>(null)
  const scope=useRef(employeeId),loaded=useRef<Item[]>([]),before=useRef<number|null>(null),anchor=useRef(around),request=useRef(0),older=useRef(false),active=useRef(employeeId)
@@ -44,17 +45,29 @@ export function useDirectMessages(employeeId:string|undefined,enabled:boolean,ar
  const loadLatest=useCallback(()=>{if(!anchor.current)return;anchor.current=undefined;void load('latest')},[load])
  useEffect(()=>{
   request.current++;scope.current=employeeId;loaded.current=[];before.current=null;anchor.current=around
-  setItems([]);setNextBefore(null);setLatestIncoming(undefined);setReadSequence(0);setReady(false);setError('')
+  setDraftReply(undefined);setItems([]);setNextBefore(null);setLatestIncoming(undefined);setReadSequence(0);setReady(false);setError('')
   if(!employeeId||!enabled)return
   void load('initial')
-  let timer:ReturnType<typeof setTimeout>|undefined
+  let timer:ReturnType<typeof setTimeout>|undefined,clearDraft:ReturnType<typeof setTimeout>|undefined
   const off=api.onEvent(event=>{
-   const payload=event.payload as {employee?:string}|undefined
+   const payload=event.payload as {employee:string;messageId:string;text?:string|null;committed?:boolean}|undefined
+   if(event.channel==='direct:chatgpt-progress'&&payload?.employee===employeeId){
+    clearTimeout(clearDraft)
+    if(payload.text)setDraftReply({employee:employeeId,messageId:payload.messageId,text:payload.text})
+    else{
+     const clear=()=>setDraftReply(current=>current?.messageId===payload.messageId?undefined:current)
+     if(payload.committed)clearDraft=setTimeout(clear,3000)
+     else clear()
+    }
+    return
+   }
    if(event.channel!=='client:connected'&&(event.channel!=='direct:changed'||payload?.employee!==employeeId))return
    clearTimeout(timer);timer=setTimeout(()=>{if(active.current===employeeId)void load('refresh')},120)
   })
-  return()=>{clearTimeout(timer);off();request.current++}
+  return()=>{clearTimeout(timer);clearTimeout(clearDraft);off();request.current++}
  },[employeeId,enabled,load])
  useEffect(()=>{if(enabled&&around&&!loaded.current.some(item=>item.id===around)){anchor.current=around;void load('initial')}},[around,employeeId,enabled,load])
- const current=enabled&&scope.current===employeeId;return {items:current?items:[],ready:current&&ready,error:current?error:'',latestIncoming:current?latestIncoming:undefined,readSequence:current?readSequence:0,nextBefore:current?nextBefore:null,refresh,loadOlder,loadLatest}
+ const current=enabled&&scope.current===employeeId
+ const progress=current&&draftReply?.employee===employeeId&&!items.some(item=>item.role==='assistant'&&item.reply?.id===draftReply?.messageId)?draftReply:undefined
+ return {progress,items:current?items:[],ready:current&&ready,error:current?error:'',latestIncoming:current?latestIncoming:undefined,readSequence:current?readSequence:0,nextBefore:current?nextBefore:null,refresh,loadOlder,loadLatest}
 }

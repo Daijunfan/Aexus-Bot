@@ -372,3 +372,13 @@ Team 位置使用 `room.place {name,column,row,expectedPlacement?}` 的整数工
 ### Native Worker conversation authority
 
 `worker.snapshot/send/dequeue/respond/configure` use the same authenticated direct-ownership policy as Worker lifecycle operations. User/Secretary may administer all; other employees control only directly owned Workers. Workers receive no employee identity or Company token. Model/effort changes remain native session operations; only user/Secretary may change Worker permissions, which require an explicit reconnect before new work. Every dispatch revalidates the physical directory and fixed execution host. Stop/Remove target only the owned native connection and process tree and wait for termination; they never remove work files or native history.
+
+ChatGPT preview employees accept plain text through Messages in a local Build
+Team. The browser receives the submitted text. The adapter publishes a completed
+reply through `direct.post` under the current employee identity, bound to the
+originating message and active turn. The browser does not receive Core
+credentials or an Aexus tool interface.
+
+Only the operator may resolve an exact paused ChatGPT delivery with
+`direct.chatgpt-recover`. The action either imports the matching browser reply
+or confirms the previous message was unsent before resuming the queue.

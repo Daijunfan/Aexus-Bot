@@ -37,7 +37,7 @@ import { forwardMessages,forwardStatus } from './message-forwarding'
 import { withPrivateSendReceipt,lookupPrivateSendReceipt,type PrivateSendAttempt } from './private-send-receipts'
 import {directHistory,postDirectMessage,prepareDirectInput,updateDirectInput,directDelivery,acknowledgeDirect,directFileEndpoint,directReply,directSummary,directSendKey} from './direct-messages'
 import {DIRECT_ATTACHMENT_PREFIX} from '../shared/direct-messages'
-import { privateSendQueued } from './sessions'
+import { privateSendQueued,recoverChatGPTDelivery } from './sessions'
 import { messengerRequest,resolveConversationReply } from './messenger'
 import { channelOperation,channelRequest,channelFileEndpoint,getChannel } from './channels'
 import { syncChannelIngress,channelIngressStatus } from './channel-ingress'
@@ -248,6 +248,8 @@ export async function handleRequest(req:Request,context?:RequestContext&{signal?
     if(!isAppAdministrator())throw Error('Only the user or Secretary may send private user input')
     if(!target)throw Error('Unknown employee conversation')
     if(caller.principal.kind==='agent'&&caller.principal.employeeId===target)throw Error('Use direct.post to reply to the user; direct.send dispatches work to another employee')
+    const isChatGPT=readStore().sessions.find(card=>card.id===target)?.engine==='chatgpt'
+    if(isChatGPT&&(a.images?.length||a.files?.length||a.mode==='steer'||a.replyTo||typeof a.text!=='string'||!a.text.trim()||a.text.length>16000))throw Error('ChatGPT supports plain text Messages only')
     const mode=a.mode??'enqueue';if(!['send','enqueue','steer'].includes(mode))throw Error('Unknown private delivery mode')
     const args:Record<string,any>={...a,sourceView:'messages',clientMessageId:a.clientMessageId??randomUUID()}
     const reply=a.replyTo?(a.replyConversation&&a.replyConversation!=='employee:'+target?resolveConversationReply(a.replyConversation,a.replyTo,a.replyQuote,a.replyTextOnly):directReply(target,a.replyTo,a.replyQuote)):undefined
@@ -263,7 +265,13 @@ export async function handleRequest(req:Request,context?:RequestContext&{signal?
       if(entry.delivery?.state==='accepted')return {sent:true,directMessageId:entry.id}
       try{const opened=await startSession({cardId:target});const sent=await steerMessage(opened.sessionId,String(a.text??''),'messages',entry.id);directDelivery(target,entry.id,'accepted');return {sent,directMessageId:entry.id}}catch(error){directDelivery(target,entry.id,'failed',String((error as Error).message));throw error}
     }
-    try{const receipt=await withPrivateSendReceipt(target,{...args,clientMessageId:directSendKey(args.clientMessageId)},work,privateSendQueued,true);directDelivery(target,entry.id,receipt.status);return {...receipt,clientMessageId:args.clientMessageId,directMessageId:entry.id}}
+    try{
+      const receipt=await withPrivateSendReceipt(target,{...args,clientMessageId:directSendKey(args.clientMessageId)},work,privateSendQueued,true)
+      // ChatGPT writes later browser outcomes separately. A replayed intake receipt
+      // must not overwrite a browser failure or an interrupted delivery.
+      if(!isChatGPT)directDelivery(target,entry.id,receipt.status)
+      return {...receipt,clientMessageId:args.clientMessageId,directMessageId:entry.id}
+    }
     catch(error){directDelivery(target,entry.id,'failed',String((error as Error).message));throw error}
   }
   if(['session.send','session.enqueue','session.steer'].includes(req.cmd))a.sourceView=messageSourceView(a.sourceView)
@@ -275,6 +283,13 @@ export async function handleRequest(req:Request,context?:RequestContext&{signal?
 }
 async function handleAuthorizedRequest(req:Request,a:Record<string,any>,target:string|undefined,caller:RequestContext,privateSend?:PrivateSendAttempt){
   if(req.cmd==='direct.send-status'){if(!isAppAdministrator())throw Error('Only the user or Secretary may inspect native private input');if(typeof a.employee!=='string'||typeof a.clientMessageId!=='string')throw Error('Provide employee and clientMessageId');return lookupPrivateSendReceipt(a.employee,directSendKey(a.clientMessageId),privateSendQueued)}
+  if(req.cmd==='direct.chatgpt-recover'){
+    if(caller.principal.kind!=='operator')throw Error('Only the user can resolve a ChatGPT delivery')
+    if(!target||typeof a.messageId!=='string'||!['check','unsent'].includes(a.action))throw Error('Provide employee, messageId and recovery action')
+    if(!readStore().sessions.some(card=>card.id===target&&card.engine==='chatgpt'&&!card.deleting))throw Error('Choose a ChatGPT employee')
+    const opened=await startSession({cardId:target})
+    return recoverChatGPTDelivery(opened.sessionId,a.messageId,a.action)
+  }
   if(req.cmd==='direct.post')return postDirectMessage(a)
   if(req.cmd==='direct.history')return directHistory(a as any)
   if(req.cmd==='direct.acknowledge')return acknowledgeDirect(a as any)
@@ -399,9 +414,12 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'management.bind': return bindManagement(a)
     case 'management.unbind': return unbindManagement(a)
     case 'management.global': if(typeof a.enabled!=='boolean')throw Error('enabled must be boolean');return setGlobalManager(s(a.id),a.enabled)
-    case 'card.initialize': return retryEmployeeInitialization(s(a.id),{model:a.model,effort:a.effort})
+    case 'card.initialize': {
+      if(readStore().sessions.some(card=>card.id===a.id&&card.engine==='chatgpt'))throw Error('ChatGPT employees do not require initialization')
+      return retryEmployeeInitialization(s(a.id),{model:a.model,effort:a.effort})
+    }
     case 'card.management-role': return setManagementRole(s(a.id),a.role)
-    case 'card.access-mode': {const card=readStore().sessions.find(c=>c.id===a.id);if(card&&(card.threadId||card.claudeSessionId)&&card.accessMode!==a.mode)throw Error('Execution isolation is fixed once native history exists; create a new employee');if(!['trusted','isolated'].includes(a.mode))throw Error('Use trusted or isolated');await closeForNativeChange(s(a.id));return updateStore(store=>{const card=store.sessions.find(c=>c.id===a.id);if(!card)throw Error('Unknown employee');card.accessMode=a.mode})}
+    case 'card.access-mode': {const card=readStore().sessions.find(c=>c.id===a.id);if(card?.engine==='chatgpt'&&a.mode==='isolated')throw Error('ChatGPT requires the signed-in browser on the local host');if(card&&(card.threadId||card.claudeSessionId)&&card.accessMode!==a.mode)throw Error('Execution isolation is fixed once native history exists; create a new employee');if(!['trusted','isolated'].includes(a.mode))throw Error('Use trusted or isolated');await closeForNativeChange(s(a.id));return updateStore(store=>{const card=store.sessions.find(c=>c.id===a.id);if(!card)throw Error('Unknown employee');card.accessMode=a.mode})}
     case 'card.profile': return employeeProfile(a)
     case 'session.status': {const cards=a.employee?readStore().sessions.filter(c=>c.id===a.employee):visibleEmployees();return cards.map(card=>{const live=listLive().find(item=>sessionInfo(item.id)?.cardId===card.id),state=live?sessionInfo(live.id):undefined;return {...publicEmployee(card),lastReply:card.lastReply,sessionId:live?.id,busy:state?.busy??false,acknowledging:state?.acknowledging??false,currentTask:state?.currentTask,activityPreview:state?.activityPreview,waitingApproval:live?approvalsFor(live.id).length>0:false}})}
     case 'shared.info': return {path:sharedDirectory()}
@@ -984,6 +1002,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       if(a.permissionMode!==undefined&&!['default','acceptEdits','plan','auto','dontAsk','bypassPermissions'].includes(a.permissionMode))throw Error('Invalid engine permission mode')
       const engine = a.engine ?? 'codex'
       if (!isEngine(engine)) throw new Error('Unknown engine')
+      if(engine==='chatgpt'&&((a.managementRole??'employee')!=='employee'||a.model||a.planMode||a.thinking||a.fastMode||a.effort||a.accessMode==='isolated'||a.permissionMode&&a.permissionMode!=='default'))throw Error('ChatGPT supports only the standard local Employee role and browser defaults')
       let model=a.model||defaultEmployeeModel(engine,kind)
       if (!String(a.title ?? '').trim()) throw new Error('Employee name is required')
       const avatar=resolveAvatar(a,activeAvatarIds())??randomAvatar(activeAvatarIds()),appearance=employeeFields({...a,avatar,color:a.color??avatarDescription(avatar).color,role:professionValue(a)})
@@ -1009,11 +1028,12 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       authorize('card.create',a);
       const employee:StoredSession = { ...appearance,...creationAuthority(requestContext().principal),managementRole:isGlobal(requestContext().principal)?a.managementRole??'employee':'employee',accessMode:isGlobal(requestContext().principal)?a.accessMode??'trusted':callerEmployee()!.accessMode??'trusted',id, title: s(a.title).trim(), engine,kind,workEnvironment:a.workEnvironment,directoryMode:a.directoryMode??(a.cwd?'bind':'default'),localWorkspaceRoot:a.workEnvironment==='local'&&teamSettings(store,a.group).mode==='cloud'?employeeRoot(store,identity):undefined,nativeOrigin:origin,cwd, group: a.group ?? '', createdAt: Date.now(),
         model,
-        thinking: a.thinking??false,effort: engine==='cline'||engine==='pi'?undefined:a.effort??'low', permissionMode:a.permissionMode??getPreferences().defaultPermissionMode }
-      employee.initialization=pendingInitialization()
+        thinking: a.thinking??false,effort: engine==='cline'||engine==='pi'||engine==='chatgpt'?undefined:a.effort??'low', permissionMode:engine==='chatgpt'?'default':a.permissionMode??getPreferences().defaultPermissionMode }
+      if(engine==='chatgpt'&&employee.accessMode==='isolated')throw Error('ChatGPT requires the signed-in browser on the local host')
+      if(engine!=='chatgpt')employee.initialization=pendingInitialization()
       ensureEmployeeBootstrap(employee,latest)
       const saved=patchSession(id,employee,creation)
-      if(employee.initialization.status==='pending')queueEmployeeInitialization(id)
+      if(employee.initialization?.status==='pending')queueEmployeeInitialization(id)
       return executionEmployee(saved,saved.sessions.find((c) => c.id === id)!)
     }
     case 'card.avatar': {

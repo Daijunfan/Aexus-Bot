@@ -6,6 +6,7 @@ import type {DeepSeekProvider} from '../claude-provider'
 export type EngineDriver={
   send(text:string,images:ImageInput[],taskId?:string):void
   steer(text:string):Promise<void>
+  recoverChatGPT?(messageId:string,action:'check'|'unsent'):Promise<void>
   interrupt():Promise<void>
   close():Promise<void>
   whenIdle():Promise<void>

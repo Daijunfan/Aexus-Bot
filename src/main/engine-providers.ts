@@ -38,6 +38,7 @@ function codexConfig(root:string):Record<string,any>{const file=path.join(root,'
 /** Public catalog is a whitelist. Credentials stay in their native files, never the renderer. */
 export async function engineProviderCatalog(engine:EngineId):Promise<EngineProviderCatalog>{
  if(!isEngine(engine))throw Error('Unknown Coding Agent engine')
+ if(engine==='chatgpt')return {engine,source:'native',profiles:[],files:[],updatedAt:Date.now(),clients:{cli:'Ego Browser',vscode:'Unavailable',app:'ChatGPT browser session'},note:'Sign in to ChatGPT in Ego Browser'}
  const profiles:EngineProviderProfile[]=[],files:string[]=[],native=usesNativeConfiguration(engine)
  let activeModel:string|undefined,endpoint:string|undefined
  if(engine==='claude'){
@@ -79,6 +80,6 @@ export async function engineProviderCatalog(engine:EngineId):Promise<EngineProvi
  if(!native){const config=engineConfiguration(engine);profiles.forEach(p=>p.active=false);profiles.unshift({id:'app:override',name:'Aexus Bot override',source:'app',active:true,baseUrl:config.baseUrl,models:config.model?[config.model]:[],credential:{configured:!!config.secret,kind:config.secret?'key':'none'},sourceFile:path.join(APP_HOME,'engines/settings.json')});endpoint=config.baseUrl;activeModel=config.model||activeModel}
  for(const profile of profiles)profile.baseUrl=publicUrl(profile.baseUrl)
  endpoint=publicUrl(endpoint)
- const extensions=path.join(os.homedir(),'.vscode/extensions'),extensionId={claude:'anthropic.claude-code-',codex:'openai.chatgpt-',cline:'saoudrizwan.claude-dev-',pi:'',opencode:'sst-dev.opencode-',kilo:'kilocode.kilo-code-',deepseek:'harcochen.dsh-vsc-integration-'}[engine],extensionInstalled=!!extensionId&&fs.existsSync(extensions)&&fs.readdirSync(extensions).some(name=>name.startsWith(extensionId)||engine==='deepseek'&&name.startsWith('fengze233.dsh-vscode-panel-'))
+ const extensions=path.join(os.homedir(),'.vscode/extensions'),extensionId={chatgpt:'',claude:'anthropic.claude-code-',codex:'openai.chatgpt-',cline:'saoudrizwan.claude-dev-',pi:'',opencode:'sst-dev.opencode-',kilo:'kilocode.kilo-code-',deepseek:'harcochen.dsh-vsc-integration-'}[engine],extensionInstalled=!!extensionId&&fs.existsSync(extensions)&&fs.readdirSync(extensions).some(name=>name.startsWith(extensionId)||engine==='deepseek'&&name.startsWith('fengze233.dsh-vscode-panel-'))
  return {engine,source:native?'native':'app',activeModel,endpoint,profiles,files,updatedAt:Date.now(),clients:{cli:'Native configuration',vscode:extensionInstalled?'Native configuration':'Extension not installed',app:native?'Native configuration':'Explicit application override'}}
 }

@@ -2832,6 +2832,40 @@
     "target": "request"
   },
   {
+    "name": "direct.chatgpt-recover",
+    "args": "--employee ID --message-id ID --action check|unsent",
+    "summary": "User: resolve an exact paused ChatGPT delivery. Check imports a matching existing reply. Unsent confirms the old message may be discarded and verifies the original browser turn before resuming. Neither action resends the old message.",
+    "gui": "ChatGPT queue recovery",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "messageId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "enum": [
+            "check",
+            "unsent"
+          ]
+        }
+      },
+      "required": [
+        "employee",
+        "messageId",
+        "action"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
     "name": "direct.acknowledge",
     "args": "--employee ID --message-id ID",
     "summary": "User/Secretary: acknowledge an exact published incoming private message. A stale ID never acknowledges a newer post.",
@@ -9315,7 +9349,7 @@
   },
   {
     "name": "engine.capabilities",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek|chatgpt",
     "summary": "Read adapter capabilities, workspace modes and employee kinds before hiring; no credentials or inference",
     "gui": "创建员工能力检查",
     "readOnly": true,
@@ -9324,7 +9358,7 @@
   },
   {
     "name": "engine.providers",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek|chatgpt",
     "summary": "Read every native provider/router and saved profile with active model, URLs, credential fingerprints and source files; never returns keys",
     "gui": "Native engine provider catalog",
     "inputSchema": {
@@ -9339,7 +9373,8 @@
             "pi",
             "opencode",
             "kilo",
-            "deepseek"
+            "deepseek",
+            "chatgpt"
           ]
         }
       },
@@ -11896,7 +11931,7 @@
   },
   {
     "name": "engine.models",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek [--kind worker|cloud-native-worker] [--team NAME]",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek|chatgpt [--kind worker|cloud-native-worker] [--team NAME]",
     "summary": "List available models before employee creation, without inference; Cloud Native reads the selected host",
     "gui": "创建员工和默认模型设置",
     "inputSchema": {
@@ -11911,7 +11946,8 @@
             "pi",
             "opencode",
             "kilo",
-            "deepseek"
+            "deepseek",
+            "chatgpt"
           ]
         },
         "kind": {
@@ -13395,7 +13431,8 @@
             "pi",
             "opencode",
             "kilo",
-            "deepseek"
+            "deepseek",
+            "chatgpt"
           ]
         },
         "model": {
