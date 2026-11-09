@@ -11,6 +11,7 @@ const coreDocuments=[
  ['core/scheduler','SCHEDULER.md'],['core/architecture','ARCHITECTURE.md'],
  ['core/conversation-workspaces','docs/CONVERSATION_WORKSPACES.md'],
  ['core/conversation-controls','docs/CONVERSATION_CONTROLS.md'],
+ ['core/group-collaboration','docs/GROUP_COLLABORATION.md'],
  ['core/message-collaboration','docs/MESSAGE_COLLABORATION.md'],
  ['core/bot-workers','docs/BOT_WORKERS.md'],['core/event-tasks','docs/EVENT_TASKS.md'],
  ['core/channels','docs/CHANNELS.md'],['core/channel-filters','docs/CHANNEL_FILTERS.md'],

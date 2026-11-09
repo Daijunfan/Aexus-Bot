@@ -1,3 +1,6 @@
+import {MESSAGE_STICKER_APIS} from '../shared/message-stickers'
+import {stickerRequest} from './message-stickers'
+import {requireGroupExport} from './group-history'
 import {planPreferencesRequest} from './plan-preferences'
 import {missionRequest,registerSecretaryRequest} from './missions'
 import {questionRequest,assertQuestionGate} from './chat-questions'
@@ -321,6 +324,8 @@ async function handleAuthorizedRequest(req:Request,a:Record<string,any>,target:s
 }
 async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Promise<any> {
   const a = (req.args ?? {}) as Record<string, any>
+  if(MESSAGE_STICKER_APIS.has(req.cmd))return stickerRequest(req.cmd,a)
+  if(['transfer.download-info','transfer.download-save','transfer.download-chunk','transfer.start'].includes(req.cmd)){const ref=a.from;if(ref?.group)requireGroupExport('group:'+ref.group);else if(ref?.conversation)requireGroupExport(ref.conversation)}
   const s = (v: unknown) => String(v)
 
   if(req.cmd.startsWith('group.')&&!['group.list','group.remove'].includes(req.cmd))assertTeamAvailable(a.name)

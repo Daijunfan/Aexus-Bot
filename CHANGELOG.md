@@ -4,6 +4,9 @@
 
 ## main — 2026-11-09 development update
 
+- Rebuild local group collaboration with distinct group colors, an integrated overview, topics/threads, polls/quizzes, collaborative checklists, shared reactions/pins and local sticker packs.
+- Add durable invitation approval/bans, scoped drafts/read receipts, sender/date/topic content filters, message recovery/retention, exports and group notification preferences through authenticated Core/CLI operations.
+
 - Rebuild Team as Characters, Board and Workers with seat-grid geometry, collision displacement, categories, parallel workbenches and native Worker lifecycle management.
 - Add DeepSeek Harness ACP, persistent Missions, conversation questions, global Mission filters and retention controls through the same Core/CLI authority model.
 - Refine themed Message surfaces, group portraits, file management, drafts, queues and cross-view workbench behavior.

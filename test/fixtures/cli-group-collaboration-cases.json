@@ -1,0 +1,734 @@
+[
+  {
+    "args": [
+      "chat",
+      "details",
+      "cg_fixture"
+    ],
+    "expected": {
+      "cmd": "chat.details",
+      "args": {
+        "id": "cg_fixture"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "details-update",
+      "cg_fixture",
+      "--patch",
+      "{\"description\":\"Design\",\"color\":\"teal\"}",
+      "--expected-revision",
+      "1"
+    ],
+    "expected": {
+      "cmd": "chat.details-update",
+      "args": {
+        "id": "cg_fixture",
+        "patch": {
+          "description": "Design",
+          "color": "teal"
+        },
+        "expectedRevision": 1
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "member-tag",
+      "cg_fixture",
+      "--tag",
+      "Design",
+      "--employee",
+      "e1"
+    ],
+    "expected": {
+      "cmd": "chat.member-tag",
+      "args": {
+        "id": "cg_fixture",
+        "tag": "Design",
+        "employee": "e1"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "thread",
+      "cg_fixture",
+      "--message-id",
+      "gm_root",
+      "--before",
+      "20",
+      "--limit",
+      "10"
+    ],
+    "expected": {
+      "cmd": "chat.thread",
+      "args": {
+        "id": "cg_fixture",
+        "messageId": "gm_root",
+        "before": 20,
+        "limit": 10
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "topic-list",
+      "cg_fixture",
+      "--include-archived"
+    ],
+    "expected": {
+      "cmd": "chat.topic-list",
+      "args": {
+        "id": "cg_fixture",
+        "includeArchived": true
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "topic-create",
+      "cg_fixture",
+      "--name",
+      "Release",
+      "--client-request-id",
+      "topic-1",
+      "--icon",
+      "🚀",
+      "--color",
+      "rose"
+    ],
+    "expected": {
+      "cmd": "chat.topic-create",
+      "args": {
+        "id": "cg_fixture",
+        "name": "Release",
+        "clientRequestId": "topic-1",
+        "icon": "🚀",
+        "color": "rose"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "topic-update",
+      "cg_fixture",
+      "--topic-id",
+      "topic_1",
+      "--patch",
+      "{\"closed\":true}",
+      "--expected-revision",
+      "1"
+    ],
+    "expected": {
+      "cmd": "chat.topic-update",
+      "args": {
+        "id": "cg_fixture",
+        "topicId": "topic_1",
+        "patch": {
+          "closed": true
+        },
+        "expectedRevision": 1
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "poll-create",
+      "cg_fixture",
+      "--spec",
+      "{\"question\":\"Choose\",\"options\":[{\"label\":\"A\"},{\"label\":\"B\"}],\"anonymous\":true}",
+      "--client-request-id",
+      "poll-1",
+      "--topic-id",
+      "topic_1"
+    ],
+    "expected": {
+      "cmd": "chat.poll-create",
+      "args": {
+        "id": "cg_fixture",
+        "spec": {
+          "question": "Choose",
+          "options": [
+            {
+              "label": "A"
+            },
+            {
+              "label": "B"
+            }
+          ],
+          "anonymous": true
+        },
+        "clientRequestId": "poll-1",
+        "topicId": "topic_1"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "poll-get",
+      "cg_fixture",
+      "--poll-id",
+      "p1"
+    ],
+    "expected": {
+      "cmd": "chat.poll-get",
+      "args": {
+        "id": "cg_fixture",
+        "pollId": "p1"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "poll-vote",
+      "cg_fixture",
+      "--poll-id",
+      "p1",
+      "--options",
+      "[\"option_1\"]"
+    ],
+    "expected": {
+      "cmd": "chat.poll-vote",
+      "args": {
+        "id": "cg_fixture",
+        "pollId": "p1",
+        "options": [
+          "option_1"
+        ]
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "poll-close",
+      "cg_fixture",
+      "--poll-id",
+      "p1",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "chat.poll-close",
+      "args": {
+        "id": "cg_fixture",
+        "pollId": "p1",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "poll-option",
+      "cg_fixture",
+      "--poll-id",
+      "p1",
+      "--label",
+      "C"
+    ],
+    "expected": {
+      "cmd": "chat.poll-option",
+      "args": {
+        "id": "cg_fixture",
+        "pollId": "p1",
+        "label": "C"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "checklist-create",
+      "cg_fixture",
+      "--title",
+      "Release",
+      "--items",
+      "[{\"text\":\"Review\",\"assignee\":\"e1\"}]",
+      "--client-request-id",
+      "list-1",
+      "--allow-add",
+      "false",
+      "--allow-complete",
+      "true"
+    ],
+    "expected": {
+      "cmd": "chat.checklist-create",
+      "args": {
+        "id": "cg_fixture",
+        "title": "Release",
+        "items": [
+          {
+            "text": "Review",
+            "assignee": "e1"
+          }
+        ],
+        "clientRequestId": "list-1",
+        "allowAdd": false,
+        "allowComplete": true
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "checklist-get",
+      "cg_fixture",
+      "--checklist-id",
+      "c1"
+    ],
+    "expected": {
+      "cmd": "chat.checklist-get",
+      "args": {
+        "id": "cg_fixture",
+        "checklistId": "c1"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "checklist-check",
+      "cg_fixture",
+      "--checklist-id",
+      "c1",
+      "--item-id",
+      "i1",
+      "--done",
+      "false"
+    ],
+    "expected": {
+      "cmd": "chat.checklist-check",
+      "args": {
+        "id": "cg_fixture",
+        "checklistId": "c1",
+        "itemId": "i1",
+        "done": false
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "checklist-edit",
+      "cg_fixture",
+      "--checklist-id",
+      "c1",
+      "--items",
+      "[{\"text\":\"Review\",\"assignee\":\"e1\"}]",
+      "--expected-revision",
+      "2",
+      "--expected-edit-revision",
+      "1"
+    ],
+    "expected": {
+      "cmd": "chat.checklist-edit",
+      "args": {
+        "id": "cg_fixture",
+        "checklistId": "c1",
+        "items": [
+          {
+            "text": "Review",
+            "assignee": "e1"
+          }
+        ],
+        "expectedRevision": 2,
+        "expectedEditRevision": 1
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "react",
+      "cg_fixture",
+      "--message-id",
+      "gm_root",
+      "--emoji",
+      "❤️",
+      "--selected",
+      "true"
+    ],
+    "expected": {
+      "cmd": "chat.react",
+      "args": {
+        "id": "cg_fixture",
+        "messageId": "gm_root",
+        "emoji": "❤️",
+        "selected": true
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "pin",
+      "cg_fixture",
+      "--message-id",
+      "gm_root",
+      "--pinned",
+      "false"
+    ],
+    "expected": {
+      "cmd": "chat.pin",
+      "args": {
+        "id": "cg_fixture",
+        "messageId": "gm_root",
+        "pinned": false
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "message-trash",
+      "cg_fixture",
+      "--messages",
+      "[{\"id\":\"gm_root\",\"expectedRevision\":0}]"
+    ],
+    "expected": {
+      "cmd": "chat.message-trash",
+      "args": {
+        "id": "cg_fixture",
+        "messages": [
+          {
+            "id": "gm_root",
+            "expectedRevision": 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "message-restore",
+      "cg_fixture",
+      "--messages",
+      "[{\"id\":\"gm_root\",\"expectedRevision\":0}]"
+    ],
+    "expected": {
+      "cmd": "chat.message-restore",
+      "args": {
+        "id": "cg_fixture",
+        "messages": [
+          {
+            "id": "gm_root",
+            "expectedRevision": 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "trash",
+      "cg_fixture",
+      "--limit",
+      "25"
+    ],
+    "expected": {
+      "cmd": "chat.trash",
+      "args": {
+        "id": "cg_fixture",
+        "limit": 25
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "clear-history",
+      "cg_fixture",
+      "--through",
+      "100",
+      "--confirm",
+      "--topic-id",
+      "general"
+    ],
+    "expected": {
+      "cmd": "chat.clear-history",
+      "args": {
+        "id": "cg_fixture",
+        "through": 100,
+        "confirm": true,
+        "topicId": "general"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "export",
+      "cg_fixture",
+      "--before",
+      "100",
+      "--limit",
+      "50"
+    ],
+    "expected": {
+      "cmd": "chat.export",
+      "args": {
+        "id": "cg_fixture",
+        "before": 100,
+        "limit": 50
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "invites",
+      "cg_fixture"
+    ],
+    "expected": {
+      "cmd": "chat.invites",
+      "args": {
+        "id": "cg_fixture"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "invite-create",
+      "cg_fixture",
+      "--name",
+      "Review",
+      "--client-request-id",
+      "invite-1",
+      "--approval",
+      "true",
+      "--use-limit",
+      "4"
+    ],
+    "expected": {
+      "cmd": "chat.invite-create",
+      "args": {
+        "id": "cg_fixture",
+        "name": "Review",
+        "clientRequestId": "invite-1",
+        "approval": true,
+        "useLimit": 4
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "invite-revoke",
+      "cg_fixture",
+      "--invite-id",
+      "invite_1"
+    ],
+    "expected": {
+      "cmd": "chat.invite-revoke",
+      "args": {
+        "id": "cg_fixture",
+        "inviteId": "invite_1"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "join",
+      "cg_fixture",
+      "--code",
+      "local-invite",
+      "--employee",
+      "e1"
+    ],
+    "expected": {
+      "cmd": "chat.join",
+      "args": {
+        "id": "cg_fixture",
+        "code": "local-invite",
+        "employee": "e1"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "join-requests",
+      "cg_fixture"
+    ],
+    "expected": {
+      "cmd": "chat.join-requests",
+      "args": {
+        "id": "cg_fixture"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "join-decide",
+      "cg_fixture",
+      "--request-id",
+      "join_1",
+      "--approve",
+      "false",
+      "--expected-revision",
+      "1"
+    ],
+    "expected": {
+      "cmd": "chat.join-decide",
+      "args": {
+        "id": "cg_fixture",
+        "requestId": "join_1",
+        "approve": false,
+        "expectedRevision": 1
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "ban",
+      "cg_fixture",
+      "--employee",
+      "e1",
+      "--banned",
+      "true"
+    ],
+    "expected": {
+      "cmd": "chat.ban",
+      "args": {
+        "id": "cg_fixture",
+        "employee": "e1",
+        "banned": true
+      }
+    }
+  },
+  {
+    "args": [
+      "messenger",
+      "sticker-list",
+      "--pack",
+      "Work",
+      "--query",
+      "OK"
+    ],
+    "expected": {
+      "cmd": "messenger.sticker-list",
+      "args": {
+        "pack": "Work",
+        "query": "OK"
+      }
+    }
+  },
+  {
+    "args": [
+      "messenger",
+      "sticker-save",
+      "--name",
+      "OK",
+      "--pack",
+      "Work",
+      "--image",
+      "{\"name\":\"ok.png\",\"mimeType\":\"image/png\",\"data\":\"dGVzdA==\"}"
+    ],
+    "expected": {
+      "cmd": "messenger.sticker-save",
+      "args": {
+        "name": "OK",
+        "pack": "Work",
+        "image": {
+          "name": "ok.png",
+          "mimeType": "image/png",
+          "data": "dGVzdA=="
+        }
+      }
+    }
+  },
+  {
+    "args": [
+      "messenger",
+      "sticker-image",
+      "sticker_1"
+    ],
+    "expected": {
+      "cmd": "messenger.sticker-image",
+      "args": {
+        "id": "sticker_1"
+      }
+    }
+  },
+  {
+    "args": [
+      "messenger",
+      "sticker-remove",
+      "--ids",
+      "[\"sticker_1\"]"
+    ],
+    "expected": {
+      "cmd": "messenger.sticker-remove",
+      "args": {
+        "ids": [
+          "sticker_1"
+        ]
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "acknowledge",
+      "cg_fixture",
+      "--message-ids",
+      "[\"gm_root\",\"gm_reply\"]",
+      "--exact"
+    ],
+    "expected": {
+      "cmd": "chat.acknowledge",
+      "args": {
+        "id": "cg_fixture",
+        "messageIds": [
+          "gm_root",
+          "gm_reply"
+        ],
+        "exact": true
+      }
+    }
+  },
+  {
+    "args": [
+      "messenger",
+      "search",
+      "--conversation",
+      "group:cg_fixture",
+      "--topic-id",
+      "topic_1",
+      "--author-id",
+      "e1",
+      "--from",
+      "100",
+      "--to",
+      "200"
+    ],
+    "expected": {
+      "cmd": "messenger.search",
+      "args": {
+        "conversation": "group:cg_fixture",
+        "topicId": "topic_1",
+        "authorId": "e1",
+        "from": 100,
+        "to": 200
+      }
+    }
+  }
+]

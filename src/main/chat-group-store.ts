@@ -1,3 +1,4 @@
+import {groupHasUnread} from '../shared/chat-groups'
 import {join} from 'node:path'
 import {APP_HOME} from '../shared/protocol'
 import {readJson,atomicJson} from './atomic-file'
@@ -5,14 +6,24 @@ import type {ChatGroup,ChatMessage,ChatDelivery} from '../shared/chat-groups'
 import type {PrincipalRef} from '../shared/management'
 
 export const directory=join(APP_HOME,'chats');export const indexFile=join(directory,'groups.json')
-let emitter:(id:string,editedMessageId?:string,messageId?:string)=>void=()=>{}
+export type ChatChangeKind='published'|'receipt'|'metadata'|'removed'|'restored'
+let emitter:(id:string,editedMessageId?:string,messageId?:string,kind?:ChatChangeKind)=>void=()=>{}
 export function setChatEmitter(handler:typeof emitter){emitter=handler}
-export const emitChatChange=(id:string,editedMessageId?:string,messageId?:string)=>emitter(id,editedMessageId,messageId)
+export const emitChatChange=(id:string,editedMessageId?:string,messageId?:string,kind?:ChatChangeKind)=>emitter(id,editedMessageId,messageId,kind)
 /** Shared user watermark, independent of employee delivery/work receipts. */
-export function advanceGroupRead(id:string,sequence:number){
+export function advanceGroupRead(id:string,sequence:number,topicId?:string,exactIds?:string[]){
  const store=catalog(),group=store.groups.find(group=>group.id===id);if(!group)return undefined
- if(group.readSequence<sequence){group.readSequence=sequence;group.revision++;group.updatedAt=Date.now();atomicJson(indexFile,store,true);emitChatChange(id)}
+ if(exactIds){const all=messages(id),seen=new Set(group.readMessageIds??[]);for(const message of all)if(exactIds.includes(message.id)&&message.author.kind==='agent'&&!message.bot?.delivery)seen.add(message.id);group.readMessageIds=[...seen];reconcileGroupUnread(group,all)}
+ else if(topicId){group.topicRead??={};if((group.topicRead[topicId]??0)>=sequence)return group.readSequence;group.topicRead[topicId]=sequence;if(!groupHasUnread(group))group.readSequence=Math.max(group.readSequence,group.lastIncomingSequence)}else{if(group.readSequence>=sequence)return group.readSequence;group.readSequence=sequence}
+ group.revision++;group.updatedAt=Date.now();atomicJson(indexFile,store,true);emitChatChange(id)
  return group.readSequence
+}
+/** Removing a message dismisses its unread marker without changing any employee delivery receipt. */
+export function reconcileGroupUnread(group:ChatGroup,all:ChatMessage[]){
+ const seen=new Set(group.readMessageIds??[]),incoming:Record<string,number>={general:0};let first=Infinity
+ for(const message of all){const topic=message.topicId??'general';if(message.author.kind!=='agent'||message.bot?.delivery||message.deletedAt||message.sequence<=Math.max(group.readSequence,group.topicRead?.[topic]??0)||seen.has(message.id))continue;incoming[topic]=Math.max(incoming[topic]??0,message.sequence);first=Math.min(first,message.sequence)}
+ group.topicIncoming=incoming;group.readSequence=Math.max(group.readSequence,first===Infinity?group.lastIncomingSequence:first-1)
+ group.readMessageIds=all.filter(message=>seen.has(message.id)&&message.sequence>Math.max(group.readSequence,group.topicRead?.[message.topicId??'general']??0)).map(message=>message.id)
 }
 export type StoredChatGroup=ChatGroup&{creation?:{caller:PrincipalRef;key:string;fingerprint:string}}
 export type Catalog={version:1;groups:StoredChatGroup[]}

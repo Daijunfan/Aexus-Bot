@@ -16,6 +16,8 @@ Secretary 通过自己的身份执行用户可在界面完成的业务操作；`
 - 管理：Company、群组、文件、头像、收藏下载、订阅、主机、插件和 Plan 使用同一 Core dispatcher。Secretary 可管理其他员工的资源和合法排期；Worker 保留原直属归属和完全干净的原生上下文。
 - 阅读与工作分开：查询不会标记用户已读、启动任务或自动收藏下载。只有显式修改 API 才产生对应效果，仍遵守原生 Ask/Full access、planning 和参数/版本校验。
 
+`question.answer` 是明确的用户决定例外：只有真实用户可以回答保存的选择题，Secretary 不能替用户作答；这不是缺失的 GUI/API 能力。群投票使用 `chat.poll-vote` 记录 Secretary 自己的选择，不等于回答用户决定。
+
 Secretary 任免与 Agent 身份签发仍由用户掌握；Secretary 不冒充用户或其他 Agent。客户端上传、下载和播放许可仍绑定真实发起者，不能捏造另一台浏览器未上传的文件。
 
 ## 任务处理入口

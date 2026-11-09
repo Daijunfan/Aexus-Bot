@@ -31,7 +31,7 @@ Organize employees by project or choose the people you want to work with. File b
 
 ### Message — conversations and information
 
-Message is the communication space for users and employees. Private conversations support direct delegation and delivery; groups provide shared context and discussion. Messages can include quotes, images, and files. External Workers such as Dot and Grok retain their native identities and histories here.
+Message is the communication space for users and employees. Private conversations support direct delegation and delivery; groups organize shared context into topics and threads, with polls, collaborative checklists, shared files, member controls, and message recovery. Messages support quotes, rich text, media, and local stickers. External Workers such as Dot and Grok retain their native identities and histories here.
 
 Read-only channels bring together Telegram, X, YouTube, and other sources. Employees can read authorized content and deliver summaries or continue work in conversations. Core manages conversations, shared files, and access permissions together.
 

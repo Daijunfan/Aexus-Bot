@@ -146,7 +146,8 @@
     "test:task-queue": "node test/task-queue-ui-test.mjs && node test/task-queue-ui-test.mjs --web",
     "test:scrollbars": "node test/scrollbar-visibility-ui-test.mjs && node test/scrollbar-visibility-ui-test.mjs --web",
     "test:worker-native-harness": "node test/worker-native-harness-test.mjs",
-    "test:board-directory": "node test/board-directory-tabs-ui-test.mjs && node test/board-directory-tabs-ui-test.mjs --web"
+    "test:board-directory": "node test/board-directory-tabs-ui-test.mjs && node test/board-directory-tabs-ui-test.mjs --web",
+    "test:group-collaboration": "node test/group-collaboration-core-test.mjs && node test/group-rebuild-ui-test.mjs && node test/group-rebuild-ui-test.mjs --web"
   },
   "build": {
     "appId": "com.agentscompany.app",
@@ -194,7 +195,8 @@
       "docs/EVENT_TASKS.md",
       "docs/FILES_WORKBENCH.md",
       "docs/releases/0.57.0.zh-CN.md",
-      "docs/releases/0.58.0.zh-CN.md"
+      "docs/releases/0.58.0.zh-CN.md",
+      "docs/GROUP_COLLABORATION.md"
     ],
     "mac": {
       "target": [

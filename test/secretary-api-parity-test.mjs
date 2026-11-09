@@ -18,7 +18,9 @@ try{
   const source=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true,file.endsWith('tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS)
   const visit=node=>{if(ts.isStringLiteralLike(node)&&known.has(node.text)){const sites=references.get(node.text)??new Set();sites.add(path.relative(root,file)+':'+(source.getLineAndCharacterOfPosition(node.pos).line+1));references.set(node.text,sites)}ts.forEachChild(node,visit)};visit(source)
  }}};walk(path.join(root,'src/renderer/src'))
+ assert.equal(allowed.has('question.answer'),false,'Secretary must never answer a saved user decision')
  const exclusions={
+  'question.answer':'Only the real user can resolve a saved choice; Secretary cannot impersonate the user',
   'channel.save':'Human Save explicitly persists channel content on the Mac',
   'channel.export':'Human Download explicitly persists channel content on the Mac',
   'messenger.message':'Human message preferences and saved content',

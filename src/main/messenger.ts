@@ -1,3 +1,7 @@
+import {validateApiArguments} from './api-contract'
+import {requireGroupExport} from './group-history'
+import {groupContentAnnotations,validateGroupDraftScope} from './group-collaboration'
+import {requireConversation} from './conversation-policy'
 import {botGroup} from './bot-workers'
 import {isAppAdministrator} from './application-authority'
 import {all as channelRows,canonicalChannelId} from './channel-store'
@@ -15,7 +19,7 @@ import {quoteShape,validateQuote,type MessageQuote} from '../shared/message-quot
 import {join} from 'node:path'
 import {randomUUID} from 'node:crypto'
 import {APP_HOME} from '../shared/protocol'
-import {EMPTY_MESSENGER,MESSAGE_REACTIONS,conversationKey,workDraftKey,messageKey,hasDraftContent,type MessengerState,type MessengerMessage,type ConversationPreferences,type MessagePreferences} from '../shared/messenger'
+import {EMPTY_MESSENGER,MESSAGE_REACTIONS,conversationKey,workDraftKey,groupDraftKey,messageKey,hasDraftContent,type MessengerState,type MessengerMessage,type ConversationPreferences,type MessagePreferences} from '../shared/messenger'
 import {messageTime} from '../shared/messages'
 import {mergeOrder,sameOrder,orderScope,validOrder} from '../shared/messenger-order'
 import {messageSourceView} from '../shared/message-source'
@@ -78,7 +82,8 @@ const liveEpoch=randomUUID()
 function messageSource(ref:ReturnType<typeof resolve>):MessageSource{
  if(ref.kind==='channel')return channelMessageSources(ref.id)[0]
  const version=ref.kind==='group'?chatMessagesVersion(ref.id):'direct-v1:'+directVersion(ref.id)
- return {id:ref.key,version:JSON.stringify([typeof version==='number'?[liveEpoch,version]:version,ref.card?.lastReply?.id,ref.card?.lastReply?.createdAt,ref.card?.lastReply?.itemId]),read:()=>ref.kind==='group'?readChatMessages(ref.id).map(message=>({conversation:ref.key,id:message.id,author:message.authorName,authorIdentity:message.author,role:message.author.kind==='operator'?'user':'assistant',text:message.text,images:message.attachments?.filter(file=>file.kind==='image').map(file=>file.path)??[],files:message.attachments?.filter(file=>file.kind==='file'),createdAt:message.createdAt,editedAt:message.editedAt,editRevision:message.editRevision})):directItems(ref.id).flatMap(item=>{
+ const annotations=ref.kind==='group'?groupContentAnnotations(requireConversation('group:'+ref.id).group!):undefined
+ return {id:ref.key,version:JSON.stringify([typeof version==='number'?[liveEpoch,version]:version,ref.card?.lastReply?.id,ref.card?.lastReply?.createdAt,ref.card?.lastReply?.itemId]),read:()=>ref.kind==='group'?readChatMessages(ref.id).filter(message=>!message.deletedAt).map(message=>({conversation:ref.key,id:message.id,author:message.authorName,authorIdentity:message.author,role:message.author.kind==='operator'?'user':'assistant',text:message.text,images:message.attachments?.filter(file=>file.kind==='image').map(file=>file.path)??[],files:message.attachments?.filter(file=>file.kind==='file'),createdAt:message.createdAt,editedAt:message.editedAt,editRevision:message.editRevision,topicId:message.topicId??'general',pinnedAt:annotations?.(message.id).pinnedAt})):directItems(ref.id).flatMap(item=>{
   if(item.role==='notice')return []
   const text=item.role==='user'?item.text:item.blocks.filter(block=>block.kind==='text').map(block=>block.text).join('\n\n'),images=item.images??[]
   if(!text.trim()&&!images.length&&!item.files?.length)return []
@@ -88,7 +93,7 @@ function messageSource(ref:ReturnType<typeof resolve>):MessageSource{
 }
 function presentMessages(rows:PublicMessage[],state:MessengerState):MessengerMessage[]{
  const refs=new Map([...new Set(rows.map(row=>row.conversation))].map(key=>[key,resolve(key)])),names=new Map(visibleEmployees().map(card=>[card.id,card.title]))
- return rows.map(row=>{const ref=refs.get(row.conversation)!;return {...row,conversationTitle:ref.title,author:ref.kind!=='employee'?row.author:row.role==='assistant'?ref.title:row.authorIdentity?.kind==='operator'?'You':row.authorIdentity?.kind==='agent'?names.get(row.authorIdentity.employeeId)??'Former teammate':'Original sender',preferences:state.messages[messageKey(row.conversation,row.id)]??{}}})
+ return rows.map(row=>{const ref=refs.get(row.conversation)!;return {...row,conversationTitle:ref.title,author:ref.kind!=='employee'?row.author:row.role==='assistant'?ref.title:row.authorIdentity?.kind==='operator'?'You':row.authorIdentity?.kind==='agent'?names.get(row.authorIdentity.employeeId)??'Former teammate':'Original sender',preferences:{...state.messages[messageKey(row.conversation,row.id)],...(row.pinnedAt?{pinned:true}:{})}}})
 }
 function publicMessages(value:string,state:MessengerState,ids?:string[]):MessengerMessage[]{
  const ref=resolve(value),selected=ids&&new Set(ids),rows=messageSource(ref).read()
@@ -97,6 +102,7 @@ function publicMessages(value:string,state:MessengerState,ids?:string[]):Messeng
 export function readMessengerMessages(conversation:string,ids?:string[]){authorize('messenger.search');const ref=resolve(conversation);if(ref.kind==='channel'&&ids){const state=read();return ids.map(id=>channelMessage(ref.id,id,state))};return publicMessages(conversation,read(),ids)}
 /** A user-approved excerpt can be shared; it never grants access to its source. */
 export function resolveConversationReply(conversation:unknown,id:unknown,quote?:MessageQuote,textOnly?:boolean):MessageReply{
+ if(typeof conversation==='string')requireGroupExport(conversation)
  authorize('messenger.reference');if(!isAppAdministrator())throw Error('Only the user or Secretary may quote another conversation')
  if(typeof id!=='string'||!id)throw Error('Choose a source message')
  if(textOnly!==undefined&&typeof textOnly!=='boolean')throw Error('textOnly must be boolean')
@@ -109,7 +115,7 @@ export function resolveConversationReply(conversation:unknown,id:unknown,quote?:
  const {images,files,...excerpt}=reply
  return {...excerpt,conversation:ref.key,conversationTitle:ref.title,authorName:source.author,...(source.images.length?{omittedImages:source.images.length}:{}),...(source.files?.length?{omittedFiles:source.files.length}:{})}
 }
-const patchFields=(patch:unknown,allowed:string[])=>{if(!patch||typeof patch!=='object'||Array.isArray(patch)||!Object.keys(patch).length)throw Error('Provide a nonempty patch');for(const [key,value] of Object.entries(patch)){if(!allowed.includes(key))throw Error('Unknown preference: '+key);if(key==='reaction'){if(value!==''&&!MESSAGE_REACTIONS.includes(value as any))throw Error('Choose a supported reaction')}else if(typeof value!=='boolean')throw Error(key+' must be boolean')}return patch}
+const patchFields=(patch:unknown,allowed:string[])=>{if(!patch||typeof patch!=='object'||Array.isArray(patch)||!Object.keys(patch).length)throw Error('Provide a nonempty patch');for(const [key,value] of Object.entries(patch)){if(!allowed.includes(key))throw Error('Unknown preference: '+key);if(key==='notifications'){if(!['all','direct','off'].includes(String(value)))throw Error('Choose all, direct or off notifications')}else if(key==='reaction'){if(value!==''&&!MESSAGE_REACTIONS.includes(value as any))throw Error('Choose a supported reaction')}else if(typeof value!=='boolean')throw Error(key+' must be boolean')}return patch}
 export async function messengerRequest(command:string,args:Record<string,any>={}){
  if(typeof args.conversation==='string'&&args.conversation.startsWith('channel:')){await ensureChannelContent();for(const id of args.ids??(args.id?[args.id]:[]))if(typeof id==='string'){if(id.startsWith('np_'))await loadChannelPost(id);else if(id.startsWith('cm_'))await loadChannelMessage(args.conversation.slice(8),id)}}
  authorize(command,args);requireAppAdministrator()
@@ -201,7 +207,8 @@ export async function messengerRequest(command:string,args:Record<string,any>={}
   }
   case 'messenger.conversation':{
    if(!Array.isArray(args.conversations)||!args.conversations.length||args.conversations.length>200)throw Error('Choose 1–200 conversations')
-   const keys=[...new Set(args.conversations.map((value:unknown)=>listIdentity(value).key))],patch=patchFields(args.patch,['pinned','favorite','archived','unread']) as ConversationPreferences
+   const keys=[...new Set(args.conversations.map((value:unknown)=>listIdentity(value).key))],patch=patchFields(args.patch,['pinned','favorite','archived','unread','notifications']) as ConversationPreferences
+   if(patch.notifications!==undefined&&keys.some(key=>!key.startsWith('group:')||getChatGroup(key.slice(6)).bot))throw Error('Choose local employee groups for notification preferences')
    for(const key of keys)state.conversations[key]={...state.conversations[key],...patch}
    return write(state)
   }
@@ -220,11 +227,15 @@ export async function messengerRequest(command:string,args:Record<string,any>={}
    return write(state,ref.key)
   }
   case 'messenger.draft':{
-   for(const key of Object.keys(args))if(args[key]!==undefined&&!['conversation','scope','text','images','files','mentions','replyTo','replyQuote','replyConversation','replyTextOnly','clientMessageId','viewId','sourceView','expectedClientMessageId'].includes(key))throw Error('Unknown draft field: '+key)
+   for(const key of Object.keys(args))if(args[key]!==undefined&&!['conversation','scope','topicId','threadId','formId','text','images','files','mentions','replyTo','replyQuote','replyConversation','replyTextOnly','clientMessageId','viewId','sourceView','expectedClientMessageId'].includes(key))throw Error('Unknown draft field: '+key)
    const ref=resolve(args.conversation),sourceView=messageSourceView(args.sourceView)
-   if(args.scope!==undefined&&!['messages','work'].includes(args.scope))throw Error('Choose messages or work draft scope')
+   if(args.scope!==undefined&&!['messages','work','topic','thread','form'].includes(args.scope))throw Error('Choose messages or work draft scope')
+   for(const [field,scope] of [['topicId','topic'],['threadId','thread'],['formId','form']])if(args[field]!==undefined&&args.scope!==scope)throw Error('Draft scope does not match '+field)
    if(args.scope==='work'&&ref.kind!=='employee')throw Error('Work drafts belong to employee conversations')
-   const key=args.scope==='work'?workDraftKey(ref.id):ref.key
+   if(['topic','thread'].includes(args.scope)){if(ref.kind!=='group')throw Error('Topic and thread drafts belong to groups');validateGroupDraftScope(ref.id,args.scope==='topic'?args.topicId:undefined,args.scope==='thread'?args.threadId:undefined)}
+   else if(args.scope==='form'){const match=/^(poll|checklist)-([a-zA-Z0-9_-]+)$/.exec(args.formId??'');if(ref.kind!=='group'||!match)throw Error('Choose a group poll or checklist form');validateGroupDraftScope(ref.id,match[2])}
+   else if(args.topicId!==undefined||args.threadId!==undefined||args.formId!==undefined)throw Error('Choose a topic, thread or form draft scope')
+   const key=args.scope==='form'?'form:'+args.formId+':'+ref.key:args.scope==='work'?workDraftKey(ref.id):groupDraftKey(ref.key,args.scope==='topic'?args.topicId:undefined,args.scope==='thread'?args.threadId:undefined)
    if(sourceView!==undefined&&ref.kind!=='employee')throw Error('sourceView applies to private message drafts')
    if(typeof args.text!=='string'||args.text.length>100000)throw Error('Draft text must be at most 100000 characters')
    const files=attachmentPaths(args.files);if(files.length+(args.images?.length??0)>16)throw Error('Choose at most 16 attachments')
@@ -279,14 +290,18 @@ async function indexedQuery<K extends IndexKind>(kind:K,sources:MessageSource[],
  throw Error('Message preferences changed while reading. Retry the query.')
 }
 async function searchMessages(args:Record<string,any>,state:MessengerState){
+   validateApiArguments('messenger.search',args)
    const filter=args.filter??'all',author=args.author??'all',offset=args.offset??0,limit=args.limit??50,query=args.query??''
    if(!['all','saved','pinned','media','audio','files','links'].includes(filter)||!['all','you','employee'].includes(author))throw Error('Invalid message search filter')
    if(!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>100||typeof query!=='string'||query.length>500)throw Error('Invalid message search pagination or query')
    const selected=args.conversation?resolve(args.conversation):undefined
+   if([args.topicId,args.authorId,args.from,args.to].some(value=>value!==undefined)&&selected?.kind!=='group')throw Error('Topic, exact author and date filters require a group conversation')
+   if(args.topicId!==undefined){if(selected?.kind!=='group')throw Error('Topic filtering requires a group');validateGroupDraftScope(selected.id,args.topicId)}
+   if(args.from!==undefined&&args.to!==undefined&&args.from>args.to)throw Error('Choose a valid date range')
    const conversations=selected?(selected.kind==='channel'?[]:[selected.key]):[...visibleEmployees().map(card=>conversationKey('employee',card.id)),...listChatGroups().map(group=>conversationKey('group',group.id))],term=query.trim().toLocaleLowerCase()
    const sources=conversations.map(value=>messageSource(resolve(value)))
    if(!selected||selected.kind==='channel')sources.push(...channelMessageSources(selected?.id))
-   const queryResult=await indexedQuery('search',sources,state,{query:term,author,filter,offset:0,limit:offset+limit}),found=queryResult.result;state=queryResult.state
+   const queryResult=await indexedQuery('search',sources,state,{query:term,author,filter,offset:0,limit:offset+limit,topicId:args.topicId,authorId:args.authorId,from:args.from,to:args.to}),found=queryResult.result;state=queryResult.state
    const news=author==='all'&&(!selected||selected.kind==='channel')&&['all','saved','media','links'].includes(filter)?await queryChannelPostPrefix({...(selected?{channelId:selected.id}:{}),...(term?{query:term}:{}),...(filter==='saved'?{saved:true}:filter==='media'?{media:true}:filter==='links'?{links:true}:{}),messageOrder:true,limit:offset+limit}):{posts:[],total:0}
    const combined=[...presentMessages(found.rows,state),...news.posts.map(newsMessage)].sort((a,b)=>(b.createdAt??0)-(a.createdAt??0)||a.conversation.localeCompare(b.conversation)||a.id.localeCompare(b.id)),total=found.total+news.total
    return {messages:combined.slice(offset,offset+limit),total,hasMore:offset+limit<total}
@@ -294,13 +309,15 @@ async function searchMessages(args:Record<string,any>,state:MessengerState){
 
 /** Cursors refer to public message identities, never to a mutable UI page number. */
 async function galleryPage(args:Record<string,any>,state:MessengerState):Promise<import('../shared/messenger').MessengerGalleryPage>{
+ validateApiArguments('messenger.gallery',args)
  const limit=args.limit??40,query=args.query??'',author=args.author??'all',order=args.order??'oldest',direction=args.direction??(args.anchor?'around':'last')
  if(!Number.isInteger(limit)||limit<1||limit>100||typeof query!=='string'||query.length>500||!['all','you','employee'].includes(author)||!['oldest','newest'].includes(order)||!['around','before','after','first','last'].includes(direction))throw Error('Invalid gallery query or page size')
  const cursor=(value:unknown)=>{if(!value||typeof value!=='object'||typeof (value as any).messageId!=='string'||!(value as any).messageId||typeof (value as any).path!=='string'||!(value as any).path)throw Error('A gallery cursor requires messageId and path');const source=(value as any).conversation??args.conversation;if(typeof source!=='string'||!/^(employee|group|channel):[a-zA-Z0-9_-]+$/.test(source))throw Error('A gallery cursor requires its source conversation');return {conversation:source,messageId:(value as any).messageId,path:(value as any).path}}
  const anchor=args.anchor===undefined?undefined:cursor(args.anchor),boundary=args.through===undefined?undefined:cursor(args.through)
  if(['around','before','after'].includes(direction)!==!!anchor)throw Error('Choose an anchor for around/before/after, or an unanchored first/last page')
+ const scope=args.conversation?resolve(args.conversation):undefined;if([args.topicId,args.authorId,args.from,args.to].some(value=>value!==undefined)&&scope?.kind!=='group')throw Error('Topic, exact author and date filters require a group conversation');if(args.topicId)validateGroupDraftScope(scope!.id,args.topicId);if(args.from!==undefined&&args.to!==undefined&&args.from>args.to)throw Error('Choose a valid date range')
  const refs=args.conversation?[resolve(args.conversation).key]:[...visibleEmployees().map(card=>conversationKey('employee',card.id)),...listChatGroups().map(group=>conversationKey('group',group.id)),...(channelRequest('channel.list',{}) as {id:string}[]).map((channel:{id:string})=>conversationKey('channel',channel.id))]
- const {result:page}=await indexedQuery('gallery',refs.map(value=>messageSource(resolve(value))),state,{conversation:args.conversation,anchor,through:boundary,order,direction,query:query.trim().toLocaleLowerCase(),author,limit})
+ const {result:page}=await indexedQuery('gallery',refs.map(value=>messageSource(resolve(value))),state,{conversation:args.conversation,anchor,through:boundary,order,direction,query:query.trim().toLocaleLowerCase(),author,limit,topicId:args.topicId,authorId:args.authorId,from:args.from,to:args.to})
  const titles=new Map(refs.map(key=>[key,resolve(key).title]))
  return {...page,images:page.images.map(({message,path})=>({...(message.conversation.startsWith('employee:')?{employee:message.conversation.slice(9)}:message.conversation.startsWith('channel:')?{channel:message.conversation.slice(8)}:{group:message.conversation.slice(6)}),messageId:message.id,path,caption:message.text,editRevision:message.editRevision,conversationTitle:titles.get(message.conversation)!}))}
 }

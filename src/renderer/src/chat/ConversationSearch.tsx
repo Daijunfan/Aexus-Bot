@@ -5,7 +5,7 @@ import {useMessenger} from '../components/useMessenger'
 import {Icon} from '../components/Icon'
 
 /** Searches the conversation already loaded by Core; never fetches other employees' histories. */
-export function ConversationSearch({open,onOpen,items,transcript,onNavigate,onReveal,conversation}:{onReveal?:(id:string,signal?:AbortSignal)=>Promise<HTMLElement|null>;conversation?:string;open:boolean;onOpen:(open:boolean)=>void;items:{id:string;text:string}[];transcript:RefObject<HTMLDivElement|null>;onNavigate:(distanceFromEnd:number)=>void}){
+export function ConversationSearch({open,onOpen,items,transcript,onNavigate,onReveal,conversation,topicId}:{onReveal?:(id:string,signal?:AbortSignal)=>Promise<HTMLElement|null>;conversation?:string;topicId?:string;open:boolean;onOpen:(open:boolean)=>void;items:{id:string;text:string}[];transcript:RefObject<HTMLDivElement|null>;onNavigate:(distanceFromEnd:number)=>void}){
   useI18n()
 
   const messenger=useMessenger()
@@ -44,7 +44,7 @@ export function ConversationSearch({open,onOpen,items,transcript,onNavigate,onRe
   const step=(offset:number)=>{if(matches.length)setIndex((current+offset+matches.length)%matches.length)}
   return <MotionStrip className="conversation-search" role="search" aria-label={uiText("Search this conversation")}>
     <Icon name="search"/><input ref={input} value={query} aria-label={uiText("Find in conversation")} placeholder={uiText("Find in this conversation…")} onChange={event=>{setQuery(event.target.value);setIndex(0)}} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();step(event.shiftKey?-1:1)}}}/>
-    {conversation&&<button className="conversation-search-all" title={uiText("Search all history")} aria-label={uiText("Search all history")} onClick={()=>{onOpen(false);messenger?.setLibrary({conversation,query})}}><Icon name="search-fuzzy"/></button>}
+    {conversation&&<button className="conversation-search-all" title={uiText("Search all history")} aria-label={uiText("Search all history")} onClick={()=>{onOpen(false);messenger?.setLibrary({conversation,query,topicId})}}><Icon name="search-fuzzy"/></button>}
     <span role="status">{query.trim()?matches.length?uiText("{0} of {1}",[current+1,matches.length]):uiText("No results"):uiText("Loaded messages")}</span>
     <button aria-label={uiText("Previous match")} title={uiText("Previous match · Shift Enter")} disabled={!matches.length} onClick={()=>step(-1)}><Icon name="chevron-up"/></button><button aria-label={uiText("Next match")} title={uiText("Next match · Enter")} disabled={!matches.length} onClick={()=>step(1)}><Icon name="chevron-down"/></button><button aria-label={uiText("Close conversation search")} onClick={()=>onOpen(false)}><Icon name="close"/></button>
   </MotionStrip>

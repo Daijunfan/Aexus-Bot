@@ -5,7 +5,7 @@ import {onPluginFlush} from '../plugins'
 import {api} from '../api'
 import {createRefreshQueue} from '../snapshot'
 import {mergeOrder,sameOrder} from '../../../shared/messenger-order'
-import {EMPTY_MESSENGER,hasDraftContent,type MessengerState,type ConversationPreferences,type MessagePreferences,type MessageDraft,type ForwardDraftInput} from '../../../shared/messenger'
+import {EMPTY_MESSENGER,hasDraftContent,draftStorageArgs,type MessengerState,type ConversationPreferences,type MessagePreferences,type MessageDraft,type ForwardDraftInput} from '../../../shared/messenger'
 
 export type MessageTarget={conversation:string;id:string;quote?:MessageQuote}
 export type ReplyDestination=MessageTarget&{text:string;images:number}
@@ -23,6 +23,7 @@ function rememberedDirectory():DirectoryState{
 
 
 export function useMessengerState(enabled:boolean){
+ const [attachmentRequest,setAttachmentRequest]=useState<{id:string;conversation:string;files:File[]}|null>(null)
  const [directory,setDirectory]=useState<DirectoryState>(rememberedDirectory)
  const updateDirectory=useCallback((patch:Partial<DirectoryState>)=>setDirectory(previous=>({...previous,...patch})),[])
  useEffect(()=>{try{localStorage.setItem(directoryKey(),JSON.stringify(directory))}catch{}},[directory])
@@ -34,7 +35,7 @@ export function useMessengerState(enabled:boolean){
  const [navigationReturn,setNavigationReturn]=useState<{from:MessageTarget;viewing:string}|null>(null)
  const [selection,setSelection]=useState<{conversation:string;ids:string[]}|null>(null)
  const [forward,setForward]=useState<{messages:{conversation:string;id:string}[];text:string;images:number}|null>(null)
- const [library,setLibrary]=useState<{conversation?:string;filter?:string;query?:string}|null>(null),[jump,setJump]=useState<{conversation:string;id:string;returnTo?:string;quote?:MessageQuote}|null>(null)
+ const [library,setLibrary]=useState<{conversation?:string;filter?:string;query?:string;topicId?:string}|null>(null),[jump,setJump]=useState<{conversation:string;id:string;returnTo?:string;quote?:MessageQuote}|null>(null)
  const [state,setState]=useState<MessengerState>(EMPTY_MESSENGER),[ready,setReady]=useState(false),[error,setError]=useState('')
  const serverState=useRef(EMPTY_MESSENGER),pendingDrafts=useRef(new Map<string,LocalDraft>()),draftTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined),writing=useRef<Promise<void>|undefined>(undefined)
  const project=useCallback(()=>{const next={...serverState.current,drafts:{...serverState.current.drafts}};for(const [key,value] of pendingDrafts.current){const {expectedClientMessageId:_,...draft}=value;if(hasDraftContent(draft))next.drafts[key]=draft;else delete next.drafts[key]}setState(next)},[])
@@ -59,7 +60,7 @@ export function useMessengerState(enabled:boolean){
     while(pendingDrafts.current.size){
      const [conversation,value]=pendingDrafts.current.entries().next().value!,{updatedAt:_,...payload}=value
      let next:MessengerState
-     try{next=await api.call<MessengerState>('messenger.draft',{...(conversation.startsWith('work:')?{conversation:conversation.slice(5),scope:'work'}:{conversation}),...payload})}
+     try{next=await api.call<MessengerState>('messenger.draft',{...draftStorageArgs(conversation),...payload})}
      catch(cause){if(pendingDrafts.current.get(conversation)!==value)continue;setError((cause as Error).message);throw Error('Your draft could not be saved. Try again before leaving.')}
      if(pendingDrafts.current.get(conversation)===value)pendingDrafts.current.delete(conversation)
      accept(next);setError('')
@@ -94,7 +95,7 @@ export function useMessengerState(enabled:boolean){
  },[flushDrafts,draft,accept,getDraft])
  useEffect(()=>onPluginFlush(flushDrafts),[flushDrafts])
  useEffect(()=>()=>{clearTimeout(draftTimer.current);void flushDrafts().catch(()=>{})},[flushDrafts])
- return useMemo(()=>({directory,updateDirectory,channelViews,rememberChannelView,replyTarget,setReplyTarget,replyIntent,setReplyIntent,prepareReply,navigationReturn,navigate,state,ready,error,conversations,reorder,message,saveFolder,deleteFolder,saveForward,draft,scheduleDraft,getDraft,clearDraft,prepareSend,flushDrafts,refresh,library,setLibrary,jump,setJump,forward,setForward,selection,setSelection,toggleSelection,messages}),[directory,updateDirectory,channelViews,rememberChannelView,replyTarget,replyIntent,prepareReply,navigationReturn,navigate,state,ready,error,conversations,reorder,message,saveFolder,deleteFolder,saveForward,draft,scheduleDraft,getDraft,clearDraft,prepareSend,flushDrafts,refresh,library,jump,forward,selection,toggleSelection,messages])
+ return useMemo(()=>({attachmentRequest,setAttachmentRequest,directory,updateDirectory,channelViews,rememberChannelView,replyTarget,setReplyTarget,replyIntent,setReplyIntent,prepareReply,navigationReturn,navigate,state,ready,error,conversations,reorder,message,saveFolder,deleteFolder,saveForward,draft,scheduleDraft,getDraft,clearDraft,prepareSend,flushDrafts,refresh,library,setLibrary,jump,setJump,forward,setForward,selection,setSelection,toggleSelection,messages}),[attachmentRequest,directory,updateDirectory,channelViews,rememberChannelView,replyTarget,replyIntent,prepareReply,navigationReturn,navigate,state,ready,error,conversations,reorder,message,saveFolder,deleteFolder,saveForward,draft,scheduleDraft,getDraft,clearDraft,prepareSend,flushDrafts,refresh,library,jump,forward,selection,toggleSelection,messages])
 }
 export type MessengerController=ReturnType<typeof useMessengerState>
 export const MessengerContext=createContext<MessengerController|null>(null)

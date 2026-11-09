@@ -1,3 +1,4 @@
+import {remarkMessageInline} from './message-inline-format.ts'
 import {unified} from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
@@ -10,14 +11,14 @@ export const QUOTE_BLOCKS=new Set(['p','div','pre','li','tr','td','th','h1','h2'
 export const normalizeQuoteText=(text:string)=>text.replace(/\s+/gu,' ').trim()
 type QuoteNode={type:string;value?:string;tagName?:string;children?:QuoteNode[]}
 // This is the renderer's Markdown pipeline. Raw HTML stays literal text, never executable.
-const parser=unified().use(remarkParse).use(remarkGfm).use(remarkRehype,{allowDangerousHtml:true})
+const parser=unified().use(remarkParse).use(remarkGfm).use(remarkMessageInline).use(remarkRehype,{allowDangerousHtml:true})
 export function quoteText(markdown:string|string[]):string{
   const walk=(node:QuoteNode):string=>{
     if(node.type==='text'||node.type==='raw')return node.value??''
     const body=(node.children??[]).map(walk).join('')
     return node.tagName&&QUOTE_BLOCKS.has(node.tagName)?' '+body+' ':body
   }
-  return normalizeQuoteText((Array.isArray(markdown)?markdown:[markdown]).map(text=>walk(parser.runSync(parser.parse(text)) as QuoteNode)).join(' '))
+  return normalizeQuoteText((Array.isArray(markdown)?markdown:[markdown]).map(text=>walk(parser.runSync(parser.parse(text),text) as QuoteNode)).join(' '))
 }
 export function quoteShape(value:unknown):MessageQuote{
   if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Provide a selected quote with text and offset')

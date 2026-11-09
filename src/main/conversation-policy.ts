@@ -1,3 +1,4 @@
+import {groupDetails} from '../shared/group-collaboration'
 import {isAppAdministrator} from './application-authority'
 import {channelOffices,saveChannelOffices} from './channel-members'
 import {catalog,indexFile} from './chat-group-store'
@@ -24,7 +25,7 @@ export function conversationIdentity(value:unknown){
  const members=offices.memberIds.filter(id=>existing.has(id)),ownerId=offices.ownerId&&members.includes(offices.ownerId)?offices.ownerId:null
  const controls=channel?one('SELECT * FROM channel_conversation_controls WHERE channel_id=?',id):undefined
  const role=(employeeId:string):ConversationRole|undefined=>!members.includes(employeeId)?undefined:groupRole({...offices,memberIds:members},employeeId)
- return {conversation:String(value),kind:kind as 'group'|'channel',id,ownerId,name:group?.name??String(channel!.name),group,members,role,revision:group?.revision??Number(channel!.revision),mutes:group?.mutes??(controls?JSON.parse(controls.mutes):{}) as Record<string,number|null>,silent:group?.silent??!!controls?.silent}
+ return {conversation:String(value),kind:kind as 'group'|'channel',id,ownerId,name:group?.name??String(channel!.name),group,members,role,revision:group?.revision??Number(channel!.revision),policyRevision:group?.policyRevision??(group?1:Number(channel!.revision)),mutes:group?.mutes??(controls?JSON.parse(controls.mutes):{}) as Record<string,number|null>,silent:group?.silent??!!controls?.silent}
 }
 export function requireConversation(value:unknown,capability:'read'|'admin'|'owner'='read',principal:PrincipalRef=requestContext().principal){
  const current=conversationIdentity(value)
@@ -46,19 +47,20 @@ export function requireConversationPublisher(value:string,id:string){
  if(conversationMuted(value,id)!==undefined)throw Error('Publisher is muted in this conversation')
  return current
 }
-function revise(value:ReturnType<typeof conversationIdentity>,expected:unknown,update:(group?:ChatGroup)=>void,action='update',details:Record<string,unknown>={}){
- if(!Number.isSafeInteger(expected)||expected!==value.revision)throw Error('Conversation changed; reload before saving')
- if(value.group){const store=catalog(),group=store.groups.find(group=>group.id===value.id)!;update(group);group.revision++;group.updatedAt=Date.now();atomicJson(indexFile,store,true)}
+function revise(value:ReturnType<typeof conversationIdentity>,expected:unknown,update:(group?:ChatGroup)=>void,action='update',details:Record<string,unknown>={},expectedPolicy?:number){
+ if(!Number.isSafeInteger(expectedPolicy??expected)||(expectedPolicy!==undefined?expectedPolicy!==value.policyRevision:expected!==value.revision))throw Error('Conversation changed; reload before saving')
+ if(value.group){const store=catalog(),group=store.groups.find(group=>group.id===value.id)!;update(group);group.policyRevision=(group.policyRevision??1)+1;group.revision++;group.updatedAt=Date.now();atomicJson(indexFile,store,true)}
  else{transaction(()=>{update();run('UPDATE channels SET revision=revision+1,updated_at=? WHERE id=?',Date.now(),value.id)});changed('channels',{channelIds:[value.id]})}
- run('INSERT INTO conversation_audit(conversation,actor,action,details,created_at) VALUES(?,?,?,?,?)',value.conversation,JSON.stringify(requestContext().principal),action,JSON.stringify(details),Date.now())
+ auditConversation(value.conversation,action,details)
  notify(value.conversation)
  return projectPolicy(conversationIdentity(value.conversation))
 }
+export function auditConversation(conversation:string,action:string,details:Record<string,unknown>={}){run('INSERT INTO conversation_audit(conversation,actor,action,details,created_at) VALUES(?,?,?,?,?)',conversation,JSON.stringify(requestContext().principal),action,JSON.stringify(details),Date.now())}
 export function conversationPolicy(value:unknown):ConversationPolicy{return projectPolicy(requireConversation(value))}
 function projectPolicy(current:ReturnType<typeof conversationIdentity>):ConversationPolicy{
  const principal=requestContext().principal,role=principal.kind==='operator'?'operator':current.role(principal.employeeId)??null,admin=isAppAdministrator(principal)||['operator','owner','admin'].includes(role??'')
  const cards=readStore().sessions
- return {conversation:current.conversation,name:current.name,kind:current.kind,revision:current.revision,ownerId:current.ownerId,silent:current.silent,mutes:current.mutes,actorRole:role,members:current.members.map(id=>({id,name:cards.find(card=>card.id===id)!.title,role:current.role(id)!,mutedUntil:conversationMuted(current.conversation,id)})),allowedActions:current.kind==='channel'||current.group?.bot?[]:[...(admin?['members','roles','mute','silence','notices','audit']:[]),...((isAppAdministrator(principal)||role==='owner')?['transfer-owner',...(current.kind==='group'?['delete-group']:[])]:[])]}
+ return {conversation:current.conversation,name:current.name,kind:current.kind,revision:current.revision,policyRevision:current.policyRevision,...(current.group?{profileRevision:groupDetails(current.group.details,current.id).revision}:{}),ownerId:current.ownerId,silent:current.silent,mutes:current.mutes,actorRole:role,members:current.members.map(id=>({id,name:cards.find(card=>card.id===id)!.title,role:current.role(id)!,mutedUntil:conversationMuted(current.conversation,id)})),allowedActions:current.kind==='channel'||current.group?.bot?[]:[...(admin?['members','roles','mute','silence','notices','audit']:[]),...((isAppAdministrator(principal)||role==='owner')?['transfer-owner',...(current.kind==='group'?['delete-group']:[])]:[])]}
 }
 export function changeConversationRole(args:Record<string,any>){
  const current=requireConversation(args.conversation,'admin'),principal=requestContext().principal,id=args.employee,role=args.role
@@ -75,7 +77,7 @@ export function changeConversationRole(args:Record<string,any>){
  return revise(current,args.expectedRevision,group=>{
   if(group){const admins=new Set(group.adminIds??[]);if(role==='owner'){if(group.ownerId&&group.memberIds.includes(group.ownerId))admins.add(group.ownerId);group.ownerId=id;admins.delete(id)}else if(role==='admin')admins.add(id);else admins.delete(id);group.adminIds=[...admins].filter(value=>group.memberIds.includes(value)&&value!==group.ownerId)}
   else{const offices=channelOffices(current.id),members=new Set(offices.memberIds),admins=new Set(offices.adminIds);members.add(id);if(role==='member')admins.delete(id);else admins.add(id);saveChannelOffices(current.id,{memberIds:[...members],adminIds:[...admins],ownerId:role==='owner'?id:offices.ownerId})}
- },'role',{employee:id,role})
+ },'role',{employee:id,role},args.expectedPolicyRevision)
 }
 export function moderateConversation(args:Record<string,any>,silence=false){
  const current=requireConversation(args.conversation,'admin'),principal=requestContext().principal
@@ -88,19 +90,20 @@ export function moderateConversation(args:Record<string,any>,silence=false){
   if(args.durationSeconds!==undefined&&(!args.muted||!Number.isSafeInteger(args.durationSeconds)||args.durationSeconds<1||args.durationSeconds>31536000))throw Error('Mute duration must be 1–31536000 seconds')
   if(args.muted)mutes[args.member]=args.durationSeconds===undefined?null:Date.now()+args.durationSeconds*1000;else delete mutes[args.member]
  }
- return revise(current,args.expectedRevision,group=>{if(group){group.mutes=mutes;group.silent=silent}else run('INSERT INTO channel_conversation_controls(channel_id,mutes,silent) VALUES(?,?,?) ON CONFLICT(channel_id) DO UPDATE SET mutes=excluded.mutes,silent=excluded.silent',current.id,JSON.stringify(mutes),silent?1:0)},silence?'silence':'mute',silence?{silent}:{member:args.member,muted:args.muted,durationSeconds:args.durationSeconds})
+ return revise(current,args.expectedRevision,group=>{if(group){group.mutes=mutes;group.silent=silent}else run('INSERT INTO channel_conversation_controls(channel_id,mutes,silent) VALUES(?,?,?) ON CONFLICT(channel_id) DO UPDATE SET mutes=excluded.mutes,silent=excluded.silent',current.id,JSON.stringify(mutes),silent?1:0)},silence?'silence':'mute',silence?{silent}:{member:args.member,muted:args.muted,durationSeconds:args.durationSeconds},args.expectedPolicyRevision)
 }
 
 export function changeConversationMember(args:Record<string,any>){
  const current=requireConversation(args.conversation,'admin'),id=args.employee
  if(!['add','remove'].includes(args.action)||typeof id!=='string'||!readStore().sessions.some(card=>card.id===id&&!card.deleting))throw Error('Choose an existing employee and add or remove')
  if(args.action==='remove'&&id===current.ownerId)throw Error('Transfer ownership before removing the Owner')
+ if(args.action==='add'&&current.group?.bannedIds?.includes(id))throw Error('Unban this employee before adding membership')
  if(args.action==='add'&&!current.members.includes(id)&&current.members.length>=200)throw Error('A conversation supports up to 200 members')
  return revise(current,args.expectedRevision,group=>{
   const ids=new Set(current.members);if(args.action==='add')ids.add(id);else ids.delete(id)
   if(group){group.memberIds=[...ids];group.adminIds=group.adminIds?.filter(id=>ids.has(id));if(args.action==='remove'&&group.mutes)delete group.mutes[id]}
   else{const offices=channelOffices(current.id);saveChannelOffices(current.id,{...offices,memberIds:[...ids],adminIds:offices.adminIds.filter(id=>ids.has(id))});const mutes={...current.mutes};if(args.action==='remove')delete mutes[id];run('UPDATE channel_conversation_controls SET mutes=? WHERE channel_id=?',JSON.stringify(mutes),current.id)}
- },'member',{employee:id,action:args.action})
+ },'member',{employee:id,action:args.action},args.expectedPolicyRevision)
 }
 export function conversationAudit(args:Record<string,any>){
  const current=requireConversation(args.conversation,'admin'),limit=args.limit??50,before=args.before??Number.MAX_SAFE_INTEGER

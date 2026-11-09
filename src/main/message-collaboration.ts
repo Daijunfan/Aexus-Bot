@@ -1,3 +1,4 @@
+import {requireGroupExport} from './group-history'
 import {botGroup} from './bot-workers'
 import {MESSAGE_COLLABORATION_COMMANDS} from '../shared/message-collaboration'
 import {workspaceCatalog} from './workspace-catalog'
@@ -17,6 +18,7 @@ export function messageCollaborationRequest(command:string,args:Record<string,an
  if(command==='workspace.catalog')return workspaceCatalog(args)
  if(command==='conversation.upload')return uploadSharedFile(args,resolve)
  if(command==='conversation.upload-status')return sharedUploadStatus(args as any)
+ if(['conversation.download','conversation.download-local'].includes(command))requireGroupExport(args.conversation)
  if(command==='conversation.entry')return conversationEntry(args)
  if(command==='conversation.download')return downloadAttachment(args,resolve)
  if(command==='conversation.download-local')return downloadAttachmentLocal(args)

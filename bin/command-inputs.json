@@ -2509,6 +2509,71 @@
       ]
     ]
   },
+  "messenger.sticker-list": {
+    "fields": [
+      [
+        "pack",
+        "pack",
+        "text",
+        false,
+        false
+      ],
+      [
+        "query",
+        "query",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "messenger.sticker-save": {
+    "fields": [
+      [
+        "name",
+        "name",
+        "text",
+        false,
+        false
+      ],
+      [
+        "pack",
+        "pack",
+        "text",
+        false,
+        false
+      ],
+      [
+        "image",
+        "image",
+        "json",
+        false,
+        false
+      ]
+    ]
+  },
+  "messenger.sticker-image": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "messenger.sticker-remove": {
+    "fields": [
+      [
+        "ids",
+        "ids",
+        "json",
+        false,
+        false
+      ]
+    ]
+  },
   "messenger.profile": {
     "fields": [
       [
@@ -2696,6 +2761,34 @@
         "conversation",
         "conversation",
         "text",
+        false,
+        false
+      ],
+      [
+        "topicId",
+        "topic-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "authorId",
+        "author-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "from",
+        "from",
+        "number",
+        false,
+        false
+      ],
+      [
+        "to",
+        "to",
+        "number",
         false,
         false
       ],
@@ -3009,6 +3102,34 @@
         "conversation",
         "conversation",
         "text",
+        false,
+        false
+      ],
+      [
+        "topicId",
+        "topic-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "authorId",
+        "author-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "from",
+        "from",
+        "number",
+        false,
+        false
+      ],
+      [
+        "to",
+        "to",
+        "number",
         false,
         false
       ],
@@ -3640,6 +3761,34 @@
         false
       ],
       [
+        "topicId",
+        "topic-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "authorId",
+        "author-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "from",
+        "from",
+        "number",
+        false,
+        false
+      ],
+      [
+        "to",
+        "to",
+        "number",
+        false,
+        false
+      ],
+      [
         "state",
         "state",
         "text",
@@ -3748,6 +3897,13 @@
         "number",
         false,
         false
+      ],
+      [
+        "expectedPolicyRevision",
+        "expected-policy-revision",
+        "number",
+        false,
+        false
       ]
     ]
   },
@@ -3816,6 +3972,13 @@
         "number",
         false,
         false
+      ],
+      [
+        "expectedPolicyRevision",
+        "expected-policy-revision",
+        "number",
+        false,
+        false
       ]
     ]
   },
@@ -3855,6 +4018,13 @@
         "number",
         false,
         false
+      ],
+      [
+        "expectedPolicyRevision",
+        "expected-policy-revision",
+        "number",
+        false,
+        false
       ]
     ]
   },
@@ -3877,6 +4047,13 @@
       [
         "expectedRevision",
         "expected-revision",
+        "number",
+        false,
+        false
+      ],
+      [
+        "expectedPolicyRevision",
+        "expected-policy-revision",
         "number",
         false,
         false
@@ -4059,6 +4236,826 @@
       [
         "offset",
         "offset",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.message-trash": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "messages",
+        "messages",
+        "json",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.message-restore": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "messages",
+        "messages",
+        "json",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.trash": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "before",
+        "before",
+        "number",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.clear-history": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "through",
+        "through",
+        "number",
+        false,
+        false
+      ],
+      [
+        "topicId",
+        "topic-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "confirm",
+        "confirm",
+        "boolean",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.export": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "before",
+        "before",
+        "number",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ],
+      [
+        "topicId",
+        "topic-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.invites": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.invite-create": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "name",
+        "name",
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expiresAt",
+        "expires-at",
+        "text",
+        false,
+        false
+      ],
+      [
+        "useLimit",
+        "use-limit",
+        "number",
+        false,
+        false
+      ],
+      [
+        "approval",
+        "approval",
+        "boolean-value",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.invite-revoke": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "inviteId",
+        "invite-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.join": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "code",
+        "code",
+        "text",
+        false,
+        false
+      ],
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.join-requests": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.join-decide": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "requestId",
+        "request-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "approve",
+        "approve",
+        "boolean-value",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.ban": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ],
+      [
+        "banned",
+        "banned",
+        "boolean-value",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.react": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "messageId",
+        "message-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "emoji",
+        "emoji",
+        "text",
+        false,
+        false
+      ],
+      [
+        "selected",
+        "selected",
+        "boolean-value",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.pin": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "messageId",
+        "message-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "pinned",
+        "pinned",
+        "boolean-value",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.thread": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "messageId",
+        "message-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "before",
+        "before",
+        "number",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.details": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.details-update": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "patch",
+        "patch",
+        "json",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.member-tag": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "tag",
+        "tag",
+        "text",
+        false,
+        false
+      ],
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.topic-list": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "includeArchived",
+        "include-archived",
+        "boolean",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.topic-create": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "name",
+        "name",
+        "text",
+        false,
+        false
+      ],
+      [
+        "icon",
+        "icon",
+        "text",
+        false,
+        false
+      ],
+      [
+        "color",
+        "color",
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.topic-update": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "topicId",
+        "topic-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "patch",
+        "patch",
+        "json",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.poll-create": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "spec",
+        "spec",
+        "json",
+        false,
+        false
+      ],
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "topicId",
+        "topic-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "viewId",
+        "view-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.poll-get": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "pollId",
+        "poll-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.poll-vote": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "pollId",
+        "poll-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "options",
+        "options",
+        "json",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.poll-close": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "pollId",
+        "poll-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.poll-option": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "pollId",
+        "poll-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "label",
+        "label",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.checklist-create": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "title",
+        "title",
+        "text",
+        false,
+        false
+      ],
+      [
+        "items",
+        "items",
+        "json",
+        false,
+        false
+      ],
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "topicId",
+        "topic-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "viewId",
+        "view-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "allowAdd",
+        "allow-add",
+        "boolean-value",
+        false,
+        false
+      ],
+      [
+        "allowComplete",
+        "allow-complete",
+        "boolean-value",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.checklist-get": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "checklistId",
+        "checklist-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.checklist-check": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "checklistId",
+        "checklist-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "itemId",
+        "item-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "done",
+        "done",
+        "boolean-value",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.checklist-edit": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "checklistId",
+        "checklist-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "items",
+        "items",
+        "json",
+        false,
+        false
+      ],
+      [
+        "title",
+        "title",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedEditRevision",
+        "expected-edit-revision",
+        "number",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
         "number",
         false,
         false
@@ -4505,6 +5502,13 @@
         "text",
         false,
         false
+      ],
+      [
+        "topicId",
+        "topic-id",
+        "text",
+        false,
+        false
       ]
     ],
     "rawPositionals": true
@@ -4514,6 +5518,13 @@
       [
         "id",
         0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "topicId",
+        "topic-id",
         "text",
         false,
         false
@@ -4594,9 +5605,30 @@
         false
       ],
       [
+        "topicId",
+        "topic-id",
+        "text",
+        false,
+        false
+      ],
+      [
         "messageId",
         "message",
         "text",
+        false,
+        false
+      ],
+      [
+        "messageIds",
+        "message-ids",
+        "json",
+        false,
+        false
+      ],
+      [
+        "exact",
+        "exact",
+        "boolean",
         false,
         false
       ]

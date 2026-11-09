@@ -1,4 +1,6 @@
-import {memo,useMemo,type ComponentProps} from 'react'
+import {remarkMessageInline} from '../../../shared/message-inline-format'
+import {translate as t} from '../i18n'
+import {memo,useMemo,useState,type ComponentProps} from 'react'
 import Markdown,{type ExtraProps} from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -50,11 +52,15 @@ function MessagePre({node,children,stateKey,...props}:ComponentProps<'pre'>&Extr
  return <MessageCodeBlock text={text.replace(/\n$/,'')} language={language} stateKey={stateKey+':'+(node?.position?.start.offset??0)}/>
 }
 
+function MessageSpoiler({children}:ComponentProps<'span'>){const [revealed,setRevealed]=useState(false);return <span className="message-spoiler" data-revealed={revealed} role={revealed?undefined:'button'} tabIndex={revealed?undefined:0} aria-label={revealed?undefined:t('Reveal hidden text')} onClick={()=>setRevealed(true)} onKeyDown={event=>{if(!revealed&&['Enter',' '].includes(event.key)){event.preventDefault();setRevealed(true)}}}><span aria-hidden={!revealed}>{children}</span></span>}
+function MessageSpan({node,children}:ComponentProps<'span'>&ExtraProps){return node?.properties['data-message-spoiler']==='true'?<MessageSpoiler key={JSON.stringify(node.children)}>{children}</MessageSpoiler>:<span>{children}</span>}
+
+
 /** Shared display only: callers retain the original text for copy, save and forwarding. */
 export const RichMessageText=memo(function RichMessageText({text,className='',images=true,onOpenLink,quoteText=false,stateKey='body'}:{text:string;className?:string;images?:boolean;onOpenLink?:(url:string)=>void;quoteText?:boolean;stateKey?:string}){
   const markdown=useMemo(()=>mathMarkdown(text),[text])
   const pre=useMemo(()=>function CodePre(props:ComponentProps<'pre'>&ExtraProps){return <MessagePre {...props} stateKey={stateKey}/>},[stateKey])
-  return <div className={'rich-message-text markdown '+className} data-quote-text={quoteText||undefined}><Markdown remarkPlugins={[remarkGfm,remarkMath]} components={{
+  return <div className={'rich-message-text markdown '+className} data-quote-text={quoteText||undefined}><Markdown remarkPlugins={[remarkGfm,remarkMath,remarkMessageInline]} components={{
     a:({href,children})=>href&&/^https?:\/\//i.test(href)?<a href={href} onClick={event=>{event.preventDefault();if(onOpenLink)onOpenLink(href);else void api.call('external.open',{url:href})}}>{children}</a>:<span>{children}</span>,
     ...(!images?{img:()=>null}:{}),
     code:({node,className,children})=>{
@@ -64,6 +70,6 @@ export const RichMessageText=memo(function RichMessageText({text,className='',im
       if(start!==undefined&&end!==undefined&&markdown[start+1]!=='$'&&/\d/.test(markdown[end]??''))return <span>{markdown.slice(start,end)}</span>
       return <MathFormula text={String(children)}/>
     },
-    pre,
+    pre,span:MessageSpan,
   }}>{markdown}</Markdown></div>
 })

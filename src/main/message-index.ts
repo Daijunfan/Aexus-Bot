@@ -61,20 +61,25 @@ export function setMessageScope(ids:string[],preferences:Record<string,MessagePr
  if(scope!==scopeKey)transaction(()=>{open().exec('DELETE FROM allowed');const add=statement('INSERT INTO allowed VALUES(?,?)');(JSON.parse(scope) as string[]).forEach((id,index)=>add.run(id,index));scopeKey=scope})
  if(prefs!==preferencesKey)transaction(()=>{open().exec('DELETE FROM preferences');const add=statement('INSERT INTO preferences VALUES(?,?,?,?)');for(const [key,value] of Object.entries(preferences))if(value.saved||value.pinned||value.hidden)add.run(key,Number(!!value.saved),Number(!!value.pinned),Number(!!value.hidden));preferencesKey=prefs})
 }
-function searchFilter(query:string,author:string,filter:string){
+function searchFilter(query:string,author:string,filter:string,extra:{topicId?:string;authorId?:string;from?:number;to?:number}={}){
  const where=['COALESCE(p.hidden,0)=0'],values:SQLInputValue[]=[]
  if(query){
   // Short Unicode strings and embedded NUL use the exact substring fallback.
   if(Array.from(query).length>=3&&!query.includes('\0')){where.push('m.rowid IN (SELECT rowid FROM message_text WHERE message_text MATCH ?)');values.push('"'+query.replaceAll('"','""')+'"')}
   where.push('instr(m.search,?)>0');values.push(query)
  }
+ if(extra.topicId!==undefined){where.push("COALESCE(json_extract(m.body,'$.topicId'),'general')=?");values.push(extra.topicId)}
+ if(extra.authorId!==undefined){where.push("CASE WHEN m.author='operator' THEN 'operator' ELSE json_extract(m.body,'$.authorIdentity.employeeId') END=?");values.push(extra.authorId)}
+ if(extra.from!==undefined){where.push('m.created>=?');values.push(extra.from)}
+ if(extra.to!==undefined){where.push('m.created<=?');values.push(extra.to)}
  if(author!=='all'){where.push('m.author=?');values.push(author==='you'?'operator':'agent')}
- if(filter==='saved'||filter==='pinned')where.push('p.'+filter+'=1')
+ if(filter==='pinned')where.push("(p.pinned=1 OR json_extract(m.body,'$.pinnedAt') IS NOT NULL)")
+ else if(filter==='saved')where.push('p.saved=1')
  else if(filter!=='all')where.push('m.'+({media:'media',audio:'audio',files:'files',links:'links'} as Record<string,string>)[filter]+'=1')
  return {where,values}
 }
-export function searchMessageIndex(options:{query:string;author:string;filter:string;offset:number;limit:number}){
- const {query,author,filter,offset,limit}=options,{where,values}=searchFilter(query,author,filter)
+export function searchMessageIndex(options:{query:string;author:string;filter:string;offset:number;limit:number;topicId?:string;authorId?:string;from?:number;to?:number}){
+ const {query,author,filter,offset,limit}=options,{where,values}=searchFilter(query,author,filter,options)
  const from=' FROM messages m JOIN allowed a ON a.source=m.source LEFT JOIN preferences p ON p.key=m.source||\'/\'||m.id WHERE '+where.join(' AND ')
  const total=Number(statement('SELECT count(*) AS n'+from).get(...values)!.n)
  const rows=statement('SELECT m.body'+from+' ORDER BY m.created DESC,a.rank,m.tie LIMIT ? OFFSET ?').all(...values,limit,offset).map(row=>JSON.parse(row.body as string) as PublicMessage)
@@ -82,7 +87,7 @@ export function searchMessageIndex(options:{query:string;author:string;filter:st
 }
 
 type ImageCursor={conversation:string;messageId:string;path:string}
-export function galleryMessageIndex(options:{conversation?:string;anchor?:ImageCursor;through?:ImageCursor;order:string;direction:string;query:string;author:string;limit:number}){
+export function galleryMessageIndex(options:{topicId?:string;authorId?:string;from?:number;to?:number;conversation?:string;anchor?:ImageCursor;through?:ImageCursor;order:string;direction:string;query:string;author:string;limit:number}){
  const {conversation,anchor,through,order,direction,query,author,limit}=options
  const baseOrder=conversation?'m.ordinal,i.position':'m.created,a.rank DESC,m.tie DESC,i.position'
  const base='WITH base AS (SELECT m.rowid AS rowid,m.source,m.id,m.created,a.rank,m.tie,i.path,i.position AS imagePosition,row_number() OVER (ORDER BY '+baseOrder+')-1 AS ordinal FROM images i JOIN messages m ON m.source=i.source AND m.id=i.id JOIN allowed a ON a.source=m.source) '
@@ -94,7 +99,7 @@ export function galleryMessageIndex(options:{conversation?:string;anchor?:ImageC
  const bounded=base.trimEnd()+', bounded AS (SELECT *,row_number() OVER (ORDER BY '+sorted+')-1 AS position FROM base WHERE ordinal<=?) '
  const target=anchor?statement(bounded+'SELECT position FROM bounded WHERE source=? AND id=? AND path=?').get(end,anchor.conversation,anchor.messageId,anchor.path):undefined
  if(anchor&&!target)throw Error('Unknown gallery image cursor')
- const at=Number(target?.position??-1),{where,values}=searchFilter(query,author,'all')
+ const at=Number(target?.position??-1),{where,values}=searchFilter(query,author,'all',options)
  const visible=bounded.trimEnd()+', visible AS (SELECT b.*,row_number() OVER (ORDER BY b.position)-1 AS visibleIndex FROM bounded b JOIN messages m ON m.rowid=b.rowid LEFT JOIN preferences p ON p.key=m.source||\'/\'||m.id WHERE '+where.join(' AND ')+') '
  const totals=statement(visible+'SELECT count(*) AS total,COALESCE(SUM(position<?),0) AS preceding,MAX(CASE WHEN position=? THEN visibleIndex END) AS selected FROM visible').get(end,...values,at,at)!
  const total=Number(totals.total),preceding=Number(totals.preceding),selected=totals.selected===null?-1:Number(totals.selected)

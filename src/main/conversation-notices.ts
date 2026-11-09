@@ -61,7 +61,7 @@ function validatePublisher(conversation:string,publisherId:string,caller:Request
 export function conversationControlRequest(command:string,args:Record<string,any>){
  if(!CONVERSATION_CONTROL_APIS.has(command))throw Error('Unknown conversation control command')
  const allowed:Record<string,string[]>={policy:[],member:['employee','action','expectedRevision'],audit:['before','limit'],role:['employee','role','expectedRevision'],mute:['member','muted','durationSeconds','expectedRevision'],silence:['silent','expectedRevision'],'notice-list':['offset','limit'],'notice-get':['id'],'notice-create':['spec','clientRequestId'],'notice-update':['id','patch','expectedRevision'],'notice-delete':['id','expectedRevision'],'notice-preview':['rule','from'],'notice-history':['id','offset','limit']}
- const op=command.slice('conversation.'.length);fields(args,['conversation',...allowed[op]])
+ const op=command.slice('conversation.'.length);fields(args,['conversation',...allowed[op],...(['role','member','mute','silence'].includes(op)?['expectedPolicyRevision']:[])])
  const current=requireConversation(args.conversation,op==='policy'?'read':'admin'),conversation=current.conversation,caller=requestContext()
  if(op==='policy')return conversationPolicy(conversation)
  if(current.kind==='channel'&&!['audit','notice-list','notice-get','notice-history'].includes(op))throw Error('Channels are read-only feeds without members, roles, moderation or group notifications')

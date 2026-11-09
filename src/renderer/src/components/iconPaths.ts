@@ -2,6 +2,10 @@
 export const iconPaths:Record<string,string>={
  'comment-discussion':'M14 15H8l-4 3V6a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3M10 11h10v10l-3-3h-7z',
  'smiley':'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M8 9h.01M16 9h.01M8 14c2 3 6 3 8 0',
+ 'graph':'M4 20V11h4v9M10 20V4h4v16M16 20v-9h4v9M2 22h20',
+ 'circle-outline':'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
+ 'lock':'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5zM12 14v3',
+ 'link':'M10 13a5 5 0 0 0 7 .1l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7-.1l-3 3a5 5 0 0 0 7 7l2-2',
  'search':'M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0m-2 5 6 6',
  'close':'m6 6 12 12M6 18 18 6','add':'M12 5v14M5 12h14','remove':'M5 12h14',
  'check':'m5 12 4 4L19 6','check-all':'m2 12 4 4 10-10m-5 9 2 2 9-10',

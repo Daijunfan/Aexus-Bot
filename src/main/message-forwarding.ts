@@ -1,3 +1,4 @@
+import {requireGroupExport} from './group-history'
 import {isAppAdministrator} from './application-authority'
 import {loadChannelPost,loadChannelMessage} from './channel-content'
 import {SingleFlight} from './single-flight'
@@ -53,6 +54,7 @@ export async function forwardMessages(args:Record<string,any>,call:(command:stri
  if(kind==='group')getChatGroup(id);else {const card=visibleEmployees().find(card=>card.id===id);if(!card||!employeeReady(card))throw Error('Destination employee is not ready')}
  const selected:MessengerMessage[]=[],histories=new Map<string,MessengerMessage[]>()
  for(const ref of args.messages){
+  if(ref?.conversation)requireGroupExport(ref.conversation)
   if(!ref||typeof ref.conversation!=='string'||typeof ref.id!=='string')throw Error('Invalid source message')
   if(ref.conversation.startsWith('channel:'))requireSavedChannelEntry(ref.conversation.slice(8),ref.id)
   if(ref.conversation.startsWith('channel:')){if(ref.id.startsWith('np_'))await loadChannelPost(ref.id);else if(ref.id.startsWith('cm_'))await loadChannelMessage(ref.conversation.slice(8),ref.id)}

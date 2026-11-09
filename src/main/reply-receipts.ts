@@ -19,12 +19,12 @@ export function acknowledgeDirectReply(employeeId:string,reference:DirectReplyRe
  const store=readStore(),card=store.sessions.find(c=>c.id===employeeId),reply=card?.lastReply
  if(!card||!reply?.directReply||reply.directReply.sequence>reference.sequence)return
  if(!reply.readAt){card.lastReply={...reply,readAt:Date.now()};writeStore(store)}
- if(reply.groupReply&&catalog().groups.some(g=>g.id===reply.groupReply!.groupId)){advanceGroupRead(reply.groupReply.groupId,reply.groupReply.sequence);acknowledgeGroupReplies(reply.groupReply.groupId,reply.groupReply.sequence)}
+ if(reply.groupReply&&catalog().groups.some(g=>g.id===reply.groupReply!.groupId)){advanceGroupRead(reply.groupReply.groupId,reply.groupReply.sequence,reply.groupReply.topicId??'general');acknowledgeGroupReplies(reply.groupReply.groupId,reply.groupReply.sequence,reply.groupReply.topicId??'general')}
 }
-export function acknowledgeGroupReplies(groupId:string,sequence:number){
+export function acknowledgeGroupReplies(groupId:string,sequence:number,topicId?:string,exactIds?:string[]){
  const store=readStore(),history=messages(groupId);let changed=false
  for(const card of store.sessions){const reply=card.lastReply,reference=reply?.groupReply;if(card.deleting||!reply||reply.readAt||reference?.groupId!==groupId||reference.sequence>sequence)continue
-  if(!history.some(message=>message.id===reference.messageId&&message.sequence===reference.sequence&&message.author.kind==='agent'&&message.author.employeeId===card.id))continue
+  if(!history.some(message=>message.id===reference.messageId&&message.sequence===reference.sequence&&(!topicId||(message.topicId??'general')===topicId)&&(!exactIds||exactIds.includes(message.id))&&message.author.kind==='agent'&&message.author.employeeId===card.id))continue
   card.lastReply={...reply,readAt:Date.now()};if(reply.directReply)advanceDirectRead(card.id,reply.directReply);changed=true
  }
  if(changed)writeStore(store)
@@ -53,7 +53,7 @@ export function publishReply(employeeId:string,items:Item[],turnKey?:string){
   // The full answer remains in transcripts; the persisted floor preview is bounded.
   const text=characters.length>4000?'…'+characters.slice(-4000).join(''):paragraph
   const groupReply=turn&&turn.id===turnKey?turn.groupReply:undefined
-  const alreadyRead=groupReply&&catalog().groups.some(group=>group.id===groupReply.groupId&&group.readSequence>=groupReply.sequence)||directReply&&directSummary(employeeId).readSequence>=directReply.sequence
+  const alreadyRead=groupReply&&catalog().groups.some(group=>group.id===groupReply.groupId&&(Math.max(group.readSequence,group.topicRead?.[groupReply.topicId??'general']??0)>=groupReply.sequence||group.readMessageIds?.includes(groupReply.messageId)))||directReply&&directSummary(employeeId).readSequence>=directReply.sequence
   card.lastReply={id,itemId:answer.itemId,text,createdAt:Date.now(),...(groupReply?{groupReply}:{}),...(directReply?{directReply}:{}),...(alreadyRead?{readAt:Date.now()}:{})}
   writeStore(store)
 }
@@ -68,8 +68,8 @@ export function acknowledgeReply(employeeId:string,replyId:string){
   if(card.lastReply.directReply)advanceDirectRead(employeeId,card.lastReply.directReply)
   const reference=card.lastReply.groupReply
   if(reference&&catalog().groups.some(group=>group.id===reference.groupId)&&messages(reference.groupId).some(message=>message.id===reference.messageId&&message.sequence===reference.sequence&&message.author.kind==='agent'&&message.author.employeeId===employeeId)){
-   const sequence=advanceGroupRead(reference.groupId,reference.sequence)!
-   acknowledgeGroupReplies(reference.groupId,sequence)
+   const sequence=advanceGroupRead(reference.groupId,reference.sequence,reference.topicId??'general')!
+   acknowledgeGroupReplies(reference.groupId,reference.sequence,reference.topicId??'general')
    const current=readStore().sessions.find(card=>card.id===employeeId)!.lastReply!
    return {acknowledged:true,replyId,readAt:current.readAt}
   }

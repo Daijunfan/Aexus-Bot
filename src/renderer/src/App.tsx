@@ -449,6 +449,6 @@ export default function App() {
     </HomeView>
     {!messageMode&&conversation}
     {error&&error!==sendRecovery?.error&&<div className="app-error" role="alert">{error}<button onClick={()=>setError('')} aria-label={uiText("Dismiss error")}>×</button></div>}
-    <ConversationNoticeToast/>
+    <ConversationNoticeToast currentConversation={messageMode&&view.chatId?'group:'+view.chatId:undefined}/>
   </div></AudioPlaybackProvider></MessengerContext.Provider></AvatarCatalogContext.Provider>
 }

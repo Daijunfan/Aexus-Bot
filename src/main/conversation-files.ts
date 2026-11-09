@@ -1,3 +1,4 @@
+import {validateGroupDraftScope} from './group-collaboration'
 import fs from 'node:fs'
 import path from 'node:path'
 import {createHash} from 'node:crypto'
@@ -16,11 +17,11 @@ import type {MessageAttachment} from '../shared/message-attachments'
 
 type Source={key:string;id:string;path:string;root?:string;relative?:string;file:MessageAttachment;message:ChatMessage;references:number;external:boolean}
 const hash=(value:string)=>createHash('sha256').update(value).digest('hex').slice(0,32)
-function catalog(conversation:string){
+function catalog(conversation:string,filters:Record<string,any>={}){
  const scope=requireConversation(conversation)
  if(scope.kind!=='group')throw Error('Choose a group conversation')
  const rows=new Map<string,Source>(),byPath=new Map<string,Source>()
- for(const message of readChatMessages(scope.id))for(const file of message.attachments??[]){
+ for(const message of readChatMessages(scope.id).filter(message=>!message.deletedAt&&(!filters.topicId||(message.topicId??'general')===filters.topicId)&&(!filters.authorId||(message.author.kind==='operator'?'operator':message.author.employeeId)===filters.authorId)&&(filters.from===undefined||message.createdAt>=filters.from)&&(filters.to===undefined||message.createdAt<=filters.to)))for(const file of message.attachments??[]){
   if(file.kind!=='file')continue
   const external=!!scope.group?.bot,endpoint=external?undefined:file.path.startsWith('@workspace/')?conversationFileEndpoint(conversation,file.path):{root:groupMediaRoot(scope.id),path:file.path}
   const relative=endpoint?path.relative(endpoint.root,workspacePath(endpoint.root,endpoint.path)).split(path.sep).join('/'):undefined
@@ -39,7 +40,9 @@ function info(source:Source,conversation:string,trash?:WorkspaceTrash,actorNames
 }
 export function listConversationFiles(args:Record<string,any>):SharedFilePage{
  authorize('conversation.files',args);validateApiArguments('conversation.files',args)
- const actorNames=new Map(readStore().sessions.map(card=>[card.id,card.title])),data=catalog(args.conversation),trashByRoot=new Map<string,WorkspaceTrash[]>(),state=args.state??'active'
+ if(args.from!==undefined&&args.to!==undefined&&args.from>args.to)throw Error('Choose a valid date range')
+ if(args.topicId)validateGroupDraftScope(args.conversation.slice(6),args.topicId)
+ const actorNames=new Map(readStore().sessions.map(card=>[card.id,card.title])),data=catalog(args.conversation,args),trashByRoot=new Map<string,WorkspaceTrash[]>(),state=args.state??'active'
  const list=data.rows.flatMap(source=>{
   if(state==='trash'){
    if(!source.root)return []

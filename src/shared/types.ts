@@ -89,7 +89,7 @@ export const employeeReady = (card: Pick<StoredSession,'initialization'>) =>
   !card.initialization || card.initialization.status === 'ready'
 
 /** Latest published answer and the user's exact-version read receipt. */
-export type GroupReplyReference={groupId:string;messageId:string;sequence:number}
+export type GroupReplyReference={topicId?:string;groupId:string;messageId:string;sequence:number}
 export type EmployeeReply={id:string;itemId:string;text:string;createdAt:number;readAt?:number;groupReply?:GroupReplyReference;directReply?:import('./direct-messages').DirectReplyReference}
 
 /** A session as persisted in the app's own store. */

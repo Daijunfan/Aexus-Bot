@@ -16,6 +16,14 @@
 
 管理权限属于员工的 `managementRole`，与 Team 名称、工作目录、目录标记和视图无关。CLI 与 UI 进入相同的 Core 授权入口。完整命令见 [API.md](API.md)。`management.topology.teams` 从同一授权入口返回逐 Team 的 allowedActions、deleteBlockedReason、governorIds 和 isOwnTeam，避免把少数受保护 Team 误判为全部不可删除。
 
+## 群组协作
+
+`chat.details-update`、话题关闭/归档/置顶、消息清理及封禁遵循当前群 Owner/Admin 与应用管理权限。普通成员按独立的 text/media/polls/topics/addMembers/pin 授权执行；颜色和标签不授予权限。投票和表情以真实调用者记录，不能冒充用户；匿名投票不返回原始身份或未揭晓的测验答案。清单编辑保留现有完成者，不等价于 Mission 成功。
+
+邀请只允许已认证员工加入当前本地群，不提供 Core 登录身份或 Company 职位。审批、撤销、封禁、创建者当前群权限和 Agent 凭据均在执行时复查。旧的 member-add 也不能绕过封禁。消息作者可移除自己的共享内容，Owner/Admin 可移除任意消息；恢复不重放已接受的工作。保留策略仅清理新消息的公开正文，原文件和恢复记录保留。
+
+内容保护限制应用内转发、跨会话引用、导出、下载和群外复制，CLI 同样执行；不声称限制可信操作系统账号、截图或已进入原生上下文的文本。本地贴纸收藏由用户/Secretary 管理，署名和发送仍走既有上传与群消息流程。完整约定见 [群组协作](docs/GROUP_COLLABORATION.md)。
+
 ## 四种职位
 
 Secretary 是用户的软件执行助手，拥有全局 **Agent 应用管理权限**。界面可完成的业务操作通过同一 Core API 向 Secretary 开放，包括频道阅读授权、订阅、排序、群组治理、文件、头像、收藏下载、已读、主机、插件、Worker 统一管理和 Plan。无需加入频道或群组；不借用 operator token，不改变真实 Agent 身份、原生引擎执行许可或操作系统身份。API 中的 `operator` 权限分类包含 Secretary，不代表必须冒充用户。

@@ -1,3 +1,4 @@
+import {requireGroupExport} from './group-history'
 import {isAppAdministrator} from './application-authority'
 import {channelMemberIds} from './channel-members'
 import {directoryName} from '../shared/directory-names'
@@ -149,6 +150,7 @@ export function conversationWorkspaceRequest(command:string,args:Record<string,a
    const ref={employee,path:relative(value.path)},base=resolveEndpoint(ref,destination),context=requestContext()
    return {ref,endpoint:{...base,validate:()=>withCaller(context,()=>{authorize(command,args);const current=resolveEndpoint(ref,destination);if(current.root!==base.root||JSON.stringify(current.remote)!==JSON.stringify(base.remote))throw Error('Personal workspace changed during transfer')})}}
   }
+  if(args.from?.conversation&&args.from.conversation!==args.to?.conversation)requireGroupExport(args.from.conversation)
   if(!args.from?.conversation&&!args.to?.conversation)throw Error('Choose at least one shared conversation workspace')
   const from=endpoint(args.from,false),to=endpoint(args.to,true),job=startTransfer(from.ref,to.ref,from.endpoint,to.endpoint)
   copies.set(job.id,owner());if(copies.size>200)for(const id of copies.keys()){if(copies.size<=200)break;try{if(['completed','failed','cancelled'].includes(getTransfer(id).state))copies.delete(id)}catch{copies.delete(id)}}

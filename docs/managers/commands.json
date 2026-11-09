@@ -5733,6 +5733,136 @@
     "target": "request"
   },
   {
+    "name": "messenger.sticker-list",
+    "args": "[--pack NAME --query TEXT]",
+    "summary": "List your local sticker packs, including static and animated images; no external service or inference.",
+    "gui": "Local stickers",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pack": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    },
+    "readOnly": true,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "messenger.sticker-save",
+    "args": "--name TEXT --pack NAME --image JSON",
+    "summary": "User/Secretary imports a signature-checked PNG/JPEG/GIF/WebP up to 2 MiB into a local sticker pack. Same image and pack is idempotent; no message is sent.",
+    "gui": "Import local sticker",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "pack": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mimeType": {
+              "enum": [
+                "image/png",
+                "image/jpeg",
+                "image/gif",
+                "image/webp"
+              ]
+            },
+            "data": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "name",
+            "mimeType",
+            "data"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "pack",
+        "image"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "messenger.sticker-image",
+    "args": "ID",
+    "summary": "Read one current local sticker image for the authenticated user; imported stickers do not grant filesystem access.",
+    "gui": "Sticker preview",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "messenger.sticker-remove",
+    "args": "--ids JSON",
+    "summary": "Remove selected stickers from your library; previously shared group images remain independent and intact.",
+    "gui": "Remove local stickers",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 200,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "ids"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
     "name": "messenger.profile",
     "args": "[--avatar ID|null | --image JSON|@file]",
     "summary": "User-only: upload a personal image, choose an avatar.list ID or reset with null; author identity stays unchanged",
@@ -6038,6 +6168,20 @@
         "conversation": {
           "type": "string",
           "pattern": "^(employee|group|channel):[a-zA-Z0-9_-]+$"
+        },
+        "topicId": {
+          "type": "string"
+        },
+        "authorId": {
+          "type": "string"
+        },
+        "from": {
+          "type": "number",
+          "minimum": 0
+        },
+        "to": {
+          "type": "number",
+          "minimum": 0
         },
         "anchor": {
           "type": "object",
@@ -6496,7 +6640,7 @@
   {
     "name": "messenger.conversation",
     "args": "--conversations JSON --patch JSON",
-    "summary": "User or Secretary: pin, favorite, archive or mark conversations unread in one atomic update",
+    "summary": "User or Secretary: pin, favorite, archive, mark unread or set local group notifications (all/direct/off) in one atomic update",
     "gui": "Messages list and bulk actions",
     "inputSchema": {
       "type": "object",
@@ -6515,6 +6659,13 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
+            "notifications": {
+              "enum": [
+                "all",
+                "direct",
+                "off"
+              ]
+            },
             "pinned": {
               "type": "boolean"
             },
@@ -6603,8 +6754,8 @@
   },
   {
     "name": "messenger.draft",
-    "args": "CONVERSATION --data JSON [--scope messages|work]",
-    "summary": "User or Secretary: persist a draft and its send identity, or conditionally clear the matching draft; scope work shares Board and full work composers separately from Message; never sends or opens an engine",
+    "args": "CONVERSATION --data JSON [--scope messages|work|topic|thread|form --topic-id ID --thread-id ID --form-id ID]",
+    "summary": "User or Secretary: persist a draft and its send identity, or conditionally clear the matching draft; scope work separates Board/work drafts; group topic/thread/form drafts retain their own contents. Never sends or opens an engine",
     "gui": "Message and work composers",
     "inputSchema": {
       "type": "object",
@@ -6614,10 +6765,26 @@
           "type": "string",
           "pattern": "^(employee|group|channel):[a-zA-Z0-9_-]+$"
         },
+        "topicId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "threadId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "formId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
         "scope": {
           "enum": [
             "messages",
-            "work"
+            "work",
+            "topic",
+            "thread",
+            "form"
           ],
           "description": "Defaults to messages. Work is employee-only and is returned under work:employee:ID in messenger.state.drafts."
         },
@@ -6731,6 +6898,20 @@
         "conversation": {
           "type": "string",
           "pattern": "^(employee|group|channel):[a-zA-Z0-9_-]+$"
+        },
+        "topicId": {
+          "type": "string"
+        },
+        "authorId": {
+          "type": "string"
+        },
+        "from": {
+          "type": "number",
+          "minimum": 0
+        },
+        "to": {
+          "type": "number",
+          "minimum": 0
         },
         "query": {
           "type": "string",
@@ -7407,6 +7588,22 @@
           "type": "string",
           "pattern": "^group:[a-zA-Z0-9_-]+$"
         },
+        "topicId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from": {
+          "type": "number",
+          "minimum": 0
+        },
+        "to": {
+          "type": "number",
+          "minimum": 0
+        },
         "state": {
           "enum": [
             "active",
@@ -7567,6 +7764,10 @@
         "expectedRevision": {
           "type": "integer",
           "minimum": 1
+        },
+        "expectedPolicyRevision": {
+          "type": "integer",
+          "minimum": 1
         }
       },
       "required": [
@@ -7660,6 +7861,10 @@
         "expectedRevision": {
           "type": "integer",
           "minimum": 1
+        },
+        "expectedPolicyRevision": {
+          "type": "integer",
+          "minimum": 1
         }
       },
       "required": [
@@ -7701,6 +7906,10 @@
         "expectedRevision": {
           "type": "integer",
           "minimum": 1
+        },
+        "expectedPolicyRevision": {
+          "type": "integer",
+          "minimum": 1
         }
       },
       "required": [
@@ -7731,6 +7940,10 @@
           "type": "boolean"
         },
         "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expectedPolicyRevision": {
           "type": "integer",
           "minimum": 1
         }
@@ -8247,6 +8460,1249 @@
       ]
     },
     "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.message-trash",
+    "args": "ID --messages JSON",
+    "summary": "Remove 1–200 group messages for everyone using edit revisions. Authors remove their own; Owner/Admin may remove any. Recoverable, no user files or native tasks deleted.",
+    "gui": "Remove group messages",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expectedRevision": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "expectedRevision"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 200
+        }
+      },
+      "required": [
+        "id",
+        "messages"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.message-restore",
+    "args": "ID --messages JSON",
+    "summary": "Restore recoverable messages by tombstone revision, rechecking current creator/Admin authority. Does not replay deliveries.",
+    "gui": "Restore group messages",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expectedRevision": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "expectedRevision"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 200
+        }
+      },
+      "required": [
+        "id",
+        "messages"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.trash",
+    "args": "ID [--before N --limit N]",
+    "summary": "Read recoverable removed-message metadata permitted to your current identity; original files and native history stay intact.",
+    "gui": "Removed group messages",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "before": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.clear-history",
+    "args": "ID --through N --confirm [--topic-id ID]",
+    "summary": "Owner/Admin removes messages through the captured sequence, optionally in one topic. New arrivals remain. Recoverable; running employee work is not cancelled.",
+    "gui": "Clear group history",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "through": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "topicId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confirm": {
+          "const": true
+        }
+      },
+      "required": [
+        "id",
+        "through",
+        "confirm"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.export",
+    "args": "ID [--before N --limit N --topic-id ID]",
+    "summary": "Export a page of published group content and attachment references. No private votes, native history, credentials or read acknowledgment. Protected groups reject exports.",
+    "gui": "Export group history",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "before": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "topicId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.invites",
+    "args": "ID",
+    "summary": "Owner/Admin lists local authenticated invite codes and their expiry, approval and use counts. Codes never grant a Core identity or Company authority.",
+    "gui": "Group invitations",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.invite-create",
+    "args": "ID --name TEXT --client-request-id KEY [--expires-at ISO --use-limit N --approval true|false]",
+    "summary": "Create a revocable local invite for already authenticated employees. Stable retries return the same invitation; never creates a public unauthenticated link.",
+    "gui": "New group invitation",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expiresAt": {
+          "type": "string"
+        },
+        "useLimit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "approval": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "clientRequestId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.invite-revoke",
+    "args": "ID --invite-id ID",
+    "summary": "Owner/Admin revokes an invitation immediately, including pending approvals using that code.",
+    "gui": "Revoke invitation",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inviteId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "inviteId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.join",
+    "args": "ID --code TEXT [--employee ID]",
+    "summary": "Redeem a local invite as your authenticated Agent identity; user/Secretary may select an existing employee. Approval requests persist. Banned or expired invitations cannot add members.",
+    "gui": "Join group",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "code"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.join-requests",
+    "args": "ID",
+    "summary": "Owner/Admin lists persistent local join requests and current invitation status.",
+    "gui": "Join requests",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.join-decide",
+    "args": "ID --request-id ID --approve true|false --expected-revision N",
+    "summary": "Owner/Admin approves or declines one request after rechecking current employee, ban, invitation, expiry and capacity. Equal decisions are idempotent.",
+    "gui": "Review join request",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "approve": {
+          "type": "boolean"
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "requestId",
+        "approve",
+        "expectedRevision"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.ban",
+    "args": "ID --employee ID --banned true|false",
+    "summary": "Owner/Admin bans or unbans an employee in this group. Ban removes membership and prevents reinvitation; unban does not silently rejoin. Owner must be transferred first.",
+    "gui": "Group bans",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "banned": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "employee",
+        "banned"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.react",
+    "args": "ID --message-id ID --emoji TEXT --selected true|false",
+    "summary": "Set or remove one of your group message reactions. Uses actual caller identity; up to three selections per member, no impersonation.",
+    "gui": "Group reactions",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "messageId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "emoji": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "selected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "messageId",
+        "emoji",
+        "selected"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.pin",
+    "args": "ID --message-id ID --pinned true|false",
+    "summary": "Owner/Admin or members with pin permission pin a published message for the whole group. Several pins are supported; message removal preserves recovery.",
+    "gui": "Group pins",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "messageId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pinned": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "messageId",
+        "pinned"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.thread",
+    "args": "ID --message-id ID [--before N --limit N]",
+    "summary": "Read a real group reply thread and root, including nested replies, without marking other messages read.",
+    "gui": "Message thread",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "messageId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "before": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "id",
+        "messageId"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.details",
+    "args": "ID",
+    "summary": "Read group identity, description, appearance, member rights and collaboration counts. A color or member tag grants no authority.",
+    "gui": "Group overview",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.details-update",
+    "args": "ID --patch JSON --expected-revision N",
+    "summary": "Owner/Admin updates group profile and posting policy atomically; independent profile revision avoids reading-receipt conflicts.",
+    "gui": "Group settings",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "patch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80,
+              "minLength": 1
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 1200
+            },
+            "color": {
+              "enum": [
+                "violet",
+                "ocean",
+                "teal",
+                "rose",
+                "amber",
+                "coral",
+                "iris",
+                "forest"
+              ]
+            },
+            "topicsEnabled": {
+              "type": "boolean"
+            },
+            "slowModeSeconds": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3600
+            },
+            "protectedContent": {
+              "type": "boolean"
+            },
+            "autoDeleteSeconds": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 31536000
+            },
+            "permissions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "text": {
+                  "type": "boolean"
+                },
+                "media": {
+                  "type": "boolean"
+                },
+                "polls": {
+                  "type": "boolean"
+                },
+                "topics": {
+                  "type": "boolean"
+                },
+                "addMembers": {
+                  "type": "boolean"
+                },
+                "pin": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "patch",
+        "expectedRevision"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.member-tag",
+    "args": "ID --tag TEXT [--employee ID]",
+    "summary": "Set your own group tag; Owner/Admin may edit another member tag. Labels never change roles.",
+    "gui": "Member tag",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "tag"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.topic-list",
+    "args": "ID [--include-archived]",
+    "summary": "List topics and message counts; General preserves pre-topic history.",
+    "gui": "Group topics",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "includeArchived": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.topic-create",
+    "args": "ID --name NAME --client-request-id KEY [--icon TEXT --color COLOR]",
+    "summary": "Create a topic with a stable retry identity under current group permissions; launches no employee work.",
+    "gui": "New topic",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 80,
+          "minLength": 1
+        },
+        "icon": {
+          "type": "string",
+          "maxLength": 8
+        },
+        "color": {
+          "enum": [
+            "violet",
+            "ocean",
+            "teal",
+            "rose",
+            "amber",
+            "coral",
+            "iris",
+            "forest"
+          ]
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "clientRequestId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.topic-update",
+    "args": "ID --topic-id ID --patch JSON --expected-revision N",
+    "summary": "Owner/Admin edits, pins, closes or archives a topic without removing messages. General cannot be archived.",
+    "gui": "Topic settings",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "topicId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "patch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 80,
+              "minLength": 1
+            },
+            "icon": {
+              "type": "string",
+              "maxLength": 8
+            },
+            "color": {
+              "enum": [
+                "violet",
+                "ocean",
+                "teal",
+                "rose",
+                "amber",
+                "coral",
+                "iris",
+                "forest"
+              ]
+            },
+            "closed": {
+              "type": "boolean"
+            },
+            "pinned": {
+              "type": "boolean"
+            },
+            "archived": {
+              "type": "boolean"
+            }
+          }
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "topicId",
+        "patch",
+        "expectedRevision"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.poll-create",
+    "args": "ID --spec JSON --client-request-id KEY [--topic-id ID --view-id ID]",
+    "summary": "Publish a durable poll/quiz as the real caller. Multiple choice, anonymous votes, revoting, added answers, closing time and hidden results.",
+    "gui": "Create poll",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "spec": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "question": {
+              "type": "string",
+              "maxLength": 1000,
+              "minLength": 1
+            },
+            "options": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 50,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "label"
+                ]
+              }
+            },
+            "multiple": {
+              "type": "boolean"
+            },
+            "anonymous": {
+              "type": "boolean"
+            },
+            "quiz": {
+              "type": "boolean"
+            },
+            "revote": {
+              "type": "boolean"
+            },
+            "hideResults": {
+              "type": "boolean"
+            },
+            "openAnswers": {
+              "type": "boolean"
+            },
+            "closesAt": {
+              "type": "string"
+            },
+            "correctOptions": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 49
+              },
+              "uniqueItems": true
+            },
+            "explanation": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          "required": [
+            "question",
+            "options"
+          ]
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "topicId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "viewId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "spec",
+        "clientRequestId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.poll-get",
+    "args": "ID --poll-id ID",
+    "summary": "Read results and your selections; anonymous voter identities and unrevealed quiz answers stay private.",
+    "gui": "Poll results",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pollId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "pollId"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.poll-vote",
+    "args": "ID --poll-id ID --options JSON",
+    "summary": "Cast or withdraw your own vote as a current member. Equal votes are idempotent; cannot impersonate the user.",
+    "gui": "Vote",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pollId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "options": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "id",
+        "pollId",
+        "options"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.poll-close",
+    "args": "ID --poll-id ID --expected-revision N",
+    "summary": "Creator or Owner/Admin closes voting without deleting results.",
+    "gui": "Close poll",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pollId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "pollId",
+        "expectedRevision"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.poll-option",
+    "args": "ID --poll-id ID --label TEXT",
+    "summary": "Add an answer when open answers are enabled; quiz solutions stay fixed.",
+    "gui": "Add poll option",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pollId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "pollId",
+        "label"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.checklist-create",
+    "args": "ID --title TEXT --items JSON --client-request-id KEY [--topic-id ID --view-id ID --allow-add true|false --allow-complete true|false]",
+    "summary": "Publish a checklist without completing any Mission. Assignees must be current members.",
+    "gui": "Create checklist",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "text": {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              "assignee": {
+                "type": "string",
+                "minLength": 1
+              },
+              "dueAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ]
+          }
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "topicId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "viewId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowAdd": {
+          "type": "boolean"
+        },
+        "allowComplete": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "items",
+        "clientRequestId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.checklist-get",
+    "args": "ID --checklist-id ID",
+    "summary": "Read items, completion actors and revision.",
+    "gui": "Checklist",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checklistId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "checklistId"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.checklist-check",
+    "args": "ID --checklist-id ID --item-id ID --done true|false",
+    "summary": "Complete or reopen one item under the current policy. Equal states are idempotent; no model call.",
+    "gui": "Checklist completion",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checklistId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "itemId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "done": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "checklistId",
+        "itemId",
+        "done"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.checklist-edit",
+    "args": "ID --checklist-id ID --items JSON --expected-revision N [--title TEXT]",
+    "summary": "Creator/Owner/Admin edits a checklist; permitted members may append items. Stable item IDs preserve completion.",
+    "gui": "Edit checklist",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checklistId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              "assignee": {
+                "type": "string",
+                "minLength": 1
+              },
+              "dueAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ]
+          }
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "expectedEditRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "checklistId",
+        "items",
+        "expectedRevision"
+      ]
+    },
+    "readOnly": false,
     "permission": "chat",
     "target": "request"
   },
@@ -8929,6 +10385,10 @@
         "id": {
           "type": "string",
           "minLength": 1
+        },
+        "topicId": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [
@@ -8941,7 +10401,7 @@
   },
   {
     "name": "chat.history",
-    "args": "ID [--before SEQUENCE | --around MESSAGE_ID] [--limit 50]",
+    "args": "ID [--before SEQUENCE | --around MESSAGE_ID] [--topic-id ID --limit 50]",
     "summary": "Read published group messages with pagination",
     "gui": "Shared views / group conversations",
     "inputSchema": {
@@ -8949,6 +10409,10 @@
       "additionalProperties": false,
       "properties": {
         "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "topicId": {
           "type": "string",
           "minLength": 1
         },
@@ -9057,6 +10521,10 @@
       "additionalProperties": false,
       "properties": {
         "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "topicId": {
           "type": "string",
           "minLength": 1
         },
@@ -9194,6 +10662,10 @@
           "type": "string",
           "minLength": 1
         },
+        "topicId": {
+          "type": "string",
+          "minLength": 1
+        },
         "text": {
           "type": "string",
           "minLength": 0,
@@ -9270,8 +10742,8 @@
   },
   {
     "name": "chat.acknowledge",
-    "args": "ID --message ID",
-    "summary": "User or Secretary: explicitly mark group messages read; private receipts remain separate",
+    "args": "ID [--message ID | --message-ids JSON] [--topic-id ID --exact]",
+    "summary": "User or Secretary: explicitly mark a topic or exact message set read; private and employee work receipts remain separate",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -9281,14 +10753,52 @@
           "type": "string",
           "minLength": 1
         },
+        "topicId": {
+          "type": "string",
+          "minLength": 1
+        },
         "messageId": {
           "type": "string",
           "minLength": 1
+        },
+        "messageIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 200,
+          "uniqueItems": true
+        },
+        "exact": {
+          "type": "boolean"
         }
       },
       "required": [
-        "id",
-        "messageId"
+        "id"
+      ],
+      "oneOf": [
+        {
+          "required": [
+            "messageId"
+          ],
+          "not": {
+            "required": [
+              "messageIds"
+            ]
+          }
+        },
+        {
+          "required": [
+            "messageIds"
+          ],
+          "not": {
+            "required": [
+              "messageId"
+            ]
+          }
+        }
       ]
     },
     "readOnly": false,
