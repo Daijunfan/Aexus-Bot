@@ -37,13 +37,13 @@ try{
  for(const count of [1,2,3,4,5,2]){
   group=await rpc('chat.update',{id:group.id,members:cards.slice(0,count).map(card=>card.id),expectedRevision:group.revision})
   await measure(page.locator('.message-contact[data-chat="'+group.id+'"]>.group-avatar'),count,'sidebar-'+count)
-  await measure(page.locator('.message-thread-header>.group-avatar'),count,'header-'+count)
+  await measure(page.locator('.message-thread-header .group-avatar'),count,'header-'+count)
   await measure(page.locator('.group-empty>.group-avatar'),count,'welcome-'+count)
   await shot('members-'+count)
  }
  checks.push('One member uses their own portrait; two, three and four show separate faces; larger groups show exactly four in a 2×2 grid; membership changes refresh all sizes')
  group=await rpc('chat.update',{id:group.id,members:cards.slice(0,4).map(card=>card.id),expectedRevision:group.revision});await rpc('card.avatar',{id:cards[0].id,avatar:avatars[2]});await expect(page.locator('.message-thread-header [data-group-avatar-member="'+cards[0].id+'"] [data-portrait]')).toHaveAttribute('data-portrait',avatars[2]);checks.push('Changing an employee portrait updates the composite without replacing member identities')
- await shot('group-grid-final');if(web){await page.setViewportSize({width:420,height:900});await measure(page.locator('.message-thread-header>.group-avatar'),4,'narrow-header');await shot('group-grid-narrow')}
+ await shot('group-grid-final');if(web){await page.setViewportSize({width:420,height:900});await measure(page.locator('.message-thread-header .group-avatar'),4,'narrow-header');await shot('group-grid-narrow')}
  assert.deepEqual(errors,[]);if(app)assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())))
  fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({passed:true,mode,checks,measurements,errors,paidModelCalls:0,productionDataUsed:false},null,2));checks.forEach(text=>console.log('PASS '+mode+': '+text))
 }catch(error){await page?.screenshot({path:path.join(out,'failure.png'),animations:'disabled'}).catch(()=>{});fs.writeFileSync(path.join(out,'failure.json'),JSON.stringify({error:error.stack,checks,errors},null,2));throw error}finally{await app?.close();await browser?.close();await f?.close()}

@@ -131,5 +131,335 @@
         "expectedMessageId": "message-1"
       }
     }
+  },
+  {
+    "args": [
+      "worker",
+      "commands",
+      "worker-1",
+      "--filter",
+      "plan"
+    ],
+    "expected": {
+      "cmd": "worker.commands",
+      "args": {
+        "id": "worker-1",
+        "filter": "plan"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "command",
+      "worker-1",
+      "--text",
+      "/help",
+      "--client-message-id",
+      "stable-command"
+    ],
+    "expected": {
+      "cmd": "worker.command",
+      "args": {
+        "id": "worker-1",
+        "text": "/help",
+        "clientMessageId": "stable-command"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "inspect",
+      "worker-1",
+      "--section",
+      "skills"
+    ],
+    "expected": {
+      "cmd": "worker.inspect",
+      "args": {
+        "id": "worker-1",
+        "section": "skills"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "skill",
+      "worker-1",
+      "--name",
+      "review",
+      "--prompt",
+      "Only staged changes"
+    ],
+    "expected": {
+      "cmd": "worker.skill",
+      "args": {
+        "id": "worker-1",
+        "name": "review",
+        "prompt": "Only staged changes"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "steer",
+      "worker-1",
+      "--text",
+      "Focus on tests",
+      "--expected-message-id",
+      "turn-1"
+    ],
+    "expected": {
+      "cmd": "worker.steer",
+      "args": {
+        "id": "worker-1",
+        "text": "Focus on tests",
+        "expectedMessageId": "turn-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "background",
+      "worker-1"
+    ],
+    "expected": {
+      "cmd": "worker.background",
+      "args": {
+        "id": "worker-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "background-stop",
+      "worker-1",
+      "--process-id",
+      "process-1"
+    ],
+    "expected": {
+      "cmd": "worker.background-stop",
+      "args": {
+        "id": "worker-1",
+        "processId": "process-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "reset",
+      "worker-1",
+      "--client-request-id",
+      "reset-1"
+    ],
+    "expected": {
+      "cmd": "worker.reset",
+      "args": {
+        "id": "worker-1",
+        "clientRequestId": "reset-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "fork",
+      "worker-1",
+      "--title",
+      "Independent fork",
+      "--client-request-id",
+      "fork-1"
+    ],
+    "expected": {
+      "cmd": "worker.fork",
+      "args": {
+        "id": "worker-1",
+        "title": "Independent fork",
+        "clientRequestId": "fork-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "history",
+      "worker-1",
+      "--archive",
+      "archive-1"
+    ],
+    "expected": {
+      "cmd": "worker.history",
+      "args": {
+        "id": "worker-1",
+        "archive": "archive-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "export",
+      "worker-1",
+      "--format",
+      "markdown",
+      "--path",
+      "conversation.md"
+    ],
+    "expected": {
+      "cmd": "worker.export",
+      "args": {
+        "id": "worker-1",
+        "format": "markdown",
+        "path": "conversation.md"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "file",
+      "worker-1",
+      "--operation",
+      "write",
+      "--path",
+      "notes.md",
+      "--content",
+      "第一行\nSecond line",
+      "--create"
+    ],
+    "expected": {
+      "cmd": "worker.file",
+      "args": {
+        "id": "worker-1",
+        "operation": "write",
+        "path": "notes.md",
+        "content": "第一行\nSecond line",
+        "create": true
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "upload-begin",
+      "worker-1",
+      "--name",
+      "image.png",
+      "--bytes",
+      "1234"
+    ],
+    "expected": {
+      "cmd": "worker.upload-begin",
+      "args": {
+        "id": "worker-1",
+        "name": "image.png",
+        "bytes": 1234
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "terminal",
+      "worker-1",
+      "--operation",
+      "input",
+      "--terminal",
+      "shell-1",
+      "--data",
+      "pwd\n"
+    ],
+    "expected": {
+      "cmd": "worker.terminal",
+      "args": {
+        "id": "worker-1",
+        "operation": "input",
+        "terminal": "shell-1",
+        "data": "pwd\n"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "configure",
+      "worker-1",
+      "--plan-mode",
+      "false",
+      "--thinking",
+      "true",
+      "--fast-mode",
+      "false",
+      "--native-options",
+      "{\"mode\":\"plan\"}"
+    ],
+    "expected": {
+      "cmd": "worker.configure",
+      "args": {
+        "id": "worker-1",
+        "planMode": false,
+        "thinking": true,
+        "fastMode": false,
+        "nativeOptions": {
+          "mode": "plan"
+        }
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "send",
+      "worker-1",
+      "--text",
+      "",
+      "--images",
+      "[\"image.png\"]",
+      "--files",
+      "[\"note.md\"]"
+    ],
+    "expected": {
+      "cmd": "worker.send",
+      "args": {
+        "id": "worker-1",
+        "text": "",
+        "images": [
+          "image.png"
+        ],
+        "files": [
+          "note.md"
+        ]
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "draft",
+      "worker-1",
+      "--text",
+      "Draft",
+      "--images",
+      "[\"image.png\"]",
+      "--expected-revision",
+      "9"
+    ],
+    "expected": {
+      "cmd": "worker.draft",
+      "args": {
+        "id": "worker-1",
+        "text": "Draft",
+        "images": [
+          "image.png"
+        ],
+        "expectedRevision": 9
+      }
+    }
   }
 ]

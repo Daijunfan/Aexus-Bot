@@ -12,9 +12,10 @@ import {onPluginFlush} from '../plugins'
 type Entry={name:string;path:string;directory:boolean;symlink:boolean;bytes:number;modifiedAt:number;managed?:boolean;writable?:boolean}
 type Document={path:string;name?:string;content?:string;hash?:string;bytes:number;binary:boolean;mimeType?:string;data?:string}
 let latestDeleted:object|undefined
-export function FileWorkspace({readOnly=false,revealAvailable=true,folderName,flat=false,assetRoot,initialFileName,initialFile='',team,employee,conversation,initialFolder='',shared=false,children,onAttachImage,explorerWidth=230,explorerCollapsed=false,explorerTreeCollapsed=false,bottomPanel,active=true}:{readOnly?:boolean;revealAvailable?:boolean;folderName?:string;flat?:boolean;assetRoot?:string;initialFileName?:string;initialFile?:string;conversation?:string;initialFolder?:string;shared?:boolean;explorerWidth?:number;explorerCollapsed?:boolean;explorerTreeCollapsed?:boolean;bottomPanel?:ReactNode;active?:boolean;team?:string;employee?:string;children?:ReactNode;onAttachImage?:(path:string)=>void}) {
+export function FileWorkspace({readOnly=false,revealAvailable=true,folderName,flat=false,assetRoot,initialFileName,initialFile='',team,employee:employeeId,worker,conversation,initialFolder='',shared=false,children,onAttachImage,explorerWidth=230,explorerCollapsed=false,explorerTreeCollapsed=false,bottomPanel,active=true}:{readOnly?:boolean;revealAvailable?:boolean;folderName?:string;flat?:boolean;assetRoot?:string;initialFileName?:string;initialFile?:string;conversation?:string;initialFolder?:string;shared?:boolean;explorerWidth?:number;explorerCollapsed?:boolean;explorerTreeCollapsed?:boolean;bottomPanel?:ReactNode;active?:boolean;team?:string;employee?:string;worker?:string;children?:ReactNode;onAttachImage?:(path:string)=>void}) {
   useI18n()
 
+  const employee=employeeId??(worker?'worker:'+worker:undefined)
   // Compact workbenches reveal files on demand without changing the shared desktop layout.
   const workspace=useRef<HTMLDivElement>(null),[workspaceWidth,setWorkspaceWidth]=useState(0),[compactExplorerOpen,setCompactExplorerOpen]=useState(false)
   const compact=!!employee&&workspaceWidth>0&&workspaceWidth<640
@@ -22,7 +23,7 @@ export function FileWorkspace({readOnly=false,revealAvailable=true,folderName,fl
   useLayoutEffect(()=>{if(!employee||!workspace.current)return;const measure=(width:number)=>{if(width)setWorkspaceWidth(Math.round(width))};measure(workspace.current.clientWidth);const observer=new ResizeObserver(([entry])=>measure(entry.contentRect.width));observer.observe(workspace.current);return()=>observer.disconnect()},[employee])
   const hideCompactExplorer=()=>{setCompactExplorerOpen(false);requestAnimationFrame(()=>workspace.current?.querySelector<HTMLButtonElement>('.explorer-visibility')?.focus())}
 
-  const scope=assetRoot?{asset:assetRoot}:conversation?{conversation}:shared?{shared:true}:{team,employee}
+  const scope=worker?{worker}:assetRoot?{asset:assetRoot}:conversation?{conversation}:shared?{shared:true}:{team,employee}
   const fileInput=useRef<HTMLInputElement>(null)
   const receive=(e:DragEvent,path:string)=>{if(readOnly||!hasFileDrop(e.dataTransfer))return;e.preventDefault();e.stopPropagation();setDropActive(false);setDropFolder('');setError('');void dropFiles(e.dataTransfer,{...scope,path:path||'.'}).then(()=>refresh()).catch(e=>setError(e.message))}
   const allowDrop=(e:DragEvent)=>{if(hasFileDrop(e.dataTransfer)){e.preventDefault();e.stopPropagation();e.dataTransfer.dropEffect='copy'}}
@@ -39,7 +40,7 @@ export function FileWorkspace({readOnly=false,revealAvailable=true,folderName,fl
   useEffect(()=>()=>{fileRead.current++},[])
   const [saving,setSaving]=useState(false),[showFile,setShowFile]=useState(false)
   const [expanded,setExpanded]=useState(new Set(['',...(initialFolder?[initialFolder]:[])])),[branches,setBranches]=useState<Record<string,Entry[]>>({})
-  const call=(op:string,args:Record<string,unknown>={})=>assetRoot?api.call('assets.file',{...args,id:assetRoot,operation:op,...(args.id?{trashId:args.id}:{})}):conversation?api.call('conversation.file',{conversation,operation:op,...args}):api.call('workspace.'+op,{...scope,...args})
+  const call=(op:string,args:Record<string,unknown>={})=>worker?api.call('worker.file',{...args,id:worker,operation:op,...(args.id?{trashId:args.id}:{})}):assetRoot?api.call('assets.file',{...args,id:assetRoot,operation:op,...(args.id?{trashId:args.id}:{})}):conversation?api.call('conversation.file',{conversation,operation:op,...args}):api.call('workspace.'+op,{...scope,...args})
   const paused=!active||!!employee&&(sidebarHidden||explorerTreeCollapsed)
   const load=async()=>{const paths=employee?[...expanded].filter(value=>!value||value.split('/').slice(0,-1).every((_,index)=>expanded.has(value.split('/').slice(0,index+1).join('/')))):[folder];return Promise.all(paths.map(async value=>[value,(await call('list',{path:value||'.',hidden})).entries] as const))}
   const refresh=async()=>{const result=await load();setLoadError('');if(employee)setBranches(previous=>retainEqual(previous,Object.fromEntries(result)));else setEntries(previous=>retainEqual(previous,result[0][1]))}

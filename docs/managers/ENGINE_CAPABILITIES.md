@@ -122,3 +122,22 @@ Kilo's current Mac global configuration contains only the official DeepSeek `dee
 - Icon: Simple Icons DeepSeek vector, CC0-1.0; source and checksum are in `src/renderer/src/assets/engines/sources.json`. Runtime distribution and trademarks retain their own terms.
 
 Verification is separated into a no-runtime Core contract test, installed-runtime tests against a deterministic loopback provider, hidden desktop/headless browser UI tests, isolated installer checks, and opt-in real-provider verification. Platform results are recorded independently; a macOS result does not certify Windows or Linux.
+
+
+## Native Worker workbench
+
+All seven engines use the same graphical conversation, slash palette, model/settings bar, file explorer and optional human shell. The shell is not the Coding Agent transport. Controls are discovered from the connected engine and active model; unsupported capabilities fail explicitly. Workers retain native configuration/history and have no employee identity, onboarding or Company tools.
+
+| Engine | Native protocol | Additional controls exposed by Workers |
+| --- | --- | --- |
+| Codex | App Server | Model/effort, plan, advertised Fast tier, skills, MCP, account/quota, steer, background terminals, compact, review, fork |
+| Claude Agent | Agent SDK | Native default/edits/bypass/dontAsk/auto permissions, model/effort, plan, thinking, advertised Fast, skills, MCP, account/usage, steer, background tasks, compact, local native fork |
+| Cline | ACP | Native model and Act/Plan modes, advertised native commands/options, staged image inputs |
+| Pi | RPC | Native model/thinking levels, extension commands and dialogs, queue delivery options, compaction, usage, images, steer, native context clone |
+| OpenCode | ACP | Native model/effort, mode, advertised commands/options and images |
+| Kilo Code | ACP | Native model/effort, mode, advertised commands/options and images |
+| DeepSeek Harness | ACP | Native model/reasoning effort and advertised commands/options; unsupported plan, images, steer and native fork remain unavailable |
+
+Worker reset archives the previous context; a supported native fork creates an independent Worker without renaming or moving its source. Neither replays queued/accepted tasks. Configuration is idle-only, and permission changes require an explicit reconnect. Native extension questions use the existing authenticated approval form and survive unrelated incoming UI updates.
+
+Codex protocol methods follow the [official App Server documentation](https://learn.chatgpt.com/docs/app-server). Pi RPC capabilities follow the installed runtime's versioned RPC documentation. Reuse existing credentials; no new paid model call is needed for discovery or UI acceptance.

@@ -3439,7 +3439,32 @@ agents worker remove WORKER_ID --json
 
 `worker.engines` 只查询 Core 主机的可执行文件可用性，不启动引擎、登录或推理；远端在连接时验证。`worker.create` 的 `clientRequestId` 绑定实际调用者与设置，相同重试返回同一条尚存记录，不复活已删除记录。
 
-`worker.draft ID --text TEXT [--expected-revision N --new-attempt]` 返回 `{applied,draft:{text,revision}}`。旧版本号写入/清空不会覆盖新草稿。发送准备是串行写入屏障，后续输入仍独立保存；显式 new-attempt 为已失败/中断请求生成新的持久版本，普通重试保持原键。停止、切换和重启保留草稿。
+`worker.draft ID --text TEXT [--images JSON --files JSON --expected-revision N --new-attempt]` 返回 `{applied,draft:{text,images?,files?,revision}}`。旧版本号写入/清空不会覆盖新草稿。发送准备是串行写入屏障，后续输入仍独立保存；显式 new-attempt 为已失败/中断请求生成新的持久版本，普通重试保持原键。停止、切换和重启保留草稿。
+
+Worker 工作台统一使用结构化会话，不运行 Coding Agent 的 TUI。`worker.commands` 返回当前连接实际支持的斜杠命令；`worker.command --text '/help'` 与 GUI 菜单使用同一分发。`/model`、`/effort`、`/permissions`、`/plan`、`/normal`、`/thinking`、`/fast`、`/skills`、`/mcp`、`/account`、`/usage` 等控制不会作为普通提示词发送。菜单按当前引擎、模型和协议能力显示；未知命令明确拒绝。原生技能、`/compact`、`/review` 才会执行对应的原生任务，不自动加入 Company 上下文。
+
+```sh
+agents worker commands WORKER_ID --json
+agents worker command WORKER_ID --text '/help' --json
+agents worker configure WORKER_ID --plan-mode true --fast-mode false --json
+agents worker inspect WORKER_ID --section skills --json
+agents worker skill WORKER_ID --name NATIVE_SKILL --prompt '检查当前改动' --client-message-id skill-1 --json
+agents worker steer WORKER_ID --text '优先修复测试' --expected-message-id MESSAGE_ID --json
+agents worker background WORKER_ID --json
+agents worker background-stop WORKER_ID --process-id NATIVE_PROCESS_ID --json
+agents worker fork WORKER_ID --title 'Independent review' --client-request-id fork-1 --json
+agents worker reset WORKER_ID --client-request-id context-1 --json
+agents worker history WORKER_ID --json
+agents worker export WORKER_ID --format markdown --path conversation.md --json
+agents worker file WORKER_ID --operation list --path . --json
+agents worker terminal WORKER_ID --operation open --json
+```
+
+`worker.configure` 的权限选项按引擎区分：通用 default、acceptEdits、bypassPermissions；Claude 还支持原生 dontAsk 和 auto。`worker.configure` 支持 `planMode/thinking/fastMode` 布尔值，以及当前连接公布的 `nativeOptions`；CLI 布尔值必须明确写 `true` 或 `false`。忙碌时禁止切换配置或上下文。`worker.inspect` 支持 capabilities、config、skills、mcp、account、usage；不存在的原生能力明确拒绝，不伪造账号、用量或 MCP 服务。账号、MCP 与高级原生选项仅供用户和 Secretary。具体引擎能力参见 [ENGINE_CAPABILITIES.md](ENGINE_CAPABILITIES.md)。
+
+`worker.send` 可带工作目录内的 `images/files` 路径（合计最多 16 项）；Core 检查物理路径和当前所有权，图片通过原生图像协议提交，不支持图像的引擎不接受伪图像输入。浏览器本地文件先经 `worker.upload-begin` 与通用 transfer 分块上传，不能当成 Core 本地路径。`worker.file`、下载、拖放和文件保存复用现有工作区边界与冲突检查。可选 `worker.terminal` 仅允许用户或 Secretary 使用，是在该工作目录打开的普通 Shell，与 Coding Agent 协议独立；Worker 删除时同时结束自己的原生进程、工具后代和这些 Shell。
+
+`worker.reset` 在空闲时关闭原生连接，将当前内容和原生引用归档，然后保留 Worker 身份、目录、引擎和设置进入新上下文；重复请求键不会重复重置。`worker.history --archive ID` 可读取归档。`worker.fork` 仅对支持的原生协议开放，生成新的 Worker 和原生上下文，不改变原 Worker，不复制运行或排队任务。两者均不重放旧任务。消息发送、原生提问、草稿附件、排队、取消与连接重启遵守相同的所有权和持久重试规则。
 
 兼容接口 `worker.read` 返回纯文本会话快照 `{output,cursor,reset}`；cursor 是持久递增的会话版本，变化时返回完整快照并用 reset 指示替换，可等待最多 15000ms。`worker.input` 仅兼容纯文本任务；原生终端 ID、控制转义和 `worker.resize` 明确拒绝，旧终端尺寸参数不再用于 start。新客户端使用 send/snapshot/respond，不能将确认提交当成模型任务完成。
 
@@ -3473,7 +3498,7 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 <!-- BEGIN GENERATED CLI COMMAND INDEX -->
 ## 全部 CLI 命令索引
 
-下面 438 项来自共享协议 `src/shared/api-registry.ts`。命令名中的句点在终端中写成空格；每项都可附加 `--json`。参数、返回值和限制见上文对应章节。
+下面 452 项来自共享协议 `src/shared/api-registry.ts`。命令名中的句点在终端中写成空格；每项都可附加 `--json`。参数、返回值和限制见上文对应章节。
 
 | 命令 | 参数 | 作用 | 对应界面 | 授权策略 |
 | --- | --- | --- | --- | --- |
@@ -3510,18 +3535,32 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 | <code>agents plan view-create</code> | <code>--spec JSON&#124;@file</code> | Save any of ten database layouts with filters, sorting, grouping and presentation options | Plan database | schedule |
 | <code>agents plan view-update</code> | <code>ID --patch JSON&#124;@file [--expected-revision N]</code> | Update an authorized saved view without changing schedules; options are a complete replacement object | Plan database | schedule |
 | <code>agents plan view-delete</code> | <code>ID [--expected-revision N]</code> | Remove an authorized saved view only; schedules and histories remain | Plan database | schedule |
+| <code>agents worker commands</code> | <code>ID [--filter TEXT]</code> | List Worker controls and commands actually reported by its native engine. No employee identity or inference. | Worker slash menu | worker |
+| <code>agents worker command</code> | <code>ID --text TEXT [--client-message-id KEY]</code> | Run an owned Worker slash command. Settings and queries stay local controls; native skills/review/compact use their documented protocol. Reset/fork retry identities are preserved. | Worker slash commands | worker |
+| <code>agents worker inspect</code> | <code>ID --section capabilities&#124;skills&#124;mcp&#124;account&#124;usage&#124;config</code> | Read the connected Worker native capabilities, commands, skills, MCP, account, usage or redacted configuration; cannot inspect another owner’s Worker. | Worker tools and usage | worker |
+| <code>agents worker skill</code> | <code>ID --name NAME [--prompt TEXT --client-message-id KEY]</code> | Invoke a currently advertised native skill/command in this Worker without employee prompts or Company tools. | Worker skills | worker |
+| <code>agents worker steer</code> | <code>ID --text TEXT --expected-message-id ID</code> | Append text to the same active native Worker turn when the engine supports steering. No attachments, queue insertion or task replay. | Worker steer | worker |
+| <code>agents worker background</code> | <code>ID</code> | Read native background tools belonging to this Worker only. | Worker background processes | worker |
+| <code>agents worker background-stop</code> | <code>ID [--process-id ID]</code> | Stop one or all native background tools owned by this Worker; never another Worker or employee. | Stop Worker background tools | worker |
+| <code>agents worker reset</code> | <code>ID --client-request-id KEY</code> | Start a fresh idle Worker context with the same identity, engine and workspace. Archive its current rendered/native references; no accepted work is replayed. | New Worker context | worker |
+| <code>agents worker fork</code> | <code>ID --title TEXT --client-request-id KEY</code> | Fork a supported native context into an independent Worker, preserving ownership/workspace/engine but no running tasks or queue. | Fork Worker | worker |
+| <code>agents worker history</code> | <code>ID [--archive ID]</code> | List or read an owned Worker archived context without starting an engine or changing the active context. | Worker context history | worker |
+| <code>agents worker export</code> | <code>ID [--format markdown&#124;json --path RELATIVE_PATH]</code> | Read an export or explicitly save it under this Worker workspace, preserving native identities and avoiding overwrites. | Export Worker conversation | worker |
+| <code>agents worker file</code> | <code>ID --operation list&#124;read&#124;image&#124;info&#124;write&#124;mkdir&#124;move&#124;trash&#124;restore [--path PATH --to PATH --content TEXT --hash HASH --create --trash-id ID --hidden]</code> | Use existing workspace file operations strictly within the current owned Worker directory/host. Never falls back from remote to local. | Worker file explorer | worker |
+| <code>agents worker upload-begin</code> | <code>ID --name NAME --bytes N</code> | Begin a client-owned chunked attachment upload inside this Worker workspace. Upload alone never sends a task. | Worker attachments | operator |
+| <code>agents worker terminal</code> | <code>ID --operation list&#124;open&#124;read&#124;input&#124;resize&#124;close [--terminal ID --data TEXT --cursor N --cols N --rows N]</code> | User/Secretary: operate an optional human shell scoped to this Worker directory and owner. It is separate from the graphical Coding Agent protocol and stops on Worker removal. | Worker workspace terminal | operator |
 | <code>agents worker engines</code> | <code>—</code> | List native CLI availability on the Core host without starting adapters, authentication or model requests; remote hosts are checked at Worker start. | Add Worker engine availability | worker |
 | <code>agents worker create</code> | <code>[--employee ID] --engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek [--title NAME --cwd PATH --client-request-id ID]</code> | Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Company tools. | Team / Add Worker | worker |
 | <code>agents worker list</code> | <code>[--employee ID]</code> | List directly owned native Workers (user/Secretary may administer all); user and Secretary may list all | Workers | worker |
-| <code>agents worker start</code> | <code>ID [--cols N --rows N]</code> | Connect the native structured engine without a model turn; resume only this Worker’s saved native session and retain native configuration | Open native Worker | worker |
+| <code>agents worker start</code> | <code>ID</code> | Connect the native structured engine without a model turn; resume only this Worker’s saved native session and retain native configuration | Open native Worker | worker |
 | <code>agents worker read</code> | <code>ID [--cursor N --wait-ms N]</code> | Read rendered conversation snapshots with a revision cursor and reset flag; optional wait up to 15000ms | Native terminal | worker |
 | <code>agents worker input</code> | <code>ID --data TEXT&#124;--file PATH [--enter --terminal ID]</code> | Compatibility text-task input. Raw terminal IDs and terminal escape sequences are rejected; use worker.send for idempotent graphical conversation input. | Native terminal input | worker |
 | <code>agents worker snapshot</code> | <code>ID</code> | Read the structured native Worker conversation, tools, approvals and queued tasks; never starts a process. | Worker conversation | worker |
-| <code>agents worker send</code> | <code>ID --text TEXT [--client-message-id KEY]</code> | Send an unwrapped native task through the engine protocol; busy Workers queue it. Identical clientMessageId retries never repeat work. Starts the configured native connection if needed. | Worker composer | worker |
+| <code>agents worker send</code> | <code>ID --text TEXT [--images JSON --files JSON --client-message-id KEY]</code> | Send an unwrapped native task through the engine protocol; busy Workers queue it. Identical clientMessageId retries never repeat work. Starts the configured native connection if needed. | Worker composer | worker |
 | <code>agents worker dequeue</code> | <code>ID --message-id ID</code> | Remove one waiting Worker task without interrupting the active task. | Worker queue | worker |
 | <code>agents worker respond</code> | <code>ID --request-id ID --decision allow&#124;deny [--answers JSON --form JSON]</code> | Answer a pending native tool approval or question for an authorized Worker. | Worker approvals | worker |
-| <code>agents worker configure</code> | <code>ID [--model MODEL --effort LEVEL --permission-mode default&#124;acceptEdits&#124;bypassPermissions]</code> | Change an idle Worker native model, reasoning effort or permission setting; keeps engine, workspace, host and native conversation identity. Connected model/effort changes use native controls; changed permissions require an explicit stop/start before new work. | Worker settings | worker |
-| <code>agents worker draft</code> | <code>ID --text TEXT [--expected-revision N --new-attempt]</code> | Retain an owned Worker composer draft without sending or starting a process. A stale expectedRevision returns applied=false and the current draft. | Worker composer | worker |
+| <code>agents worker configure</code> | <code>ID [--model MODEL --effort LEVEL --permission-mode default&#124;acceptEdits&#124;bypassPermissions&#124;dontAsk&#124;auto --plan-mode true&#124;false --thinking true&#124;false --fast-mode true&#124;false --native-options JSON]</code> | Change an idle Worker native model, reasoning effort or permission setting; keeps engine, workspace, host and native conversation identity. Connected model/effort changes use native controls; changed permissions require an explicit stop/start before new work. | Worker settings | worker |
+| <code>agents worker draft</code> | <code>ID --text TEXT [--images JSON --files JSON --expected-revision N --new-attempt]</code> | Retain an owned Worker composer draft without sending or starting a process. A stale expectedRevision returns applied=false and the current draft. | Worker composer | worker |
 | <code>agents worker resize</code> | <code>ID --cols N --rows N</code> | Legacy terminal resizing; structured Workers explicitly reject terminal resizing | Native terminal size | worker |
 | <code>agents worker interrupt</code> | <code>ID [--expected-message-id ID]</code> | Interrupt the current native task and cancel queued tasks; keep the connection and history when supported | Interrupt Worker | worker |
 | <code>agents worker stop</code> | <code>ID</code> | Stop the owned native process tree; retain Worker record, work files and native history | Stop Worker | worker |

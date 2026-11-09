@@ -37,6 +37,15 @@ export async function nativeCodexRequest(id:string,method:string,params:Record<s
   return session.call(method,params)
 }
 
+/** Keep fork naming on the new thread; ordinary scoped requests always target the active thread. */
+export async function forkNativeCodexWorker(id:string,title:string,cwd:string){
+ const session=sessions.get(id);if(!session?.alive()||!session.threadId())throw Error('Send a task before forking the native context')
+ const result=await session.call('thread/fork',{threadId:session.threadId(),cwd,deferGoalContinuation:true,historyMode:'legacy'})
+ const child=result.thread?.id;if(!child)throw Error('Native fork returned no identity')
+ try{await session.call('thread/name/set',{threadId:child,name:title})}catch(error){await session.call('thread/delete',{threadId:child});throw error}
+ return {nativeSessionId:child}
+}
+
 /** One native connection per employee keeps tools and background terminals alive between turns. */
 export async function runNativeCodexTurn(binary:string,args:Args){
   if(args.employeeId&&readStore().sessions.find(card=>card.id===args.employeeId)?.accessMode==='isolated')args={...args,workRoot:undefined,sandbox:'danger-full-access'}

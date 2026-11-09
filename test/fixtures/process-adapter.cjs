@@ -3,9 +3,9 @@
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),{spawn}=require('node:child_process')
 if(process.argv.includes('--version')){console.log('fixture-1');process.exit(0)}
 const acp=process.argv.includes('--acp'),arg=k=>{const i=process.argv.indexOf(k);return i<0?undefined:process.argv[i+1]},dir=acp?arg('--config'):process.env.PI_CODING_AGENT_DIR
-fs.mkdirSync(dir,{recursive:true});let sid=acp?Date.now()+'_fixture_cli':crypto.randomUUID(),current,timer,permission,mcpServers=[],ackPolicy
-const saved=acp?path.join(dir,'fixture-state.json'):arg('--session')||path.join(dir,'sessions',sid+'.jsonl')
-if(!path.resolve(saved).startsWith(path.resolve(dir)+path.sep))throw Error('Fixture session path must remain inside its disposable profile')
+fs.mkdirSync(dir,{recursive:true});let sid=acp?Date.now()+'_fixture_cli':crypto.randomUUID(),current,timer,permission,mcpServers=[],ackPolicy,thinkingLevel='off',nativeModel='deepseek-flash',steeringMode='one-at-a-time',followUpMode='one-at-a-time',autoCompactionEnabled=true
+let saved=acp?path.join(dir,'fixture-state.json'):arg('--session')||path.join(dir,'sessions',sid+'.jsonl')
+if(!path.resolve(saved).startsWith(path.resolve(dir)+path.sep)&&!(process.env.AC_WORKER_PARITY&&path.resolve(saved).startsWith(path.resolve(path.dirname(dir))+path.sep)&&fs.existsSync(saved)))throw Error('Fixture session path must remain inside its disposable profile')
 if(fs.existsSync(saved)){try{sid=JSON.parse(fs.readFileSync(saved)).id}catch{}}
 const send=value=>process.stdout.write(JSON.stringify(value)+'\n'),result=(r,data)=>send(acp?{jsonrpc:'2.0',id:r.id,result:data}:{id:r.id,type:'response',command:r.type,success:true,data})
 const update=value=>send({jsonrpc:'2.0',method:'session/update',params:{sessionId:sid,update:value}})
@@ -98,20 +98,35 @@ async function prompt(r,text){
   else send({type:'extension_ui_request',id:permission.id,method:'confirm',title:'Agents Company tool permission',message:JSON.stringify({toolName:'write',toolCallId:permission.id,input})})
   return
  }
+ if(!acp&&text.includes('NATIVE_SELECT_FIXTURE')){permission={id:'pi-native-select',nativeUI:true};send({type:'extension_ui_request',id:permission.id,method:'select',title:'Choose a native Pi action',options:['Review','Continue']});return}
+ if(!acp&&text.includes('NATIVE_INPUT_FIXTURE')){permission={id:'pi-native-input',nativeUI:true};send({type:'extension_ui_request',id:permission.id,method:'input',title:'Native Pi instructions',placeholder:'Write instructions'});return}
  if(text.includes('HOLD_FIXTURE'))return
  timer=setTimeout(()=>finish(text.includes('[Agents Company private initialization]')?'OK':text.includes('UNICODE_FIXTURE')?'春\u2028雨\u2029秋':'山海皆可平'),text.includes('QUEUE_FIXTURE')?700:30)
 }
 let buffer='';process.stdin.setEncoding('utf8');process.stdin.on('data',chunk=>{buffer+=chunk;let i;while((i=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,i);buffer=buffer.slice(i+1);if(!line)continue;const r=JSON.parse(line),method=r.method||r.type,p=r.params||r
+ if(process.env.AC_WORKER_PARITY)fs.appendFileSync(path.join(dir,'fixture-protocol.jsonl'),JSON.stringify(r)+'\n')
  if(permission&&r.id===permission.id){
+  if(permission.nativeUI){finish(r.value??'cancelled');continue}
   if(permission.discussionPermission){const receive=permission.receive;permission=undefined;receive(acp?r.result?.outcome?.optionId==='allow_once':!!r.confirmed);continue}
   if(permission.discussion){const receive=permission.receive;permission=undefined;let value;try{value=JSON.parse(r.value)}catch{value={error:r.value??'Missing discussion response'}}receive(value);continue}
   if(permission.tunnelReply){finish(r.value??'cancelled');continue}
   const allow=acp?r.result?.outcome?.optionId==='allow_once':r.confirmed;if(permission.ack!==undefined){const reply=permission.ack;note('ack-tool-result',{allowed:!!allow});if(allow)fs.writeFileSync(permission.file,'must not run');permission=undefined;finishAck(reply);continue}if(permission.request){if(allow){permission.tunnelReply=true;send({type:'extension_ui_request',id:permission.id,method:'input',title:'Agents Company Tunnel',placeholder:JSON.stringify({...permission.request,toolCallId:permission.id})})}else finish('denied');continue}if(allow)fs.writeFileSync(permission.file,'approved');finish(allow?'approved':'denied');continue}
  if(method==='initialize')result(r,{protocolVersion:1,agentInfo:{name:'cline-fixture',version:'3.0.65'},agentCapabilities:{loadSession:true}})
  else if(method==='session/load'&&!fs.existsSync(saved))send({jsonrpc:'2.0',id:r.id,error:{code:-32002,message:'Resource not found: '+p.sessionId}})
- else if(method==='session/new'||method==='session/load'){if(p.sessionId)sid=p.sessionId;mcpServers=p.mcpServers??[];result(r,models())}
- else if(['session/set_config_option','session/set_mode','set_thinking_level','set_model'].includes(method))result(r,{})
- else if(method==='get_state')result(r,{sessionId:sid,sessionFile:saved,thinkingLevel:'off',model:{id:'deepseek-flash',provider:'deepseek'},isStreaming:!!current})
+ else if(method==='session/new'||method==='session/load'){if(method==='session/new')sid=Date.now()+'_'+crypto.randomUUID();if(p.sessionId)sid=p.sessionId;mcpServers=p.mcpServers??[];result(r,models())}
+ else if(['session/set_config_option','session/set_mode'].includes(method))result(r,{})
+ else if(method==='get_commands')result(r,{commands:[{name:'fixture-skill',description:'Native fixture skill',source:'extension'}]})
+ else if(method==='get_available_thinking_levels')result(r,{levels:['off','low','medium','high']})
+ else if(method==='set_thinking_level'){thinkingLevel=p.level;result(r,{})}
+ else if(method==='set_model'){nativeModel=p.modelId;result(r,{})}
+ else if(method==='set_steering_mode'){steeringMode=p.mode;result(r,{})}
+ else if(method==='set_follow_up_mode'){followUpMode=p.mode;result(r,{})}
+ else if(method==='set_auto_compaction'){autoCompactionEnabled=p.enabled;result(r,{})}
+ else if(method==='get_session_stats')result(r,{tokens:{input:42,output:12}})
+ else if(method==='compact')result(r,{summary:'Fixture compacted native context'})
+ else if(method==='clone'){sid=crypto.randomUUID();saved=path.join(dir,'sessions',sid+'.jsonl');fs.mkdirSync(path.dirname(saved),{recursive:true});fs.writeFileSync(saved,JSON.stringify({id:sid}));result(r,{cancelled:false})}
+ else if(method==='set_session_name')result(r,{})
+ else if(method==='get_state')result(r,{sessionId:sid,sessionFile:saved,thinkingLevel,model:{id:nativeModel,provider:'deepseek'},isStreaming:!!current,steeringMode,followUpMode,autoCompactionEnabled})
  else if(method==='get_available_models')result(r,{models:[{id:'deepseek-flash',provider:'deepseek',name:'DeepSeek Flash'}]})
  else if(method==='session/prompt'||method==='prompt')prompt(r,acp?p.prompt.map(x=>x.text||'').join(''):p.message)
  else if(method==='session/cancel'||method==='abort'){finish('',true);if(!acp)result(r,{})}

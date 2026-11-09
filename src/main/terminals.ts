@@ -13,21 +13,21 @@ import {python,tunnelDirectory,tunnelConfig} from './tunnel'
 import {nativeWorkerEnv} from './native-worker-env'
 
 export type TerminalProgram={runtime?:'node';program:string[];worker:string;root:string}
-type Terminal={id:string;employee:string;worker?:string;cwd:string;host?:string;running:boolean;exitCode?:number;output:TerminalOutput;process:ChildProcessWithoutNullStreams;done:Promise<void>;changed:Set<()=>void>;inputs:Map<string,{resolve:()=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>}
+type Terminal={id:string;employee:string;worker?:string;purpose?:'agent'|'shell';cwd:string;host?:string;running:boolean;exitCode?:number;output:TerminalOutput;process:ChildProcessWithoutNullStreams;done:Promise<void>;changed:Set<()=>void>;inputs:Map<string,{resolve:()=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>}
 const terminals=new Map<string,Terminal>()
 let emit:(channel:string,payload:any)=>void=()=>{}
 export function setTerminalEmitter(next:typeof emit){emit=next}
-const metadata=(t:Terminal)=>({id:t.id,employee:t.employee,worker:t.worker,cwd:t.cwd,host:t.host,running:t.running,exitCode:t.exitCode})
+const metadata=(t:Terminal)=>({id:t.id,employee:t.employee,worker:t.worker,purpose:t.purpose,cwd:t.cwd,host:t.host,running:t.running,exitCode:t.exitCode})
 export const listTerminals=(employee?:string)=>[...terminals.values()].filter(t=>!employee||t.employee===employee).map(metadata)
 function get(id:string){const terminal=terminals.get(id);if(!terminal)throw new Error('Unknown terminal');return terminal}
 function size(cols:number,rows:number){if(!Number.isInteger(cols)||!Number.isInteger(rows)||cols<2||cols>500||rows<2||rows>300)throw new Error('无效终端尺寸');return {cols,rows}}
-export function openTerminal(employee:Pick<StoredSession,'id'|'cwd'|'remote'>,cols=100,rows=24,launch?:TerminalProgram){
+export function openTerminal(employee:Pick<StoredSession,'id'|'cwd'|'remote'>,cols=100,rows=24,launch?:TerminalProgram,ownership?:{worker:string;purpose:'shell'}){
   size(cols,rows)
   const id=randomUUID(),directory=path.join(APP_HOME,'terminals'),file=path.join(directory,id+'.json')
   const config={cwd:employee.remote?APP_HOME:employee.cwd,remote:employee.remote?tunnelConfig(employee.remote):undefined,cols,rows,...(launch?{program:launch.program,root:launch.root}: {})}
   fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(file,JSON.stringify(config),{mode:0o600})
-  const child=process.platform==='win32'?windowsTerminal(employee.remote?APP_HOME:employee.cwd,employee.remote??undefined,cols,rows,launch?.program,launch?.runtime==='node'):spawn(python(),['-B',path.join(tunnelDirectory(),'terminal.py'),file],{env:launch?{...nativeWorkerEnv(),...(launch.runtime==='node'?{ELECTRON_RUN_AS_NODE:'1'}:{})}:childEnv(),stdio:['pipe','pipe','pipe']})
-  const terminal:Terminal={id,employee:employee.id,worker:launch?.worker,cwd:employee.remote?.directory??employee.cwd,host:employee.remote?.host,running:true,output:new TerminalOutput(),process:child,done:new Promise(resolve=>child.once('close',()=>resolve())),changed:new Set(),inputs:new Map()}
+  const child=process.platform==='win32'?windowsTerminal(employee.remote?APP_HOME:employee.cwd,employee.remote??undefined,cols,rows,launch?.program,launch?.runtime==='node',!!ownership):spawn(python(),['-B',path.join(tunnelDirectory(),'terminal.py'),file],{env:launch?{...nativeWorkerEnv(),...(launch.runtime==='node'?{ELECTRON_RUN_AS_NODE:'1'}:{})}:ownership?nativeWorkerEnv():childEnv(),stdio:['pipe','pipe','pipe']})
+  const terminal:Terminal={id,employee:employee.id,worker:launch?.worker??ownership?.worker,purpose:launch?'agent':ownership?.purpose,cwd:employee.remote?.directory??employee.cwd,host:employee.remote?.host,running:true,output:new TerminalOutput(),process:child,done:new Promise(resolve=>child.once('close',()=>resolve())),changed:new Set(),inputs:new Map()}
   terminals.set(id,terminal);const decoder=new StringDecoder('utf8')
   const append=(data:string)=>{terminal.output.append(data);if(data)for(const notify of terminal.changed)notify();emit('terminal:data',{id})}
   createInterface({input:child.stdout}).on('line',line=>{try{const event=JSON.parse(line);if(event.data)append(decoder.write(Buffer.from(event.data,'base64')));if(event.inputId){const pending=terminal.inputs.get(event.inputId);if(pending){clearTimeout(pending.timer);terminal.inputs.delete(event.inputId);event.error?pending.reject(Error(event.error)):pending.resolve()}}if(event.exitCode!==undefined)terminal.exitCode=event.exitCode}catch{}})

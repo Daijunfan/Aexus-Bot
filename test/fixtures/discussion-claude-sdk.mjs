@@ -8,6 +8,8 @@ export function createSdkMcpServer({name,tools}){return {name,tools}}
 export function query({prompt,options}){
  let closed=false,interrupted=false
  const sessionId=options.resume??randomUUID(),employee=options.env?.AGENTS_COMPANY_EMPLOYEE??'catalog',control=process.env.AC_INIT_FIXTURE,file=suffix=>path.join(control,employee+suffix)
+ const nativeNote=(method,value)=>{if(process.env.AC_WORKER_PARITY)fs.appendFileSync(path.join(options.cwd,'fixture-protocol.jsonl'),JSON.stringify({method,...value})+'\n')}
+ nativeNote('open',{permissionMode:options.permissionMode,resume:options.resume,hasCompanyTools:!!options.mcpServers?.agents_company,hasCompanyPrompt:!!options.systemPrompt?.append})
  const note=(kind,value)=>fs.writeFileSync(file('-'+kind+'.json'),JSON.stringify(value))
  const decisions=async(name,input)=>{const values=[];for(const matcher of options.hooks?.PreToolUse??[])for(const hook of matcher.hooks)values.push((await hook({hook_event_name:'PreToolUse',tool_name:name,tool_input:input,session_id:sessionId,cwd:options.cwd},'fixture-tool',{signal:new AbortController().signal})).hookSpecificOutput?.permissionDecision);return values}
  const nativeTool=async(rawName,args)=>{
@@ -21,7 +23,7 @@ export function query({prompt,options}){
   for await(const input of prompt){
    if(closed)return;interrupted=false
    const text=typeof input.message.content==='string'?input.message.content:input.message.content.filter(part=>part.type==='text').map(part=>part.text).join(''),ack=/^\[Agents Company (group|channel) acknowledgment\]\n/.test(text),uuid=input.uuid,hidden=text.includes('[Agents Company private initialization]')
-   note(ack?'ack':hidden?'initializing':'work',{text,sessionId,at:Date.now()});let response='WORK_FINISHED',failure
+   nativeNote('send',{input:input.message.content});note(ack?'ack':hidden?'initializing':'work',{text,sessionId,at:Date.now()});let response='WORK_FINISHED',failure
    if(text.includes('ACK_TOOL_FIXTURE')){
     const values=[];for(const name of ['Bash','Read','Write','Edit'])values.push(...await decisions(name,{}))
     const allowed=!values.length||values.some(value=>value!=='deny');if(ack)note('ack-tool-result',{allowed,decisions:values});if(allowed)fs.writeFileSync(path.join(options.cwd,ack?'ack-forbidden.txt':'approval.txt'),'approved')
@@ -54,7 +56,7 @@ export function query({prompt,options}){
    yield {type:'result',subtype:interrupted||failure?'error_during_execution':'success',is_error:!!(interrupted||failure),errors:interrupted?['Interrupted']:failure?[failure]:[],session_id:sessionId,user_message_uuid:uuid,...(ack&&fs.existsSync(file('.ack-result.txt'))?{result:fs.readFileSync(file('.ack-result.txt'),'utf8')}:{})}
   }
  })()
- Object.assign(q,{supportedCommands:async()=>[],supportedModels:async()=>[{value:'fixture-claude',displayName:'Fixture'}],close:()=>{closed=true},interrupt:async()=>{interrupted=true},setModel:async()=>{},setPermissionMode:async()=>{},setMaxThinkingTokens:async()=>{},applyFlagSettings:async()=>{}})
+ Object.assign(q,{supportedCommands:async()=>process.env.AC_WORKER_PARITY?[{name:'fixture-skill',description:'Native Claude skill',argumentHint:'[arguments]'}]:[],supportedModels:async()=>[{value:'fixture-claude',displayName:'Fixture',supportsFastMode:!!process.env.AC_WORKER_PARITY,supportsEffort:true,supportedEffortLevels:['low','high']}],close:()=>{closed=true},interrupt:async()=>{interrupted=true},setModel:async value=>nativeNote('setModel',{value}),setPermissionMode:async value=>nativeNote('setPermissionMode',{value}),setMaxThinkingTokens:async value=>nativeNote('setThinking',{value}),applyFlagSettings:async value=>nativeNote('setFlags',{value}),mcpServerStatus:async()=>[{name:'fixture-mcp',status:'connected'}],accountInfo:async()=>({subscriptionType:'fixture',apiKey:'fixture-secret-must-be-redacted'}),stopTask:async()=>{}})
  return q
 }
 
@@ -65,3 +67,5 @@ function workPostArgs(text,control,employee){
  const context=JSON.parse(text.split(marker)[1].split('\n')[0])
  return {conversationType:context.conversationType,conversationId:context.conversationId,messageId:context.messageId??context.entryId,...JSON.parse(fs.readFileSync(file,'utf8'))}
 }
+
+export async function forkSession(sessionId,{title}){return {sessionId:randomUUID()}}

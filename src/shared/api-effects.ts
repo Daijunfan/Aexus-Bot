@@ -7,7 +7,7 @@ direct.history direct.send-status
 conversation.policy conversation.audit conversation.notice-list conversation.notice-get conversation.notice-preview conversation.notice-history
 assets.browse assets.info assets.preview assets.tree assets.children assets.locate assets.search
 board.categories bot.list monitor.list monitor.read
-worker.list worker.read worker.snapshot
+worker.commands worker.inspect worker.background worker.history worker.list worker.read worker.snapshot
 status auth.whoami api.list api.describe api.docs api.result avatar.list avatar.get management.roles management.topology management.activity
 system.info system.directories settings.get engine.list engine.providers engine.check engine.capabilities engine.models engine.inspect engine.install-plan engine.install-status engine.login-status
 session.list session.status session.info session.snapshot session.activity session.transcript session.inbox session.queue session.background session.search commands.list commands.complete
@@ -21,6 +21,9 @@ workspace.list workspace.read workspace.image workspace.suggest conversation.wor
 plugin.resources plugin.list plugin.describe plugin.windows host.list host.get host.fingerprints host.terminal-list host.terminal-read host.directories terminal.list terminal.read transfer.list transfer.get shared.info view.get view.list
 `.trim().split(/\s+/))
 export function apiReadOnly(command:string,args:Record<string,unknown>={}){
+ if(command==='worker.terminal')return ['list','read'].includes(String(args.operation))
+ if(command==='worker.file')return ['list','read','image','info','chunk'].includes(String(args.operation))
+ if(command==='worker.export')return args.path===undefined
  if(command==='plan.preferences')return args.patch===undefined
  if(command==='bot.list')return true
  if(command==='bot.access')return args.employeeIds===undefined

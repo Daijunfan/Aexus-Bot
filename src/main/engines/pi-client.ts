@@ -18,7 +18,7 @@ import {preparePiTunnel,type TunnelTool,type TunnelToolCall} from './pi-tunnel'
 
 type CoreTool={tool:{name:string;description:string;inputSchema:Record<string,unknown>};call:(input:unknown,callId:string)=>Promise<unknown>}
 
-export function piClient(options:{nativeWorker?:boolean;onProcess?:(child:ChildProcess)=>void;discussion?:CoreTool;documentation?:CoreTool;api?:CoreTool;cwd:string;directory:string;workRoot?:string;employeeId?:string;sessionFile?:string;model?:string;remoteLaunch?:RemoteLaunch;tunnelTools?:TunnelTool[];onTunnelCall?:(request:TunnelToolCall)=>Promise<unknown>;env?:NodeJS.ProcessEnv;onEvent?:(event:any)=>void;onPermission?:(request:{toolName:string;toolCallId:string;input:Record<string,unknown>})=>Promise<boolean>}){
+export function piClient(options:{nativeWorker?:boolean;onProcess?:(child:ChildProcess)=>void;discussion?:CoreTool;documentation?:CoreTool;api?:CoreTool;cwd:string;directory:string;workRoot?:string;employeeId?:string;sessionFile?:string;model?:string;remoteLaunch?:RemoteLaunch;tunnelTools?:TunnelTool[];onTunnelCall?:(request:TunnelToolCall)=>Promise<unknown>;env?:NodeJS.ProcessEnv;onEvent?:(event:any)=>void;onNativeUI?:(request:any)=>Promise<Record<string,unknown>>;onPermission?:(request:{toolName:string;toolCallId:string;input:Record<string,unknown>})=>Promise<boolean>}){
   fs.mkdirSync(options.directory,{recursive:true,mode:0o700})
   const provider=processProvider('pi'),modelsFile=path.join(options.directory,'models.json')
   const native=provider.native?nativePiConnection():undefined
@@ -66,7 +66,9 @@ export function piClient(options:{nativeWorker?:boolean;onProcess?:(child:ChildP
       }else if(message.method==='confirm'&&message.title==='Agents Company tool permission'){
         let request:any;try{request=JSON.parse(message.message)}catch{send({type:'extension_ui_response',id:message.id,cancelled:true});return}
         void (options.onPermission?.(request)??Promise.resolve(false)).then(confirmed=>{if(!closed)send({type:'extension_ui_response',id:message.id,confirmed})}).catch(()=>{if(!closed)send({type:'extension_ui_response',id:message.id,cancelled:true})})
-      }else if(['select','confirm','input','editor'].includes(message.method))send({type:'extension_ui_response',id:message.id,cancelled:true})
+      }else if(['select','confirm','input','editor'].includes(message.method)){
+        void (options.onNativeUI?.(message)??Promise.resolve({cancelled:true})).then(value=>{if(!closed)send({type:'extension_ui_response',id:message.id,...value})}).catch(()=>{if(!closed)send({type:'extension_ui_response',id:message.id,cancelled:true})})
+      }else options.onEvent?.(message)
     }else options.onEvent?.(message)
   }
   // Pi framing is LF-only; Unicode line/paragraph separators are valid JSON text.

@@ -42,7 +42,7 @@ import {MessageEmployeesDialog} from './MessageEmployeesDialog'
 
 export const MessageAvatar=memo(function MessageAvatar({employee,large=false}:{employee:StoredSession;large?:boolean}){
   
-return <EmployeePortrait avatar={employee.avatar??(employee.engine==='codex'?'robot':'cat')} color={employee.color} large={large}/>})
+return <EmployeePortrait employeeId={employee.id} avatar={employee.avatar??(employee.engine==='codex'?'robot':'cat')} color={employee.color} large={large}/>})
 export function messageStatus(card:StoredSession,session?:Session){
   if(!employeeReady(card))return card.initialization?.status==='failed'?'Initialization failed':'Getting ready…'
   if(session?.approvals?.length)return 'Needs your approval'

@@ -779,6 +779,398 @@
       ]
     ]
   },
+  "worker.commands": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "filter",
+        "filter",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.command": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "text",
+        "text",
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientMessageId",
+        "client-message-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.inspect": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "section",
+        "section",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.skill": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "name",
+        "name",
+        "text",
+        false,
+        false
+      ],
+      [
+        "prompt",
+        "prompt",
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientMessageId",
+        "client-message-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.steer": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "text",
+        "text",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedMessageId",
+        "expected-message-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.background": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.background-stop": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "processId",
+        "process-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.reset": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.fork": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "title",
+        "title",
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.history": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "archive",
+        "archive",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.export": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "format",
+        "format",
+        "text",
+        false,
+        false
+      ],
+      [
+        "path",
+        "path",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.file": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "operation",
+        "operation",
+        "text",
+        false,
+        false
+      ],
+      [
+        "path",
+        "path",
+        "text",
+        false,
+        false
+      ],
+      [
+        "to",
+        "to",
+        "text",
+        false,
+        false
+      ],
+      [
+        "content",
+        "content",
+        "text",
+        false,
+        false
+      ],
+      [
+        "contentBase64",
+        "content-base64",
+        "text",
+        false,
+        false
+      ],
+      [
+        "hash",
+        "hash",
+        "text",
+        false,
+        false
+      ],
+      [
+        "create",
+        "create",
+        "boolean",
+        false,
+        false
+      ],
+      [
+        "trashId",
+        "trash-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "hidden",
+        "hidden",
+        "boolean",
+        false,
+        false
+      ],
+      [
+        "offset",
+        "offset",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.upload-begin": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "name",
+        "name",
+        "text",
+        false,
+        false
+      ],
+      [
+        "bytes",
+        "bytes",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.terminal": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "operation",
+        "operation",
+        "text",
+        false,
+        false
+      ],
+      [
+        "terminal",
+        "terminal",
+        "text",
+        false,
+        false
+      ],
+      [
+        "data",
+        "data",
+        "text",
+        false,
+        false
+      ],
+      [
+        "cursor",
+        "cursor",
+        "number",
+        false,
+        false
+      ],
+      [
+        "cols",
+        "cols",
+        "number",
+        false,
+        false
+      ],
+      [
+        "rows",
+        "rows",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
   "worker.engines": {
     "fields": []
   },
@@ -857,6 +1249,20 @@
         "text",
         "text",
         "text",
+        false,
+        false
+      ],
+      [
+        "images",
+        "images",
+        "json",
+        false,
+        false
+      ],
+      [
+        "files",
+        "files",
+        "json",
         false,
         false
       ],
@@ -955,6 +1361,34 @@
         "text",
         false,
         false
+      ],
+      [
+        "planMode",
+        "plan-mode",
+        "boolean-value",
+        false,
+        false
+      ],
+      [
+        "thinking",
+        "thinking",
+        "boolean-value",
+        false,
+        false
+      ],
+      [
+        "fastMode",
+        "fast-mode",
+        "boolean-value",
+        false,
+        false
+      ],
+      [
+        "nativeOptions",
+        "native-options",
+        "json",
+        false,
+        false
       ]
     ]
   },
@@ -971,6 +1405,20 @@
         "text",
         "text",
         "text",
+        false,
+        false
+      ],
+      [
+        "images",
+        "images",
+        "json",
+        false,
+        false
+      ],
+      [
+        "files",
+        "files",
+        "json",
         false,
         false
       ],

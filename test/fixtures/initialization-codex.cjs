@@ -46,11 +46,20 @@ async function acknowledgmentText(text,active){
 }
 rl.on('line',line=>{
   const request=JSON.parse(line),p=request.params||{},result=value=>send({id:request.id,result:value})
+  if(process.env.AC_WORKER_PARITY)fs.appendFileSync(path.join(control,employee+'-protocol.jsonl'),JSON.stringify(request)+'\n')
   if(request.id===undefined)return
   if(!request.method){if(request.id==='board-approval'){note('board-approval',request.result);boardApproval?.();boardApproval=undefined}return}
   switch(request.method){
     case 'initialize':if(process.env.AC_NATIVE_WORKER_FIXTURE){note('process',{pid:process.pid,controllerEnvironment:Object.keys(process.env).filter(key=>/^(AGENTS_|AEXUS_)/.test(key))});if(fs.existsSync(path.join(control,employee+'.hold-initialize')))return}return result({userAgent:'initialization-fixture'})
-    case 'model/list':return result({data:[{id:'gpt-6-luna',model:'gpt-6-luna',displayName:'Fixture',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'low'}],defaultReasoningEffort:'low'},{id:'fixture-alt',model:'fixture-alt',displayName:'Fixture alternate'}],nextCursor:null})
+    case 'config/read':return result({config:process.env.AC_WORKER_PARITY?{model:'gpt-6-luna',model_reasoning_effort:'low',sandbox_mode:'read-only',approval_policy:'on-request',api_key:'fixture-secret-must-be-redacted'}:{}})
+    case 'skills/list':return result({data:[{skills:[{name:'fixture-skill',description:'Inspect local changes',enabled:true},{name:'disabled',enabled:false}]}]})
+    case 'mcpServerStatus/list':return result({data:[{name:'fixture-mcp',status:'connected',tools:{inspect:{description:'Fixture inspection'}}}]})
+    case 'account/read':return result({account:{type:'apiKey',apiKey:'fixture-account-secret'},requiresOpenaiAuth:false})
+    case 'account/rateLimits/read':return result({rateLimits:{primary:{usedPercent:12}}})
+    case 'thread/name/set':note('thread-name',{threadId:p.threadId,name:p.name});return result({})
+    case 'thread/compact/start':result({});setTimeout(()=>event('thread/compacted',{threadId:thread}),10);return
+    case 'review/start':result({turn:{id:crypto.randomUUID(),status:'inProgress'}});setTimeout(()=>event('turn/completed',{threadId:thread,turn:{id:turn,status:'completed'}}),20);return
+    case 'model/list':return result({data:[{id:'gpt-6-luna',model:'gpt-6-luna',displayName:'Fixture',isDefault:true,...(process.env.AC_WORKER_PARITY?{serviceTiers:[{id:'fast',name:'Fast'}],inputModalities:['text','image']}:{}),supportedReasoningEfforts:[{reasoningEffort:'low'}],defaultReasoningEffort:'low'},{id:'fixture-alt',model:'fixture-alt',displayName:'Fixture alternate'}],nextCursor:null})
     case 'thread/fork':return result({thread:{id:crypto.randomUUID(),turns:[]}})
     case 'thread/start':case 'thread/resume':thread=p.threadId||crypto.randomUUID();cwd=p.cwd||cwd;discussionUrl=p.config?.['mcp_servers.agents_company']?.url;enabledTools=p.config?.['mcp_servers.agents_company']?.enabled_tools??[];environments=p.environments??[{environmentId:'local',cwd,runtimeWorkspaceRoots:[cwd]}];note('thread-start',{resumed:request.method==='thread/resume',readingTools:enabledTools.includes('agents_company_discussion_post'),documentationTools:enabledTools.includes('agents_company_documentation'),disabledNativeAgents:p.config?.['features.multi_agent']===false,developerInstructions:p.developerInstructions??null,permissions:p.permissions??null,sandbox:p.sandbox??null});return result({thread:{id:thread,turns:[]}})
     case 'thread/backgroundTerminals/list':return result({data:[],nextCursor:null})
@@ -66,7 +75,7 @@ rl.on('line',line=>{
        const script="const fs=require('node:fs'),{spawn}=require('node:child_process');process.on('SIGTERM',()=>{});const child=spawn(process.execPath,['-e',"+JSON.stringify(grandchild)+",process.argv[2]],{stdio:['ignore','inherit','inherit'],detached:true});fs.writeFileSync(process.argv[1],JSON.stringify({parent:"+process.pid+",child:process.pid,grandchild:child.pid}));setInterval(()=>{},1000)"
        spawn(process.execPath,['-e',script,file,ready],{stdio:['ignore','inherit','inherit'],detached:true})
       }
-      const input={thread,turn,text,cwd,model:p.model,environments,explicitEnvironments:p.environments!==undefined,readingTools:enabledTools.includes('agents_company_discussion_post'),documentationTools:enabledTools.includes('agents_company_documentation'),at:Date.now()}
+      const input={thread,turn,text,cwd,model:p.model,...(process.env.AC_WORKER_PARITY?{nativeInput:p.input,serviceTier:p.serviceTier,collaborationMode:p.collaborationMode}:{}),environments,explicitEnvironments:p.environments!==undefined,readingTools:enabledTools.includes('agents_company_discussion_post'),documentationTools:enabledTools.includes('agents_company_documentation'),at:Date.now()}
       if(!hidden&&!ack&&process.env.AC_NATIVE_WORKER_FIXTURE)fs.appendFileSync(path.join(control,employee+'-native-turns.jsonl'),JSON.stringify({pid:process.pid,...input})+'\n')
       if(ack)note('ack',input)
       else{note(hidden?'initializing':'user',hidden?input:{thread,turn,text,cwd,model:p.model});if(!hidden)note('work',input)}

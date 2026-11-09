@@ -1,3 +1,5 @@
+import {WORKER_CONTROL_APIS} from '../shared/worker-controls'
+import {workerControlRequest,workerFileEndpoint,workerFile} from './native-workers'
 import {MESSAGE_STICKER_APIS} from '../shared/message-stickers'
 import {stickerRequest} from './message-stickers'
 import {requireGroupExport} from './group-history'
@@ -232,6 +234,7 @@ export async function handleRequest(req:Request,context?:RequestContext&{signal?
     if(a.deleteWorkspace&&!isGlobal(caller.principal))throw Error('删除工作文件夹需要用户或全局管理授权；管理关系只允许移除员工')
   }else authorize(req.cmd,a,target,caller)
   assertInitializationRequest(req.cmd,target)
+  if(req.cmd.startsWith('worker.'))validateApiArguments(req.cmd,a)
   if(req.cmd.startsWith('mission.')||req.cmd.startsWith('question.')||['plan.preferences','plan.archive'].includes(req.cmd))validateApiArguments(req.cmd,a)
   assertQuestionGate(req.cmd,caller)
   if(['plan.preferences','plan.archive'].includes(req.cmd))return planPreferencesRequest(req.cmd.slice(5),a)
@@ -324,6 +327,7 @@ async function handleAuthorizedRequest(req:Request,a:Record<string,any>,target:s
 }
 async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Promise<any> {
   const a = (req.args ?? {}) as Record<string, any>
+  if(WORKER_CONTROL_APIS.has(req.cmd)&&req.cmd!=='worker.upload-begin')return workerControlRequest(req.cmd,a)
   if(MESSAGE_STICKER_APIS.has(req.cmd))return stickerRequest(req.cmd,a)
   if(['transfer.download-info','transfer.download-save','transfer.download-chunk','transfer.start'].includes(req.cmd)){const ref=a.from;if(ref?.group)requireGroupExport('group:'+ref.group);else if(ref?.conversation)requireGroupExport(ref.conversation)}
   const s = (v: unknown) => String(v)
@@ -556,18 +560,19 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       if(a.employee&&!employee)throw new Error('Unknown employee')
       return checkRemote(employee?executionEmployee(readStore(),employee).remote:a.team?teamSettings(readStore(),a.team).remote:a.remote)
     }
+    case 'worker.upload-begin': {if(!isAppAdministrator())throw Error('Only the user or Secretary may upload client files');validateApiArguments(req.cmd,a);const directory='.agents-attachments';if(!(await workerFile(s(a.id),'info',{path:directory})).exists)await workerFile(s(a.id),'mkdir',{path:directory});return beginUpload({worker:s(a.id),path:directory},workerFileEndpoint(s(a.id),directory),s(a.name),Number(a.bytes),true)}
     case 'worker.create': return createWorker({employee:a.employee,engine:s(a.engine),title:a.title,cwd:a.cwd,clientRequestId:a.clientRequestId})
     case 'worker.list': return listWorkers(a.employee)
     case 'worker.engines': return workerEngines()
     case 'worker.snapshot': return workerSnapshot(s(a.id))
-    case 'worker.send': return sendWorker(s(a.id),s(a.text),a.clientMessageId)
+    case 'worker.send': return sendWorker(s(a.id),s(a.text),a.clientMessageId,a.images,a.files)
     case 'worker.dequeue': return dequeueWorker(s(a.id),s(a.messageId))
     case 'worker.respond': return respondWorker(s(a.id),s(a.requestId),s(a.decision),a.answers,a.form)
-    case 'worker.configure': return configureWorker(s(a.id),{...(a.model!==undefined?{model:a.model}:{}),...(a.effort!==undefined?{effort:a.effort}:{}),...(a.permissionMode!==undefined?{permissionMode:a.permissionMode}:{})})
+    case 'worker.configure': {validateApiArguments(req.cmd,a);const {id,...changes}=a;return configureWorker(s(id),changes)}
     case 'worker.start': return startWorker(s(a.id),a.cols,a.rows)
     case 'worker.read': return readWorker(s(a.id),Number(a.cursor??0),Number(a.waitMs??0))
     case 'worker.input': return inputWorker(s(a.id),s(a.data??''),a.terminal)
-    case 'worker.draft': return saveWorkerDraft(s(a.id),a.text,a.expectedRevision,a.newAttempt===true)
+    case 'worker.draft': return saveWorkerDraft(s(a.id),a.text,a.expectedRevision,a.newAttempt===true,a.images,a.files)
     case 'worker.resize': return resizeWorker(s(a.id),Number(a.cols),Number(a.rows))
     case 'worker.interrupt': return interruptWorker(s(a.id),a.expectedMessageId)
     case 'worker.stop': return stopWorker(s(a.id))
@@ -1188,7 +1193,8 @@ async function attachmentDirectory(conversation:string):Promise<FileLocation>{
 }
 function fileEndpoint(ref:FileLocation,destination:boolean):FileEndpoint {
   if(ref?.asset){const mapped=assetLocation(ref.asset,ref.path),endpoint=fileEndpoint(mapped,destination),context=requestContext();return {...endpoint,validate:async(operation,args)=>withCaller(context,async()=>{const current=fileEndpoint(assetLocation(ref.asset!,ref.path),destination);if(current.root!==endpoint.root||JSON.stringify(current.remote)!==JSON.stringify(endpoint.remote))throw Error('Asset workspace changed during transfer');await endpoint.validate?.(operation,args);if(operation==='copy-commit')assetIndex.invalidate()})}}
-  if(!ref||typeof ref.path!=='string'||[!!ref.shared,!!ref.team,!!ref.employee,!!ref.local,!!ref.group,!!ref.channel,!!ref.conversation].filter(Boolean).length!==1)throw Error('File location requires one shared/team/employee/local/group/channel scope and path')
+  if(!ref||typeof ref.path!=='string'||[!!ref.worker,!!ref.shared,!!ref.team,!!ref.employee,!!ref.local,!!ref.group,!!ref.channel,!!ref.conversation].filter(Boolean).length!==1)throw Error('File location requires one shared/team/employee/local/group/channel scope and path')
+  if(ref.worker)return workerFileEndpoint(ref.worker,ref.path)
   const botId=ref?.group??ref?.employee??(ref?.conversation?.startsWith('group:')?ref.conversation.slice(6):undefined)
   if(botId&&botGroup(botId)&&typeof ref.path==='string'&&ref.path.startsWith('@bot/')){if(destination)throw Error('Published bot files are read-only; download a workspace copy');return botFileEndpoint(botId,ref.path)}
   if(ref.employee&&ref.path.startsWith(DIRECT_ATTACHMENT_PREFIX)){if(destination)throw Error('Published private attachments are read-only');return directFileEndpoint(ref.employee,ref.path)}

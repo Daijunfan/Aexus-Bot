@@ -65,7 +65,10 @@ const {MISSION_COMMANDS}=await import('../src/shared/missions.ts'),{QUESTION_COM
 if(!server.includes("return missionRequest(req.cmd.slice(8),a)")||!server.includes("return questionRequest(req.cmd.slice(9),a)")||!server.includes("return planPreferencesRequest(req.cmd.slice(5),a)"))throw Error('Mission, question or global preference dispatch is missing')
 const {GROUP_COLLABORATION_APIS}=await import('../src/shared/group-collaboration.ts'),{MESSAGE_STICKER_APIS}=await import('../src/shared/message-stickers.ts')
 if(!server.includes('return groupCollaborationRequest(command,a,')||!server.includes('return stickerRequest(req.cmd,a)'))throw Error('Group collaboration or sticker dispatch is missing')
+const {WORKER_CONTROL_APIS}=await import('../src/shared/worker-controls.ts')
+if(!server.includes('WORKER_CONTROL_APIS.has(req.cmd)')||!server.includes('return workerControlRequest(req.cmd,a)'))throw Error('Worker controls are not dispatched by Core')
 const serverCommands = new Set([
+  ...WORKER_CONTROL_APIS,
   ...GROUP_COLLABORATION_APIS,...MESSAGE_STICKER_APIS,
   ...[...MISSION_COMMANDS,...QUESTION_COMMANDS,...PLAN_PREFERENCE_COMMANDS].map(command=>command.name),
   ...CHANNEL_FETCH_APIS,

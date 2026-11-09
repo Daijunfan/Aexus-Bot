@@ -62,3 +62,6 @@ Settings → Characters manages enabled/archived entries through the same Core A
 Complete pre-rework animation sources, previews, portraits, generators, provenance
 and licenses are backed up in `Archive/Avatars/2026-11-07`. The manifest records each
 file's SHA-256. Archiving does not establish additional redistribution permissions.
+
+
+Character portraits have transparent UI surfaces throughout Team, Message and Mission. The live sprite uses the same portrait framing and original artwork; working/responding/attention comes from that employee ID's actual session, not a shared avatar name. Visible active portraits animate continuously; idle portraits use short greetings. Reduced motion, background documents and off-screen portraits stop playback. Worker engine marks preserve their native logos with restrained activity motion, without an outer plate.

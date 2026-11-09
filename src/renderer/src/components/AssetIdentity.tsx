@@ -15,7 +15,7 @@ export function AssetGlyph({node,large=false}:{node:AssetNode;large?:boolean}){
  const personal=!!node.owner?.employee&&(node.kind==='member'||node.kind==='employee'),icon=node.kind==='image'?'file-media':node.kind==='audio'?'music':node.kind==='video'?'play-circle':node.kind==='code'?'code':/\.pdf$/i.test(node.name)?'file-pdf':'file-text'
  return <span className={'asset-identity '+(large?'large ':'')+(node.directory?'is-folder':'is-file')} data-view={node.owner?.view} data-kind={node.kind}>
   {node.directory?<FolderArt/>:<span className="asset-document-art"><Icon name={icon}/><small>{node.name.split('.').at(-1)?.toUpperCase().slice(0,7)}</small></span>}
-  {personal&&<span className="asset-owner-portrait" aria-label={node.owner?.employeeName}><EmployeePortrait avatar={node.owner?.avatar} color={node.owner?.color} large={large}/></span>}
+  {personal&&<span className="asset-owner-portrait" aria-label={node.owner?.employeeName}><EmployeePortrait employeeId={node.owner?.employee} avatar={node.owner?.avatar} color={node.owner?.color} large={large}/></span>}
   {node.directory&&!personal&&node.host?.kind==='remote'&&<span className="asset-folder-emblem">{node.host.os?<TeamOSIcon os={node.host.os} distribution={node.host.distribution}/>:<Icon name="server"/>}</span>}
  </span>
 }

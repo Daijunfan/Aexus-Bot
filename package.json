@@ -147,7 +147,8 @@
     "test:scrollbars": "node test/scrollbar-visibility-ui-test.mjs && node test/scrollbar-visibility-ui-test.mjs --web",
     "test:worker-native-harness": "node test/worker-native-harness-test.mjs",
     "test:board-directory": "node test/board-directory-tabs-ui-test.mjs && node test/board-directory-tabs-ui-test.mjs --web",
-    "test:group-collaboration": "node test/group-collaboration-core-test.mjs && node test/group-rebuild-ui-test.mjs && node test/group-rebuild-ui-test.mjs --web"
+    "test:group-collaboration": "node test/group-collaboration-core-test.mjs && node test/group-rebuild-ui-test.mjs && node test/group-rebuild-ui-test.mjs --web",
+    "test:worker-workbench": "node test/worker-workbench-core-test.mjs && node test/worker-workbench-ui-test.mjs && node test/worker-workbench-ui-test.mjs --web"
   },
   "build": {
     "appId": "com.agentscompany.app",

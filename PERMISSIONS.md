@@ -380,3 +380,6 @@ Team 位置使用 `room.place {name,column,row,expectedPlacement?}` 的整数工
 ### Native Worker conversation authority
 
 `worker.snapshot/send/dequeue/respond/configure` use the same authenticated direct-ownership policy as Worker lifecycle operations. User/Secretary may administer all; other employees control only directly owned Workers. Workers receive no employee identity or Company token. Model/effort changes remain native session operations; only user/Secretary may change Worker permissions, which require an explicit reconnect before new work. Every dispatch revalidates the physical directory and fixed execution host. Stop/Remove target only the owned native connection and process tree and wait for termination; they never remove work files or native history.
+
+
+Worker 图形工作台中的斜杠命令、工具查询、原生模式、上下文归档/分叉、文件和可选 Shell 均通过 `worker.*` 复查直接所有权。`worker.inspect` 的 account/mcp，以及 `worker.configure` 的权限和高级 nativeOptions，以及手动 Shell `worker.terminal` 只允许用户/Secretary；普通员工仍可设置自身直属 Worker 的已公布模型与模式。原生进程不获得 Core principal 或令牌。附件、传输与文件操作使用 Worker 当前物理工作目录和固定主机边界。背景任务 ID 仅能来自本 Worker 原生会话；删除等待原生进程树与其手动 Shell 退出，其他 Worker 不受影响。
