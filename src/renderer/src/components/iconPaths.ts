@@ -52,7 +52,7 @@ export const iconPaths:Record<string,string>={
  'quote':'M10 5H3v7h5c0 4-2 6-5 7M21 5h-7v7h5c0 4-2 6-5 7',
  'calendar':'M4 5h16v16H4V5ZM8 2v6M16 2v6M4 11h16M8 15h.01M12 15h.01M16 15h.01',
  'settings-gear':'M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3ZM16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
- 'files':'M8 7h12v15H8zM16 3H4v15',
+ 'files':'M6 3h9l4 4v14H6V3ZM15 3v5h4M9 12h7M9 16h7',
  'folder-opened':'M3 10V5a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v2M3 10h17a1 1 0 0 1 1 1l-2 8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10Z',
  'library':'M3 4h4v16H3zM10 4h4v16h-4zM17 5l3-1 3 15-3 1-3-15Z',
  'device-camera-video':'M3 6h12v12H3zM15 10l6-4v12l-6-4',

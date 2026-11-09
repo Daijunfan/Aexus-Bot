@@ -5,7 +5,6 @@ import {authorize,requestContext,isAppAdministrator} from './authorization'
 import {readStore} from './store'
 import {catalog} from './chat-group-store'
 import {all} from './channel-store'
-import {workspaceForMember} from './conversation-workspaces'
 import {planRequest} from './plan'
 import {scheduleRequest} from './scheduler/service'
 import {effectiveChatMute} from '../shared/chat-groups'
@@ -31,12 +30,8 @@ export async function employeeProfile(args:Record<string,unknown>):Promise<Emplo
  const store=readStore(),card=store.sessions.find(card=>card.id===id&&!card.deleting)
  if(!card)throw Error('Employee no longer exists')
  const principal=requestContext().principal,admin=isAppAdministrator(),settings=employeeSettings(store,card),team=teamSettings(store,card.group)
- const groups=catalog().groups.filter(g=>g.memberIds.includes(id)&&(isAppAdministrator(principal)||principal.kind==='agent'&&g.memberIds.includes(principal.employeeId))).map(g=>({id:g.id,name:g.name,kind:'group' as const,role:groupRole(g,id)!,muted:effectiveChatMute(g,id)!==undefined,canOpenWorkspace:isAppAdministrator(principal)||principal.kind==='agent'&&g.memberIds.includes(principal.employeeId)}))
+ const groups=catalog().groups.filter(g=>g.memberIds.includes(id)&&(isAppAdministrator(principal)||principal.kind==='agent'&&g.memberIds.includes(principal.employeeId))).map(g=>({id:g.id,name:g.name,kind:'group' as const,role:groupRole(g,id)!,muted:effectiveChatMute(g,id)!==undefined,canOpenWorkspace:false}))
  const channels=all('SELECT id,name FROM channels').filter(c=>(card.managementRole==='secretary'||channelReaderIds(c.id).includes(id))&&canReadChannel(c.id,principal)).map(c=>({id:c.id as string,name:c.name as string,kind:'channel' as const,role:'reader' as const,muted:conversationMuted('channel:'+c.id,id)!==undefined,canOpenWorkspace:false}))
- const memberships:ProfileMembership[]=[...groups,...channels].map(item=>{
-  const conversation=item.kind+':'+item.id
-  if(item.kind==='channel')return {...item,conversation,workspace:null}
-  try{return {...item,conversation,workspace:workspaceForMember(conversation,id,false)}}catch(error){return {...item,conversation,workspace:null,workspaceError:(error as Error).message}}
- })
+ const memberships:ProfileMembership[]=[...groups,...channels].map(item=>({...item,conversation:item.kind+':'+item.id,workspace:null}))
  return {employee:{id:card.id,title:card.title,avatar:card.avatar,color:card.color,accessory:card.accessory,role:card.role,engine:card.engine,model:card.model,managementRole:card.managementRole??'employee',kind:card.kind??'worker',createdAt:card.createdAt},company:{team:card.group,mode:team.mode,teamRoot:store.teamRoots?.[card.group]??null,workspace:card.cwd,location:settings.mode==='cloud'?'remote':'core',host:settings.mode==='cloud'?settings.remote?.host??null:null},memberships,plans,canEditProfile:admin}
 }

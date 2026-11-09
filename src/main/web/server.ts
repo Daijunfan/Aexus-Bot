@@ -212,7 +212,7 @@ export async function startWebServer(options:Options={}){
         if(readOnly)pendingReads++
         const reply=(!coreReceipt?previous?.reply:undefined)??handleRequest(request,current.context)
         if(keepReply&&!previous){const item={signature,reply,at:0};replay.set(key,item);void reply.then(()=>{item.at=Date.now()},()=>{item.at=Date.now()})}
-        try{const result=await reply;if(request.cmd==='messenger.media-open'&&current.session)mediaSessions.set(result.id,{session:current.session,context:current.context});if(request.cmd==='messenger.media-close')mediaSessions.delete(String(request.args?.id));json(res,{ok:true,data:['plugin.open','plugin.windows','plugin.place','plugin.mode','plugin.view'].includes(request.cmd)?projectPluginView(result,current.session??peers.get(current.context.clientId??'')?.session):result})}finally{
+        try{const result=await reply;if(request.cmd==='messenger.media-open'&&current.session)mediaSessions.set(result.id,{session:current.session,context:current.context});if(request.cmd==='messenger.media-close')mediaSessions.delete(String(request.args?.id));json(res,{ok:true,data:request.cmd==='conversation.file-open'?{...result,reader:projectPluginView(result.reader,current.session??peers.get(current.context.clientId??'')?.session)}:['plugin.open','plugin.windows','plugin.place','plugin.mode','plugin.view'].includes(request.cmd)?projectPluginView(result,current.session??peers.get(current.context.clientId??'')?.session):result})}finally{
           // Read concurrency stays bounded without retaining completed query responses.
           if(readOnly)pendingReads--
           if(['plugin.dismiss','plugin.close'].includes(request.cmd)){const id=String(request.args?.id);grants.delete(id);}

@@ -6,7 +6,7 @@ import {requireGroupExport} from './group-history'
 import {planPreferencesRequest} from './plan-preferences'
 import {missionRequest,registerSecretaryRequest} from './missions'
 import {questionRequest,assertQuestionGate} from './chat-questions'
-import {listConversationFiles,trashConversationFiles,restoreConversationFiles} from './conversation-files'
+import {listConversationFiles,trashConversationFiles,restoreConversationFiles,sharedFileForReading} from './conversation-files'
 import {API_REVISION,knownApi,validateApiArguments} from './api-contract'
 import {readApiResult} from './api-results'
 import {employeeActivity} from '../shared/activity'
@@ -339,6 +339,14 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
   if(req.cmd.startsWith('channel.')&&['channel.image','channel.export'].includes(req.cmd))await beforeChannelRequest(req.cmd,a)
   if(req.cmd.startsWith('channel.')&&!['channel.settings','channel.image','channel.export'].includes(req.cmd)){const result=await channelOperation(req.cmd,a);if(['channel.save','channel.delete'].includes(req.cmd))await saveChannelContent(String(a.id));if(['channel.publish','channel.media-put','channel.source-avatar-put','channel.message-send','channel.message-post'].includes(req.cmd))await flushChannelContent();return result}
   if(CONVERSATION_CONTROL_APIS.has(req.cmd))return conversationControlRequest(req.cmd,a)
+  if(req.cmd==='conversation.file-open'){
+    const source=sharedFileForReading(a);await beforeViewChange();sharedFileForReading(a)
+    const document=await callPlugin('margin-reader',source.root,'document.open',{path:source.path,activate:true})
+    await callPlugin('margin-reader',source.root,'settings.set',{activeStudySet:null,homeSection:'library'})
+    sharedFileForReading(a)
+    const reader=await openPluginWindow('margin-reader',source.root)
+    return {reader,document,source:{conversation:a.conversation,path:a.path,version:source.version}}
+  }
   if(req.cmd==='conversation.files')return listConversationFiles(a)
   if(req.cmd==='conversation.file-trash')return trashConversationFiles(a)
   if(req.cmd==='conversation.file-restore')return restoreConversationFiles(a)
@@ -1207,7 +1215,7 @@ function fileEndpoint(ref:FileLocation,destination:boolean):FileEndpoint {
   if(ref.conversation)return conversationFileEndpoint(ref.conversation,ref.path,destination)
   if((ref.group||ref.channel)&&ref.path.startsWith(WORKSPACE_FILE_PREFIX))return conversationFileEndpoint((ref.group?'group:'+ref.group:'channel:'+ref.channel),ref.path,destination)
   if(ref.channel){if(destination)throw Error('Channel files are read-only');if(!isAppAdministrator())throw Error('Only the user or Secretary may download channel files');return channelFileEndpoint({channelId:ref.channel,path:ref.path})}
-  if(ref.group){if(!isAppAdministrator())throw Error('Use chat.file for published group attachments');return {root:groupMediaRoot(ref.group),path:ref.path||'.'}}
+  if(ref.group){if(ref.path.split(/[\\/]/).some(part=>part.toLowerCase()==='.margin-reader'))throw Error('Reader metadata is managed through the plugin');if(!isAppAdministrator())throw Error('Use chat.file for published group attachments');return {root:groupMediaRoot(ref.group),path:ref.path||'.'}}
   if(ref.shared)return {root:sharedDirectory(),path:ref.path||'.'}
   if(ref.local){
     if(!isAbsolute(ref.path))throw Error('本地路径必须为绝对路径')

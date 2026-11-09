@@ -152,7 +152,8 @@
     "test:desktop-quit": "node test/desktop-quit-ui-test.mjs",
     "test:employee-input": "node test/employee-input-performance-ui-test.mjs",
     "test:disclosure-navigation": "node test/disclosure-navigation-core-test.mjs && node test/disclosure-navigation-ui-test.mjs && node test/disclosure-navigation-ui-test.mjs --web",
-    "test:channel-interactions": "node test/channel-interactions-ui-test.mjs && node test/channel-interactions-ui-test.mjs --web && node test/channel-source-filters-ui-test.mjs --web"
+    "test:channel-interactions": "node test/channel-interactions-ui-test.mjs && node test/channel-interactions-ui-test.mjs --web && node test/channel-source-filters-ui-test.mjs --web",
+    "test:group-files-reader": "node test/group-files-reader-core-test.mjs && node test/group-files-reader-ui-test.mjs && node test/group-files-reader-ui-test.mjs --web && node test/conversation-files-core-test.mjs"
   },
   "build": {
     "appId": "com.agentscompany.app",

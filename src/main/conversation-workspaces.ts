@@ -56,7 +56,7 @@ function layout(info:Identity,create=true){
  // Initial names are durable: later display renames do not move a running workspace.
  const root=directory(path.join(base,data.folderName),create),cards=readStore().sessions
  let changed=!fs.existsSync(file)
- for(const id of info.memberIds){
+ for(const id of info.kind==='channel'?info.memberIds:[]){
   if(!data.members[id]){
    const name=directoryName(cards.find(card=>card.id===id)!.title,'employee'),used=new Set(Object.values(data.members).map(value=>value.toLocaleLowerCase()))
    let candidate=name,index=1
@@ -71,13 +71,13 @@ function layout(info:Identity,create=true){
 export function workspaceForMember(conversation:string,employeeId?:string,create=true):ConversationWorkspace{
  const info=identity(conversation)
  if(employeeId&&!info.memberIds.includes(employeeId))throw Error('Employee is not a current conversation member')
- const {root,data}=layout(info,create),cards=readStore().sessions,card=cards.find(card=>card.id===employeeId),memberDirectory=employeeId?data.members[employeeId]:undefined
- return {conversation,name:info.name,root,folderName:data.folderName,members:info.memberIds.map(id=>({employeeId:id,name:cards.find(card=>card.id===id)!.title,directory:data.members[id]})),...(memberDirectory?{memberDirectory,memberPath:path.join(root,memberDirectory)}:{}),...(card?{personalWorkspace:card.cwd}:{}),nativeAccess:!card||employeeSettings(readStore(),card).mode!=='cloud'&&card.kind!=='cloud-native-worker',policy:info.kind==='group'?'Every current group member has equal read/create/upload/edit/delete rights over shared content, including root files and peer folders. User and Secretary administer it without joining. Named member folder identities and host-managed metadata remain protected. Work on a personal Company copy, then upload the updated file.':'Authorized channel members read shared files and edit their own named subfolder; user and Secretary administer all content. Existing paths remain stable.'}
+ const {root,data}=layout(info,create),cards=readStore().sessions,card=cards.find(card=>card.id===employeeId),memberDirectory=info.kind==='channel'&&employeeId?data.members[employeeId]:undefined
+ return {conversation,name:info.name,root,folderName:data.folderName,members:info.memberIds.map(id=>({employeeId:id,name:cards.find(card=>card.id===id)!.title,...(info.kind==='channel'?{directory:data.members[id]}:{})})),...(memberDirectory?{memberDirectory,memberPath:path.join(root,memberDirectory)}:{}),...(card?{personalWorkspace:card.cwd}:{}),nativeAccess:!card||employeeSettings(readStore(),card).mode!=='cloud'&&card.kind!=='cloud-native-worker',policy:info.kind==='group'?'Group files are shared conversation content, not employee workspaces. Every member has equal file rights. Employees keep only their assigned Team workspace; joining never creates a member folder or changes the execution directory. Existing shared files remain in place.':'Authorized channel members read shared files and edit their own named subfolder; user and Secretary administer all content. Existing paths remain stable.'}
 }
 function relative(value:unknown='.'){
  if(typeof value!=='string'||!value||value.includes('\0')||value.includes('\\')||path.isAbsolute(value))throw Error('Use a relative shared file path')
  const result=value.startsWith(WORKSPACE_FILE_PREFIX)?value.slice(WORKSPACE_FILE_PREFIX.length):value
- if(result.split('/').some(part=>part==='..'||part==='.agents-company'||part.startsWith('.agents-transfer-')))throw Error('Shared file path is reserved or outside the workspace')
+ if(result.split('/').some(part=>part==='..'||['.agents-company','.margin-reader'].includes(part.toLowerCase())||part.toLowerCase().startsWith('.agents-transfer-')))throw Error('Shared file path is reserved or outside the workspace')
  return path.posix.normalize(result)
 }
 function noLinks(root:string,value:string){
@@ -97,7 +97,7 @@ export function conversationFileEndpoint(conversation:string,value:string,destin
  if(destination)writable(file)
  return {root,path:file,changed:()=>sharedFilesChanged(conversation),validate:(operation,args)=>withCaller(context,()=>{
   allowed(conversation);noLinks(root,String(args.path??file));if(args.to!==undefined)noLinks(root,String(args.to))
-  if(destination){writable(String(args.path??file),operation);if(args.to!==undefined){writable(String(args.to),operation);if(operation==='copy-commit'&&Object.values(data.members).includes(String(args.to)))throw Error('Named member workspace identities cannot be replaced');if(info.kind!=='group'&&!isAppAdministrator(principal)&&principal.kind==='agent'&&String(args.to).split('/').length===1&&operation==='copy-commit'&&!fs.lstatSync(path.join(root,String(args.path))).isFile())throw Error('Only direct files may be imported at the conversation root')}}
+  if(destination){writable(String(args.path??file),operation);if(args.to!==undefined){writable(String(args.to),operation);if(info.kind==='channel'&&operation==='copy-commit'&&Object.values(data.members).includes(String(args.to)))throw Error('Named member workspace identities cannot be replaced');if(info.kind!=='group'&&!isAppAdministrator(principal)&&principal.kind==='agent'&&String(args.to).split('/').length===1&&operation==='copy-commit'&&!fs.lstatSync(path.join(root,String(args.path))).isFile())throw Error('Only direct files may be imported at the conversation root')}}
  })}
 }
 export function conversationFile(args:Record<string,any>){
@@ -111,19 +111,19 @@ export function conversationFile(args:Record<string,any>){
   if(info.kind!=='group'&&!isAppAdministrator(principal))throw Error('Only the user or Secretary may restore root files')
   const id=args.id.slice(5);if(!/^[a-f0-9-]{36}$/.test(id))throw Error('Invalid trash identity')
   const manifest=noLinks(root,'.agents-company/trash/'+id+'.json'),original=JSON.parse(fs.readFileSync(manifest,'utf8')).path
-  if(typeof original!=='string'||info.kind!=='group'&&relative(original).split('/').length!==1||Object.values(data.members).includes(original)||info.kind!=='group'&&!fs.lstatSync(noLinks(root,'.agents-company/trash/'+id)).isFile())throw Error('Cannot restore a managed workspace identity')
+  if(typeof original!=='string'||info.kind!=='group'&&relative(original).split('/').length!==1||info.kind==='channel'&&Object.values(data.members).includes(original)||info.kind!=='group'&&!fs.lstatSync(noLinks(root,'.agents-company/trash/'+id)).isFile())throw Error('Cannot restore a managed workspace identity')
   conversationFileEndpoint(info.conversation,original,true)
  }
  conversationFileEndpoint(info.conversation,operation==='restore'&&info.kind!=='group'&&!isAppAdministrator(principal)&&principal.kind==='agent'&&!rootRestore?data.members[principal.employeeId]:file,writing)
  if(target!==undefined)conversationFileEndpoint(info.conversation,target,true)
- if(writing&&operation!=='restore'&&(Object.values(data.members).includes(file)||target!==undefined&&Object.values(data.members).includes(target)))throw Error('Named employee workspace folders cannot be replaced, renamed or removed')
+ if(info.kind==='channel'&&writing&&operation!=='restore'&&(Object.values(data.members).includes(file)||target!==undefined&&Object.values(data.members).includes(target)))throw Error('Named employee workspace folders cannot be replaced, renamed or removed')
  if(operation==='write'&&(typeof args.content!=='string'||Buffer.byteLength(args.content)>4*1024*1024))throw Error('Shared text writes must be at most 4 MiB')
  const own=!isAppAdministrator(principal)&&principal.kind==='agent'?data.members[principal.employeeId]:undefined,rootWrite=writing&&info.kind==='group',useOwn=writing&&!!own&&info.kind!=='group',subroot=useOwn?path.join(root,own!):root
  const strip=(value:string)=>useOwn?path.relative(subroot,path.join(root,value)):value
  const result=workspaceFiles(subroot,operations[operation as keyof typeof operations],{...args,...(rootRestore?{id:args.id.slice(5)}:{}),path:operation==='restore'?'.':strip(file),...(target?{to:strip(target)}:{}),offset:args.offset??0,length:262144})
  if(writing)sharedFilesChanged(info.conversation)
  if(operation==='info')return {...result,version:fileVersion(noLinks(root,file))}
- if(operation==='list')return {...result,path:(result.path??'').split(path.sep).join('/'),entries:result.entries!.filter((entry:{name:string})=>entry.name!=='.agents-company'&&!entry.name.startsWith('.agents-transfer-')).map((entry:{path:string})=>({...entry,path:entry.path.split(path.sep).join('/'),managed:Object.values(data.members).includes(entry.path),writable:info.kind==='group'||isAppAdministrator(principal)||entry.path.split(path.sep)[0]===own}))}
+ if(operation==='list')return {...result,path:(result.path??'').split(path.sep).join('/'),entries:result.entries!.filter((entry:{name:string})=>!['.agents-company','.margin-reader'].includes(entry.name)&&!entry.name.startsWith('.agents-transfer-')).map((entry:{path:string})=>({...entry,path:entry.path.split(path.sep).join('/'),managed:info.kind==='channel'&&Object.values(data.members).includes(entry.path),writable:info.kind==='group'||isAppAdministrator(principal)||entry.path.split(path.sep)[0]===own}))}
  if(operation==='trash'&&rootWrite)return {...result,id:'root:'+result.id}
  return result.path?{...result,path:(useOwn?[own,result.path].join('/'):result.path).split(path.sep).join('/')}:result
 }

@@ -4199,6 +4199,31 @@
       ]
     ]
   },
+  "conversation.file-open": {
+    "fields": [
+      [
+        "conversation",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "path",
+        "path",
+        "text",
+        true,
+        false
+      ],
+      [
+        "version",
+        "version",
+        "text",
+        true,
+        false
+      ]
+    ]
+  },
   "conversation.files": {
     "fields": [
       [

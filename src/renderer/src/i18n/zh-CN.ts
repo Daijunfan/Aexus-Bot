@@ -1,5 +1,7 @@
 /** Product interface copy only. User names, messages, files and model output are never translated. */
 export const zhCN:Record<string,string> = {
+  "Opening in Margin Reader…": "正在 Margin Reader 中打开…",
+  "Shared file": "共享文件",
   "Notes for this task": "任务规划备注",
   "Add an employee in Team to create a task.": "请先在 Team 中添加员工，再创建任务。",
   "No tasks in this view": "此视图暂无任务",

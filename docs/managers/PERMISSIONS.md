@@ -174,7 +174,7 @@ upload staging, another group's files, or a private employee workspace. Agents c
 publish arbitrary group file paths. Group/channel attachment delivery sends one text-only file notice together with the
 user's original text. It does not copy bytes or private-chat attachments automatically.
 In a group, every current member has equal conversation.file rights plus conversation.upload
-over shared content at the root and in peer member folders. Channel members use conversation.file,
+over shared content at the root and inside retained shared subdirectories. Channel members use conversation.file,
 and an Agent member may edit only its own named subfolder; conversation.upload is group-only. The user and Secretary administer both without
 joining; named member directories and host metadata stay protected. Members may also use
 conversation.copy to explicitly copy originals into any shared destination they may write,
@@ -190,9 +190,9 @@ formal work. Silent acknowledgments create no further delivery.
 
 ## 群组与频道共享工作区
 
-`conversation.workspace/workspaces/file/copy/transfer` 使用真实群组/频道成员身份。群组中，每个当前成员对共享根目录以及所有成员目录内的文件拥有相同的读取、创建、上传、编辑和删除权限；群内 Owner/Admin 身份本身不额外增加文件权限。频道中，Agent 成员可读取全部共享文件，但 `conversation.file` 写入仅限自己的一级姓名子目录；`conversation.upload` 仅适用于群组。用户和 Secretary 无需加入即可管理群组和频道的全部内容；命名成员目录身份和宿主管理元数据始终受保护，不能被重命名、替换、移动、放入回收站或被上传覆盖。任何职位都不能代替成员身份，也不能写入其他员工的私有 Company Workspace。个人 Company Workspace 继续独立可用。归档不改变权限，移除成员立即撤销 API 访问，但保留已有文件。`workspace.catalog` 只返回本人所有 Company/Message 工作区及权限，不规定任务必须存放的位置。
+`conversation.workspace/workspaces/file/copy/transfer` 使用真实群组/频道身份。群组每个当前成员对共享文件具有相同的读、创建、上传、编辑、删除权限；Owner/Admin 不增加文件权限。用户与 Secretary 无需加入即可管理。员工只拥有 Team 分配的执行 workspace；`workspace.catalog` 仅返回该位置，加群不创建个人目录、不改变 cwd 或执行主机。群共享目录是内容存放位置，不是员工工作区；旧成员目录与已有文件原地保留，按普通共享内容处理，移除成员立即撤销 API 访问。
 
-同名群组用稳定 ID 父目录隔离，同名员工目录映射到真实员工 ID。目录名称在首次创建后保持稳定，重命名显示名称不会移动运行中的工作目录。用户完成上传后文件即对成员共享，发送消息才触发文字通知；临时上传分块不向成员展示。以上为 Core API 授权，不是同一操作系统账号下任意 Trusted 原生进程的文件沙箱，也不会因加入群组而放宽引擎权限。
+`conversation.files` 汇总真实共享文件、图片、已完成上传及消息引用。没有消息的文件不伪造作者或 messageId。图片/PDF 缩略预览沿用现有资产预览边界；`conversation.file-open` 仅用户/Secretary 可调用，核验当前文件版本后通过 Margin Reader 公开接口原地打开 PDF，不复制或扩大普通员工的插件权限。Reader 的 `.margin-reader` 元数据与 `.agents-company`、传输暂存路径均受保护。频道保留旧布局写入限制，不新增成员工作区。所有操作都不授予对他人员工私有 Team workspace 的写权限。
 
 `Archived chats` 统一显示已归档的员工、群组和频道；Restore 继续调用 `messenger.conversation {patch:{archived:false}}`，不改变历史、未读回执、成员身份或工作区。
 
@@ -241,7 +241,7 @@ All 右侧固定显示外包、私聊、群组、频道四个类别筛选；不�
 
 `card.profile {id,offset?,limit?}` 复用 employee.read 目标授权，只读返回 Company 身份、可见群组/频道中的真实成员身份、稳定工作目录和分页 Plan 摘要。管理员可读员工不等于能读其未加入的群聊；普通 Agent 的会话身份投影按本人成员关系过滤；用户与 Secretary 可全局查看和管理。资料不返回提示词、凭据或私聊正文，不创建目录、不启动引擎、不改变本人已读。异步读排期之后重新核对权限与成员关系。初始化状态不妨碍只读查看身份，仍不能以此启动正式任务。
 
-员工资料中管理职位与编码引擎只读；原有独立任免接口继续按职位能力矩阵授权。更换角色仅在显式展开后使用原外观编辑流程。用户通过资料的 Workspaces 入口可编辑群/频道全部共享内容；群组 Agent 成员可读写根目录及同伴成员目录，频道 Agent 成员只可写本人一级姓名目录；Secretary 无需加入即可维护会话文件，包括根目录和成员目录；命名目录的稳定身份不可重命名、替换或删除，并可显式复制到个人 Workspace，所有者和已有会话/目录标识保持不变。
+员工资料中管理职位与编码引擎只读；原有独立任免接口继续按职位能力矩阵授权。更换角色仅在显式展开后使用原外观编辑流程。员工资料仅展示 Team 分配的执行 workspace；群文件统一从 Message 的共享文件入口管理。群组 Agent 成员可读写全部共享内容，Secretary 无需加入即可维护。旧目录和文件原地保留；频道的旧布局限制与现有标识保持兼容，不新建额外员工工作区。
 
 ## 云端角色与编码引擎凭据
 
@@ -276,7 +276,7 @@ Secretary 可查询全部 Plan 排期与保留的执行记录，包含目标员�
 
 Current group conversation offices (Owner/Admin/Member) are independent of Company managementRole and grant no extra file authority. Ordinary employees need actual conversation Owner/Admin to moderate; the user and Secretary administer all groups without joining, while retaining the actual caller identity. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` retains its own employee scheduling contracts. Channel post-count workflows are retired; employees explicitly use channel.fetch-text, channel.fetch-images or channel.search.
 
-`conversation.entry/download/download-status` provides full stored published content and a verified copy into the caller's own Company execution workspace by default (or another explicitly selected own catalog workspace), never a peer's private workspace. `conversation.download-local` is limited to the user or Secretary and writes to an explicitly chosen absolute Mac/Core-host path, refusing an existing file unless overwrite is explicit. Group members may then edit the personal copy and use `conversation.upload` to create (never overwrite) or update a shared file with `expectedVersion`; group files are limited to 2 GiB and message images to 10 MiB. Uploading never publishes a message: use explicit `chat.post` with `@workspace/…` paths. Receipts are durable, deduplicate identical retries, and an interrupted request is not replayed after restart. See [MESSAGE_COLLABORATION.md](docs/MESSAGE_COLLABORATION.md) for these separate contracts. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+`conversation.entry/download/download-status` provides full stored published content and a verified copy into the caller's own Company execution workspace by default (or its explicit company workspace ID), never a peer's private workspace. `conversation.download-local` is limited to the user or Secretary and writes to an explicitly chosen absolute Mac/Core-host path, refusing an existing file unless overwrite is explicit. Group members may then edit the personal copy and use `conversation.upload` to create (never overwrite) or update a shared file with `expectedVersion`; group files are limited to 2 GiB and message images to 10 MiB. Uploading never publishes a message: use explicit `chat.post` with `@workspace/…` paths. Receipts are durable, deduplicate identical retries, and an interrupted request is not replayed after restart. See [MESSAGE_COLLABORATION.md](docs/MESSAGE_COLLABORATION.md) for these separate contracts. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
 
 ## Asset center
 
@@ -291,7 +291,7 @@ preview and rejects busy affected employees and active transfers.
 It reveals local Core-host paths only after scope and symlink validation. Remote
 and Web requests cannot open a Core path in the client's file manager. Revealing
 fixed roots or published attachments grants no write or rename permission;
-existing read-only and member workspace boundaries remain unchanged. Downloads
+existing file reading grants and assigned Team-workspace boundaries remain enforced. Downloads
 continue through the existing authenticated transfer/channel operations.
 `assetDrawerWidth` uses existing `settings.set` authority and only affects display.
 

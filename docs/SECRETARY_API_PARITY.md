@@ -22,7 +22,9 @@ Secretary 任免与 Agent 身份签发仍由用户掌握；Secretary 不冒充�
 
 ## 任务处理入口
 
-群文件先查 `conversation.files {conversation:"group:ID"}`，读取当前 path/version、messageId、referenceCount、canTrash/canRestore。同一路径在多条消息中分享会合并为一个当前文件，不把历史消息条数当文件数。用户要求删除时调用 `conversation.file-trash {conversation,files:[{path,version}]}`；恢复先查 `state:"trash"`，再传 `conversation.file-restore {conversation,files:[{path,trashId}]}`。这些都是共享内容操作，影响其他群成员看到的文件；文件进入回收站，原消息仍保留。旧版本删除请求不会删除已恢复/更新的文件；同名冲突不能覆盖。原生外部 Bot 文件 readOnly，不能用本地操作替代原生删除。
+群文件先查 `conversation.files {conversation:"group:ID"}`，读取当前 path/version、referenceCount、canTrash/canRestore；只有已发布的文件才有 messageId/作者。图片和已完成但未发消息的共享上传同样可查询。同一路径在多条消息中分享会合并为一个当前文件，不把历史消息条数当文件数。用户要求删除时调用 `conversation.file-trash {conversation,files:[{path,version}]}`；恢复先查 `state:"trash"`，再传 `conversation.file-restore {conversation,files:[{path,trashId}]}`。这些都是共享内容操作，影响其他群成员看到的文件；文件进入回收站，原消息仍保留。旧版本删除请求不会删除已恢复/更新的文件；同名冲突不能覆盖。原生外部 Bot 文件 readOnly，不能用本地操作替代原生删除。
+
+PDF 可用 conversation.file-open {conversation,path,version} 原地在 Margin Reader 阅读，无须下载或导入副本。
 
 群消息正文/PDF 已保存与成员是否收到、是否完成任务分别记录。“未送达”不是文件丢失。定时任务占用时排队等待，结束并恢复设置后继续；不要为投递普通消息取消正在执行的排期。用户明确要求补送时调用 `chat.retry {id,messageId,employeeIds?}`，只补送未开始的失败接收人，保留原消息、附件、作者及其他成员回执。检查 retriedEmployeeIds/skippedEmployeeIds；已执行或有原生上下文证据的任务不能自动重放。用户和 Secretary 均使用本人真实身份，权限在实际派发时复核。
 
@@ -122,7 +124,7 @@ Message 的 Private 分类包含员工私聊，以及 `bot.kind=private` 的 Dot
 | 群组、成员、禁言和固定通知 | `chat.*` / `conversation.policy/role/mute/silence/notice-*`；普通员工要求实际 Owner/Admin；Secretary 无需加入可全局管理，显式发布保留真实作者 |
 | 频道、发布引擎、来源、头像、管理员、订阅、文章 | `channel.*`；普通员工需要阅读授权；Secretary 默认全局访问，保留真实发布身份 |
 | 分类、排序、归档与偏好 | `messenger.*`；读取并修改用户实际使用的同一分类、排序、阅读与分享状态 |
-| 个人/共享/会话工作区 | `workspace.*`、`conversation.*`、`transfer.*`；Secretary 可全局管理，普通员工保持自身目录范围；稳定成员目录及路径边界不变 |
+| 个人/共享/会话工作区 | `workspace.*`、`conversation.*`、`transfer.*`；Secretary 可全局管理，普通员工保持自身目录范围；员工仅有 Team workspace，加群不新建个人目录；共享内容原地保留 |
 | 设置、主机、后台终端 | `settings.*`、`host.*`、`terminal.*`；主机和原生引擎权限独立生效 |
 | 插件 | 文档工具读 `plugin/ID/command/METHOD`，执行 `plugin.call {id,method,employee?/team?/workspace?,params}`，使用当前授权工作区 |
 

@@ -3279,26 +3279,13 @@ session, when the client supports those actions.
 Full API and worked examples: [Conversation workspaces](docs/CONVERSATION_WORKSPACES.md),
 also available through `agents api docs core/conversation-workspaces --json`.
 
-`conversation.workspace {conversation,employee?}` and `conversation.workspaces {employee?}`
-return stable named shared folders and member subfolders. `conversation.file` supports
-list/read/image/info/chunk/write/mkdir/move/trash/restore. All current members can read;
-Agent mutations normally use their own member subtree. User and Secretary manage all shared files without joining, while ordinary
-employees write only their own named subtree. Stable named member folders cannot
-be replaced, removed or renamed. These Core checks do not sandbox arbitrary same-account native tools.
-`conversation.copy {from,to}` explicitly copies between a shared folder and the caller's
-personal workspace, or into their named member folder; it does not overwrite destinations.
-`conversation.transfer {id,cancel?}` reports/cancels only the caller's copy.
+`conversation.workspace` and `conversation.workspaces` describe shared conversation content, not employee execution workspaces. An employee has only the Team-assigned Company workspace; `workspace.catalog` returns that one location. Joining groups does not create per-member folders or change cwd. Group descriptors omit memberDirectory/memberPath and members[].directory. Existing legacy folders and originals stay in place as ordinary shared content.
 
-New attachments use `@workspace/relative-path`; completed uploads are shared immediately,
-and pressing Send notifies the members. Renaming a conversation or employee does not move
-an existing workspace. The API returns the stable actual path. Old group attachments
-remain at their original locations and stay readable through `chat.file`.
+`conversation.file` retains current-member shared read/create/upload/edit/delete rights. User/Secretary administer without joining; channel legacy write restrictions remain compatible. Core host metadata (`.agents-company`, `.margin-reader`) and traversal/symlinks are protected. `conversation.copy`, `conversation.upload` and download receipts retain current identity, exact versions, explicit publication and host checks.
 
-Messages has one **Archived chats** entry for employees, groups and channels, with direct
-Restore controls. Archive/restore uses `messenger.conversation` with `patch.archived`, and
-does not alter files, memberships, histories or read receipts. Only Company displays the
-labelled Add Team and Add Employee controls. Employee work pages can browse both their
-personal Workspace and joined group/channel member folders without changing native identity.
+The group header opens one shared-file manager. `conversation.files` includes completed uploads and published files/images, with message/sender fields only when known. It supports search, sort, real preview IDs and recoverable trash without rewriting messages. Local PDF/image covers reuse Margin Reader; legacy attachments are previewable too. `conversation.file-open {conversation,path,version}` is user/Secretary only: it opens the exact current local PDF in Margin Reader directly from its shared root, without downloading/importing a second copy or leaving the main conversation. Images use the existing viewer.
+
+See [Conversation files and workspaces](docs/CONVERSATION_WORKSPACES.md) for CLI examples and boundaries. Archive/restore still changes only user organization and preserves memberships, histories and file data.
 
 ## Plan automation and channel schedules
 
@@ -3424,7 +3411,7 @@ Read [Conversation controls](docs/CONVERSATION_CONTROLS.md) or `agents api docs 
 
 The current contract is [MESSAGE_COLLABORATION.md](docs/MESSAGE_COLLABORATION.md), available through `agents api docs core/message-collaboration`. Message groups distinguish Owner/Admin/Member; channels are read-only feeds. `conversation.member` adds/removes membership; `conversation.role` changes an office without treating demotion as removal. `conversation.audit` returns real governance actors and revision-protected actions.
 
-`workspace.catalog` lists an Agent's Company workspace and all joined Message member workspaces with exact paths and access, without prescribing task placement. Members edit their own first-level named subtree. A current-member Company Secretary can additionally maintain direct root files; other conversation offices do not grant this exception, and peer folders remain read-only.
+`workspace.catalog` returns the employee's Team-assigned execution workspace only. Shared group files are conversation content, accessed with conversation.file; group membership creates no private directory or alternate execution location.
 
 `conversation.entry` returns complete stored public text, links, media and documents. `conversation.download` copies an attachment into a selected own workspace; `conversation.download-status` reports actual progress and committed paths. Stable request keys deduplicate unchanged attempts, and staging plus size/SHA checks preserve originals and existing files.
 
@@ -3527,7 +3514,7 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 <!-- BEGIN GENERATED CLI COMMAND INDEX -->
 ## 全部 CLI 命令索引
 
-下面 453 项来自共享协议 `src/shared/api-registry.ts`。命令名中的句点在终端中写成空格；每项都可附加 `--json`。参数、返回值和限制见上文对应章节。
+下面 454 项来自共享协议 `src/shared/api-registry.ts`。命令名中的句点在终端中写成空格；每项都可附加 `--json`。参数、返回值和限制见上文对应章节。
 
 | 命令 | 参数 | 作用 | 对应界面 | 授权策略 |
 | --- | --- | --- | --- | --- |
@@ -3696,12 +3683,13 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 | <code>agents assets search</code> | <code>[--query TEXT] [--root ID] [--offset N] [--limit N] [--hidden] [--refresh] [--view Company&#124;Messages&#124;Plan] [--team NAME] [--employee ID] [--conversation REF] [--kind TYPE] [--storage local&#124;remote&#124;cloud] [--sort name&#124;modified&#124;size]</code> | User-only: page background-indexed files with their Team, employee, group or channel ownership | Asset list | workspace |
 | <code>agents assets locate</code> | <code>ID</code> | User-only: resolve a current asset, its parent workspace and human-readable breadcrumbs without opening Finder or downloading cloud documents | Show in folder | workspace |
 | <code>agents assets file</code> | <code>ID --operation list&#124;read&#124;image&#124;info&#124;chunk&#124;write&#124;mkdir&#124;move&#124;trash&#124;restore [--path PATH] [--to PATH] [--content TEXT] [--hash HASH] [--create] [--hidden] [--offset N] [--trash-id ID]</code> | User-only: use existing workspace operations without changing scope or member permissions | Asset file editor | workspace |
-| <code>agents conversation workspace</code> | <code>CONVERSATION [--employee ID]</code> | Read shared paths and current file rights. Every group member may read/create/upload/edit/delete shared content; channel members write their own subfolder. User/Secretary administer without joining. | Group / channel workspace | chat |
-| <code>agents conversation workspaces</code> | <code>[--employee ID]</code> | List an employee’s group/channel workspaces without changing their personal workspace or execution host | Employee workspace selector | chat |
+| <code>agents conversation workspace</code> | <code>CONVERSATION [--employee ID]</code> | Read shared content paths and file rights. Groups have no per-employee folders; joining never changes the Team execution workspace. User/Secretary administer without joining. | Group / channel workspace | chat |
+| <code>agents conversation workspaces</code> | <code>[--employee ID]</code> | List shared conversation content locations; these are not employee execution workspaces or per-member group folders | Employee workspace selector | chat |
 | <code>agents conversation file</code> | <code>CONVERSATION --operation list&#124;read&#124;image&#124;info&#124;chunk&#124;write&#124;mkdir&#124;move&#124;trash&#124;restore [--path PATH] [--to PATH] [--content TEXT] [--hash HASH] [--create] [--hidden] [--offset N] [--id TRASH_ID]</code> | Group members have equal shared-file rights including root and peer folder contents. Named member folder identities and host metadata remain protected. Channel members write only their own subtree. info returns an opaque version for upload updates. | Shared file browser | chat |
 | <code>agents conversation copy</code> | <code>--from JSON --to JSON</code> | Copy shared files/folders between allowed shared locations and your personal workspace. Group shared content is equally writable by every member; source retained, destination never overwritten. Use conversation.upload with expectedVersion to replace an edited group file. | Shared workspace copy | chat |
 | <code>agents conversation transfer</code> | <code>ID [--cancel]</code> | Read or cancel your shared-workspace copy; queued is not completed, and a restart does not replay copies | Shared workspace copy progress | chat |
-| <code>agents conversation files</code> | <code>CONVERSATION [--state active&#124;trash --query TEXT --author all&#124;you&#124;employee --sort newest&#124;name&#124;size --offset N --limit N]</code> | List unique published group files with current size/version, original message references and recoverable trash; no file bytes or reading receipts. Native Bot files are read-only. | Group shared files | chat |
+| <code>agents conversation file-open</code> | <code>CONVERSATION --path PATH --version VERSION</code> | User/Secretary: open a current shared PDF directly in Margin Reader using its original file, without downloading or importing a copy. Rechecks group access and exact file version; keeps the conversation open. | Read shared PDF | chat |
+| <code>agents conversation files</code> | <code>CONVERSATION [--state active&#124;trash --query TEXT --author all&#124;you&#124;employee --sort newest&#124;name&#124;size --offset N --limit N]</code> | List shared group files and images, including completed uploads, legacy attachments and recoverable trash. Message references and sender provenance are present when published; no download or read receipt. Native Bot files are read-only. | Group shared files | chat |
 | <code>agents conversation file-trash</code> | <code>CONVERSATION --files JSON</code> | Current group members have equal content rights: move 1–100 published files to recoverable trash with expected versions; all preflight checks pass before any move. Same-version retries return existing trash receipts. | Delete shared files | chat |
 | <code>agents conversation file-restore</code> | <code>CONVERSATION --files JSON</code> | Restore published group files by path and trash ID, rechecking membership and refusing to overwrite a new file at the original path. Restore receipts make unchanged retries safe. | Restore shared files | chat |
 | <code>agents conversation member</code> | <code>CONVERSATION --employee ID --action add&#124;remove --expected-revision N</code> | Owner/Admin adds an Agent as Member or removes membership without deleting the employee or files; transfer Owner first | Conversation members | chat |
@@ -3749,9 +3737,9 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 | <code>agents chat checklist-edit</code> | <code>ID --checklist-id ID --items JSON --expected-revision N [--title TEXT]</code> | Creator/Owner/Admin edits a checklist; permitted members may append items. Stable item IDs preserve completion. | Edit checklist | chat |
 | <code>agents conversation upload</code> | <code>--conversation group:ID --from JSON --path FILE --client-request-id KEY [--expected-version VERSION]</code> | Copy an own Company-workspace file into the group shared folder. All members have equal file rights. New files never overwrite; replacing requires the exact version returned by conversation.file info. Returns an async receipt, no automatic group speech. | Upload edited shared file | chat |
 | <code>agents conversation upload-status</code> | <code>ID [--cancel]</code> | Read or cancel an uploaded shared-file copy. Only completed means committed; restart never replays. User/Secretary may manage receipts; other employees use their own and current group membership. | Shared upload progress | chat |
-| <code>agents workspace catalog</code> | <code>[--employee ID&#124;self]</code> | List your Company workspace and every joined group/channel member workspace with exact paths, location, permissions and file API; does not choose a workspace or move files | Employee workspace selector | chat |
+| <code>agents workspace catalog</code> | <code>[--employee ID&#124;self]</code> | Return the employee’s assigned Team execution workspace, exact host and file API. Joining conversations does not create additional workspaces or change cwd. | Employee workspace selector | chat |
 | <code>agents conversation entry</code> | <code>CONVERSATION --id ENTRY_ID</code> | Read a complete published private/group/channel entry, links, replies, media and downloadable file descriptors. Private read scope or current group/channel access required; shared attachments include the current version. | Published content and files | chat |
-| <code>agents conversation download</code> | <code>CONVERSATION --entry-id ID --attachment-id ID --client-request-id KEY [--workspace WORKSPACE_ID --employee ID --path DIR --name FILENAME]</code> | Copy one published private/group/channel attachment into your own Company execution workspace by default. Optional joined Message workspace. Streams with size/version/integrity checks; sources retained and existing destinations never overwritten. | Download to employee workspace | chat |
+| <code>agents conversation download</code> | <code>CONVERSATION --entry-id ID --attachment-id ID --client-request-id KEY [--workspace WORKSPACE_ID --employee ID --path DIR --name FILENAME]</code> | Copy one published private/group/channel attachment into your own Company execution workspace by default. Optional workspace ID must refer to that same assigned Team workspace. Streams with size/version/integrity checks; sources retained and existing destinations never overwritten. | Download to employee workspace | chat |
 | <code>agents conversation download-local</code> | <code>CONVERSATION --entry-id ID --attachment-id ID --path ABSOLUTE_FILE [--overwrite]</code> | User/Secretary: stream a published private/group/channel file or image to an explicitly chosen Mac/Core-host file path. No implicit overwrite and no large renderer Blob. | Save attachment to chosen Mac path | chat |
 | <code>agents conversation download-status</code> | <code>ID [--cancel]</code> | Read your attachment copy progress, final path or failure; cancel affects only your copy. Restart never blindly replays interrupted downloads. | Attachment copy progress | chat |
 | <code>agents channel post-trigger-list</code> | <code>CHANNEL_ID</code> | Read per-Agent post-count rules and progress. Owner/Admin sees all; Members see their own rule. Independent of Plan and static timed notices. | Channel post-count rules | chat |

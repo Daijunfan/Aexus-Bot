@@ -10,7 +10,7 @@ import {getChannelMessage} from './channel-discussion'
 import {channelFileEndpoint,getChannel} from './channels'
 import {one,run,liveChannelPost,projectChannelPost,projectChannelDocuments} from './channel-store'
 import {cloudDocumentSource} from './channel-files'
-import {conversationFileEndpoint,workspaceForMember} from './conversation-workspaces'
+import {conversationFileEndpoint} from './conversation-workspaces'
 import {workspaceCatalog} from './workspace-catalog'
 import {authorize,requestContext,withCaller} from './authorization'
 import {workspaceFiles} from './files'
@@ -105,9 +105,7 @@ export async function downloadAttachment(args:Record<string,any>,resolve:(ref:Fi
  if(pending){if(pending.fingerprint!==fingerprint)throw Error('Download request ID already used with different arguments');return pending.promise}
  const promise=(async()=>{
  let target:FileEndpoint,to:FileLocation
- if(workspace.view==='messages'){
-  const member=workspaceForMember(workspace.conversation!,employee);to={conversation:workspace.conversation!,path:path.posix.join(member.memberDirectory!,subdirectory)};target=conversationFileEndpoint(to.conversation!,to.path,true)
- }else{to={employee,path:subdirectory};target=resolve(to,true)}
+ to={employee,path:subdirectory};target=resolve(to,true)
  const original=target.validate,root=target.root,remote=JSON.stringify(target.remote),digest=file.sha256?createHash('sha256'):undefined;let bytes=0
  target={...target,validate:async(operation,input)=>withCaller(context,async()=>{
   authorize('conversation.download');publishedScope(scope.conversation)

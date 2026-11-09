@@ -7910,7 +7910,7 @@
   {
     "name": "conversation.workspace",
     "args": "CONVERSATION [--employee ID]",
-    "summary": "Read shared paths and current file rights. Every group member may read/create/upload/edit/delete shared content; channel members write their own subfolder. User/Secretary administer without joining.",
+    "summary": "Read shared content paths and file rights. Groups have no per-employee folders; joining never changes the Team execution workspace. User/Secretary administer without joining.",
     "gui": "Group / channel workspace",
     "inputSchema": {
       "type": "object",
@@ -7936,7 +7936,7 @@
   {
     "name": "conversation.workspaces",
     "args": "[--employee ID]",
-    "summary": "List an employee’s group/channel workspaces without changing their personal workspace or execution host",
+    "summary": "List shared conversation content locations; these are not employee execution workspaces or per-member group folders",
     "gui": "Employee workspace selector",
     "inputSchema": {
       "type": "object",
@@ -8105,9 +8105,41 @@
     "target": "request"
   },
   {
+    "name": "conversation.file-open",
+    "args": "CONVERSATION --path PATH --version VERSION",
+    "summary": "User/Secretary: open a current shared PDF directly in Margin Reader using its original file, without downloading or importing a copy. Rechecks group access and exact file version; keeps the conversation open.",
+    "gui": "Read shared PDF",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation": {
+          "type": "string",
+          "pattern": "^group:[a-zA-Z0-9_-]+$"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "conversation",
+        "path",
+        "version"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
     "name": "conversation.files",
     "args": "CONVERSATION [--state active|trash --query TEXT --author all|you|employee --sort newest|name|size --offset N --limit N]",
-    "summary": "List unique published group files with current size/version, original message references and recoverable trash; no file bytes or reading receipts. Native Bot files are read-only.",
+    "summary": "List shared group files and images, including completed uploads, legacy attachments and recoverable trash. Message references and sender provenance are present when published; no download or read receipt. Native Bot files are read-only.",
     "gui": "Group shared files",
     "inputSchema": {
       "type": "object",
@@ -10318,7 +10350,7 @@
   {
     "name": "workspace.catalog",
     "args": "[--employee ID|self]",
-    "summary": "List your Company workspace and every joined group/channel member workspace with exact paths, location, permissions and file API; does not choose a workspace or move files",
+    "summary": "Return the employee’s assigned Team execution workspace, exact host and file API. Joining conversations does not create additional workspaces or change cwd.",
     "gui": "Employee workspace selector",
     "inputSchema": {
       "type": "object",
@@ -10364,7 +10396,7 @@
   {
     "name": "conversation.download",
     "args": "CONVERSATION --entry-id ID --attachment-id ID --client-request-id KEY [--workspace WORKSPACE_ID --employee ID --path DIR --name FILENAME]",
-    "summary": "Copy one published private/group/channel attachment into your own Company execution workspace by default. Optional joined Message workspace. Streams with size/version/integrity checks; sources retained and existing destinations never overwritten.",
+    "summary": "Copy one published private/group/channel attachment into your own Company execution workspace by default. Optional workspace ID must refer to that same assigned Team workspace. Streams with size/version/integrity checks; sources retained and existing destinations never overwritten.",
     "gui": "Download to employee workspace",
     "inputSchema": {
       "type": "object",

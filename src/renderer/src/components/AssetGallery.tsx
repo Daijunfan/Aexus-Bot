@@ -11,8 +11,8 @@ const covers=new Map<string,AssetPreview>(),queue:Array<{key:string;id:string;al
 let running=0,coverBytes=0,coverEpoch=0
 function drain(){while(running<2&&queue.length){const job=queue.shift()!;if(!job.alive())continue;running++;void api.call<AssetPreview>('assets.preview',{id:job.id}).then(value=>{if(value.kind==='image'){coverBytes-=covers.get(job.key)?.data?.length??0;covers.set(job.key,value);coverBytes+=value.data?.length??0;while(covers.size>60||coverBytes>10*1024*1024){const key=covers.keys().next().value!;coverBytes-=covers.get(key)?.data?.length??0;covers.delete(key)}}if(job.alive())job.resolve(value)}).catch(()=>job.alive()&&job.resolve({kind:'fallback'})).finally(()=>{running--;drain()})}}
 export function clearAssetCovers(){covers.clear();coverBytes=0;coverEpoch++}
-function AssetCover({node,revision}:{node:AssetNode;revision:number}){
- const root=useRef<HTMLSpanElement>(null),[cover,setCover]=useState<AssetPreview>(),key=[node.id,node.bytes,node.modifiedAt,coverEpoch].join(':')
+export function AssetCover({node,revision}:{node:AssetNode;revision:number|string}){
+ const root=useRef<HTMLSpanElement>(null),[cover,setCover]=useState<AssetPreview>(),key=[node.id,node.bytes,node.modifiedAt,revision,coverEpoch].join(':')
  useEffect(()=>{let alive=true;if(node.directory||node.storage==='remote')return
   const cached=covers.get(key);if(cached){setCover(cached);return}setCover(undefined)
   const observer=new IntersectionObserver(items=>{if(items.some(item=>item.isIntersecting)){observer.disconnect();queue.push({key,id:node.id,alive:()=>alive,resolve:setCover});drain()}},{root:root.current?.closest('.asset-scroll'),rootMargin:'120px'})

@@ -730,5 +730,24 @@
         "to": 200
       }
     }
+  },
+  {
+    "args": [
+      "conversation",
+      "file-open",
+      "group:cg_fixture",
+      "--path",
+      "@workspace/Paper.pdf",
+      "--version",
+      "abc123"
+    ],
+    "expected": {
+      "cmd": "conversation.file-open",
+      "args": {
+        "conversation": "group:cg_fixture",
+        "path": "@workspace/Paper.pdf",
+        "version": "abc123"
+      }
+    }
   }
 ]
