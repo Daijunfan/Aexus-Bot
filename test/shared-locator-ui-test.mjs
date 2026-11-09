@@ -1,3 +1,4 @@
+import {openApplicationFiles} from './fixtures/application-menu.mjs'
 // Real file copies, navigation and camera operations in a disposable company.
 import fs from 'node:fs'
 import os from 'node:os'
@@ -38,7 +39,7 @@ try{
  await rpc('workspace.mkdir',{employee:card.id,path:'bundle'})
  fs.writeFileSync(path.join(card.cwd,'bundle','image.bin'),crypto.randomBytes(300000))
  await navigate({kind:'conversation',employee:card.id});await expect(page.locator('.employee-files [data-file="report.md"]')).toBeVisible()
- await page.locator('.directory-shared').click();await expect(page.locator('.shared-drawer')).toBeVisible()
+ await openApplicationFiles(page);await expect(page.locator('.shared-drawer')).toBeVisible()
  const list=page.locator('[data-asset-id=shared]'),source=page.locator('.employee-files [data-file="report.md"]')
  await source.dragTo(list)
  await expect.poll(()=>same(sourcePath,path.join(shared,'report.md'))).toBe(true)
@@ -73,7 +74,7 @@ try{
  await expect.poll(()=>same(sourcePath,path.join(shared,'archive/report.md'))).toBe(true)
  ok(true,'shared tree subfolder accepts employee files')
  await rpc('workspace.write',{employee:card.id,path:'sidebar.md',content:'# Sidebar import',create:true})
- await page.locator('.employee-files [data-file="sidebar.md"]').dragTo(page.locator('.directory-shared'))
+ await page.locator('.employee-files [data-file="sidebar.md"]').dragTo(page.locator('.application-settings-trigger'))
  await expect.poll(()=>fs.existsSync(path.join(shared,'sidebar.md'))).toBe(true)
  ok(true,'sidebar shared icon remains a working file drop target')
  await shot('01-shared-roundtrip')
@@ -92,7 +93,7 @@ try{
  await page.locator('.employee-files [aria-label="New file"]').click();const filename=page.locator('input[name="file-name"]');await filename.fill('cancelled.md');await filename.press('Escape')
  await expect(filename).toHaveCount(0);await expect(page.locator('.conversation-dialog')).toBeVisible();ok(!fs.existsSync(path.join(card.cwd,'cancelled.md')),'Escape cancels a file-name edit before returning from chat')
  await page.locator('.composer textarea').press('Escape');await expect(page.locator('.conversation-layer')).toHaveCount(0)
- const toggle=page.getByRole('button',{name:'Team overview',exact:true});await toggle.click();await expect(toggle).toHaveAttribute('aria-pressed','true')
+ await page.locator('.application-settings-trigger').click();await page.getByRole('menuitemcheckbox',{name:'Team overview',exact:true}).click();await expect.poll(async()=>(await rpc('settings.get')).showTeamOverview).toBe(true)
  await rpc('canvas.set',{x:-50000,y:-50000,zoom:.2});await expect(page.locator('.canvas-overview-outside')).toBeVisible()
  await page.getByRole('button',{name:'Locate Engineering',exact:true}).click();await expect(page.locator('[data-department="Engineering"]')).toBeVisible()
  await page.locator('.canvas-overview-teams button').filter({hasText:'Design studio'}).click();await expect(page.locator('[data-department="Design studio"]')).toBeVisible()

@@ -1,3 +1,4 @@
+import {openApplicationFiles} from './fixtures/application-menu.mjs'
 // Real HTTP/Core operations with deliberately delayed responses; no production state.
 import fs from 'node:fs'
 import path from 'node:path'
@@ -13,7 +14,7 @@ try{
  f=await assetWorkbenchFixture(application.directory,{AGENTS_COMPANY_WEB:'1',AGENTS_COMPANY_WEB_PORT:String(port)})
  for(const [name,content] of [['race-a.txt','first original'],['race-b.txt','second original']])await f.rpc('assets.file',{id:'shared',operation:'write',path:name,content,create:true});await f.settled()
  browser=await chromium.launch({headless:true,...(process.platform==='darwin'?{channel:'chrome'}:{})});page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(15000);page.on('pageerror',error=>errors.push(error.message))
- await page.goto('http://127.0.0.1:'+port);await page.locator('.web-login input').fill(fs.readFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim());await page.getByRole('button',{name:'Enter workspace',exact:true}).click();await page.locator('.infinite-canvas').waitFor();await page.locator('.directory-shared').click()
+ await page.goto('http://127.0.0.1:'+port);await page.locator('.web-login input').fill(fs.readFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim());await page.getByRole('button',{name:'Enter workspace',exact:true}).click();await page.locator('.infinite-canvas').waitFor();await openApplicationFiles(page)
  const drawer=page.locator('.asset-browser'),preview=page.getByRole('dialog',{name:'Asset workspace',exact:true}),search=drawer.getByRole('textbox',{name:'Search assets',exact:true}),editor=preview.getByRole('textbox',{name:'File content',exact:true})
  let delayedRead=false,delayedWrite=false,failFolder=false,delayedSearch=false,delayedLocate=false,writeCount=0,releaseRead,releaseWrite,releaseSearch,releaseLocate
  await page.route('**/api/rpc',async route=>{const request=route.request().postDataJSON(),args=request.args??{}

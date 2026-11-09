@@ -20,7 +20,7 @@ try{
  fixture=await fixtureCore({AGENTS_COMPANY_TEST_BOTS_URL:'http://127.0.0.1:'+provider.address().port,...(web?{AGENTS_COMPANY_WEB:'1',AGENTS_COMPANY_WEB_PORT:String(port)}:{})})
  if(web){browser=await chromium.launch({headless:true,...(process.platform==='darwin'?{channel:'chrome'}:{})});page=await browser.newPage({viewport:{width:1380,height:1000}});await page.goto('http://127.0.0.1:'+port);await page.locator('.web-login input').fill(fs.readFileSync(path.join(fixture.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim());await page.getByRole('button',{name:'Enter workspace',exact:true}).click()}
  else{await fixture.stop();const env={...fixture.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1380',AGENTS_COMPANY_HEIGHT:'1000'};delete env.ELECTRON_RUN_AS_NODE;const application=process.env.AGENTS_COMPANY_TEST_APP;app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env});page=await app.firstWindow()}
- page.setDefaultTimeout(15000);page.on('pageerror',error=>errors.push(error.message));await page.locator('.infinite-canvas').waitFor()
+ page.setDefaultTimeout(15000);page.on('pageerror',error=>errors.push(error.message));await page.locator('.company-navigation').waitFor()
  const rpc=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args})
  // Clipboard writes are observed at the browser API boundary; never replace the Mac clipboard.
  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.copiedText=value}}}))
@@ -36,7 +36,7 @@ try{
  await page.getByRole('button',{name:'@ All',exact:true}).click();await expect(composer).toHaveValue('稍后再说@all ');await composer.fill('');checks.push('A caret-position @mention keeps the sentence suffix, routes to the chosen stable ID, reaches native context inline, and disappears from routing when deleted; @all is inline')
  const privatePost=await fixture.request(token,'direct.post',{text:body,clientMessageId:'private-context'});assert.ok(privatePost.ok,privatePost.error)
  const groupPost=await fixture.request(token,'chat.post',{id:group.id,text:body,clientMessageId:'group-context'});assert.ok(groupPost.ok,groupPost.error)
- const noRails=()=>expect(page.locator('.message-view .message-actions,.message-view .message-action-rail,.channel-news-actions')).toHaveCount(0)
+ const noRails=async()=>{await expect(page.locator('.message-view .message-action-rail,.channel-news-actions')).toHaveCount(0);await expect(page.locator('.message-view .message-actions>button:not(.message-options-trigger)')).toHaveCount(0)}
  const context=async(target,label,shot,edge=false)=>{
   await target.scrollIntoViewIfNeeded();await target.hover();await noRails()
   const point=await target.evaluate((el,edge)=>{const r=el.getBoundingClientRect(),v=(el.closest('.transcript,.group-transcript,.channel-feed,.channel-post-detail-scroll')??el).getBoundingClientRect();return edge?{x:Math.min(r.right,v.right)-18,y:Math.min(r.bottom,v.bottom)-18}:{x:Math.max(r.left,v.left)+12,y:Math.max(r.top,v.top)+12}},edge)

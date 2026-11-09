@@ -154,6 +154,7 @@
     "test:disclosure-navigation": "node test/disclosure-navigation-core-test.mjs && node test/disclosure-navigation-ui-test.mjs && node test/disclosure-navigation-ui-test.mjs --web",
     "test:channel-interactions": "node test/channel-interactions-ui-test.mjs && node test/channel-interactions-ui-test.mjs --web && node test/channel-source-filters-ui-test.mjs --web",
     "test:group-files-reader": "node test/group-files-reader-core-test.mjs && node test/group-files-reader-ui-test.mjs && node test/group-files-reader-ui-test.mjs --web && node test/conversation-files-core-test.mjs",
+    "test:application-launcher": "node test/application-launcher-ui-test.mjs && node test/application-launcher-ui-test.mjs --web",
     "test:group-storage": "node test/group-storage-core-test.mjs && node test/group-storage-ui-test.mjs && node test/group-storage-ui-test.mjs --web"
   },
   "build": {

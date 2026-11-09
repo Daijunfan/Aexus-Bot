@@ -1,0 +1,25 @@
+/* The global rail is replaced by compact tools in the existing title bar. */
+.app.in-office{--directory-width:0px}
+.company-launcher{display:flex;align-items:center;justify-self:start;gap:9px;min-width:0;max-width:100%;-webkit-app-region:no-drag}
+.company-launcher[data-traffic-lights=true]{padding-left:max(62px,calc(62px / var(--page-zoom,1)))}
+.company-launcher button{display:grid;place-items:center;flex:none;width:32px;height:32px;padding:3px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--fg-dim);cursor:pointer}
+.company-launcher button:hover,.company-launcher button[aria-expanded=true],.company-launcher button[data-active=true]{background:var(--bg-hover);color:var(--accent)}
+.company-launcher button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.company-launcher .application-settings-trigger{width:34px;height:34px}.application-settings-trigger>.codicon{font-size:21px}
+.application-plugins{display:flex;align-items:center;gap:5px;min-width:0;padding-left:9px;border-left:1px solid var(--border-soft)}
+.application-plugins button[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 10%,var(--bg-elev));border-color:color-mix(in srgb,var(--accent) 25%,var(--border-soft))}
+.application-plugins .plugin-image,.application-menu .plugin-image{width:26px;height:26px;object-fit:contain;flex:none}
+.application-plugins .plugin-monogram,.application-menu .plugin-monogram{width:26px;height:26px;border:1px solid var(--border-soft);border-radius:7px;background:var(--bg-elev);color:var(--fg);font:700 21px Georgia,serif;box-shadow:none}
+.company-launcher .application-plugins-trigger{display:none}.company-launcher .application-plugins-trigger[data-overflow=true]{display:grid}.application-plugins-trigger>.codicon{font-size:20px}
+.application-menu.messenger-menu{width:248px;padding:6px;border-radius:14px;border:1px solid var(--border);background:var(--bg-elev);color:var(--fg);backdrop-filter:none;box-shadow:0 12px 40px #101b3424,0 2px 6px #101b340a}
+.application-menu-heading{display:block;padding:8px 10px 9px;font-size:11px;font-weight:650;color:var(--fg-dim)}
+.application-menu.messenger-menu>button{min-height:36px;padding:7px 10px;gap:10px;border-radius:8px;font:inherit;font-size:12px;cursor:pointer}
+.application-menu>button>span:not(.codicon,.plugin-monogram){flex:1;min-width:0;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.application-menu.messenger-menu>button>.codicon{font-size:17px;color:var(--fg-dim)}.application-menu.messenger-menu>button>.application-menu-trailing{margin-left:auto;font-size:13px;color:var(--accent)}
+.application-menu>button:disabled{opacity:.5;cursor:wait}.application-menu>button[aria-checked=true]{color:var(--accent)}.application-menu>button .is-checking{animation:spin 1s linear infinite}
+.application-menu>p[role=alert]{margin:6px 5px;padding:9px;border-radius:8px;background:color-mix(in srgb,var(--red) 8%,var(--bg-elev));color:var(--red);font-size:11px;overflow-wrap:anywhere}
+.app .canvas-edit-toolbar{left:14px}
+@media(max-width:900px){.application-plugins{display:none}.company-launcher .application-plugins-trigger{display:grid}.company-launcher{gap:4px}.company-launcher button,.company-launcher .application-settings-trigger{width:30px;height:30px}}
+@media(max-width:600px){.company-header .company-launcher{grid-column:1;grid-row:1}.company-launcher .application-plugins{display:flex;gap:3px;padding-left:5px}.company-launcher .application-plugins-trigger{display:none}.company-launcher{gap:5px}}
+@media(max-width:420px){.company-launcher .application-plugins{display:none}.company-launcher .application-plugins-trigger{display:grid}}
+@media(prefers-reduced-motion:reduce){.application-menu>button .is-checking{animation:none}}

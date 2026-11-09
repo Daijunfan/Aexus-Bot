@@ -1337,6 +1337,8 @@ export const zhCN:Record<string,string> = {
   "Pinned message": "置顶消息",
   "Show pinned messages": "查看置顶消息",
   "Application settings": "应用设置",
+  "Application menu": "应用菜单",
+  "Open {0}": "打开 {0}",
   "MAKE YOURSELF AT HOME": "打造舒适的工作环境",
   "Your workspace preferences": "你的工作环境",
   "Close settings": "关闭设置",

@@ -1,3 +1,4 @@
+import {openApplicationFiles} from './fixtures/application-menu.mjs'
 // Full renderer and real Core; disposable workspaces and deterministic native/SSH fixtures only.
 import fs from 'node:fs'
 import path from 'node:path'
@@ -19,7 +20,7 @@ try{
  await f.settled()
  if(native){await f.stop();const env={...f.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1000'};delete env.ELECTRON_RUN_AS_NODE;delete env.AGENTS_COMPANY_WEB;app=await electron.launch({executablePath:require('electron'),args:[application.directory],env});page=await app.firstWindow()}
  else{browser=await chromium.launch({headless:true,...(process.platform==='darwin'?{channel:'chrome'}:{})});page=await browser.newPage({viewport:{width:1440,height:1000}});await page.goto('http://127.0.0.1:'+port);await page.locator('.web-login input').fill(fs.readFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim());await page.getByRole('button',{name:'Enter workspace',exact:true}).click()}
- page.setDefaultTimeout(15000);page.on('pageerror',e=>report.errors.push(e.message));await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.directory-shared').click()
+ page.setDefaultTimeout(15000);page.on('pageerror',e=>report.errors.push(e.message));await page.emulateMedia({reducedMotion:'reduce'});await openApplicationFiles(page)
  const drawer=()=>page.locator('.asset-browser'),node=id=>drawer().locator('[data-asset-id="'+id+'"]'),info=()=>page.getByRole('dialog',{name:'Get Info',exact:true}),menu=()=>page.getByRole('menu',{name:'File actions',exact:true}),search=()=>drawer().getByRole('textbox',{name:'Search assets',exact:true}),shot=name=>page.screenshot({path:path.join(out,name+'.png'),animations:'disabled'})
  const treeFind=async id=>{const scroll=drawer().locator('.asset-scroll');await scroll.evaluate(el=>el.scrollTop=0);for(let i=0;i<40;i++){if(await node(id).count()){await node(id).scrollIntoViewIfNeeded();return node(id)}await scroll.evaluate(el=>el.scrollTop+=el.clientHeight*.6);await page.waitForTimeout(35)}throw Error('Cannot find tree item '+id)}
  const noPaths=async()=>{const text=await drawer().innerText(),titles=await drawer().locator('[title]').evaluateAll(nodes=>nodes.map(el=>el.title).join('\n'));for(const path of [f.temp,f.env.AGENTS_COMPANY_HOME,f.shared,a.cwd,f.remote])assert.ok(!text.includes(path)&&!titles.includes(path),'Physical paths stay hidden: '+path)}

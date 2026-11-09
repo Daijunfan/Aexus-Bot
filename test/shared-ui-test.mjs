@@ -1,3 +1,4 @@
+import {openApplicationFiles} from './fixtures/application-menu.mjs'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -25,7 +26,7 @@ try{
  fs.writeFileSync(path.join(card.cwd,'packet.bin'),crypto.randomBytes(1024*1024));fs.mkdirSync(path.join(card.cwd,'incoming'))
  await cli('view','open','conversation','--employee',card.id);await page.locator('.employee-files').waitFor()
  ok((await cli('view','get')).employee===card.id,'a stale plugin selection does not block another Team employee')
- await page.locator('.directory-shared').click();await page.locator('.asset-browser').waitFor()
+ await openApplicationFiles(page);await page.locator('.asset-browser').waitFor()
  const drawer=await page.locator('.asset-browser').boundingBox(),conversation=await page.locator('.conversation-dialog').boundingBox()
  ok(conversation.x>=drawer.x+drawer.width,'asset browser and employee workspace remain visible side by side')
  const source=page.locator('.employee-files [data-file="packet.bin"]'),sharedRoot=page.locator('[data-asset-id=shared]');await source.waitFor()

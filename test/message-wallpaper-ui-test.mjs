@@ -1,3 +1,4 @@
+import {openApplicationSettings} from './fixtures/application-menu.mjs'
 // Full Web and hidden desktop renderers, isolated Core, original SVGs and deterministic employee protocol.
 import fs from 'node:fs'
 import path from 'node:path'
@@ -27,7 +28,7 @@ async function run(native){
   else{browser=await chromium.launch({headless:true,...(process.platform==='darwin'?{channel:'chrome'}:{})});page=await browser.newPage({viewport:{width:1440,height:1000}});await page.goto('http://127.0.0.1:'+port);await page.locator('.web-login input').fill(fs.readFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim());await page.getByRole('button',{name:'Enter workspace',exact:true}).click()}
   page.setDefaultTimeout(12000);page.on('pageerror',error=>report.errors.push(error.message));await page.emulateMedia({reducedMotion:'reduce'});await expect(page.locator('.infinite-canvas')).toBeVisible()
   const ui=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args}),wall=page.locator('.message-view > .message-wallpaper'),panel=page.locator('.view-preferences-panel'),settings=panel.locator('.wallpaper-settings'),shot=name=>page.screenshot({path:path.join(out,mode+'-'+name+'.png'),animations:'disabled'})
-  const openSettings=async()=>{await page.locator('.directory-settings:not(.directory-refresh)').click();await expect(panel).toBeVisible()},closeSettings=async()=>{await panel.getByRole('button',{name:'Close settings',exact:true}).click();await expect(panel).toHaveCount(0)}
+  const openSettings=async()=>{await openApplicationSettings(page);await expect(panel).toBeVisible()},closeSettings=async()=>{await panel.getByRole('button',{name:'Close settings',exact:true}).click();await expect(panel).toHaveCount(0)}
   await openSettings();await expect(settings).toHaveCount(0);await panel.getByRole('tab',{name:'Messages',exact:true}).click();await expect(settings).toBeVisible();await expect(page.locator('html')).toHaveAttribute('data-theme','white');await expect(settings.locator('.wallpaper-preview')).toHaveClass(/sample-mint/);await closeSettings()
   await ui('view.open',{kind:'messages',employee:a.id});await expect(wall).toHaveAttribute('data-wallpaper-pattern','daydream');await expect(wall).toHaveAttribute('data-wallpaper-density','115');await expect(page.locator('.message-conversation .transcript')).toContainText('Let’s make room')
   const svg=wall.locator('svg'),nodeCount=await svg.locator('*').count();assert.ok(nodeCount<125,'one compact tile, not one element per viewport glyph');await expect(wall).toHaveCSS('pointer-events','none');await shot('daydream-scattered-chat')

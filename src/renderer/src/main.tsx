@@ -75,3 +75,5 @@ import './styles/workspace-design.css'
 import './styles/avatar-surfaces.css'
 
 import './styles/disclosure-navigation.css'
+
+import './styles/application-launcher.css'
