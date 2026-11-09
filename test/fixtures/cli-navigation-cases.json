@@ -14,5 +14,54 @@
         "teamTab": "workers"
       }
     }
+  },
+  {
+    "args": [
+      "view",
+      "select",
+      "plan",
+      "--mission-tab",
+      "research"
+    ],
+    "expected": {
+      "cmd": "view.select",
+      "args": {
+        "id": "plan",
+        "missionTab": "research"
+      }
+    }
+  },
+  {
+    "args": [
+      "view",
+      "open",
+      "plan",
+      "--mission-tab",
+      "engineering"
+    ],
+    "expected": {
+      "cmd": "view.open",
+      "args": {
+        "kind": "plan",
+        "missionTab": "engineering",
+        "details": false
+      }
+    }
+  },
+  {
+    "args": [
+      "view",
+      "navigation",
+      "plan",
+      "--expanded",
+      "false"
+    ],
+    "expected": {
+      "cmd": "view.navigation",
+      "args": {
+        "section": "plan",
+        "expanded": false
+      }
+    }
   }
 ]

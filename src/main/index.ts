@@ -71,8 +71,8 @@ ipcMain.handle('shell:openExternal', async (event, url: string) => {
 
 setFileRevealer(file=>shell.showItemInFolder(file))
 
-setViewGuard(async nextKind => {
-  if (mainWindow&&rendererReady(mainWindow.webContents)) await askRenderer('flush', {nextKind}, 12000)
+setViewGuard(async (nextKind,nextMissionTab) => {
+  if (mainWindow&&rendererReady(mainWindow.webContents)) await askRenderer('flush', {nextKind,nextMissionTab}, 12000)
 })
 
 setUiHandler(async (op, args) => {

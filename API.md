@@ -256,10 +256,21 @@ agents worker create --engine codex --cwd /path/to/existing/project --title Work
 ```
 
 `view.get.teamTab` is `characters|board|workers`, remembered per client across navigation
-and restart. The top-level Team button returns to the last selected Team subview.
+and restart. The top-level Team button returns to the last selected Team subview with the selector collapsed. Clicking Team again reveals its horizontal selector; the chevron changes from right to down. `view.navigation {section:"team",expanded:true|false}` controls this client-only disclosure without leaving the current editor.
 The existing `teamViewId` controls saved employee team groupings for Characters/Board. Workers uses its independent native catalog.
 Selecting a tab without teamViewId retains the current grouping; selecting the main
 Team mode without either argument returns to All Team, preserving the remembered tab.
+
+Mission uses the same disclosure behavior. Its child destinations are **Plan**, **Engineering** and **Research**; the last two are empty workspaces. `view.select {id:"plan",missionTab:"plan|engineering|research"}` selects a child, while `view.navigation {section:"mission",expanded:true|false}` reveals or hides the child selector. Clicking the active Plan child toggles a nested selector containing its ten existing layouts and saved custom views (`section:"plan"`). Collapsing Mission also collapses this nested row. Selected child and Plan layout are remembered per client across navigation and Core restart; disclosure rows are transient and collapse when leaving the primary destination. The legacy primary API ID/kind `plan` continues to mean Mission. Navigation does not change task authority, execution, filters or selected employee identities; unsaved forms still block leaving their workspace.
+
+Plan exposes one **New task** form. “When I confirm success” creates a persistent `mission.*` goal with assignees, supervision and reminders; “After each scheduled execution” uses the existing `schedule.*` timing/event controls. These retain separate Core lifecycle semantics: an engine run cannot silently confirm a persistent goal. The common name, prompt and planning fields remain filled when switching completion mode. Existing task detail editors and CLI commands remain available.
+
+```sh
+agents view select plan --mission-tab research --json
+agents view navigation mission --expanded true --json
+agents view select plan --mission-tab plan --json
+agents view navigation plan --expanded true --json
+```
 
 `card.create --client-request-id ID` recovers the same accepted employee after a lost
 response. It keeps the workspace, engine, appearance and initialization identity;
@@ -3496,7 +3507,7 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 <!-- BEGIN GENERATED CLI COMMAND INDEX -->
 ## 全部 CLI 命令索引
 
-下面 452 项来自共享协议 `src/shared/api-registry.ts`。命令名中的句点在终端中写成空格；每项都可附加 `--json`。参数、返回值和限制见上文对应章节。
+下面 453 项来自共享协议 `src/shared/api-registry.ts`。命令名中的句点在终端中写成空格；每项都可附加 `--json`。参数、返回值和限制见上文对应章节。
 
 | 命令 | 参数 | 作用 | 对应界面 | 授权策略 |
 | --- | --- | --- | --- | --- |
@@ -3730,7 +3741,8 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 | <code>agents channel post-trigger-batch</code> | <code>CHANNEL_ID --batch-id ID [--offset N --limit N]</code> | Read the exact counted batch with paged complete posts and explicit unavailable entries; no approximate latest-N window, model call or user-read acknowledgment | Batch source posts | chat |
 | <code>agents card profile</code> | <code>ID [--offset N] [--limit N]</code> | Read employee identity, authorized memberships, named workspaces and paged Plan tasks without opening an engine or changing read receipts | Employee profile | employee.read |
 | <code>agents view list</code> | <code>—</code> | List application views and their shared data contracts | Shared views / group conversations | operator |
-| <code>agents view select</code> | <code>company&#124;messages&#124;plan [--team-view ID] [--team-tab characters&#124;board&#124;workers]</code> | Select a presentation mode; Team has Characters, Board and Workers subviews; Messages resumes the last conversation for this client | Shared views / group conversations | operator |
+| <code>agents view navigation</code> | <code>team&#124;mission&#124;plan --expanded true&#124;false</code> | Set the current client primary or nested navigation disclosure. Reveals selectors without leaving an editor; expanded rows collapse on primary navigation. | Primary navigation chevrons | operator |
+| <code>agents view select</code> | <code>company&#124;messages&#124;plan [--team-view ID] [--team-tab characters&#124;board&#124;workers] [--mission-tab plan&#124;engineering&#124;research]</code> | Select a presentation mode; Team has Characters, Board and Workers subviews; Messages resumes the last conversation for this client | Shared views / group conversations | operator |
 | <code>agents chat list</code> | <code>—</code> | List groups for the current authenticated member | Shared views / group conversations | chat |
 | <code>agents chat create</code> | <code>--name NAME [--team TEAM] [--members JSON] [--owner-id ID] [--client-request-id ID]</code> | Create a group with an Agent Owner; Agent creators own their group, user selects ownerId (defaults to first selected member). Stable clientRequestId retries the same caller-owned creation | Shared views / group conversations | chat |
 | <code>agents chat update</code> | <code>ID --patch JSON</code> | Conversation Owner/Admin: edit group name and membership; Company role does not confer access | Shared views / group conversations | chat |
@@ -3820,7 +3832,7 @@ Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Wo
 | <code>agents engine models</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek [--kind worker&#124;cloud-native-worker] [--team NAME]</code> | List available models before employee creation, without inference; Cloud Native reads the selected host | 创建员工和默认模型设置 | operator |
 | <code>agents settings set</code> | <code>[--view company&#124;messages&#124;plan &#124; --view-appearance JSON&#124;@file] [--message-wallpaper JSON&#124;@file] [--language en&#124;zh-CN] [--theme violet&#124;blue&#124;mint&#124;teal&#124;cyan&#124;rose&#124;coral&#124;amber&#124;indigo&#124;graphite&#124;custom&#124;white&#124;light&#124;space&#124;black&#124;midnight&#124;sage] [--theme-color #RRGGBB] [--default-permission default&#124;acceptEdits&#124;bypassPermissions] [--explorer-width N] [--explorer-collapsed on&#124;off] [--explorer-tree-collapsed on&#124;off] [--asset-drawer-width N] [--terminal-height N] [--page-zoom N] [--zoom-sensitivity N] [--pan-sensitivity N] [--sidebar-width N] [--board-max-columns N] [--snap-employees on&#124;off] [--team-overview on&#124;off] [--default-codex-model ID] [--default-claude-model ID] [--default-cline-model ID] [--default-pi-model ID]</code> | Patch independent view appearances and shared settings; legacy theme flags target Messages only | 背景、灵敏度和团队索引 | operator |
 | <code>agents view get</code> | <code>—</code> | Read service-owned navigation, including without a window | 当前面板 | operator |
-| <code>agents view open</code> | <code>home&#124;messages&#124;plan&#124;team&#124;employee&#124;workspace&#124;conversation&#124;initialization&#124;plugin&#124;settings [--name NAME] [--employee ID &#124; --chat GROUP_ID &#124; --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab characters&#124;board&#124;workers]</code> | Open a form, workspace, news channel or employee conversation | 打开资料或会话 | operator |
+| <code>agents view open</code> | <code>home&#124;messages&#124;plan&#124;team&#124;employee&#124;workspace&#124;conversation&#124;initialization&#124;plugin&#124;settings [--name NAME] [--employee ID &#124; --chat GROUP_ID &#124; --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab characters&#124;board&#124;workers] [--mission-tab plan&#124;engineering&#124;research]</code> | Open a form, workspace, news channel or employee conversation | 打开资料或会话 | operator |
 | <code>agents view close</code> | <code>—</code> | Close the current panel after saving workspace edits; keep engines running | × / Escape / 收起面板 | operator |
 | <code>agents view details</code> | <code>on&#124;off</code> | Show or hide employee details inside a conversation | 员工资料 / 返回会话 | operator |
 | <code>agents status</code> | <code>—</code> | Is the app running, and how many sessions are live | The app window being open | operator |

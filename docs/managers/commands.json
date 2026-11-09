@@ -10702,8 +10702,37 @@
     "target": "request"
   },
   {
+    "name": "view.navigation",
+    "args": "team|mission|plan --expanded true|false",
+    "summary": "Set the current client primary or nested navigation disclosure. Reveals selectors without leaving an editor; expanded rows collapse on primary navigation.",
+    "gui": "Primary navigation chevrons",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "section": {
+          "enum": [
+            "team",
+            "mission",
+            "plan"
+          ]
+        },
+        "expanded": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "section",
+        "expanded"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
     "name": "view.select",
-    "args": "company|messages|plan [--team-view ID] [--team-tab characters|board|workers]",
+    "args": "company|messages|plan [--team-view ID] [--team-tab characters|board|workers] [--mission-tab plan|engineering|research]",
     "summary": "Select a presentation mode; Team has Characters, Board and Workers subviews; Messages resumes the last conversation for this client",
     "gui": "Shared views / group conversations",
     "inputSchema": {
@@ -10727,6 +10756,13 @@
             "characters",
             "board",
             "workers"
+          ]
+        },
+        "missionTab": {
+          "enum": [
+            "plan",
+            "engineering",
+            "research"
           ]
         }
       },
@@ -14277,7 +14313,7 @@
   },
   {
     "name": "view.open",
-    "args": "home|messages|plan|team|employee|workspace|conversation|initialization|plugin|settings [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab characters|board|workers]",
+    "args": "home|messages|plan|team|employee|workspace|conversation|initialization|plugin|settings [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab characters|board|workers] [--mission-tab plan|engineering|research]",
     "summary": "Open a form, workspace, news channel or employee conversation",
     "gui": "打开资料或会话",
     "readOnly": false,

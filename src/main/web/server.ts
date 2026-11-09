@@ -104,7 +104,7 @@ export async function startWebServer(options:Options={}){
     }
   })
 
-  setViewGuard(async nextKind=>{if(requestContext().clientId&&peers.has(requestContext().clientId!))await ask('flush',{nextKind})})
+  setViewGuard(async (nextKind,nextMissionTab)=>{if(requestContext().clientId&&peers.has(requestContext().clientId!))await ask('flush',{nextKind,nextMissionTab})})
   const server=http.createServer(async(req,res)=>{
     res.setHeader('referrer-policy','no-referrer')
     try{

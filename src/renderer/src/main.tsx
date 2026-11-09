@@ -73,3 +73,5 @@ import './styles/plan-editor.css'
 import './styles/collaboration.css'
 import './styles/workspace-design.css'
 import './styles/avatar-surfaces.css'
+
+import './styles/disclosure-navigation.css'

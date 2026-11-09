@@ -5,6 +5,10 @@ export type ViewState = {
   kind: 'home' | 'team' | 'employee' | 'workspace' | 'conversation' | 'initialization' | 'settings' | 'plugin' | 'clone' | 'messages' | 'plan'
   revision: number
   teamTab?: 'characters' | 'board' | 'workers'
+  missionTab?: 'plan' | 'engineering' | 'research'
+  teamNavigationOpen?: boolean
+  missionNavigationOpen?: boolean
+  planNavigationOpen?: boolean
   name?: string
   pluginId?: string
   employee?: string
@@ -17,5 +21,5 @@ export type ViewState = {
   details?: boolean
   shared?: boolean
   /** Return from an existing workbench or editor to its originating direct message. */
-  returnTo?: {kind:'messages';employee?:string;chatId?:string;channelId?:string;sourceId?:string}|{kind:'plan';planViewId?:string}
+  returnTo?: {kind:'messages';employee?:string;chatId?:string;channelId?:string;sourceId?:string}|{kind:'plan';planViewId?:string;missionTab?:ViewState['missionTab']}
 }

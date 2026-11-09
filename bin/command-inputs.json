@@ -5888,6 +5888,24 @@
     "fields": [],
     "rawPositionals": true
   },
+  "view.navigation": {
+    "fields": [
+      [
+        "section",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "expanded",
+        "expanded",
+        "boolean-value",
+        true,
+        false
+      ]
+    ]
+  },
   "chat.list": {
     "fields": []
   },

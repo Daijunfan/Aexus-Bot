@@ -150,7 +150,8 @@
     "test:group-collaboration": "node test/group-collaboration-core-test.mjs && node test/group-rebuild-ui-test.mjs && node test/group-rebuild-ui-test.mjs --web",
     "test:worker-workbench": "node test/worker-workbench-core-test.mjs && node test/worker-workbench-ui-test.mjs && node test/worker-workbench-ui-test.mjs --web",
     "test:desktop-quit": "node test/desktop-quit-ui-test.mjs",
-    "test:employee-input": "node test/employee-input-performance-ui-test.mjs"
+    "test:employee-input": "node test/employee-input-performance-ui-test.mjs",
+    "test:disclosure-navigation": "node test/disclosure-navigation-core-test.mjs && node test/disclosure-navigation-ui-test.mjs && node test/disclosure-navigation-ui-test.mjs --web"
   },
   "build": {
     "appId": "com.agentscompany.app",

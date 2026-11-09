@@ -21,7 +21,7 @@ for(const {args,input,expected} of [...cases,...messageCases,...preferenceCases,
  const actual=JSON.parse(result.stdout);if(actual.cmd)actual.args??={}
  assert.deepEqual(actual,expected,args.join(' '))
 }
-const coveredRoutes=new Set(cases.map(({args})=>args.slice(0,2).join('.')))
+const coveredRoutes=new Set([...cases,...navigationCases].map(({args})=>args.slice(0,2).join('.')))
 for(const command of Object.keys(compiled))assert.ok(coveredRoutes.has(command),'Missing CLI payload fixture: '+command)
 const unknown=JSON.parse(spawnSync(process.execPath,[path.join(root,'bin/agents'),'unknown-command','--json'],{cwd:root,env:{...process.env,AGENTS_COMPANY_PARSE_ONLY:'1'},encoding:'utf8'}).stdout)
 assert.match(unknown.error,/unknown command: unknown-command/);assert.doesNotMatch(unknown.error,/not defined/)

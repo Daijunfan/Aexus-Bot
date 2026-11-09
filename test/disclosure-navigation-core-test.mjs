@@ -1,0 +1,22 @@
+// Client-scoped navigation and durable selections over actual Core handlers.
+import fs from 'node:fs'
+import net from 'node:net'
+import path from 'node:path'
+import assert from 'node:assert/strict'
+import {randomUUID} from 'node:crypto'
+import {fixtureCore} from './fixtures/headless-core.mjs'
+const listener=net.createServer();await new Promise(resolve=>listener.listen(0,'127.0.0.1',resolve));const port=listener.address().port;await new Promise(resolve=>listener.close(resolve));const url='http://127.0.0.1:'+port,f=await fixtureCore({AGENTS_COMPANY_WEB:'1',AGENTS_COMPANY_WEB_PORT:String(port)}),clients={A:{id:randomUUID()},B:{id:randomUUID()}}
+async function login(){for(const identity of Object.values(clients)){const response=await fetch(url+'/api/login',{method:'POST',headers:{Origin:url,'content-type':'application/json'},body:JSON.stringify({token:fs.readFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim()})}),reply=await response.json();assert.ok(reply.ok);identity.cookie=response.headers.get('set-cookie').split(';')[0];identity.csrf=reply.data.csrf}}
+const call=async(command,args={},client='A')=>{const identity=clients[client],response=await fetch(url+'/api/rpc',{method:'POST',headers:{Origin:url,Cookie:identity.cookie,'content-type':'application/json','x-agents-csrf':identity.csrf,'x-agents-client':identity.id},body:JSON.stringify({cmd:command,args})}),reply=await response.json();assert.ok(reply.ok,reply.error);return reply.data}
+try{
+ await f.until(()=>fetch(url+'/api/health').then(response=>response.ok).catch(()=>false),'web ready');await login()
+ let view=await call('view.get');assert.equal(view.teamTab,'characters');assert.ok(!view.teamNavigationOpen)
+ await call('view.navigation',{section:'team',expanded:true});view=await call('view.select',{id:'company',teamTab:'workers'});assert.equal(view.teamNavigationOpen,true);await call('view.select',{id:'messages'});view=await call('view.select',{id:'company'});assert.equal(view.teamTab,'workers');assert.ok(!view.teamNavigationOpen)
+ await call('view.select',{id:'plan'});await call('view.navigation',{section:'mission',expanded:true});await call('view.navigation',{section:'plan',expanded:true});view=await call('view.open',{kind:'plan',planViewId:'calendar'});assert.equal(view.planNavigationOpen,true);await call('view.navigation',{section:'mission',expanded:false});view=await call('view.get');assert.ok(!view.planNavigationOpen)
+ await call('view.select',{id:'company'});view=await call('view.select',{id:'plan'});assert.equal(view.missionTab,'plan');assert.equal(view.planViewId,'calendar');assert.ok(!view.missionNavigationOpen)
+ await call('view.navigation',{section:'mission',expanded:true});await call('view.select',{id:'plan',missionTab:'research'});await call('view.select',{id:'messages'});view=await call('view.select',{id:'plan'});assert.equal(view.missionTab,'research');assert.equal(view.planViewId,'calendar');assert.ok(!view.missionNavigationOpen)
+ await assert.rejects(call('view.navigation',{section:'plan',expanded:true}),/matching primary/);await assert.rejects(call('view.select',{id:'company',missionTab:'research'}),/within Mission/);await assert.rejects(call('view.open',{kind:'plan',missionTab:'engineering',planViewId:'calendar'}),/Database views belong/)
+ await call('view.select',{id:'plan',missionTab:'engineering'},'B');await call('view.select',{id:'company',teamTab:'board'},'B');assert.equal((await call('view.get',{},'A')).missionTab,'research')
+ await f.stop();await f.start();await login();view=await call('view.select',{id:'plan'},'A');assert.equal(view.missionTab,'research');assert.equal(view.planViewId,'calendar');assert.ok(!view.missionNavigationOpen);assert.equal((await call('view.select',{id:'company'},'A')).teamTab,'workers');assert.equal((await call('view.select',{id:'company'},'B')).teamTab,'board');assert.equal((await call('view.select',{id:'plan'},'B')).missionTab,'engineering')
+ console.log('PASS primary/nested disclosure, parent collapse, remembered Team/Mission/Plan selection, restart, independent clients, invalid routes; no execution')
+}finally{await f.close()}

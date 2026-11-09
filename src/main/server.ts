@@ -149,7 +149,7 @@ import { transcriptItems,deleteTranscript,seedTranscript } from './transcripts'
 import { renderTranscript } from '../shared/transcript'
 import type { EffortLevel,PermissionMode } from '@anthropic-ai/claude-agent-sdk'
 
-let beforeViewChange:(nextKind?:ViewState['kind'])=>Promise<void> = async () => {}
+let beforeViewChange:(nextKind?:ViewState['kind'],nextMissionTab?:ViewState['missionTab'])=>Promise<void> = async () => {}
 export function setViewGuard(guard: typeof beforeViewChange) { beforeViewChange = guard }
 let server: Server | null = null
 let ownsSocket = false
@@ -476,12 +476,16 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'settings.set': return setPreferences(a) // Includes pageZoom and pane sizes; usable without a desktop.
 
     case 'view.list': return {views:APP_VIEWS,current:getView(),company:teamViewList(),shared:{employees:'session.list',conversations:'session.transcript',inbox:'session.inbox',readReceipts:'session.acknowledge',groups:'chat.list',bindings:'management.topology',schedules:'schedule.list',plans:'plan.query',planViews:'plan.views'}}
+    case 'view.navigation': {
+      validateApiArguments(req.cmd,a);const view=getView(),section=s(a.section),company=!['messages','plan'].includes(view.kind)&&view.returnTo?.kind!=='messages'&&view.returnTo?.kind!=='plan';if(section==='team'?!company:view.kind!=='plan'||section==='plan'&&((view.missionTab??'plan')!=='plan'||a.expanded&&!view.missionNavigationOpen))throw Error('Open the matching primary view before expanding its navigation');return setView({...view,[section==='team'?'teamNavigationOpen':section==='mission'?'missionNavigationOpen':'planNavigationOpen']:a.expanded})
+    }
     case 'view.select': {
       const mode=appView(a.id);if(!mode)throw Error('Unknown application view')
       if(a.teamTab!==undefined&&(mode.id!=='company'||!['characters','board','workers'].includes(a.teamTab)))throw Error('Choose Characters, Board or Workers within Team')
       if(mode.id!=='company'&&a.teamViewId!==undefined)throw Error('Only Company selects a Team subview')
       if(mode.id==='company'&&a.teamViewId!==undefined&&!teamViewList().views.some(item=>item.id===a.teamViewId))throw Error('Unknown Company subview')
-      await beforeViewChange(mode.id==='company'?'home':mode.id)
+      if(a.missionTab!==undefined&&(mode.id!=='plan'||!['plan','engineering','research'].includes(a.missionTab)))throw Error('Choose Plan, Engineering or Research within Mission')
+      const nextMissionTab=a.missionTab??getView().missionTab??'plan';await beforeViewChange(mode.id==='company'?'home':mode.id,mode.id==='plan'?nextMissionTab:undefined)
       if(mode.id==='company')selectTeamView(a.teamViewId??(a.teamTab?teamViewList().activeId:'all'))
       if(mode.id==='messages'){
         const saved={...getMessagesView(),shared:getView().shared}
@@ -493,13 +497,15 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
           return setView(saved)
         }catch{return setView({kind:'messages'})}
       }
-      return setView({kind:mode.kind,...(a.teamTab?{teamTab:a.teamTab}:{})})
+      return setView({kind:mode.kind,...(a.teamTab?{teamTab:a.teamTab}:{}),...(mode.id==='plan'?{missionTab:nextMissionTab}:{} )})
     }
     case 'view.get': return getView()
     case 'view.open': {
       const kind=a.kind as ViewState['kind'],store=readStore()
       if(!['home','team','employee','workspace','conversation','initialization','settings','plugin','clone','messages','plan'].includes(kind))throw new Error('Unknown view kind')
       if(a.teamTab!==undefined&&(kind!=='home'||!['characters','board','workers'].includes(a.teamTab)))throw Error('Choose Characters, Board or Workers within Team')
+      if(a.missionTab!==undefined&&(kind!=='plan'||!['plan','engineering','research'].includes(a.missionTab)))throw Error('Choose Plan, Engineering or Research within Mission')
+      if(a.planViewId!==undefined&&a.missionTab!==undefined&&a.missionTab!=='plan')throw Error('Database views belong to Mission / Plan')
       if(a.planViewId!==undefined&&(kind!=='plan'||!((await planRequest('views',{})) as Array<{id:string}>).some((view:any)=>view.id===a.planViewId)))throw Error('Unknown Plan view')
       if([a.employee,a.chatId,a.channelId].filter(value=>value!==undefined).length>1)throw Error('Choose one conversation')
       if(a.chatId!==undefined){if(kind!=='messages')throw Error('Group conversations belong to Messages');getChatGroup(a.chatId)}
@@ -511,16 +517,16 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       const pluginId=a.pluginId??((kind==='settings'||kind==='employee'||kind==='clone')?getView().pluginId:undefined)
       if(kind==='plugin'||pluginId)requirePlugin(s(pluginId))
       if(kind==='conversation'&&pluginId){const card=store.sessions.find(c=>c.id===a.employee)!;if(teamSettings(store,card.group).pluginId!==pluginId)throw new Error('员工不属于当前插件')}
-      await beforeViewChange(kind)
+      await beforeViewChange(kind,kind==='plan'?(a.planViewId?'plan':a.missionTab??getView().missionTab??'plan'):undefined)
       if(kind==='plugin'){await openPluginWindow(s(pluginId),pluginWorkspace({id:pluginId}));return setView({kind:'home',pluginId})}
       const previous=getView()
-      const returnTo=!['home','messages','plugin','plan'].includes(kind)?(previous.kind==='plan'?{kind:'plan' as const,planViewId:previous.planViewId}:previous.kind==='messages'?{kind:'messages' as const,employee:previous.employee,...(previous.chatId?{chatId:previous.chatId}:{}),...(previous.channelId?{channelId:previous.channelId,...(previous.sourceId?{sourceId:previous.sourceId}:{})}:{})}:previous.returnTo):undefined
-      return setView({kind,...(a.teamTab?{teamTab:a.teamTab}:{}),name:a.name,employee:a.employee,chatId:a.chatId,channelId:a.channelId,sourceId:a.sourceId,planViewId:a.planViewId,settings:a.settings,pluginId,details:!!a.details,shared:previous.shared,returnTo})
+      const returnTo=!['home','messages','plugin','plan'].includes(kind)?(previous.kind==='plan'?{kind:'plan' as const,planViewId:previous.planViewId,missionTab:previous.missionTab}:previous.kind==='messages'?{kind:'messages' as const,employee:previous.employee,...(previous.chatId?{chatId:previous.chatId}:{}),...(previous.channelId?{channelId:previous.channelId,...(previous.sourceId?{sourceId:previous.sourceId}:{})}:{})}:previous.returnTo):undefined
+      return setView({kind,...(a.teamTab?{teamTab:a.teamTab}:{}),name:a.name,employee:a.employee,chatId:a.chatId,channelId:a.channelId,sourceId:a.sourceId,...(a.planViewId!==undefined?{planViewId:a.planViewId}:{}),...(kind==='plan'?{missionTab:a.planViewId?'plan':a.missionTab??previous.missionTab??'plan'}:{}),settings:a.settings,pluginId,details:!!a.details,shared:previous.shared,returnTo})
     }
     case 'view.close': {
       await beforeViewChange()
       const view=getView(),back=view.returnTo
-      if(back?.kind==='plan')return setView({kind:'plan',planViewId:back.planViewId})
+      if(back?.kind==='plan')return setView({kind:'plan',planViewId:back.planViewId,missionTab:back.missionTab??'plan'})
       if(back){let channelId:string|undefined;if(back.channelId){try{channelId=getChannel(back.channelId).id}catch{}};return setView({kind:'messages',employee:readStore().sessions.some(card=>card.id===back.employee&&!card.deleting)?back.employee:undefined,...(back.chatId&&listChatGroups().some(group=>group.id===back.chatId)?{chatId:back.chatId}:{}),...(channelId?{channelId,...(back.sourceId&&!['youtube','x','telegram'].includes(getChannel(channelId).kind)?{sourceId:back.sourceId}:{})}:{})})}
       if(view.kind==='messages'&&(view.employee||view.chatId||view.channelId))return setView({kind:'messages'})
       return setView({kind:'home',pluginId:view.pluginId})
