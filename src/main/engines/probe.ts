@@ -12,6 +12,7 @@ import {assertEngineExecutable} from './registry'
 /** An explicit, bounded inference check, separate from ordinary no-cost discovery. */
 export async function probeEngine(engine:EngineId,confirm:boolean,model?:string){
   if(!isEngine(engine))throw Error('Unknown Coding Agent engine')
+  if(engine==='chatgpt')throw Error('Test ChatGPT by sending a message to a local ChatGPT employee')
   if(confirm!==true)throw Error('测试调用可能产生模型费用；请明确确认后重试 (--confirm)')
   if(isNativeAcp(engine)){await assertEngineExecutable(engine);return (await import('./opencode-runtime')).probeNativeAcp(engine,model)}
   if(engine==='cline'||engine==='pi'){await assertEngineExecutable(engine);return (await import('./process-probe')).probeProcessEngine(engine,model)}

@@ -98,6 +98,7 @@ export type Live = {
   /** Codex runs one child process per turn, so turns are queued rather than pushed. */
   running: boolean
   queueDispatching?: boolean
+  chatGPTRecovery?: string
   nativeTasks?:Record<string,{processId:string;command:string;cwd:string;status:string}>
   nativeContinuation?:boolean
   pendingMessages?: {id:string;text:string;images?:string[];files?:string[];delegation?:Delegation;viewId?:string;sourceView?:MessageSourceView;chat?:ChatTaskContext;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
@@ -277,7 +278,7 @@ const queuedPrivateSends=new Map<string,PrivateSendAttempt>()
 export function privateSendQueued(employeeId:string,queueId:string){return [...live.values()].some(state=>state.cardId===employeeId&&(state.pendingMessages?.some(message=>message.id===queueId)||state.privateSend?.queueId===queueId))}
 function interruptQueuedPrivateSend(id:string,reason:string){const attempt=queuedPrivateSends.get(id);try{attempt?.interrupted(reason)}catch(error){return error}finally{queuedPrivateSends.delete(id)}}
 function dispatchQueued(s:Live,id:string){
-  if(!live.has(id)||taskOwners.has(s.cardId)||s.running||s.acknowledging||s.queueDispatching||!s.pendingMessages?.length)return
+  if(!live.has(id)||taskOwners.has(s.cardId)||s.running||s.acknowledging||s.chatGPTRecovery||s.queueDispatching||!s.pendingMessages?.length)return
   s.queueDispatching=true
   const next=s.pendingMessages.shift()!,privateSend=queuedPrivateSends.get(next.id);queuedPrivateSends.delete(next.id);rememberMeta(id,{pendingMessages:[...s.pendingMessages]})
   void sendMessage(id,next.text,undefined,next.images,next.delegation,next.viewId,next.chat,next.replyTo,next.replyQuote,next.crossReply,next.files,privateSend,next.sourceView).then(sent=>{if(!sent)privateSend?.interrupted('Private message preparation was interrupted. It was not replayed.')}).catch(error=>{try{privateSend?.failed(error)}catch(saveError){emit('session:error',{sessionId:id,message:String(saveError)})};updateChatDelivery(s.cardId,next.chat,{status:'failed',error:String(error)});if(!next.delegation?.groupNotice&&!next.delegation?.channelNotice)emit('session:error',{sessionId:id,message:String(error)})}).finally(()=>{s.queueDispatching=false;if(!s.running)queueMicrotask(()=>dispatchQueued(s,id))})
@@ -301,6 +302,9 @@ export function enqueueMessage(id:string,text:string,images:string[]=[],delegati
   viewId=notice?undefined:taskViewId(s.cardId,viewId)
   if(crossReply){if(!isAppAdministrator(delegation.requestedBy))throw Error('Only the user or Secretary may quote another conversation')}else resolveMessageReply(id,replyTo,replyQuote)
   if(replyTo!==undefined&&text.startsWith('/'))throw Error('Replies require a regular message, not a slash command')
+  // The browser can run only one turn per employee. Bound waiting work during bursts.
+  if(s.engine==='chatgpt'&&(s.pendingMessages?.length??0)>=8)
+    throw Error('This ChatGPT employee has 8 messages waiting. Try again after one starts.')
   const entry={id:newSessionId(),text,images,...(filePaths.length?{files:filePaths}:{}),delegation,viewId,...(sourceView?{sourceView}:{}),chat,...(replyTo!==undefined?{replyTo,replyQuote,...(crossReply?{crossReply}:{})}:{})}
   if(privateSend){privateSend.queued(entry.id);queuedPrivateSends.set(entry.id,privateSend)}
   ;(s.pendingMessages??=[]).push(entry)
@@ -318,6 +322,13 @@ export async function steerMessage(id:string,text:string,sourceView?:MessageSour
 export async function backgroundProcesses(id:string,processId?:string,stop=false){
   const s=require_(id);if(stop)assertEmployeeControl(s.cardId)
   return s.driver.background(processId,stop)
+}
+export async function recoverChatGPTDelivery(id:string,messageId:string,action:'check'|'unsent'){
+  const state=require_(id)
+  assertEmployeeControl(state.cardId)
+  if(!state.driver.recoverChatGPT)throw Error('This employee does not support ChatGPT recovery')
+  await state.driver.recoverChatGPT(messageId,action)
+  return {resumed:true}
 }
 export function queuedMessages(id:string){return [...(require_(id).pendingMessages??[])]}
 export function removeQueuedMessage(id:string,messageId:string){
@@ -398,6 +409,8 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
   const s = require_(sessionId)
   assertEmployeeControl(s.cardId, owner)
   delegation??=delegationFor(s.cardId);validateDelegation(delegation,s.cardId)
+  if(s.chatGPTRecovery)throw Error('Resolve the previous ChatGPT delivery before sending')
+  if(s.engine==='chatgpt'&&(!privateSend?.directMessageId||chat||owner||imagePaths.length||filePaths.length||replyTo||crossReply))throw Error('ChatGPT supports plain text from Messages only')
   const notice=isGroupNotice(delegation,chat,s.cardId)
   if(!notice&&!privateSend?.directMessageId)authorizeSlash(text,s.cardId,delegation)
   const nativeControl=!chat&&!privateSend?.directMessageId&&(s.engine==='claude'&&text.startsWith('/')||s.engine==='codex'&&/^\/(compact|review)(?:\s|$)/.test(text))
@@ -460,7 +473,7 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
     const engineText=nativeControl?text:prefix+taskViewPrompt(viewId,!chat&&!s.privateInitialization&&!privateTurns.has(sessionId)?messageSourcePrompt(sourceView,attachmentText):chatTaskPrompt(chat,s.cardId,acceptedDelegation,attachmentText))
     s.bootstrapInstructions=bootstrap
     const closePublication=chat?openDiscussionTool(s,chat):undefined
-    try{s.driver.send(s.privateInitialization||nativeControl?engineText:employeeRolePrompt(readStore().sessions.find(card=>card.id===s.cardId)!,engineText),images,taskId)}catch(error){closePublication?.();throw error}
+    try{s.driver.send(s.engine==='chatgpt'?text:s.privateInitialization||nativeControl?engineText:employeeRolePrompt(readStore().sessions.find(card=>card.id===s.cardId)!,engineText),images,taskId)}catch(error){closePublication?.();throw error}
     if(closePublication)void s.driver.whenIdle().then(closePublication,closePublication)
     privateSend?.accepted(taskId!)
   }
@@ -610,6 +623,7 @@ export type SessionInfo = {
   effort?: EffortLevel
   permissionMode: PermissionMode
   usage?:Record<string,unknown>
+  chatGPTRecovery?:string
   pendingMessages?:{id:string;text:string;images?:string[];files?:string[];delegation?:Delegation;viewId?:string;sourceView?:MessageSourceView;chat?:ChatTaskContext;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
   commands: SlashCommand[]
   /** Commands bound to a local terminal, which a GUI should hide. */

@@ -94,6 +94,7 @@ async function append(employee:string,args:Record<string,any>,author:PrincipalRe
   const id='dm_'+randomUUID()
   try{
    const media=await attachments(employee,id,images,files)
+   requestContext().signal?.throwIfAborted()
    authorize(incoming?'direct.send':'direct.post',{employee},employee);readable(employee)
    const reply=args.resolvedReply??(args.replyTo?directReply(employee,args.replyTo,args.replyQuote):undefined),value=state(employee),entry:Entry={id,sequence:(value.entries.at(-1)?.sequence??0)+1,createdAt:Date.now(),author,text,clientMessageId:key,fingerprint,...media,...(reply?{reply}:{}),...(incoming?{delivery:{state:'preparing',boot}}:{})}
    value.entries.push(entry);save(employee,value);if(!incoming)published(employee,{messageId:entry.id,sequence:entry.sequence});return entry

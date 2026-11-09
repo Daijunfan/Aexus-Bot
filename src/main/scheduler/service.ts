@@ -47,6 +47,7 @@ function validate(input: ScheduleSpec,orphan=false): ScheduleSpec {
   const a = input.action, card = readStore().sessions.find(card => card.id === a?.employeeId)
   if (!card&&!orphan) throw new Error('Unknown employee; choose a current target from plan.schema before running or reassigning this schedule')
   if (a.type !== 'agent') throw new Error('action.type must be agent; prompt contains the instruction or CLI command for the employee')
+  if (card?.engine==='chatgpt') throw new Error('ChatGPT employees accept input from Messages only')
   if (card&&a.engine && a.engine !== card.engine) throw new Error('Schedule engine must match the employee')
   if (typeof a.prompt !== 'string' || !a.prompt.trim()||a.prompt.length>64000) throw new Error('action.prompt must contain 1–64000 characters')
   if (a.model !== undefined && (typeof a.model !== 'string' || !a.model.trim())) throw new Error('model must be a nonempty string')

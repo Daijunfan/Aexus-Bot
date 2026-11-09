@@ -64,6 +64,7 @@ export const EFFORT_LEVELS: { value: EffortLevel; label: string }[] = [
 
 export const ENGINES: { value: Engine; label: string; hint: string }[] = [
   { value: 'claude', label: 'Claude Agent', hint: 'Anthropic Claude via the Agent SDK' },
+  { value: 'chatgpt', label: 'ChatGPT', hint: 'Native ChatGPT in Ego Browser' },
   { value: 'codex', label: 'Codex', hint: 'OpenAI Codex CLI' },
   { value: 'cline', label: 'Cline', hint: 'Cline ACP · DeepSeek Flash' },
   { value: 'pi', label: 'Pi', hint: 'Pi RPC · DeepSeek Flash' },
@@ -263,6 +264,7 @@ export type Session = {
   thinkingManaged?: boolean
   planMode?: boolean
   usage?: Record<string,unknown>
+  chatGPTRecovery?:string
   pendingMessages?: {id:string;text:string;images?:string[];files?:string[];viewId?:string;sourceView?:import('./message-source').MessageSourceView;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
   remoteAdmin?: boolean
   fastMode?: boolean

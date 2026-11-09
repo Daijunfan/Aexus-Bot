@@ -13,6 +13,7 @@ export function bundledClaudeBinary(from?:string){
 }
 /** Resolve at call time: install/configure never requires restarting the company. */
 export function engineExecutable(engine:EngineId,preferPaired=engine==='claude'):string{
+  if(engine==='chatgpt')return resolveBinary('ego-browser')
   const config=engineConfiguration(engine)
   const override=process.env[engine.toUpperCase()+'_BIN']
   if(override)return override

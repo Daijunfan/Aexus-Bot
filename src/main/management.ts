@@ -67,7 +67,7 @@ export {bindManagement,unbindManagement} from './management-bindings'
 export function setManagementRole(id:string,role:ManagementRole){
   authorize('card.management-role',{id,role},id)
   if(!isManagementRole(role))throw Error('Invalid management role')
-  updateStore(store=>{const card=store.sessions.find(c=>c.id===id&&!c.deleting);if(!card)throw Error('Unknown employee');assertManagementKind({...card,managementRole:role},hasGlobalRole(store.access,card),employeeSettings(store,card).mode==='cloud');card.managementRole=role;ensureEmployeeBootstrap(card,store)});return {id,managementRole:role}
+  updateStore(store=>{const card=store.sessions.find(c=>c.id===id&&!c.deleting);if(!card)throw Error('Unknown employee');if(card.engine==='chatgpt'&&role!=='employee')throw Error('ChatGPT supports the Employee role only');assertManagementKind({...card,managementRole:role},hasGlobalRole(store.access,card),employeeSettings(store,card).mode==='cloud');card.managementRole=role;ensureEmployeeBootstrap(card,store)});return {id,managementRole:role}
 }
 /** Compatibility alias; all authority still lives in managementRole. */
 export function setGlobalManager(id:string,enabled:boolean){

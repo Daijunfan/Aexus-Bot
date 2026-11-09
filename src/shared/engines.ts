@@ -1,5 +1,6 @@
 /** Public engine IDs are stable; provider/model selection is independent. */
 export const ENGINE_DEFINITIONS={
+  chatgpt:{label:'ChatGPT',description:'Native ChatGPT browser conversation',protocol:'browser',capabilities:{streaming:true,images:false,approvals:false,resume:true,steer:false,plan:false,thinking:false,effort:false,background:false,clone:false}},
   codex:{label:'Codex',description:'Codex App Server',protocol:'app-server',capabilities:{streaming:true,images:true,approvals:true,resume:true,steer:true,plan:true,thinking:false,effort:true,background:true,clone:true}},
   cline:{label:'Cline',description:'Cline ACP · Native configuration',protocol:'acp',capabilities:{streaming:true,images:true,approvals:true,resume:true,steer:false,plan:true,thinking:false,effort:false,background:false,clone:false}},
   pi:{label:'Pi',description:'Pi RPC · Native configuration',protocol:'rpc',capabilities:{streaming:true,images:false,approvals:true,resume:true,steer:true,plan:false,thinking:false,effort:false,background:false,clone:false}},
@@ -18,9 +19,10 @@ export type EngineHealth={engine:EngineId;label:string;target:string;installed:b
 /** Creation-time discovery contains no paths, credentials or inference. */
 export function engineCapabilities(engine:EngineId){
   const definition=engineDefinition(engine),processAdapter=engine!=='codex'&&engine!=='claude'
-  return {engine,...definition,workspaceModes:isNativeAcp(engine)?['build','work']:['build','cloud','work'],employeeKinds:processAdapter?['worker']:['worker','cloud-native-worker'],cloudWorkerTransport:isNativeAcp(engine)?null:engine==='codex'?'remote-exec':'mcp-tunnel'}
+  return {engine,...definition,workspaceModes:engine==='chatgpt'?['build']:isNativeAcp(engine)?['build','work']:['build','cloud','work'],employeeKinds:processAdapter?['worker']:['worker','cloud-native-worker'],cloudWorkerTransport:engine==='chatgpt'||isNativeAcp(engine)?null:engine==='codex'?'remote-exec':'mcp-tunnel'}
 }
 export function assertEngineWorkspace(engine:EngineId,mode:'build'|'cloud'|'work',kind='worker'){
+  if(engine==='chatgpt'&&(mode!=='build'||kind!=='worker'))throw Error('ChatGPT requires a local Build Team and a local employee')
   if(isNativeAcp(engine)&&mode==='cloud')throw Error(`${ENGINE_DEFINITIONS[engine].label} currently requires a Core-local workspace; select Local workspace in this cloud Team`)
   if(isNativeAcp(engine)&&kind!=='worker')throw Error(`${ENGINE_DEFINITIONS[engine].label} currently supports kind:worker on the Core host only`)
   if(engine!=='codex'&&engine!=='claude'){
