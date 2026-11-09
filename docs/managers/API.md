@@ -2932,6 +2932,13 @@ cleans up its processes. Workfiles remain untouched. Terminal shells run with th
 human user's local/SSH account permissions. Agent tools still obey their own Work
 scope or Tunnel routing configuration.
 
+Team employee conversations use the same measured virtual viewport as long
+Messages histories. Work histories above 40 turns mount only visible rows and a
+small overscan; the full transcript remains available through Core and scroll
+navigation. Tool/thought expansion state survives row recycling. Typing into the
+composer does not lay out the full native history. Input, drafts, file editing,
+terminal layout, queue/stop semantics and native session identity are unchanged.
+
 `view.open`, `view.close`, and `view.details` flush file edits through these same
 workspace APIs. Save conflicts keep the editor open; the user can explicitly
 reload the current disk version. File editor and terminal are available for both
