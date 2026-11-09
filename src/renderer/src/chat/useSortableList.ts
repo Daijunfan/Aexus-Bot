@@ -22,8 +22,10 @@ export function useSortableList(options:Options){
  }
  const paint=()=>{
   const g=gesture.current,list=root.current;if(!g?.active||!list||!g.node.isConnected)return
-  const rect=g.node.getBoundingClientRect(),matrix=new DOMMatrix(getComputedStyle(g.node).transform),factor=list.getBoundingClientRect().width/list.offsetWidth||1
-  const base=(axis==='x'?rect.left:rect.top)-(axis==='x'?matrix.m41:matrix.m42)*factor,delta=(g.at-g.grab-base)/factor
+  const rect=g.node.getBoundingClientRect(),box=list.getBoundingClientRect(),matrix=new DOMMatrix(getComputedStyle(g.node).transform),factor=box.width/list.offsetWidth||1
+  // Keep a horizontal drag inside the strip: its transform must not extend scrollWidth forever.
+  const at=axis==='x'?Math.max(box.left,Math.min(box.right-rect.width,g.at-g.grab)):g.at-g.grab
+  const base=(axis==='x'?rect.left:rect.top)-(axis==='x'?matrix.m41:matrix.m42)*factor,delta=(at-base)/factor
   g.node.style.transform=axis==='x'?`translate3d(${delta}px,0,0)`:`translate3d(0,${delta}px,0)`
  }
  const finish=(commit:boolean)=>{

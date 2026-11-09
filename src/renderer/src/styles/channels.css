@@ -52,3 +52,9 @@
 .channel-subscription-sync strong{font-weight:500;overflow-wrap:anywhere}
 .channel-subscription-sync [data-sync-state=synced]{color:var(--green)}
 .channel-subscription-sync [data-sync-state=pending],.channel-subscription-sync [data-sync-state=offline]{color:var(--amber)}
+
+.channel-document-preview>.channel-document-download{position:absolute;inset:0;display:grid;place-items:center;width:100%;height:100%;padding:0;border:0;border-radius:inherit;background:transparent;color:#fff;opacity:0;transition:opacity .15s;cursor:pointer}
+.channel-document-download>.codicon{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#1f2937;font-size:20px;box-shadow:0 1px 5px #0002}
+.channel-document-preview:is(:hover,:focus-within)>.channel-document-download,.channel-document-download:disabled{opacity:1}.channel-document-download:disabled{cursor:progress}.channel-document-preview>.channel-document-download:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media(hover:none){.channel-document-preview>.channel-document-download{opacity:1}}
+@media(prefers-reduced-motion:reduce){.channel-document-preview>.channel-document-download{transition:none}}

@@ -14,7 +14,7 @@ try{
  f=await fixtureCore(web?{AGENTS_COMPANY_WEB:'1',AGENTS_COMPANY_WEB_PORT:String(port)}:{})
  if(web){browser=await chromium.launch({headless:true,...(process.platform==='darwin'?{channel:'chrome'}:{})});page=await browser.newPage({viewport:{width:1450,height:940}});await page.goto('http://127.0.0.1:'+port);await page.locator('.web-login input').fill(fs.readFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim());await page.getByRole('button',{name:'Enter workspace',exact:true}).click()}
  else{await f.stop();const env={...f.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1450',AGENTS_COMPANY_HEIGHT:'940'};delete env.ELECTRON_RUN_AS_NODE;const application=process.env.AGENTS_COMPANY_TEST_APP;app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env});page=await app.firstWindow();await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1450,940))}
- page.setDefaultTimeout(20000);page.on('pageerror',error=>errors.push(error.message));await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.infinite-canvas').waitFor()
+ page.setDefaultTimeout(20000);page.on('pageerror',error=>errors.push(error.message));await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.company-navigation').waitFor()
  const rpc=async(cmd,args={})=>{if(cmd==='view.open')return page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args});const result=await f.request(null,cmd,args);assert.ok(result.ok,result.error);return result.data}
  await rpc('settings.set',{language:'en',theme:'white',messageWallpaper:{palette:'purple',pattern:'telegram',opacity:16}})
  const platforms=[]
