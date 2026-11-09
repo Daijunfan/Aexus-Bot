@@ -374,7 +374,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'management.global': if(typeof a.enabled!=='boolean')throw Error('enabled must be boolean');return setGlobalManager(s(a.id),a.enabled)
     case 'card.initialize': return retryEmployeeInitialization(s(a.id),{model:a.model,effort:a.effort})
     case 'card.management-role': return setManagementRole(s(a.id),a.role)
-    case 'card.access-mode': {const card=readStore().sessions.find(c=>c.id===a.id);if(card&&(card.threadId||card.claudeSessionId)&&card.accessMode!==a.mode)throw Error('Execution isolation is fixed once native history exists; create a new employee');if(!['trusted','isolated'].includes(a.mode))throw Error('Use trusted or isolated');await closeForNativeChange(s(a.id));return updateStore(store=>{const card=store.sessions.find(c=>c.id===a.id);if(!card)throw Error('Unknown employee');card.accessMode=a.mode})}
+    case 'card.access-mode': {const card=readStore().sessions.find(c=>c.id===a.id);if(card?.engine==='deepseek'&&a.mode==='isolated')throw Error('DeepSeek Harness does not support strict process isolation');if(card&&(card.threadId||card.claudeSessionId)&&card.accessMode!==a.mode)throw Error('Execution isolation is fixed once native history exists; create a new employee');if(!['trusted','isolated'].includes(a.mode))throw Error('Use trusted or isolated');await closeForNativeChange(s(a.id));return updateStore(store=>{const card=store.sessions.find(c=>c.id===a.id);if(!card)throw Error('Unknown employee');card.accessMode=a.mode})}
     case 'card.profile': return employeeProfile(a)
     case 'session.status': {const cards=a.employee?readStore().sessions.filter(c=>c.id===a.employee):visibleEmployees();return cards.map(card=>{const live=listLive().find(item=>sessionInfo(item.id)?.cardId===card.id),state=live?sessionInfo(live.id):undefined;return {...publicEmployee(card),lastReply:card.lastReply,sessionId:live?.id,busy:state?.busy??false,acknowledging:state?.acknowledging??false,currentTask:state?.currentTask,activityPreview:state?.activityPreview,waitingApproval:live?approvalsFor(live.id).length>0:false}})}
     case 'shared.info': return {path:sharedDirectory()}
@@ -926,7 +926,8 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       if (!isEngine(engine)) throw new Error('Unknown engine')
       const creationPermission=a.permissionMode??getPreferences().defaultPermissionMode
       if(engine==='deepseek'&&['auto','plan'].includes(creationPermission))throw Error('DeepSeek Harness does not support Plan or Auto permission mode; choose Ask or Accept edits')
-      if(engine==='deepseek'&&a.accessMode==='isolated')throw Error('DeepSeek Harness does not support strict process isolation')
+      const creationAccessMode=isGlobal(requestContext().principal)?a.accessMode??'trusted':callerEmployee()!.accessMode??'trusted'
+      if(engine==='deepseek'&&creationAccessMode==='isolated')throw Error('DeepSeek Harness does not support strict process isolation')
       let model=a.model||defaultEmployeeModel(engine,kind)
       if (!String(a.title ?? '').trim()) throw new Error('Employee name is required')
       const avatar=resolveAvatar(a,activeAvatarIds())??randomAvatar(activeAvatarIds()),appearance=employeeFields({...a,avatar,color:a.color??avatarDescription(avatar).color,role:professionValue(a)})
@@ -950,7 +951,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       const id = newSessionId()
       const origin=kind==='cloud-native-worker'?{kind:'cloud' as const,hostId:config.hostId!,host:config.remote!.host,os:config.remote!.os,directory:cwd}:undefined
       authorize('card.create',a);
-      const employee:StoredSession = { ...appearance,...creationAuthority(requestContext().principal),managementRole:isGlobal(requestContext().principal)?a.managementRole??'employee':'employee',accessMode:isGlobal(requestContext().principal)?a.accessMode??'trusted':callerEmployee()!.accessMode??'trusted',id, title: s(a.title).trim(), engine,kind,workEnvironment:a.workEnvironment,directoryMode:a.directoryMode??(a.cwd?'bind':'default'),localWorkspaceRoot:a.workEnvironment==='local'&&teamSettings(store,a.group).mode==='cloud'?employeeRoot(store,identity):undefined,nativeOrigin:origin,cwd, group: a.group ?? '', createdAt: Date.now(),
+      const employee:StoredSession = { ...appearance,...creationAuthority(requestContext().principal),managementRole:isGlobal(requestContext().principal)?a.managementRole??'employee':'employee',accessMode:creationAccessMode,id, title: s(a.title).trim(), engine,kind,workEnvironment:a.workEnvironment,directoryMode:a.directoryMode??(a.cwd?'bind':'default'),localWorkspaceRoot:a.workEnvironment==='local'&&teamSettings(store,a.group).mode==='cloud'?employeeRoot(store,identity):undefined,nativeOrigin:origin,cwd, group: a.group ?? '', createdAt: Date.now(),
         model,
         thinking: a.thinking??false,effort: engine==='cline'||engine==='pi'?undefined:a.effort??'low', permissionMode:creationPermission }
       employee.initialization=pendingInitialization()

@@ -27,6 +27,7 @@ const server=http.createServer(async(req,res)=>{
  }else if(scenario==='CASE_PRIVATE'&&!calls.some(c=>c.input?.command==='direct.post')){name=find('agents_company_api');input={command:'direct.post',args:{text:'DSH private reply',clientMessageId:'fixture-private'}}}
  else if(scenario==='CASE_API'&&!calls.some(c=>c.input?.command==='plan.query')){name=find('agents_company_api');input={command:'plan.query',args:{}}}
  else if(scenario==='CASE_READ'&&!calls.some(c=>c.input?.file_path)){name=find('read');input={file_path:path.join(temp,'outside.txt')}}
+ else if(scenario==='CASE_BYPASS'&&!calls.some(c=>c.input?.command?.includes('BYPASS_MARKER'))){name=find('bash');input={command:'printf allowed > BYPASS_MARKER',description:'Explicit user bypass'}}
  else if(scenario==='CASE_DENY'&&!calls.some(c=>c.input?.command?.includes('DENIED_MARKER'))){name=find('bash');input={command:'printf denied > DENIED_MARKER',description:'Fixture denial'}}
  else if(scenario==='CASE_ALLOW'&&!calls.some(c=>c.input?.command?.includes('ALLOWED_MARKER'))){name=find('bash');input={command:'printf allowed > ALLOWED_MARKER',description:'Fixture approval'}}
  else if(scenario==='CASE_CANCEL'&&!calls.some(c=>c.input?.command?.includes('CANCELLED_MARKER'))){name=find('bash');input={command:'sleep 5; printf bad > CANCELLED_MARKER',description:'Fixture cancellation'}}
@@ -75,6 +76,9 @@ try{
   await rpc('approval.respond',{id:(await f.status(card.id)).sessionId,requestId:pending.id,decision});await idle(card.id)
   assert.equal(fs.existsSync(path.join(card.cwd,marker)),decision==='allow')
  }
+ await rpc('config.permission',{id:(await f.status(card.id)).sessionId,mode:'bypassPermissions'})
+ await send('CASE_BYPASS');assert.ok(fs.existsSync(path.join(card.cwd,'BYPASS_MARKER')))
+ await rpc('config.permission',{id:(await f.status(card.id)).sessionId,mode:'default'})
  fs.writeFileSync(path.join(temp,'outside.txt'),'outside fixture')
  await rpc('session.send',{employee:card.id,text:'CASE_READ'})
  const readApproval=await f.until(async()=>{const s=await f.status(card.id);return (await f.cli('approval','list',s.sessionId))[0]},'external read requires Core approval')
@@ -93,6 +97,12 @@ try{
  const saved=(await rpc('session.list')).sessions.find(c=>c.id===card.id),ref=saved.nativeSessions.find(r=>r.engine==='deepseek')
  await rpc('session.close',{id:(await f.status(card.id)).sessionId});await send('CASE_RESUME')
  assert.equal((await rpc('session.list')).sessions.find(c=>c.id===card.id).nativeSessions.find(r=>r.engine==='deepseek').id,ref.id)
+ await assert.rejects(()=>rpc('card.access-mode',{id:card.id,mode:'isolated'}),/isolation/)
+ const manager=await f.create('Isolated manager','Local','manager'),managerToken=await f.token(manager.id)
+ const stateFile=path.join(f.env.AGENTS_COMPANY_HOME,'sessions.json'),stored=JSON.parse(fs.readFileSync(stateFile,'utf8'));stored.sessions.find(c=>c.id===manager.id).accessMode='isolated';fs.writeFileSync(stateFile,JSON.stringify(stored))
+ for(const [cmd,args] of [['config.permission',{id:(await f.status(card.id)).sessionId,mode:'bypassPermissions'}],['card.access-mode',{id:card.id,mode:'trusted'}]]){const denied=await f.request(managerToken,cmd,args);assert.equal(denied.ok,false);assert.match(denied.error,/Forbidden|Only the user/)}
+ const rejected=await f.request(managerToken,'card.create',{title:'Inherited isolation',group:'Local',engine:'deepseek',accessMode:'trusted'})
+ assert.equal(rejected.ok,false);assert.match(rejected.error,/isolation/);assert.equal((await rpc('session.list')).sessions.length,2)
  const activeId=(await f.status(card.id)).sessionId
  await assert.rejects(()=>rpc('config.plan',{id:activeId,enabled:true}),/Plan/)
  assert.ok(requests.every(r=>r.model==='fixture-model'))
