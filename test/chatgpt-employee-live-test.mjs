@@ -17,6 +17,8 @@ fs.mkdirSync(out,{recursive:true})
 let fixture,app
 try{
   fixture=await fixtureCore({AGENTS_COMPANY_PACKAGE_ROOT:root})
+  await fixture.request(null,'settings.set',{language:'en',theme:'white'})
+  await fixture.request(null,'group.add',{name:'ChatGPT Test',mode:'build'})
   await fixture.stop()
   const env={...fixture.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1000'}
   delete env.ELECTRON_RUN_AS_NODE
@@ -25,10 +27,7 @@ try{
   page.setDefaultTimeout(20000)
   page.on('pageerror',error=>console.error('Renderer:',error.message))
   const call=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args})
-  await page.locator('.infinite-canvas').waitFor()
-  await call('settings.set',{language:'en',theme:'white'})
-  await call('group.add',{name:'ChatGPT Test',mode:'build'})
-  await call('view.open',{kind:'home'})
+  await expect(page.getByRole('tab',{name:'Characters',exact:true})).toBeVisible()
   await page.locator('.add-employee').click()
   const form=page.locator('.employee-form')
   await form.locator('button[data-engine="chatgpt"]').click()

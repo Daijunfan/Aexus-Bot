@@ -57,9 +57,9 @@ export function listWorkers(employee?:string){
  if(employee||!isAppAdministrator(principal)&&principal.kind==='agent')owner(employee)
  return records().filter(w=>employee?w.employee===employee:isAppAdministrator(principal)||principal.kind==='agent'&&w.employee===principal.employeeId).map(present)
 }
-export function workerEngines():NativeWorkerEngine[]{return Object.keys(ENGINE_DEFINITIONS).map(engine=>{const id=engine as NativeWorkerEngine['engine'],executable=engineExecutable(id,false),resolved=path.isAbsolute(executable)?executable:resolveBinary(executable);return {engine:id,label:ENGINE_DEFINITIONS[id].label,installed:path.isAbsolute(resolved)&&fs.existsSync(resolved)}})}
+export function workerEngines():NativeWorkerEngine[]{return Object.keys(ENGINE_DEFINITIONS).filter(engine=>engine!=='chatgpt').map(engine=>{const id=engine as NativeWorkerEngine['engine'],executable=engineExecutable(id,false),resolved=path.isAbsolute(executable)?executable:resolveBinary(executable);return {engine:id,label:ENGINE_DEFINITIONS[id].label,installed:path.isAbsolute(resolved)&&fs.existsSync(resolved)}})}
 export function createWorker(args:{employee?:string;engine:string;title?:string;cwd?:string;clientRequestId?:string}){
- if(!isEngine(args.engine))throw Error('Unsupported native Coding Agent engine')
+ if(!isEngine(args.engine)||args.engine==='chatgpt')throw Error('Unsupported native Coding Agent engine')
  const principal=requestContext().principal
  const owned=args.employee||!isAppAdministrator(principal)||principal.kind==='agent'&&!args.cwd?owner(args.employee):undefined
  if(!owned&&!args.cwd?.trim())throw Error('Choose an existing Worker workspace')

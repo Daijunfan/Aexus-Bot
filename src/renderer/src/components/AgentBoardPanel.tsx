@@ -111,6 +111,9 @@ export function AgentBoardPanel({card,live,enabled,hidden=false,drafts,setDrafts
   {loadError&&<p className="board-error" role="alert">{uiText(loadError)}<button onClick={()=>void loadRef.current()}>{uiText('Reload conversation')}</button></p>}
   {(draft.error||actionError||active?.error)&&<p className="board-error" role="alert">{uiText(draft.error||actionError||active!.error!)}{draft.error&&(draft.reviewAttempt?<button onClick={onOpen}>{uiText('Review this attempt in the full conversation')}</button>:<span>{uiText('Your draft is retained. Send again to confirm this request.')}</span>)}</p>}
   {active&&<TaskQueue key={active.id} messages={active.pendingMessages} onRemove={async messageId=>{try{await api.call('session.dequeue',{id:active.id,messageId})}finally{await loadRef.current()}}}/>}
+  {card.engine==='chatgpt'?<div className="board-composer">
+   <button className="board-detail-link" onClick={()=>void run(()=>api.call('view.open',{kind:'messages',employee:card.id}))}>{uiText('Open in Messages')}<Icon name="arrow-right"/></button>
+  </div>:<>
   {draft.replyTo&&<div className="board-draft-reply"><Icon name="reply"/><button onClick={onOpen}>{uiText('Reply attached · Open full conversation')}</button><button aria-label={uiText('Cancel reply')} onClick={()=>edit({replyTo:undefined,replyQuote:undefined,replyConversation:undefined,replyTextOnly:undefined})}><Icon name="close"/></button></div>}
   <DraftFiles conversation={key} images={draft.images} files={draft.files} onRemove={path=>edit({images:draft.images.filter(image=>image!==path),files:draft.files.filter(file=>file!==path)})}/><AttachmentTransfers uploads={uploads}/>
   <div className="board-composer task-composer" onDragOver={event=>{if(ready&&!locked&&Array.from(event.dataTransfer.items).some(item=>item.kind==='file'))event.preventDefault()}} onDrop={event=>{const files=Array.from(event.dataTransfer.files);if(files.length){event.preventDefault();if(ready&&!locked)addFiles(files)}}}>
@@ -119,6 +122,7 @@ export function AgentBoardPanel({card,live,enabled,hidden=false,drafts,setDrafts
    <div className="composer-bar"><div className="composer-utilities"><input ref={fileInput} type="file" hidden multiple onChange={event=>{addFiles(Array.from(event.target.files??[]));event.target.value=''}}/><button className="board-icon-button" disabled={locked||uploads.pending||!ready} aria-label={uiText('Attach files')} title={uiText('Attach files')} onClick={()=>fileInput.current?.click()}><Icon name="attach"/></button></div><ComposerActions busy={busy} disabled={locked||uploads.pending||!ready||!draft.text.trim()&&!draft.images.length&&!draft.files.length} pending={draft.sending?'send':undefined} stopping={pending} queueCount={active?.pendingMessages?.length} onSend={()=>void send()} onStop={()=>active&&void run(()=>api.call('session.interrupt',{id:active.id,expectedMessageId:active.currentTask?.messageId}))}/></div>
   </div>
   <footer><button onClick={latest}><Icon name="arrow-down"/>{uiText('Latest messages')}</button><span title={uiText(busy?'Enter to queue · Shift Enter for a new line':'Enter to send · Shift Enter for a new line')}>{uiText(busy?'Enter to queue · Shift Enter for a new line':'Enter to send · Shift Enter for a new line')}</span></footer>
+  </>}
  </EmployeeWorkbench>:<div className="board-conversation-empty">{uiText('Loading conversation…')}</div>}
  </article>
 }
