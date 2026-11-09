@@ -9,7 +9,7 @@ export type EmployeeKind = 'worker' | 'cloud-native-worker'
 export type WorkEnvironment = 'team' | 'local'
 export type NativeOrigin = {kind:'cloud';hostId:string;host:string;os:'linux'|'macos'|'windows';directory:string}
 export type NativeSession = {engine:Engine;id:string;profile?:string;origin?:NativeOrigin;ownership?:'external'}
-export type TeamSettings = { mode: 'work' | 'build' | 'cloud'; pluginId?: string; hostId?:string; directory?:string; remote?: import('./remote').RemoteTarget; directoryMode?: 'default'|'bind' }
+export type TeamSettings = { folderName?:string;parentDirectory?:string; mode: 'work' | 'build' | 'cloud'; pluginId?: string; hostId?:string; directory?:string; remote?: import('./remote').RemoteTarget; directoryMode?: 'default'|'bind' }
 export const teamSettings = (store: Pick<Store,'teamSettings'>, name: string): TeamSettings => store.teamSettings?.[name] ?? {mode:'build'}
 /** Team is organizational membership; a local workspace may coexist with cloud teammates. */
 export function employeeSettings(store:Pick<Store,'teamSettings'>,card:{group:string;workEnvironment?:WorkEnvironment}):TeamSettings {

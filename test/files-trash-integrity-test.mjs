@@ -23,6 +23,9 @@ try{
  fs.writeFileSync=(...args)=>{if(typeof args[0]==='number')throw Error('simulated restore receipt failure');return originalWrite(...args)}
  assert.throws(()=>workspaceFiles(temp,'restore',{id:receipt.id},{keepReceipt:true}),/simulated/)
  fs.writeFileSync=originalWrite;assert.equal(workspaceTrash(temp).length,1);assert.equal(fs.existsSync(file),false)
+ let receiptWrites=0;fs.writeFileSync=(...args)=>{if(typeof args[0]==='number'&&++receiptWrites===2)throw Error('simulated second restore receipt failure');return originalWrite(...args)}
+ assert.throws(()=>workspaceFiles(temp,'restore',{id:receipt.id},{keepReceipt:true}),/simulated/)
+ fs.writeFileSync=originalWrite;assert.equal(workspaceTrash(temp).length,1);assert.equal(fs.existsSync(file),false)
  fs.renameSync=(from,to)=>{if(to===file)throw Error('simulated restore move failure');return originalRename(from,to)}
  assert.throws(()=>workspaceFiles(temp,'restore',{id:receipt.id},{keepReceipt:true}),/simulated/)
  fs.renameSync=originalRename;assert.equal(workspaceTrash(temp).length,1)

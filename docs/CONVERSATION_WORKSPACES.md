@@ -2,9 +2,23 @@
 
 An employee has one execution workspace: the directory assigned in Team. Joining a group never creates another employee directory, changes cwd, switches host, or changes a native session. `workspace.catalog` returns this assigned `company:EMPLOYEE_ID` workspace only. Use `conversation.file` to read shared group content and `conversation.upload` to share results from the employee’s own workspace.
 
+## Choose storage when creating a group
+
+User and Secretary may pass `storage:{mode:"create"|"bind",hostId?,directory?,folderName?}` to `chat.create`. With hostId the directory belongs to that registered cloud host; otherwise it belongs to the Core host. In create mode, directory is the parent and folderName defaults to a filesystem-safe group label. In bind mode, directory must already exist and is used directly; no rename or overwrite occurs. Omitting storage retains a managed Core folder. Ordinary employee creators use this default and cannot grant themselves arbitrary host/path access.
+
+```sh
+agents chat create --name 'Research' --members '["EMPLOYEE_ID"]' --storage '{"mode":"create","directory":"/data/groups","folderName":"Source library"}' --client-request-id group-1 --json
+agents chat create --name 'Cloud research' --members '["EMPLOYEE_ID"]' --storage '{"mode":"create","hostId":"HOST_ID","directory":"/srv/groups","folderName":"Originals"}' --client-request-id group-2 --json
+agents chat create --name 'Existing data' --members '["EMPLOYEE_ID"]' --storage '{"mode":"bind","hostId":"HOST_ID","directory":"/srv/existing"}' --client-request-id group-3 --json
+```
+
+The committed storage directory is stable across group rename/restart. Existing groups keep their original locations. A host storing group files cannot be removed while referenced. Storage gives current members scoped file access, not general SSH administration or host credentials. Local employees, workers on the storage host, and workers on another cloud host use the same conversation APIs and opaque versions; cross-host copies keep the employee’s assigned execution directory.
+
+Team creation uses the same folder choice. `group.add --folder-name NAME --parent-directory PATH` creates an independent local folder label; add `--mode cloud --host-id HOST_ID` for a cloud parent. `--directory-mode bind --root LOCAL_PATH` or `--remote-dir REMOTE_PATH` binds an existing location. No existing employee/native workspace is moved automatically.
+
 ## Shared content locations
 
-`conversation.workspace {conversation,employee?}` returns the stable Core shared content root, current members and rights. Groups do not return `members[].directory`, `memberDirectory` or `memberPath`. `personalWorkspace`, when returned, is the existing Team cwd. `conversation.workspaces` lists shared content locations, not extra execution workspaces. Remote employees access Core files through these APIs; a Core path is not a remote-local path.
+`conversation.workspace {conversation,employee?}` returns the stable Core or registered-host shared content root, current members and rights. Groups do not return `members[].directory`, `memberDirectory` or `memberPath`. `personalWorkspace`, when returned, is the existing Team cwd. `conversation.workspaces` lists shared content locations, not extra execution workspaces. Remote employees access Core files through these APIs; a Core path is not a remote-local path.
 
 The ID parent isolates same-name conversations. Renaming a group or employee does not move files. Existing legacy member folders and their files remain at their original paths as ordinary shared content; they are not advertised or recreated as employee workspaces. Leaving or archiving a group preserves the files and revokes former members’ API access.
 
@@ -23,14 +37,14 @@ Channel news feeds use reading grants, without new employee membership or person
 
 The group header has one **Shared files** entry, opening the existing Media / Files / Links library. There is no second folder-browser entry or per-employee group-folder selector. The Files manager includes completed uploads, published files/images and retained files inside old subdirectories. Paths, versions and message provenance come from Core; files with no message have no fabricated sender or message ID. Topic/sender filters exclude unknown provenance.
 
-`conversation.files` returns unique current paths, exact versions, sizes, preview IDs and recoverable trash. A path shared in several messages appears once with its reference count. `assets.preview` uses Margin Reader’s bounded preview worker for local PDF/image/text thumbnails; it never fetches an original from a remote host just to create a cover. Legacy published attachments receive valid preview IDs too. Images open in the existing image viewer.
+`conversation.files` returns unique current paths, exact versions, sizes, preview IDs and recoverable trash. A path shared in several messages appears once with its reference count. `assets.preview` uses Margin Reader’s bounded preview worker for local PDF/image/text thumbnails; other unselected remote assets are never fetched automatically. Legacy published attachments receive valid preview IDs too. Images open in the existing image viewer.
 
 ```sh
 agents conversation files group:GROUP_ID --sort name --json
 agents conversation file-open group:GROUP_ID --path '@workspace/Paper.pdf' --version CURRENT_VERSION --json
 ```
 
-`conversation.file-open` is available to the user/Secretary. It rechecks current group access, exact version and regular local PDF identity, invokes Margin Reader’s public `document.open`, then opens/focuses its existing plugin window. The reader uses the original shared file in its existing root; it does not run download/import, request Save As, copy the PDF into another library, change the main conversation, or grant plugin rights to group members. Margin Reader’s reading state lives in its own protected `.margin-reader` metadata. The original PDF is retained.
+`conversation.file-open` is available to the user/Secretary. It rechecks current group access, exact version and regular PDF identity, invokes Margin Reader’s public `document.open`, then opens/focuses its existing plugin window. Local originals open in place. For registered-host storage, bounded preview scratch space is deleted after cover generation, and a PDF is fetched on demand into a tracked reading cache. Reader-close releases unchanged cached originals while preserving annotations and locally edited files. This does not mirror the group, request Save As, change the main conversation, or grant plugin rights to group members. Margin Reader’s reading state lives in its own protected `.margin-reader` metadata. The original PDF is retained.
 
 ## Edits and recoverable removal
 

@@ -1,3 +1,4 @@
+import {storageFolderName} from '../shared/storage-folder'
 import {directoryName} from '../shared/directory-names'
 import {remoteTarget} from '../shared/remote'
 import { existsSync, mkdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
@@ -49,7 +50,7 @@ export function defaultTeamRoot(name:string,settings:TeamSettings={mode:'build'}
     return join(pluginWorkspaceBase(settings.pluginId||''),directoryName(clean||'default','team'))
   }
   if(!clean||clean==='.'||clean==='..'||/[\\/\0]/.test(clean))throw new Error('Team 名称不能包含路径分隔符或使用 . / ..')
-  return join(process.env.AGENTS_COMPANY_PROJECTS||join(homedir(),'develop','Agents-company-projects'),directoryName(clean,'team'))
+  const base=settings.parentDirectory??process.env.AGENTS_COMPANY_PROJECTS??join(homedir(),'develop','Agents-company-projects');if(!isAbsolute(base))throw Error('Choose an absolute parent directory on the Core host');return join(base,settings.folderName?storageFolderName(settings.folderName):directoryName(clean,'team'))
 }
 
 export function managedTeamRoot(name:string,settings:TeamSettings,path?:string):string {

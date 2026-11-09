@@ -105,7 +105,7 @@ export async function questionRequest(method:string,args:Record<string,any>){
   if(unanswered)return publicQuestion(unanswered)
   data().questions.push(item);creating.add(item.id);save(item)
   try{
-   const publication=item.conversation.startsWith('employee:')?await postDirectMessage({text:item.question,clientMessageId:'question:'+item.id}):postChatMessage({id:item.conversation.slice(6),text:Array.from(item.question).slice(0,1800).join(''),kind:'question',clientMessageId:'question:'+item.id})
+   const publication=item.conversation.startsWith('employee:')?await postDirectMessage({text:item.question,clientMessageId:'question:'+item.id}):await postChatMessage({id:item.conversation.slice(6),text:Array.from(item.question).slice(0,1800).join(''),kind:'question',clientMessageId:'question:'+item.id})
    item.messageId=publication.id
    if(item.conversation.startsWith('employee:'))linkDirectQuestion(authorId,item.messageId,item.id)
    else{const groupId=item.conversation.slice(6),history=messages(groupId),message=history.find(message=>message.id===item.messageId);if(message){message.questionId=item.id;atomicJson(historyFile(groupId),history,true);emitChatChange(groupId,item.messageId)}}

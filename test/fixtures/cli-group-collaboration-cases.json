@@ -749,5 +749,35 @@
         "version": "abc123"
       }
     }
+  },
+  {
+    "args": [
+      "chat",
+      "create",
+      "--name",
+      "Cloud group",
+      "--members",
+      "[\"employee-1\"]",
+      "--storage",
+      "{\"mode\": \"create\", \"hostId\": \"host-1\", \"directory\": \"/srv/groups\", \"folderName\": \"Originals\"}",
+      "--client-request-id",
+      "storage-create"
+    ],
+    "expected": {
+      "cmd": "chat.create",
+      "args": {
+        "name": "Cloud group",
+        "members": [
+          "employee-1"
+        ],
+        "storage": {
+          "mode": "create",
+          "hostId": "host-1",
+          "directory": "/srv/groups",
+          "folderName": "Originals"
+        },
+        "clientRequestId": "storage-create"
+      }
+    }
   }
 ]

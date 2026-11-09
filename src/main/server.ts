@@ -1,3 +1,6 @@
+import {catalog as groupStorageCatalog} from './chat-group-store'
+import {readingFile,trackReadingWindow} from './file-snapshots'
+import {storageFolderName} from '../shared/storage-folder'
 import {WORKER_CONTROL_APIS} from '../shared/worker-controls'
 import {workerControlRequest,workerFileEndpoint,workerFile} from './native-workers'
 import {MESSAGE_STICKER_APIS} from '../shared/message-stickers'
@@ -30,7 +33,7 @@ import {MESSAGE_COLLABORATION_APIS} from '../shared/message-collaboration'
 import {messageCollaborationRequest} from './message-collaboration'
 import {CONVERSATION_CONTROL_APIS} from '../shared/conversation-control-schema'
 import {conversationControlRequest,reconcileConversationNotices} from './conversation-notices'
-import {conversationWorkspaceRequest,conversationFileEndpoint} from './conversation-workspaces'
+import {conversationWorkspaceRequest,conversationFileEndpoint,sharedFileIO} from './conversation-workspaces'
 import {WORKSPACE_FILE_PREFIX} from '../shared/conversation-workspaces'
 import { engineRequest } from './commands/engine'
 import { chatRequest } from './commands/chat'
@@ -340,11 +343,12 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
   if(req.cmd.startsWith('channel.')&&!['channel.settings','channel.image','channel.export'].includes(req.cmd)){const result=await channelOperation(req.cmd,a);if(['channel.save','channel.delete'].includes(req.cmd))await saveChannelContent(String(a.id));if(['channel.publish','channel.media-put','channel.source-avatar-put','channel.message-send','channel.message-post'].includes(req.cmd))await flushChannelContent();return result}
   if(CONVERSATION_CONTROL_APIS.has(req.cmd))return conversationControlRequest(req.cmd,a)
   if(req.cmd==='conversation.file-open'){
-    const source=sharedFileForReading(a);await beforeViewChange();sharedFileForReading(a)
-    const document=await callPlugin('margin-reader',source.root,'document.open',{path:source.path,activate:true})
-    await callPlugin('margin-reader',source.root,'settings.set',{activeStudySet:null,homeSection:'library'})
-    sharedFileForReading(a)
-    const reader=await openPluginWindow('margin-reader',source.root)
+    const source=await sharedFileForReading(a);await beforeViewChange();await source.validate()
+    const local=await readingFile(source.end,a.conversation,source.version);await source.validate()
+    const document=await callPlugin('margin-reader',local.root,'document.open',{path:local.path,activate:true})
+    await callPlugin('margin-reader',local.root,'settings.set',{activeStudySet:null,homeSection:'library'})
+    await source.validate()
+    const reader=await openPluginWindow('margin-reader',local.root);trackReadingWindow(reader.id,local.root)
     return {reader,document,source:{conversation:a.conversation,path:a.path,version:source.version}}
   }
   if(req.cmd==='conversation.files')return listConversationFiles(a)
@@ -457,10 +461,12 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       for(const name of teams)remoteTarget({...candidate,directory:teamSettings(store,name).remote?.directory})
       for(const card of store.sessions.filter(c=>teams.includes(c.group)&&employeeSettings(store,c).mode==='cloud'))await closeForWorkspaceChange(card.id)
       const host=updateCloudHost(s(a.id),a.patch??{})
+      for(const group of groupStorageCatalog().groups.filter(group=>group.storage?.hostId===a.id))closeRemote('group-files-'+group.id)
       for(const name of teams)closeRemote(teamConnectionId(name))
       writeStore(readStore());publishEvent('hosts:changed',{});return host
     }
     case 'host.remove': {
+      const storedGroups=groupStorageCatalog().groups.filter(group=>group.storage?.hostId===a.id);if(storedGroups.length)throw Error('Cloud host stores group files: '+storedGroups.map(group=>group.name).join(', '))
       const store=readStore(),teams=store.groups.filter(name=>teamSettings(store,name).hostId===a.id)
       if(teams.length)throw new Error('云主机仍被 Team 绑定：'+teams.join('、'))
       assertHostIdle(s(a.id));await closeHostTerminals(s(a.id))
@@ -557,15 +563,15 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'assets.browse':case 'assets.tree':case 'assets.children':case 'assets.search':case 'assets.locate':case 'assets.file':
       if(req.cmd==='assets.file'){const ref=assetReference(s(a.id),a.path);a.id=ref.asset;a.path=ref.path}
       if(req.cmd==='assets.file'&&String(a.id).startsWith('published:')&&!(String(a.id).startsWith('published:channel:')&&a.operation==='list')){if(!['list','read','image','info','chunk'].includes(a.operation))throw Error('Published attachments are read-only; copy them to a workspace to edit');const end=fileEndpoint(assetLocation(s(a.id),s(a.path||'.')),false),op=({image:'read-image',info:'copy-info',chunk:'copy-read'} as Record<string,string>)[a.operation]??a.operation;return workspaceFiles(end.root,op,{path:end.path,offset:a.offset??0,length:262144,hidden:a.hidden})}
-      if(req.cmd==='assets.file'&&['info','chunk'].includes(a.operation)){const end=fileEndpoint(assetLocation(s(a.id),s(a.path||'.')),false),op=a.operation==='info'?'copy-info':'copy-read',args={path:end.path,offset:a.offset??0,length:262144};await end.validate?.(op,args);return end.remote?remoteFiles('assets-file-'+a.id,end.remote,op,args):workspaceFiles(end.root,op,args)}
-      return assetRequest(req.cmd,a,(cmd,args)=>handleRequest({cmd,args}),async(ref,args)=>{const end=fileEndpoint(ref,false);if(!end.remote)throw Error('Remote inventory requires a remote workspace');return remoteFiles('asset-index-'+String(ref.team??ref.employee),end.remote,'inventory',args)})
+      if(req.cmd==='assets.file'&&['info','chunk'].includes(a.operation)){const end=fileEndpoint(assetLocation(s(a.id),s(a.path||'.')),false),op=a.operation==='info'?'copy-info':'copy-read',args={path:end.path,offset:a.offset??0,length:262144};await end.validate?.(op,args);return sharedFileIO(end,op,args)}
+      return assetRequest(req.cmd,a,(cmd,args)=>handleRequest({cmd,args}),async(ref,args)=>{const end=fileEndpoint(ref,false);if(!end.remote)throw Error('Remote inventory requires a remote workspace');return remoteFiles('asset-index-'+String(ref.team??ref.employee??ref.conversation),end.remote,'inventory',args)})
     case 'workspace.reveal': return revealWorkspaceFile(fileEndpoint(a.from,false))
     case 'workspace.suggest': {
       const store=readStore(),config=teamSettings(store,s(a.team))
       if(a.workEnvironment==='local'&&config.mode==='cloud')return {path:employeeRoot(store,{group:s(a.team),workEnvironment:'local'})}
       if(a.mode==='cloud'||(!a.mode&&config.mode==='cloud')){const remote=remoteTarget(a.remote??config.remote);if(!remote)throw new Error('请在云主机 Team 中填写远端工作目录');return {path:remote.directory}}
       if(!a.mode&&store.groups.includes(a.team)&&store.teamRoots?.[a.team])return {path:store.teamRoots[a.team]}
-      return {path:!a.mode&&config.directoryMode==='bind'?store.teamRoots?.[a.team]:managedTeamRoot(s(a.team||'workspace'),a.mode?{mode:a.mode,pluginId:a.pluginId}:config)}
+      return {path:!a.mode&&config.directoryMode==='bind'?store.teamRoots?.[a.team]:managedTeamRoot(s(a.team||'workspace'),a.mode?{mode:a.mode,pluginId:a.pluginId,folderName:a.folderName,parentDirectory:a.parentDirectory}:config)}
     }
     case 'workspace.choose':
       return askRenderer('choose-folder',{path:a.path})
@@ -862,18 +868,19 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       }
       if(before.groups.includes(name))throw Error('Team 已存在；名称可修改，工作目录创建后不可更换')
       assertTeamAvailable(name)
-      const config=validateTeamSettings({mode:a.mode??(a.hostId?'cloud':'build'),pluginId:a.pluginId,directoryMode:a.directoryMode,hostId:a.hostId,directory:a.directory,remote:a.remote})
+      if(a.directoryMode==='bind'&&(a.folderName!==undefined||a.parentDirectory!==undefined))throw Error('Folder name and parent apply only when creating a folder')
+      const config=validateTeamSettings({mode:a.mode??(a.hostId?'cloud':'build'),pluginId:a.pluginId,directoryMode:a.directoryMode,hostId:a.hostId,directory:a.directory??(a.hostId?a.parentDirectory:undefined),remote:a.remote,folderName:a.folderName,parentDirectory:a.parentDirectory})
       validateNewTeamAppearance(name,config,{design:a.design,bounds:a.bounds})
       const os=config.remote?.os??(process.platform==='darwin'?'macos':process.platform==='win32'?'windows':'linux')
       if(a.os!==undefined&&a.os!==os||a.distribution!==undefined&&a.distribution!==config.remote?.distribution)throw Error('目标操作系统与实际 Team 主机不符；先用 host list --summary 按 os/distribution 选择已登记主机，不要用 Team 名称代替主机绑定')
       if(config.mode==='cloud'){
-        const create=a.directoryMode==='default'
-        if(create&&(a.directory||a.remote?.directory))throw Error('默认生成远端 Team 目录时不要传 remote-dir；绑定已有目录请使用 directory-mode bind')
+        const create=(a.directoryMode??(a.folderName?'default':'bind'))==='default';if(!create&&a.folderName)throw Error('Folder name applies only when creating a folder')
         if(create&&(name==='.'||name==='..'||/[\\/\0]/.test(name)))throw Error('Team 名称不能包含路径分隔符或使用 . / ..')
-        const directory=(await remoteFiles(teamConnectionId(name),config.remote!,'directory',{path:create?directoryName(name,'team'):'.',...(create?{create:true,exclusive:true}:{})})).path
-        config.directory=directory;config.remote={...config.remote!,directory}
+        const directory=(await remoteFiles(teamConnectionId(name),config.remote!,'directory',{path:create?(config.folderName??directoryName(name,'team')):'.',...(create?{create:true,exclusive:true}:{})})).path
+        if(create)config.parentDirectory=config.remote!.directory;config.directory=directory;config.remote={...config.remote!,directory}
         closeRemote(teamConnectionId(name))
       }
+      if(config.mode==='build'&&config.directoryMode!=='bind'&&config.folderName){const target=chooseTeamRoot(name,config,a.root,true);mkdirSync(dirname(target),{recursive:true});mkdirSync(target,{mode:0o700})}
       authorize('group.add',a)
       return clientStore(addGroup(name,config.mode==='cloud'?config.remote!.directory:a.root,config,{design:a.design,bounds:a.bounds,creation}))
     }

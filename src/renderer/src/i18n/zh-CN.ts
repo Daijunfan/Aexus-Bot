@@ -1,5 +1,17 @@
 /** Product interface copy only. User names, messages, files and model output are never translated. */
 export const zhCN:Record<string,string> = {
+  "All group members share the files in this folder; their Team workspaces stay unchanged.": "此文件夹中的文件由群成员共享，员工的 Team 工作区保持不变。",
+  "Use this folder": "选择此文件夹",
+  "Folder already exists. Use the existing-folder option.": "文件夹已存在，请选择使用已有文件夹。",
+  "Choose a valid folder name without path separators": "请输入不含路径分隔符的有效文件夹名称。",
+  "Default application storage": "应用默认存储位置",
+  "Storage folder": "存储文件夹",
+  "Storage location": "存储位置",
+  "Storage folder mode": "文件夹方式",
+  "Create a new folder": "新建文件夹",
+  "Use an existing folder": "使用已有文件夹",
+  "Choose a storage folder": "请选择存储文件夹",
+
   "Opening in Margin Reader…": "正在 Margin Reader 中打开…",
   "Shared file": "共享文件",
   "Notes for this task": "任务规划备注",
@@ -2380,7 +2392,7 @@ export const zhCN:Record<string,string> = {
   "These folders belong to the Core host. Upload files from the browser’s device instead.": "这里的目录属于运行 Core 的主机。浏览器本地文件请使用上传。",
   "Core-host directory path": "后端目录路径",
   "Choose this directory": "选择此目录",
-  "Parent folder": "上一级",
+  "Parent folder": "父文件夹",
   "The Core returned an invalid response": "后端返回无效响应",
   "Request failed": "请求失败",
   "Sign in to the Core service first": "请先登录后端服务",

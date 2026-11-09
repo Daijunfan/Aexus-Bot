@@ -1,3 +1,4 @@
+import {storageFolderName} from '../shared/storage-folder'
 import {storeChanges,type StoreChanges} from '../shared/store-changes'
 import { isEngine } from '../shared/engines'
 import { clientStore,setClientView } from './client-state'
@@ -194,11 +195,12 @@ export function validateTeamSettings(settings:TeamSettings):TeamSettings {
   if(!['work','build','cloud'].includes(settings.mode))throw new Error('Team 模式必须是 work、build 或 cloud')
   if(settings.pluginId&&settings.mode!=='work')throw new Error(settings.mode==='cloud'?'云端团队不支持插件':'插件仅适用于本地插件团队')
   if(settings.directoryMode!==undefined&&!['default','bind'].includes(settings.directoryMode))throw new Error('请选择默认生成或绑定已有文件夹')
-  if(settings.mode==='cloud'){if(!settings.hostId)throw new Error('请先在 Cloud Hosts 插件添加云主机，再使用 hostId 绑定 Team');const remote=cloudHostTarget(settings.hostId,settings.directory??settings.remote?.directory);return {mode:'cloud',hostId:settings.hostId,directory:remote.directory,remote}}
+  const folder=settings.folderName!==undefined?{folderName:storageFolderName(settings.folderName)}:{};const parent=settings.parentDirectory?{parentDirectory:settings.parentDirectory}:{}
+  if(settings.mode==='cloud'){if(!settings.hostId)throw new Error('请先在 Cloud Hosts 插件添加云主机，再使用 hostId 绑定 Team');const remote=cloudHostTarget(settings.hostId,settings.directory??settings.remote?.directory);return {mode:'cloud',hostId:settings.hostId,directory:remote.directory,remote,...folder,...parent,...(settings.directoryMode?{directoryMode:settings.directoryMode}:{})}}
   if(settings.remote||settings.hostId||settings.directory)throw new Error('SSH 主机和远端目录只能配置在 cloud Team 中；请使用 --mode cloud')
   if(settings.directoryMode!==undefined&&!['default','bind'].includes(settings.directoryMode))throw new Error('请选择默认生成或绑定已有文件夹')
   const directory=settings.directoryMode?{directoryMode:settings.directoryMode}:{}
-  if(settings.mode==='build')return {mode:'build',...directory}
+  if(settings.mode==='build')return {mode:'build',...directory,...folder,...parent}
   if(!settings.pluginId)throw new Error('Work Team 必须选择已安装的插件')
   if(settings.directoryMode==='bind')throw new Error('Work Team 使用插件固定工作目录，不能手动绑定 Team 文件夹')
   requirePlugin(settings.pluginId)

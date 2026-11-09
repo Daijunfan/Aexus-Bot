@@ -13,7 +13,7 @@ let stopping=false
 const join=(a:string,b:string)=>[a==='.'?'':a,b].filter(Boolean).join('/')
 async function request(task:Task,end:FileEndpoint,side:string,op:string,args:Record<string,unknown>){
   await end.validate?.(op,args)
-  const result=op==='copy-commit'&&end.commit?await end.commit(args):end.read&&['copy-info','copy-read'].includes(op)?await end.read(op,args):end.remote?await remoteFiles(`transfer-${task.job.id}-${side}`,end.remote,op,args):workspaceFiles(end.root,op,args)
+  const result=op==='copy-commit'&&end.commit?await end.commit(args):end.read?await end.read(op,args):end.remote?await remoteFiles(`transfer-${task.job.id}-${side}`,end.remote,op,args):workspaceFiles(end.root,op,args)
   if(op==='copy-commit')end.changed?.();return result
 }
 export const listTransfers=()=>[...tasks.values()].map(t=>({...t.job})).reverse()

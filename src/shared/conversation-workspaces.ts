@@ -1,7 +1,7 @@
 import {objectSchema,nonemptySchema,booleanSchema,textSchema} from './api-schema.ts'
 import type {MessageAttachment} from './message-attachments'
 export const WORKSPACE_FILE_PREFIX='@workspace/'
-export type ConversationWorkspace={conversation:string;name:string;root:string;folderName:string;members:{employeeId:string;name:string;directory?:string}[];memberDirectory?:string;memberPath?:string;personalWorkspace?:string;nativeAccess:boolean;policy:string}
+export type ConversationWorkspace={conversation:string;name:string;root:string;folderName:string;storage?:import('./storage-folder').GroupStorage;members:{employeeId:string;name:string;directory?:string}[];memberDirectory?:string;memberPath?:string;personalWorkspace?:string;nativeAccess:boolean;policy:string}
 export function sharedUploadNotice(text:string,attachments:MessageAttachment[]=[]){
  if(!attachments.length)return text
  return [text,'[User uploaded shared files]\n'+JSON.stringify(attachments.map(file=>({name:file.name,path:file.path,bytes:file.bytes,kind:file.kind})))+'\nThese files remain in this conversation folder. Inspect them through conversation.file when relevant; no file or image bytes were sent to your private chat. Use workspace.catalog to inspect your available workspaces and file permissions.'].filter(Boolean).join('\n\n')

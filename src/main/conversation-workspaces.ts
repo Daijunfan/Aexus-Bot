@@ -1,3 +1,6 @@
+import {cloudHostTarget,getCloudHost} from './cloud-hosts'
+import {remoteFiles} from './tunnel'
+import type {GroupStorage} from '../shared/storage-folder'
 import {requireGroupExport} from './group-history'
 import {isAppAdministrator} from './application-authority'
 import {channelMemberIds} from './channel-members'
@@ -19,7 +22,7 @@ import {workspaceFiles,workspacePath} from './files'
 import {startTransfer,getTransfer,cancelTransfer,type FileEndpoint} from './transfers'
 import {fileVersion} from './read-cache'
 
-type Identity={conversation:string;kind:'group'|'channel';id:string;name:string;memberIds:string[]}
+type Identity={conversation:string;kind:'group'|'channel';id:string;name:string;memberIds:string[];storage?:GroupStorage}
 type Directory={version:1;folderName:string;members:Record<string,string>}
 const copies=new Map<string,string>()
 const owner=()=>JSON.stringify([requestContext().principal,requestContext().credentialHash])
@@ -34,7 +37,7 @@ function identity(value:unknown):Identity{
  if(!item)throw Error('Conversation no longer exists')
  const ids=kind==='group'?(item as {memberIds:string[]}).memberIds:channelMemberIds(id)
  const active=new Set(readStore().sessions.filter(card=>!card.deleting).map(card=>card.id))
- return {conversation:value,kind,id,name:item.name,memberIds:ids.filter((id:string)=>active.has(id))}
+ return {conversation:value,kind,id,name:item.name,memberIds:ids.filter((id:string)=>active.has(id)),...(kind==='group'&&(item as any).storage?{storage:(item as any).storage}:{})}
 }
 function allowed(value:unknown){
  authorize('conversation.workspace');const info=identity(value),principal=requestContext().principal
@@ -47,6 +50,7 @@ function directory(root:string,create=true){
  return root
 }
 function layout(info:Identity,create=true){
+ if(info.kind==='group'&&info.storage){const remote=info.storage.kind==='remote'?cloudHostTarget(info.storage.hostId!,info.storage.directory):undefined,paths=remote?.os==='windows'?path.win32:path.posix;return {root:info.storage.directory,data:{version:1 as const,folderName:paths.basename(info.storage.directory),members:{} as Record<string,string>},remote}}
  if(create)fs.mkdirSync(APP_HOME,{recursive:true,mode:0o700});let base=fs.existsSync(APP_HOME)?fs.realpathSync(APP_HOME):path.resolve(APP_HOME)
  for(const part of ['conversation-workspaces',info.kind,info.id])base=directory(path.join(base,part),create)
  const file=path.join(base,'workspace.json')
@@ -71,8 +75,8 @@ function layout(info:Identity,create=true){
 export function workspaceForMember(conversation:string,employeeId?:string,create=true):ConversationWorkspace{
  const info=identity(conversation)
  if(employeeId&&!info.memberIds.includes(employeeId))throw Error('Employee is not a current conversation member')
- const {root,data}=layout(info,create),cards=readStore().sessions,card=cards.find(card=>card.id===employeeId),memberDirectory=info.kind==='channel'&&employeeId?data.members[employeeId]:undefined
- return {conversation,name:info.name,root,folderName:data.folderName,members:info.memberIds.map(id=>({employeeId:id,name:cards.find(card=>card.id===id)!.title,...(info.kind==='channel'?{directory:data.members[id]}:{})})),...(memberDirectory?{memberDirectory,memberPath:path.join(root,memberDirectory)}:{}),...(card?{personalWorkspace:card.cwd}:{}),nativeAccess:!card||employeeSettings(readStore(),card).mode!=='cloud'&&card.kind!=='cloud-native-worker',policy:info.kind==='group'?'Group files are shared conversation content, not employee workspaces. Every member has equal file rights. Employees keep only their assigned Team workspace; joining never creates a member folder or changes the execution directory. Existing shared files remain in place.':'Authorized channel members read shared files and edit their own named subfolder; user and Secretary administer all content. Existing paths remain stable.'}
+ const {root,data,remote}=layout(info,create),cards=readStore().sessions,card=cards.find(card=>card.id===employeeId),memberDirectory=info.kind==='channel'&&employeeId?data.members[employeeId]:undefined
+ return {conversation,name:info.name,root,folderName:data.folderName,...(info.storage?{storage:info.storage}:{}),members:info.memberIds.map(id=>({employeeId:id,name:cards.find(card=>card.id===id)!.title,...(info.kind==='channel'?{directory:data.members[id]}:{})})),...(memberDirectory?{memberDirectory,memberPath:path.join(root,memberDirectory)}:{}),...(card?{personalWorkspace:card.cwd}:{}),nativeAccess:remote?!!card&&employeeSettings(readStore(),card).hostId===info.storage?.hostId:!card||employeeSettings(readStore(),card).mode!=='cloud'&&card.kind!=='cloud-native-worker',policy:info.kind==='group'?'Group files are shared conversation content, not employee workspaces. Every member has equal file rights. Employees keep only their assigned Team workspace; joining never creates a member folder or changes the execution directory. Existing shared files remain in place.':'Authorized channel members read shared files and edit their own named subfolder; user and Secretary administer all content. Existing paths remain stable.'}
 }
 function relative(value:unknown='.'){
  if(typeof value!=='string'||!value||value.includes('\0')||value.includes('\\')||path.isAbsolute(value))throw Error('Use a relative shared file path')
@@ -86,26 +90,47 @@ function noLinks(root:string,value:string){
  for(const part of parts){current=path.join(current,part);try{if(fs.lstatSync(current).isSymbolicLink())throw Error('Shared files cannot follow symbolic links')}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}}
  return resolved
 }
+/** One endpoint for local and host-backed group files, with membership checked for every I/O. */
 export function conversationFileEndpoint(conversation:string,value:string,destination=false):FileEndpoint{
- const info=allowed(conversation),{root,data}=layout(info),file=directoryPath(root,relative(value)),principal=requestContext().principal,context=requestContext()
- noLinks(root,file)
- const writable=(candidate:string,operation='destination')=>{
-  const parts=path.relative(root,workspacePath(root,candidate)).split(path.sep).filter(Boolean)
-  if(info.kind==='group'||isAppAdministrator(principal)||principal.kind!=='agent'||parts[0]===data.members[principal.employeeId])return
+ const info=allowed(conversation),{root,data,remote}=layout(info),file=remote?relative(value):directoryPath(root,relative(value)),principal=requestContext().principal,context=requestContext(),binding=JSON.stringify(info.storage??null),hostStamp=remote?getCloudHost(info.storage!.hostId!).updatedAt:undefined
+ const writable=(candidate:string)=>{
+  if(info.kind==='group'||isAppAdministrator(principal)||principal.kind!=='agent'||candidate.split('/')[0]===data.members[principal.employeeId])return
   throw Error('Only your named conversation subfolder is writable; user and Secretary manage shared files')
  }
+ const validate=(operation:string,args:Record<string,any>)=>withCaller(context,()=>{
+  const current=allowed(conversation);if(JSON.stringify(current.storage??null)!==binding||remote&&getCloudHost(current.storage!.hostId!).updatedAt!==hostStamp||remote&&JSON.stringify(cloudHostTarget(current.storage!.hostId!,root))!==JSON.stringify(remote))throw Error('Shared storage changed; retry the operation')
+  if(!remote){noLinks(root,String(args.path??file));if(args.to!==undefined)noLinks(root,String(args.to))}
+  if(destination){writable(String(args.path??file));if(args.to!==undefined){relative(String(args.to));writable(String(args.to));if(info.kind==='channel'&&operation==='copy-commit'&&Object.values(data.members).includes(String(args.to)))throw Error('Named member workspace identities cannot be replaced')}}
+ })
  if(destination)writable(file)
- return {root,path:file,changed:()=>sharedFilesChanged(conversation),validate:(operation,args)=>withCaller(context,()=>{
-  allowed(conversation);noLinks(root,String(args.path??file));if(args.to!==undefined)noLinks(root,String(args.to))
-  if(destination){writable(String(args.path??file),operation);if(args.to!==undefined){writable(String(args.to),operation);if(info.kind==='channel'&&operation==='copy-commit'&&Object.values(data.members).includes(String(args.to)))throw Error('Named member workspace identities cannot be replaced');if(info.kind!=='group'&&!isAppAdministrator(principal)&&principal.kind==='agent'&&String(args.to).split('/').length===1&&operation==='copy-commit'&&!fs.lstatSync(path.join(root,String(args.path))).isFile())throw Error('Only direct files may be imported at the conversation root')}}
- })}
+ const read=info.kind==='group'?async(operation:string,args:Record<string,any>)=>withCaller(context,async()=>{
+  validate(operation,args)
+  const result=remote?await remoteFiles('group-files-'+info.id,remote,operation,{...args,strictLinks:true}):workspaceFiles(root,operation,{...args,literalPaths:true},{by:args.by,keepReceipt:args.keepReceipt,expectedVersion:args.expectedVersion})
+  validate(operation,args);return result
+ }):undefined
+ return {root,path:file,...(remote?{remote}:{}),...(read?{read}:{}),changed:()=>sharedFilesChanged(conversation),validate}
 }
-export function conversationFile(args:Record<string,any>){
+export async function sharedFileIO(end:FileEndpoint,operation:string,args:Record<string,any>={}){
+ await end.validate?.(operation,args)
+ return end.read?end.read(operation,args):end.remote?remoteFiles('shared-file-io',end.remote,operation,args):workspaceFiles(end.root,operation,args,{by:args.by,keepReceipt:args.keepReceipt,expectedVersion:args.expectedVersion})
+}
+
+export async function conversationFile(args:Record<string,any>){
  authorize('conversation.file',args)
- const info=allowed(args.conversation),{root,data}=layout(info),principal=requestContext().principal,operation=args.operation
+ const info=allowed(args.conversation),{root,data,remote}=layout(info),principal=requestContext().principal,operation=args.operation
  const operations={list:'list',read:'read',image:'read-image',info:'copy-info',chunk:'copy-read',write:'write',mkdir:'mkdir',move:'move',trash:'trash',restore:'restore'} as const
  if(!Object.hasOwn(operations,operation))throw Error('Choose a supported shared file operation')
- const writing=['write','mkdir','move','trash','restore'].includes(operation),rootRestore=operation==='restore'&&typeof args.id==='string'&&args.id.startsWith('root:'),file=directoryPath(root,relative(args.path??'.')),target=args.to===undefined?undefined:directoryPath(root,relative(args.to))
+ const writing=['write','mkdir','move','trash','restore'].includes(operation),rootRestore=operation==='restore'&&typeof args.id==='string'&&args.id.startsWith('root:'),file=remote?relative(args.path??'.'):directoryPath(root,relative(args.path??'.')),target=args.to===undefined?undefined:remote?relative(args.to):directoryPath(root,relative(args.to))
+ if(operation==='write'&&(typeof args.content!=='string'||Buffer.byteLength(args.content)>4*1024*1024))throw Error('Shared text writes must be at most 4 MiB')
+ if(remote){
+  const end=conversationFileEndpoint(info.conversation,file,writing),id=rootRestore?args.id.slice(5):args.id
+  if(operation==='restore'){const receipt=await sharedFileIO(end,'trash-info',{id});relative(receipt.path)}
+  const result=await sharedFileIO(end,operations[operation as keyof typeof operations],{...args,path:file,...(target?{to:target}:{}),...(id?{id}:{}),offset:args.offset??0,length:262144,by:principal})
+  if(writing)sharedFilesChanged(info.conversation)
+  if(operation==='list')return {...result,path:result.path==='.'?'':result.path,entries:result.entries.filter((entry:any)=>!['.agents-company','.margin-reader'].includes(entry.name.toLowerCase())&&!entry.name.startsWith('.agents-transfer-')).map((entry:any)=>({...entry,managed:false,writable:true}))}
+  if(operation==='trash')return {...result,id:'root:'+result.id}
+  return result
+ }
  if(info.kind!=='group'&&operation==='mkdir'&&!isAppAdministrator(principal)&&principal.kind==='agent'&&!file.startsWith(data.members[principal.employeeId]+'/'))throw Error('Create directories inside your own member workspace')
  if(rootRestore){
   if(info.kind!=='group'&&!isAppAdministrator(principal))throw Error('Only the user or Secretary may restore root files')
@@ -117,10 +142,9 @@ export function conversationFile(args:Record<string,any>){
  conversationFileEndpoint(info.conversation,operation==='restore'&&info.kind!=='group'&&!isAppAdministrator(principal)&&principal.kind==='agent'&&!rootRestore?data.members[principal.employeeId]:file,writing)
  if(target!==undefined)conversationFileEndpoint(info.conversation,target,true)
  if(info.kind==='channel'&&writing&&operation!=='restore'&&(Object.values(data.members).includes(file)||target!==undefined&&Object.values(data.members).includes(target)))throw Error('Named employee workspace folders cannot be replaced, renamed or removed')
- if(operation==='write'&&(typeof args.content!=='string'||Buffer.byteLength(args.content)>4*1024*1024))throw Error('Shared text writes must be at most 4 MiB')
  const own=!isAppAdministrator(principal)&&principal.kind==='agent'?data.members[principal.employeeId]:undefined,rootWrite=writing&&info.kind==='group',useOwn=writing&&!!own&&info.kind!=='group',subroot=useOwn?path.join(root,own!):root
  const strip=(value:string)=>useOwn?path.relative(subroot,path.join(root,value)):value
- const result=workspaceFiles(subroot,operations[operation as keyof typeof operations],{...args,...(rootRestore?{id:args.id.slice(5)}:{}),path:operation==='restore'?'.':strip(file),...(target?{to:strip(target)}:{}),offset:args.offset??0,length:262144})
+ const result=workspaceFiles(subroot,operations[operation as keyof typeof operations],{...args,...(rootRestore?{id:args.id.slice(5)}:{}),path:operation==='restore'?'.':strip(file),...(target?{to:strip(target)}:{}),offset:args.offset??0,length:262144,...(info.kind==='group'?{literalPaths:true}:{})})
  if(writing)sharedFilesChanged(info.conversation)
  if(operation==='info')return {...result,version:fileVersion(noLinks(root,file))}
  if(operation==='list')return {...result,path:(result.path??'').split(path.sep).join('/'),entries:result.entries!.filter((entry:{name:string})=>!['.agents-company','.margin-reader'].includes(entry.name)&&!entry.name.startsWith('.agents-transfer-')).map((entry:{path:string})=>({...entry,path:entry.path.split(path.sep).join('/'),managed:info.kind==='channel'&&Object.values(data.members).includes(entry.path),writable:info.kind==='group'||isAppAdministrator(principal)||entry.path.split(path.sep)[0]===own}))}
@@ -164,15 +188,15 @@ export function conversationWorkspaceRequest(command:string,args:Record<string,a
 }
 
 /** Publish stable shared-file references; bytes are fetched only when a recipient chooses. */
-export function sharedAttachments(conversation:string,images:unknown,files:unknown):MessageAttachment[]{
+export async function sharedAttachments(conversation:string,images:unknown,files:unknown):Promise<MessageAttachment[]>{
  const photos=attachmentPaths(images),documents=attachmentPaths(files)
  if(photos.length+documents.length>16)throw Error('Choose at most 16 attachments')
  if(!photos.length&&!documents.length)return []
  allowed(conversation)
- const read=(value:string,kind:'image'|'file')=>{
+ const read=async(value:string,kind:'image'|'file')=>{
   if(!value.startsWith(WORKSPACE_FILE_PREFIX))throw Error('Choose a file uploaded to this conversation')
   const end=conversationFileEndpoint(conversation,value)
-  return attachmentInfo(value,workspaceFiles(end.root,'copy-info',{path:end.path}),kind,kind==='image'?workspaceFiles(end.root,'read-image',{path:end.path}).mimeType:undefined)
+  return attachmentInfo(value,await sharedFileIO(end,'copy-info',{path:end.path}),kind,kind==='image'?(await sharedFileIO(end,'read-image',{path:end.path})).mimeType:undefined)
  }
- return [...photos.map(value=>read(value,'image')),...documents.map(value=>read(value,'file'))]
+ return Promise.all([...photos.map(value=>read(value,'image')),...documents.map(value=>read(value,'file'))])
 }

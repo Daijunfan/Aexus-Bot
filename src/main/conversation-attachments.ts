@@ -10,7 +10,7 @@ import {getChannelMessage} from './channel-discussion'
 import {channelFileEndpoint,getChannel} from './channels'
 import {one,run,liveChannelPost,projectChannelPost,projectChannelDocuments} from './channel-store'
 import {cloudDocumentSource} from './channel-files'
-import {conversationFileEndpoint} from './conversation-workspaces'
+import {conversationFileEndpoint,sharedFileIO} from './conversation-workspaces'
 import {workspaceCatalog} from './workspace-catalog'
 import {authorize,requestContext,withCaller} from './authorization'
 import {workspaceFiles} from './files'
@@ -33,7 +33,7 @@ function publishedScope(conversation:string){
 }
 
 /** Full public data, never a private transcript or a guessed latest-N summary. */
-export function conversationEntry(args:Record<string,any>){
+export async function conversationEntry(args:Record<string,any>){
  const scope=publishedScope(args.conversation);if(typeof args.id!=='string'||!args.id)throw Error('Choose a published entry ID')
  let entry:any,kind:'news'|'message'='message';let attachments:Attachment[]=[]
  if(scope.kind==='channel'&&args.id.startsWith('np_')){
@@ -43,10 +43,10 @@ export function conversationEntry(args:Record<string,any>){
  }else{
   entry=scope.kind==='employee'?directPublishedEntry(scope.id,args.id):scope.kind==='group'?readChatMessages(scope.id).find(message=>message.id===args.id):getChannelMessage(scope.id,args.id)
   if(!entry)throw Error('Unknown published message')
-  attachments=(entry.attachments??[]).map((file:any)=>{
-   const shared=file.path.startsWith('@workspace/'),endpoint=shared?conversationFileEndpoint(scope.conversation,file.path):undefined,info=endpoint?workspaceFiles(endpoint.root,'copy-info',{path:endpoint.path}):undefined
-   return {id:'attachment:'+hash(file.path).slice(0,32),name:file.name,kind:file.kind==='image'?'image':'document',bytes:info?.regular?info.bytes:file.bytes,mimeType:file.mimeType,path:file.path,...(endpoint?{version:fileVersion(path.join(endpoint.root,endpoint.path))}:{}),read:scope.kind==='employee'?{command:file.kind==='image'?'workspace.image':'workspace.read',args:{employee:scope.id,path:file.path}}:shared?{command:'conversation.file',args:{conversation:scope.conversation,path:file.path,operation:file.kind==='image'?'image':'chunk'}}:{command:'chat.file',args:{id:scope.id,path:file.path,operation:file.kind==='image'?'image':'chunk'}}}
-  })
+  attachments=await Promise.all((entry.attachments??[]).map(async(file:any)=>{
+   const shared=file.path.startsWith('@workspace/'),endpoint=shared?conversationFileEndpoint(scope.conversation,file.path):undefined,info=endpoint?await sharedFileIO(endpoint,'copy-info',{path:endpoint.path}):undefined
+   return {id:'attachment:'+hash(file.path).slice(0,32),name:file.name,kind:file.kind==='image'?'image':'document',bytes:info?.regular?info.bytes:file.bytes,mimeType:file.mimeType,path:file.path,...(endpoint?{version:info?.version??'missing'}:{}),read:scope.kind==='employee'?{command:file.kind==='image'?'workspace.image':'workspace.read',args:{employee:scope.id,path:file.path}}:shared?{command:'conversation.file',args:{conversation:scope.conversation,path:file.path,operation:file.kind==='image'?'image':'chunk'}}:{command:'chat.file',args:{id:scope.id,path:file.path,operation:file.kind==='image'?'image':'chunk'}}}
+  }))
  }
  const text=[entry.url,entry.authorUrl,entry.title,entry.body,entry.text].filter(value=>typeof value==='string').join('\n')
  const links=[...new Set((text.match(/https?:\/\/[^\s<>"\u0000-\u001f]+/g)??[]).map(url=>url.replace(/[),.;]+$/,'')))]
@@ -67,7 +67,7 @@ async function attachmentSource(conversation:string,entryId:string,file:Attachme
   authorize('conversation.entry');publishedScope(conversation)
   if(scope.kind==='channel'&&entryId.startsWith('np_')){const post=liveChannelPost(entryId);if(post.channel_id!==scope.id)throw Error('Post moved to another channel')}
   if(operation==='copy-info'){
-   const current=conversationEntry({conversation,id:entryId}).attachments.find(value=>value.id===file.id)
+   const current=(await conversationEntry({conversation,id:entryId})).attachments.find(value=>value.id===file.id)
    if(!current||current.bytes!==file.bytes||current.sha256!==file.sha256||current.version!==file.version)throw Error('Published attachment changed during download')
   }
   await validate?.(operation,args)
@@ -96,7 +96,7 @@ export async function downloadAttachment(args:Record<string,any>,resolve:(ref:Fi
  if(!workspace)throw Error('Choose one of your workspace.catalog IDs')
  if(scope.kind!=='employee'&&!isAppAdministrator(principal)&&!scope.members.includes(employee))throw Error('The selected employee must belong to the source conversation')
  if(typeof args.clientRequestId!=='string'||!args.clientRequestId.trim()||args.clientRequestId.length>160)throw Error('Provide a stable clientRequestId')
- const file=conversationEntry({conversation:scope.conversation,id:args.entryId}).attachments.find(file=>file.id===args.attachmentId)
+ const file=(await conversationEntry({conversation:scope.conversation,id:args.entryId})).attachments.find(file=>file.id===args.attachmentId)
  if(!file)throw Error('Choose an attachment ID returned by conversation.entry')
  const subdirectory=relative(args.path),name=filename(args.name??file.name),fingerprint=hash(JSON.stringify([scope.conversation,args.entryId,file.id,workspaceId,employee,subdirectory,name])),requestKey=JSON.stringify([actor(principal),args.clientRequestId])
  const previous=one('SELECT data FROM conversation_downloads WHERE request_key=?',requestKey)
@@ -130,7 +130,7 @@ export async function downloadAttachment(args:Record<string,any>,resolve:(ref:Fi
 }
 export async function downloadAttachmentLocal(args:Record<string,any>){
  if(!isAppAdministrator())throw Error('Only the user or Secretary may save files to a chosen Mac/Core-host path')
- const scope=publishedScope(args.conversation),file=conversationEntry({conversation:scope.conversation,id:args.entryId}).attachments.find(f=>f.id===args.attachmentId)
+ const scope=publishedScope(args.conversation),file=(await conversationEntry({conversation:scope.conversation,id:args.entryId})).attachments.find(f=>f.id===args.attachmentId)
  if(!file)throw Error('Choose an attachment returned by conversation.entry')
  if(typeof args.path!=='string'||!path.isAbsolute(args.path))throw Error('Choose an absolute local destination file path')
  return saveDownload(await attachmentSource(scope.conversation,args.entryId,file),args.path,args.overwrite===true)

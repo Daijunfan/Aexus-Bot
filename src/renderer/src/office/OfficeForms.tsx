@@ -1,3 +1,5 @@
+import {StorageFolderFields} from '../components/StorageFolderFields'
+import {defaultStorageFolderName,type StorageFolderInput} from '../../../shared/storage-folder'
 import {AvatarPicker} from '../components/AvatarPicker'
 import {useEnabledAvatars} from '../components/AvatarCatalog'
 import {directoryName} from '../../../shared/directory-names'
@@ -8,7 +10,6 @@ import {managementRoles,rolePolicy,type ManagementRole} from '../../../shared/ro
 import {Icon} from '../components/Icon'
 import {ModelSelect} from '../components/ModelSelect'
 import {AppSelect} from '../components/AppSelect'
-import {RemoteConnectionFields} from './RemoteConnectionFields'
 import {EmployeeFolderPicker} from './EmployeeFolderPicker'
 import { useEffect,useState,useRef } from 'react'
 import {EmployeePortrait} from '../components/EmployeePortrait'
@@ -114,28 +115,29 @@ export function TeamForm({ name, index, layout, root = '', settings={mode:'build
   const [bounds, updateBounds] = useState(()=>initialBounds(index,layout)),setBounds=(value:Parameters<typeof updateBounds>[0])=>{creationTouched.current=true;updateBounds(value)}
   const [folder,setFolder]=useState(root)
   const [config,setConfig]=useState<TeamSettings>(name===undefined?(template?.settings?.mode==='cloud'?template.settings:{mode:'build',directoryMode:'default'}):settings)
-  const directoryMode=config.mode==='cloud'?'bind':config.directoryMode??'default'
+  const [storage,setStorage]=useState<StorageFolderInput>({mode:'create',...(name===undefined&&template?.settings?.hostId?{hostId:template.settings.hostId,directory:template.settings.parentDirectory}:{})})
+  const directoryMode=name===undefined?(storage.mode==='create'?'default':'bind'):config.directoryMode??'bind'
   const [suggested,setSuggested]=useState(''),[deleting,setDeleting]=useState(false)
   const [saving, setSaving] = useState(false)
   const [removing, setRemoving] = useState(false)
   const [folderError,setFolderError]=useState('')
-  const formValue=JSON.stringify([title,design,bounds,folder,config,directoryMode]),initialValue=useRef(formValue)
+  const formValue=JSON.stringify([title,design,bounds,folder,config,directoryMode,storage]),initialValue=useRef(formValue)
   useEffect(()=>{onDirtyChange?.(name===undefined?creationTouched.current||!!title.trim():formValue!==initialValue.current)},[formValue,onDirtyChange])
   useEffect(()=>{onSavingChange?.(saving||deleting);return()=>onSavingChange?.(false)},[saving,deleting,onSavingChange])
 
-  useEffect(()=>{let active=true;setFolderError('');if(name!==undefined){setFolder(root);return}if(config.mode==='cloud'){setFolder(config.directory??config.remote?.directory??'');return}void api.call<{path:string}>('workspace.suggest',{team:title||'未命名项目',...config}).then(result=>{if(active){setSuggested(result.path);if(config.mode==='work')setFolder(result.path);else if(directoryMode==='default')setFolder(result.path)}}).catch(error=>{if(active){setFolder('');setFolderError((error as Error).message)}});return()=>{active=false}},[title,config.mode,config.pluginId,config.directory,config.remote?.directory,directoryMode,root,name])
-  return <form inert={inert} onChangeCapture={()=>{creationTouched.current=true}} className={'team-form'+(name===undefined?' creation-form':'')} onSubmit={async (e) => { e.preventDefault();if(submitActive.current)return;submitActive.current=true;setSaving(true);try { await onSave(name === '' ? '' : title, folder.trim(), design, bounds,{...config,directoryMode}) } catch(error){setFolderError((error as Error).message)} finally { submitActive.current=false;setSaving(false) } }}>
+  useEffect(()=>{let active=true;if(name!==undefined){setFolder(root);return}if(config.mode==='cloud'){setFolder(storage.directory??'');return}void api.call<{path:string}>('workspace.suggest',{team:title||'Project',mode:'build'}).then(result=>{if(!active)return;setSuggested(result.path);const base=storage.directory??result.path.replace(/[\\/][^\\/]+$/,'');setFolder(storage.mode==='bind'?storage.directory??'':base.replace(/[\\/]+$/,'')+'/'+(storage.folderName??defaultStorageFolderName(title)))}).catch(cause=>active&&setFolderError(cause.message));return()=>{active=false}},[title,config.mode,storage,root,name])
+
+  return <form inert={inert} onChangeCapture={()=>{creationTouched.current=true}} className={'team-form'+(name===undefined?' creation-form':'')} onSubmit={async (e) => { e.preventDefault();if(submitActive.current)return;submitActive.current=true;setSaving(true);try { await onSave(name === '' ? '' : title, folder.trim(), design, bounds,{...config,directoryMode,...(name===undefined?config.mode==='cloud'?{hostId:storage.hostId,directory:storage.directory,folderName:storage.mode==='create'?storage.folderName??defaultStorageFolderName(title):undefined}:{folderName:storage.mode==='create'?storage.folderName??defaultStorageFolderName(title):undefined,parentDirectory:storage.mode==='create'?storage.directory??suggested.replace(/[\\/][^\\/]+$/,''):undefined}:{})}) } catch(error){setFolderError((error as Error).message)} finally { submitActive.current=false;setSaving(false) } }}>
     {name!==undefined&&<div className={`sign-preview theme-${design.theme}`}><i /><span>{title || uiText("New team")}<small>{design.subtitle}</small></span><b>01</b></div>}
     <label className="creation-name">{uiText("Team name")}<input name="team-name" autoFocus={name===undefined} required readOnly={name===''} value={title} onChange={e=>setTitle(e.target.value)} placeholder={uiText("e.g. Engineering")}/></label>
     {name===undefined?<>
     <section className="creation-section"><h3>{uiText("Workspace type")}</h3><div className="team-mode-options creation-team-types" role="group" aria-label={uiText("Team type")}>{([
       {mode:'build',icon:'folder',label:'Local project'},
       {mode:'cloud',icon:'server',label:'Cloud project'}
-    ] as const).map(choice=><button type="button" key={choice.mode} data-mode={choice.mode} aria-pressed={config.mode===choice.mode} className={config.mode===choice.mode?'selected':''} onClick={()=>{setConfig(choice.mode==='cloud'?{mode:'cloud'}:{mode:'build',directoryMode:'default'});setFolderError('')}}><span className="creation-type-icon"><Icon name={choice.icon}/></span><strong>{uiText(choice.label)}</strong><Icon name={config.mode===choice.mode?'check':'circle-outline'}/></button>)}</div></section>
+    ] as const).map(choice=><button type="button" key={choice.mode} data-mode={choice.mode} aria-pressed={config.mode===choice.mode} className={config.mode===choice.mode?'selected':''} onClick={()=>{setConfig(choice.mode==='cloud'?{mode:'cloud'}:{mode:'build',directoryMode:'default'});setStorage({mode:'create'});setFolderError('')}}><span className="creation-type-icon"><Icon name={choice.icon}/></span><strong>{uiText(choice.label)}</strong><Icon name={config.mode===choice.mode?'check':'circle-outline'}/></button>)}</div></section>
     <section className="creation-section creation-workspace"><h3><Icon name={config.mode==='cloud'?'server':config.mode==='work'?'extensions':'folder'}/>{uiText(config.mode==='cloud'?'Host and folder':config.mode==='work'?'Plugin workspace':'Working folder')}</h3>
-    {config.mode==='cloud'&&<RemoteConnectionFields value={config} onChange={next=>{setConfig(next);setFolderError('')}}/>}
-    {config.mode==='work'&&<><label>{uiText("Plugin")}<AppSelect aria-label={uiText("Plugin")} name="team-plugin" required value={config.pluginId??''} onChange={e=>setConfig({mode:'work',pluginId:e.target.value,directoryMode:'default'})}><option value="" disabled>{uiText("Choose an integrated plugin")}</option>{plugins.map(p=><option value={p.id} key={p.id}>{p.name}</option>)}</AppSelect>{!plugins.length&&<small>{uiText("No plugins installed")}</small>}</label><label>{uiText("Working folder")}<input name="team-root" readOnly value={folder}/></label></>}
-    {config.mode==='build'&&<><div className="directory-mode-options" role="group" aria-label={uiText("Team directory mode")}>{(['default','bind'] as const).map(mode=><button type="button" key={mode} data-team-directory-mode={mode} aria-pressed={directoryMode===mode} className={directoryMode===mode?'selected':''} onClick={()=>{setConfig({...config,directoryMode:mode});setFolder(mode==='bind'?'':suggested);setFolderError('')}}>{uiText(mode==='default'?'Create automatically':'Bind an existing folder')}</button>)}</div><label>{uiText("Folder")}<div className="folder-input"><input name="team-root" required readOnly={directoryMode==='default'} value={folder} onChange={e=>{setFolder(e.target.value);setFolderError('')}} placeholder={uiText("Choose an existing physical folder")}/>{directoryMode==='bind'&&<button type="button" onClick={async()=>{try{const chosen=await api.call<{path:string|null}>('workspace.choose',{path:folder||suggested});if(chosen.path)setFolder(chosen.path);setFolderError('')}catch(e){setFolderError((e as Error).message)}}}>{uiText("Browse")}</button>}</div></label></>}
+    <StorageFolderFields value={storage} onChange={next=>{setStorage(next);setFolderError('')}} name={title} location={config.mode==='cloud'?'remote':'local'} localDefault={suggested.replace(/[\\/][^\\/]+$/,'')} disabled={saving}/>
+
     </section>
     </>:<div className="workspace-contract"><span>{uiText(config.mode==='work'?'Local plugin':config.mode==='cloud'?'Cloud project':'Local project')}</span><code>{root}</code></div>}
     {folderError&&<p className="employee-form-error" role="alert">{folderError}</p>}
@@ -151,6 +153,6 @@ export function TeamForm({ name, index, layout, root = '', settings={mode:'build
     <p className="workspace-note">{uiText('Team rooms use rectangular seats. Drag the right, bottom or corner edge to add rows and columns; employees stay in their numbered seats.')}</p>
     </>}
     {removing&&<p className="workspace-note">{uiText("This will remove the Team, its")} {employeeCount}  {uiText("employees and all their local and native Codex / Claude Agent conversations. Working folders and files will be kept.")}</p>}
-    <div className="form-footer">{onRemove && <button type="button" className="text-danger" disabled={deleting||saving} onClick={async () => { if (!removing) { setRemoving(true); return } setDeleting(true);try{await onRemove()}finally{setDeleting(false)} }}>{deleting?uiText("Cleaning up conversations…"):removing ? uiText("Confirm removal of Team and all conversations") : uiText("Remove Team")}</button>}{onCancel&&<button type="button" className="btn creation-cancel" onClick={onCancel} disabled={saving}>{uiText("Cancel")}</button>}<button className="btn primary save-team" disabled={saving||deleting||!title.trim()||!folder||!!folderError||(config.mode==='cloud'&&!config.hostId)}>{saving ? uiText("Saving…") : name === undefined ? uiText("Create Team") : uiText("Save workspace")}</button></div>
+    <div className="form-footer">{onRemove && <button type="button" className="text-danger" disabled={deleting||saving} onClick={async () => { if (!removing) { setRemoving(true); return } setDeleting(true);try{await onRemove()}finally{setDeleting(false)} }}>{deleting?uiText("Cleaning up conversations…"):removing ? uiText("Confirm removal of Team and all conversations") : uiText("Remove Team")}</button>}{onCancel&&<button type="button" className="btn creation-cancel" onClick={onCancel} disabled={saving}>{uiText("Cancel")}</button>}<button className="btn primary save-team" disabled={saving||deleting||!title.trim()||!folder||!!folderError||(config.mode==='cloud'&&!storage.hostId)}>{saving ? uiText("Saving…") : name === undefined ? uiText("Create Team") : uiText("Save workspace")}</button></div>
   </form>
 }

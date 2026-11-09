@@ -539,7 +539,7 @@ async function main() {
     case 'engine.remote-check': {const p=parse(rest);return out(await call('engine.remote-check',{team:p.team,engine:p.engine,directory:p.directory}))}
     case 'engine.remote-sessions': {const p=parse(rest);return out(await call('engine.remote-sessions',{team:p.team,engine:p.engine}))}
     case 'group.add':
-      {const p=parse(rest);return out(await call('group.add', { name: rest[0], root:p.root,mode:p.mode,pluginId:p.plugin,directoryMode:p['directory-mode'],hostId:p['host-id'],directory:p['remote-dir'],remote:remoteFlags(p),os:p.os,distribution:p.distribution,...(p.design!==undefined?{design:jsonArgument(p.design)}:{}),...(p.bounds!==undefined?{bounds:jsonArgument(p.bounds)}:{}),...(p['client-request-id']!==undefined?{clientRequestId:p['client-request-id']}: {}) }), (s) => s.groups.join('\n'))}
+      {const p=parse(rest);return out(await call('group.add', { name: rest[0], root:p.root,mode:p.mode,pluginId:p.plugin,directoryMode:p['directory-mode'],folderName:p['folder-name'],parentDirectory:p['parent-directory'],hostId:p['host-id'],directory:p['remote-dir'],remote:remoteFlags(p),os:p.os,distribution:p.distribution,...(p.design!==undefined?{design:jsonArgument(p.design)}:{}),...(p.bounds!==undefined?{bounds:jsonArgument(p.bounds)}:{}),...(p['client-request-id']!==undefined?{clientRequestId:p['client-request-id']}: {}) }), (s) => s.groups.join('\n'))}
     case 'group.configure':
       {const p=parse(rest);return out(await call('group.configure',{name:p._[0],mode:p.mode,pluginId:p.plugin,directoryMode:p['directory-mode'],root:p.root,hostId:p['host-id'],directory:p['remote-dir'],remote:remoteFlags(p)}))}
     case 'group.root':

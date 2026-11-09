@@ -192,7 +192,9 @@ formal work. Silent acknowledgments create no further delivery.
 
 `conversation.workspace/workspaces/file/copy/transfer` 使用真实群组/频道身份。群组每个当前成员对共享文件具有相同的读、创建、上传、编辑、删除权限；Owner/Admin 不增加文件权限。用户与 Secretary 无需加入即可管理。员工只拥有 Team 分配的执行 workspace；`workspace.catalog` 仅返回该位置，加群不创建个人目录、不改变 cwd 或执行主机。群共享目录是内容存放位置，不是员工工作区；旧成员目录与已有文件原地保留，按普通共享内容处理，移除成员立即撤销 API 访问。
 
-`conversation.files` 汇总真实共享文件、图片、已完成上传及消息引用。没有消息的文件不伪造作者或 messageId。图片/PDF 缩略预览沿用现有资产预览边界；`conversation.file-open` 仅用户/Secretary 可调用，核验当前文件版本后通过 Margin Reader 公开接口原地打开 PDF，不复制或扩大普通员工的插件权限。Reader 的 `.margin-reader` 元数据与 `.agents-company`、传输暂存路径均受保护。频道保留旧布局写入限制，不新增成员工作区。所有操作都不授予对他人员工私有 Team workspace 的写权限。
+群组创建时只有用户/Secretary 可以选择 `storage` 的本地绝对目录或已登记 `hostId` 的云端目录，支持新建独立名称的目录或绑定已有目录。普通员工创建群组仅使用默认托管目录。群文件成员权限委派到选定目录，不授予任意 SSH 命令、主机凭据或更改执行位置的权限；每次 I/O 及异步结果返回后复核成员和绑定。路径越界、软链接、过期版本与覆盖限制在本地/云端一致。群文件仍引用的主机不能被删除。
+
+`conversation.files` 汇总真实共享文件、图片、已完成上传及消息引用。没有消息的文件不伪造作者或 messageId。图片/PDF 缩略预览沿用现有资产预览边界；`conversation.file-open` 仅用户/Secretary 可调用，核验当前文件版本后通过 Margin Reader 公开接口读取 PDF；云端原件仅按需生成临时预览/阅读缓存，关闭阅读器后释放缓存原件，不镜像整个群目录或扩大普通员工的插件权限。Reader 的 `.margin-reader` 元数据与 `.agents-company`、传输暂存路径均受保护。频道保留旧布局写入限制，不新增成员工作区。所有操作都不授予对他人员工私有 Team workspace 的写权限。
 
 `Archived chats` 统一显示已归档的员工、群组和频道；Restore 继续调用 `messenger.conversation {patch:{archived:false}}`，不改变历史、未读回执、成员身份或工作区。
 

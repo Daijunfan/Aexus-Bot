@@ -7589,7 +7589,7 @@
   {
     "name": "assets.preview",
     "args": "ID",
-    "summary": "User-only: derive a bounded local PDF, article or image cover with the installed Reader renderer; never fetch remote originals or mutate files",
+    "summary": "User-only: derive bounded PDF/image/text covers with the installed Reader renderer. Configured group storage may use disposable remote preview scratch space; other remote originals are not fetched.",
     "gui": "Document cover",
     "inputSchema": {
       "type": "object",
@@ -8107,7 +8107,7 @@
   {
     "name": "conversation.file-open",
     "args": "CONVERSATION --path PATH --version VERSION",
-    "summary": "User/Secretary: open a current shared PDF directly in Margin Reader using its original file, without downloading or importing a copy. Rechecks group access and exact file version; keeps the conversation open.",
+    "summary": "User/Secretary: open a current shared PDF in Margin Reader. Local originals open in place; registered-host originals use an on-demand reading cache released when the reader closes. Rechecks membership/version and keeps the conversation open.",
     "gui": "Read shared PDF",
     "inputSchema": {
       "type": "object",
@@ -10823,8 +10823,8 @@
   },
   {
     "name": "chat.create",
-    "args": "--name NAME [--team TEAM] [--members JSON] [--owner-id ID] [--client-request-id ID]",
-    "summary": "Create a group with an Agent Owner; Agent creators own their group, user selects ownerId (defaults to first selected member). Stable clientRequestId retries the same caller-owned creation",
+    "args": "--name NAME [--team TEAM] [--members JSON] [--owner-id ID] [--storage JSON] [--client-request-id ID]",
+    "summary": "Create a group with an Agent Owner. User/Secretary can choose local or registered-host storage, create a custom named folder or bind an existing folder; employees keep their Team cwd. Stable clientRequestId retries the same caller-owned creation",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -10847,6 +10847,33 @@
         "team": {
           "type": "string",
           "minLength": 1
+        },
+        "storage": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hostId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "directory": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mode": {
+              "enum": [
+                "create",
+                "bind"
+              ]
+            },
+            "folderName": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "mode"
+          ]
         },
         "members": {
           "type": "array",
@@ -15316,8 +15343,8 @@
   },
   {
     "name": "group.add",
-    "args": "<name> [--mode build|cloud] [--host-id ID] [--directory-mode default|bind] [--remote-dir PATH] [--os linux|macos|windows] [--distribution ID] [--design JSON --client-request-id ID]",
-    "summary": "Create a local or cloud project with fixed rectangular seats, optional atomic decoration and caller-bound retry identity; plugins are independent and use per-content employee grants. Cloud uses host-id; os/distribution assert actual host.",
+    "args": "<name> [--mode build|cloud] [--host-id ID] [--directory-mode default|bind] [--folder-name NAME --parent-directory PATH] [--remote-dir PATH] [--os linux|macos|windows] [--distribution ID] [--design JSON --client-request-id ID]",
+    "summary": "Create a local/cloud project with a folder name independent of the display name. Create under parent-directory (remote-dir is also a cloud parent) or bind an existing folder. Fixed seats, caller-bound retries and host OS assertions remain.",
     "gui": "“+ Department”",
     "readOnly": false,
     "permission": "operator",

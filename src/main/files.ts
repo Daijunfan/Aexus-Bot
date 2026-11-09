@@ -43,13 +43,24 @@ const hash=(value:Buffer)=>createHash('sha256').update(value).digest('hex')
 const imageMime=(bytes:Buffer)=>bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?'image/png':bytes.subarray(0,3).equals(Buffer.from([255,216,255]))?'image/jpeg':/^GIF8[79]a$/.test(bytes.subarray(0,6).toString())?'image/gif':bytes.subarray(0,4).toString()==='RIFF'&&bytes.subarray(8,12).toString()==='WEBP'?'image/webp':undefined
 export function workspaceFiles(root:string,operation:string,args:Record<string,any>,trashOptions?:{by?:PrincipalRef;keepReceipt?:boolean;expectedVersion?:string}) {
   args={...args,path:directoryPath(root,args.path||'.'),...(args.to!==undefined?{to:directoryPath(root,String(args.to))}:{})}
-  if(operation==='mkdir')args={...args,path:directoryDestination(root,args.path||'.',true)}
-  if(operation==='write')args={...args,path:directoryDestination(root,args.path||'.')}
-  if(operation==='move')args={...args,to:directoryDestination(root,String(args.to),fs.lstatSync(workspacePath(root,args.path)).isDirectory())}
+  if(operation==='mkdir'&&!args.literalPaths)args={...args,path:directoryDestination(root,args.path||'.',true)}
+  if(operation==='write'&&!args.literalPaths)args={...args,path:directoryDestination(root,args.path||'.')}
+  if(operation==='move'&&!args.literalPaths)args={...args,to:directoryDestination(root,String(args.to),fs.lstatSync(workspacePath(root,args.path)).isDirectory())}
   const file=workspacePath(root,args.path||'.',['write','mkdir','move','trash'].includes(operation))
+  if(operation==='shared-list'){
+    const entries:any[]=[];const walk=(relative:string)=>{for(const entry of fs.readdirSync(path.join(root,relative),{withFileTypes:true})){if(entry.name.startsWith('.')||entry.isSymbolicLink())continue;const name=path.posix.join(relative,entry.name);if(entry.isDirectory())walk(name);else if(entry.isFile()){const stat=fs.lstatSync(path.join(root,name));entries.push({path:name,name:entry.name,bytes:stat.size,modifiedAt:stat.mtimeMs,version:fileVersion(path.join(root,name)),regular:true,directory:false})}}};walk('');return {entries,trash:workspaceTrash(root)}
+  }
+  if(operation==='trash-info'||operation==='restore-rollback'){
+    if(!/^[a-f0-9-]{36}$/.test(args.id))throw Error('Invalid trash identity')
+    const directory=workspacePath(root,'.agents-company/trash'),manifest=path.join(directory,args.id+'.json');if(!fs.lstatSync(manifest).isFile()||fs.lstatSync(manifest).isSymbolicLink())throw Error('Trash receipt unavailable')
+    const value=JSON.parse(fs.readFileSync(manifest,'utf8')),target=workspacePath(root,value.path,true),blob=path.join(directory,args.id),available=fs.existsSync(blob)
+    if(operation==='trash-info')return {...value,id:args.id,available,originalExists:fs.existsSync(target),already:!!value.restoredAt&&!available}
+    if(available||!value.restoredAt||!fs.existsSync(target)||value.restoredVersion!==fileVersion(target))throw Error('Restored file changed; refresh before retrying')
+    fs.renameSync(target,blob);delete value.restoredAt;delete value.restoredVersion;atomicJson(manifest,value,true);return {rolledBack:true}
+  }
   if(operation==='copy-info'){
     if(!fs.existsSync(file)){const removed=workspaceTrash(root,path.relative(root,file).split(path.sep).join('/'))[0];return {exists:false,...(removed?{trashed:true,trashId:removed.id,deletedAt:removed.deletedAt}:{})}}
-    const stat=fs.lstatSync(file);return {exists:true,directory:stat.isDirectory(),regular:stat.isFile(),symlink:stat.isSymbolicLink(),bytes:stat.size,modifiedAt:stat.mtimeMs,mode:stat.mode&0o777}
+    const stat=fs.lstatSync(file);return {exists:true,version:fileVersion(file),directory:stat.isDirectory(),regular:stat.isFile(),symlink:stat.isSymbolicLink(),bytes:stat.size,modifiedAt:stat.mtimeMs,mode:stat.mode&0o777}
   }
   if(operation==='copy-read'){
     const {offset,length}=args
@@ -58,12 +69,13 @@ export function workspaceFiles(root:string,operation:string,args:Record<string,a
     const fd=fs.openSync(file,'r'),buffer=Buffer.alloc(length)
     try{const bytes=fs.readSync(fd,buffer,0,length,offset);return {data:buffer.subarray(0,bytes).toString('base64'),bytes}}finally{fs.closeSync(fd)}
   }
-  if(['copy-write','copy-commit','copy-remove'].includes(operation)){
+  if(['copy-write','copy-commit','copy-replace','copy-remove'].includes(operation)){
     workspacePath(root,args.path,true)
     if(!path.relative(root,file).split(path.sep).some(p=>/^\.agents-transfer-[a-f0-9-]{36}$/.test(p)))throw Error('Invalid transfer staging path')
     if(operation==='copy-remove'){fs.rmSync(file,{recursive:true,force:true});return {removed:true}}
-    if(operation==='copy-commit'){
+    if(operation==='copy-commit'||operation==='copy-replace'){
       const to=workspacePath(root,String(args.to),true)
+      if(operation==='copy-replace'){if(fileVersion(to)!==args.expectedVersion)throw Error('Shared file changed while uploading');fs.renameSync(file,to);return {path:args.to}}
       if(fs.existsSync(to))throw Error('目标已有同名文件，未覆盖')
       if(fs.statSync(file).isDirectory())fs.renameSync(file,to)
       else{fs.linkSync(file,to);fs.unlinkSync(file)}
@@ -117,8 +129,11 @@ export function workspaceFiles(root:string,operation:string,args:Record<string,a
     const directory=workspacePath(root,'.agents-company/trash'),info=JSON.parse(fs.readFileSync(path.join(directory,args.id+'.json'),'utf8'))
     const next=workspacePath(root,info.path,true)
     if(fs.existsSync(next))throw new Error('原路径已有文件')
-    if(trashOptions?.keepReceipt)atomicJson(path.join(directory,args.id+'.json'),{...info,restoredAt:Date.now()},true)
-    fs.renameSync(path.join(directory,args.id),next);if(!trashOptions?.keepReceipt)fs.unlinkSync(path.join(directory,args.id+'.json'));return {path:info.path}
+    const manifest=path.join(directory,args.id+'.json'),blob=path.join(directory,args.id)
+    if(trashOptions?.keepReceipt)atomicJson(manifest,{...info,restoredAt:Date.now()},true)
+    fs.renameSync(blob,next)
+    if(trashOptions?.keepReceipt){try{atomicJson(manifest,{...info,restoredAt:Date.now(),restoredVersion:fileVersion(next)},true)}catch(error){fs.renameSync(next,blob);throw error}}else fs.unlinkSync(manifest)
+    return {path:info.path}
   }
   throw new Error('Unknown file operation')
 }

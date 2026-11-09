@@ -11,7 +11,7 @@ const owner=()=>JSON.stringify([requestContext().principal,requestContext().clie
 type Upload={id:string;owner:string;target:FileEndpoint;to:FileLocation;name:string;bytes:number;offset:number;stage:string;busy:boolean;updatedAt:number;reservation?:string}
 const uploads=new Map<string,Upload>(),reservations=new Set<string>()
 const join=(a:string,b:string)=>[a==='.'?'':a,b].filter(Boolean).join('/')
-const call=async(id:string,end:FileEndpoint,operation:string,args:Record<string,unknown>)=>{await end.validate?.(operation,args);const result=operation==='copy-commit'&&end.commit?await end.commit(args):end.read&&['copy-info','copy-read'].includes(operation)?await end.read(operation,args):end.remote?await remoteFiles('upload-'+id+'-'+createHash('sha256').update(JSON.stringify(end.remote)).digest('hex').slice(0,16),end.remote,operation,args):workspaceFiles(end.root,operation,args);if(operation==='copy-commit')end.changed?.();return result}
+const call=async(id:string,end:FileEndpoint,operation:string,args:Record<string,unknown>)=>{await end.validate?.(operation,args);const result=operation==='copy-commit'&&end.commit?await end.commit(args):end.read?await end.read(operation,args):end.remote?await remoteFiles('upload-'+id+'-'+createHash('sha256').update(JSON.stringify(end.remote)).digest('hex').slice(0,16),end.remote,operation,args):workspaceFiles(end.root,operation,args);if(operation==='copy-commit')end.changed?.();return result}
 const get=(id:string)=>{const value=uploads.get(id);if(!value||value.owner!==owner())throw Error('Unknown upload');return value}
 export async function beginUpload(to:FileLocation,target:FileEndpoint,name:string,bytes:number,unique=false){
   if(uploads.size>=64)throw Error('Too many uploads; finish or cancel existing uploads')
@@ -21,7 +21,7 @@ export async function beginUpload(to:FileLocation,target:FileEndpoint,name:strin
   if(!info.directory||info.symlink)throw Error('Upload destination must be an existing directory')
   let reservation:string|undefined
   if(unique){const extension=path.extname(name),stem=name.slice(0,name.length-extension.length);let index=1
-    while(true){const key=JSON.stringify([target.root,target.path,name]),exists=await call(id,target,'copy-info',{path:join(target.path,name)})
+    while(true){const key=JSON.stringify([target.remote??null,target.root,target.path,name]),exists=await call(id,target,'copy-info',{path:join(target.path,name)})
       if(!exists.exists&&!reservations.has(key)){reservations.add(key);reservation=key;break}
       name=stem+' ('+(++index)+')'+extension
     }
@@ -62,7 +62,7 @@ export async function abortUpload(id:string){
 export async function downloadInfo(target:FileEndpoint){
   const result=await call('download',target,'copy-info',{path:target.path})
   if(!result.exists||result.directory||result.symlink||result.regular===false)throw Error('Choose a regular file to download')
-  return {bytes:result.bytes,modifiedAt:result.modifiedAt,...(target.name?{name:target.name}:{})}
+  return {bytes:result.bytes,modifiedAt:result.modifiedAt,...(result.version?{version:result.version}:{}),...(target.name?{name:target.name}:{})}
 }
 export async function downloadChunk(target:FileEndpoint,offset:number,modifiedAt?:number){
   const info=await downloadInfo(target)
@@ -78,7 +78,7 @@ export async function saveDownload(target:FileEndpoint,destination:string,overwr
   let offset=0
   try{
     while(offset<info.bytes){const chunk=await downloadChunk(target,offset,info.modifiedAt),data=Buffer.from(chunk.data,'base64');if(!data.length)throw Error('File ended before its advertised size');let done=0;while(done<data.length)done+=fs.writeSync(fd,data,done,data.length-done,offset+done);offset+=data.length}
-    if((await downloadInfo(target)).modifiedAt!==info.modifiedAt)throw Error('File changed during download; retry')
+    const after=await downloadInfo(target);if(after.modifiedAt!==info.modifiedAt||after.bytes!==info.bytes||info.version&&after.version!==info.version)throw Error('File changed during download; retry')
     fs.fsyncSync(fd);fs.closeSync(fd)
     if(overwrite)fs.renameSync(stage,destination);else{fs.linkSync(stage,destination);fs.unlinkSync(stage)}
     return {path:destination,bytes:offset,saved:true}

@@ -63,5 +63,27 @@
         "expanded": false
       }
     }
+  },
+  {
+    "args": [
+      "group",
+      "add",
+      "Display",
+      "--directory-mode",
+      "default",
+      "--folder-name",
+      "Code",
+      "--parent-directory",
+      "/tmp/projects"
+    ],
+    "expected": {
+      "cmd": "group.add",
+      "args": {
+        "name": "Display",
+        "directoryMode": "default",
+        "folderName": "Code",
+        "parentDirectory": "/tmp/projects"
+      }
+    }
   }
 ]

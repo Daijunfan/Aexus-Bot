@@ -72,8 +72,15 @@ def asset_inventory(root, args):
 
 
 def workspace_files(root, operation, args):
-    root = Path(root).resolve()
+    original_root = Path(root)
+    if args.get('strictLinks') and original_root.is_symlink(): raise ValueError('Shared storage root was replaced by a link')
+    root = original_root.resolve()
     def locate(value='.', write=False):
+        if args.get('strictLinks'):
+            current = root
+            for part in Path(value).parts:
+                current = current / part
+                if current.is_symlink(): raise ValueError('Shared files cannot follow symbolic links')
         file = (root / value).resolve()
         try:
             relative = file.relative_to(root)
@@ -84,6 +91,27 @@ def workspace_files(root, operation, args):
         return file
     def digest(file):
         return hashlib.sha256(file.read_bytes()).hexdigest()
+    def version(file):
+        st=file.stat()
+        return hashlib.sha256(f'{st.st_dev}:{st.st_ino}:{st.st_size}:{st.st_mtime_ns}:{st.st_ctime_ns}'.encode()).hexdigest()[:24]
+    def atomic_metadata(file, value):
+        temporary=file.parent/(file.name+'.'+str(uuid.uuid4())+'.tmp')
+        try:
+            with temporary.open('x',encoding='utf-8') as stream:
+                json.dump(value,stream,ensure_ascii=False);stream.flush();os.fsync(stream.fileno())
+            temporary.replace(file)
+        finally:
+            temporary.unlink(missing_ok=True)
+    def removed_files():
+        result=[];directory=root/'.agents-company'/'trash'
+        if not directory.exists(): return result
+        for manifest in directory.glob('*.json'):
+            if manifest.is_symlink() or not manifest.is_file(): continue
+            blob=manifest.with_suffix('')
+            if not blob.exists(): continue
+            item=json.loads(manifest.read_text(encoding='utf-8'));locate(item['path'])
+            st=blob.stat();result.append(dict(item,id=manifest.stem,directory=item.get('directory',blob.is_dir()),bytes=item.get('bytes',st.st_size),deletedAt=item.get('deletedAt',manifest.stat().st_mtime*1000)))
+        return result
     value = args.get('path') or '.'
     file = locate(value, operation in ['write', 'mkdir', 'move', 'trash'])
     if operation == 'directory-plan':
@@ -145,12 +173,29 @@ def workspace_files(root, operation, args):
             raise
     if operation == 'inventory':
         return asset_inventory(root, args)
+    if operation == 'shared-list':
+        entries=[]
+        def walk(folder):
+            for child in folder.iterdir():
+                if child.name.startswith('.') or child.is_symlink(): continue
+                if child.is_dir(): walk(child)
+                elif child.is_file():
+                    st=child.stat();entries.append(dict(path=child.relative_to(root).as_posix(),name=child.name,bytes=st.st_size,modifiedAt=st.st_mtime*1000,version=version(child),regular=True,directory=False))
+        walk(root);return dict(entries=entries,trash=removed_files())
+    if operation in ['trash-info','restore-rollback']:
+        identity=str(uuid.UUID(args['id']));directory=root/'.agents-company'/'trash';manifest=directory/(identity+'.json')
+        if manifest.is_symlink() or not manifest.is_file(): raise ValueError('Trash receipt unavailable')
+        item=json.loads(manifest.read_text(encoding='utf-8'));target=locate(item['path'],True);blob=directory/identity;available=blob.exists()
+        if operation=='trash-info': return dict(item,id=identity,available=available,originalExists=target.exists(),already=bool(item.get('restoredAt')) and not available)
+        if available or not item.get('restoredAt') or not target.exists() or item.get('restoredVersion')!=version(target): raise ValueError('Restored file changed')
+        target.rename(blob);item.pop('restoredAt',None);item.pop('restoredVersion',None);atomic_metadata(manifest,item);return dict(rolledBack=True)
     if operation == 'copy-info':
         original = root / value
         if not original.exists() and not original.is_symlink():
-            return dict(exists=False)
+            removed=next((item for item in removed_files() if item['path']==value),None)
+            return dict(exists=False,**(dict(trashed=True,trashId=removed['id'],deletedAt=removed['deletedAt']) if removed else {}))
         stat = original.lstat()
-        return dict(exists=True, directory=original.is_dir(), regular=original.is_file(), symlink=original.is_symlink(), bytes=stat.st_size, modifiedAt=stat.st_mtime*1000, mode=stat.st_mode & 0o777)
+        return dict(exists=True, version=version(original) if not original.is_symlink() else None, directory=original.is_dir(), regular=original.is_file(), symlink=original.is_symlink(), bytes=stat.st_size, modifiedAt=stat.st_mtime*1000, mode=stat.st_mode & 0o777)
     if operation == 'copy-read':
         offset, length = args['offset'], args['length']
         if type(offset) is not int or offset < 0 or type(length) is not int or not 0 < length <= 262144:
@@ -161,7 +206,7 @@ def workspace_files(root, operation, args):
             stream.seek(offset)
             data = stream.read(length)
         return dict(data=base64.b64encode(data).decode(), bytes=len(data))
-    if operation in ['copy-write', 'copy-commit', 'copy-remove']:
+    if operation in ['copy-write', 'copy-commit', 'copy-replace', 'copy-remove']:
         locate(value, True)
         if not any(re.fullmatch(r'\.agents-transfer-[a-f0-9-]{36}', p) for p in file.relative_to(root).parts):
             raise ValueError('Invalid transfer staging path')
@@ -169,8 +214,11 @@ def workspace_files(root, operation, args):
             if file.is_dir(): shutil.rmtree(file)
             elif file.exists(): file.unlink()
             return dict(removed=True)
-        if operation == 'copy-commit':
+        if operation in ['copy-commit','copy-replace']:
             target = locate(args['to'], True)
+            if operation=='copy-replace':
+                if not target.exists() or version(target)!=args.get('expectedVersion'): raise ValueError('Shared file changed while uploading')
+                file.replace(target);return dict(path=args['to'])
             if target.exists(): raise ValueError('目标已有同名文件，未覆盖')
             if file.is_dir(): file.rename(target)
             else:
@@ -274,8 +322,13 @@ def workspace_files(root, operation, args):
     if operation == 'trash':
         identity = str(uuid.uuid4())
         trash.mkdir(parents=True, exist_ok=True)
-        file.rename(trash / identity)
-        (trash/(identity+'.json')).write_text(json.dumps({'path':value}))
+        st=file.stat();item=dict(path=value,deletedAt=time.time()*1000,bytes=st.st_size,directory=file.is_dir(),version=version(file))
+        if args.get('expectedVersion') is not None and args['expectedVersion']!=item['version']: raise ValueError('File changed; refresh before deleting')
+        if args.get('by') is not None: item['by']=args['by']
+        manifest=trash/(identity+'.json');atomic_metadata(manifest,item)
+        try: file.rename(trash/identity)
+        except Exception:
+            manifest.unlink(missing_ok=True);raise
         return dict(id=identity, path=value)
     if operation == 'restore':
         identity = str(uuid.UUID(args['id']))
@@ -283,7 +336,13 @@ def workspace_files(root, operation, args):
         target = locate(info['path'], True)
         if target.exists():
             raise ValueError('原路径已有文件')
-        (trash/identity).rename(target)
-        (trash/(identity+'.json')).unlink()
+        manifest=trash/(identity+'.json');blob=trash/identity
+        if args.get('keepReceipt'): atomic_metadata(manifest,dict(info,restoredAt=time.time()*1000))
+        blob.rename(target)
+        if args.get('keepReceipt'):
+            try: atomic_metadata(manifest,dict(info,restoredAt=time.time()*1000,restoredVersion=version(target)))
+            except Exception:
+                target.rename(blob);raise
+        else: manifest.unlink()
         return dict(path=info['path'])
     raise ValueError('Unknown file operation')
