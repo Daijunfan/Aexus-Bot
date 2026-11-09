@@ -68,3 +68,18 @@ The download destination is the employee’s assigned `company:EMPLOYEE_ID`; ano
 To replace a shared file, read `conversation.file --operation info`, then pass its exact `version` as `conversation.upload --expected-version`. A new file omits it and refuses collision. An upload alone does not post a message: publish the completed `publishedPath` with `chat.post` when a group notification is intended.
 
 `conversation.copy` remains available for explicit copies between a shared directory and the caller’s own Team workspace. `conversation.transfer` reads/cancels only the initiating caller’s transfer. No shared-content operation silently changes employee identity, host, model, role or working directory.
+
+
+Chosen group storage locations and their names remain fixed during `assets.naming` directory organization, including local/remote ancestor paths and overlapping Team/Shared roots. The migration preview identifies preserved group bindings. Existing legacy managed layouts remain compatible. This does not authorize a change of storage host or inspect unrelated adjacent workspace metadata.
+
+## Copy between shared content and the assigned Team workspace
+
+Download/edit in your existing Team workspace, then explicitly copy or upload the result back. Neither operation creates a personal group folder or publishes a message:
+
+```sh
+agents conversation copy --from '{"conversation":"group:GROUP_ID","path":"brief.md"}' --to '{"employee":"self","path":"."}' --json
+agents conversation transfer TRANSFER_ID --json
+agents conversation copy --from '{"employee":"self","path":"review.md"}' --to '{"conversation":"group:GROUP_ID","path":"."}' --json
+```
+
+Wait for `state:completed`; acceptance/queued status is not a completed copy. Source files remain, same-name destinations are refused, and an explicit `chat.post` or `direct.post` is still needed to publish a result.

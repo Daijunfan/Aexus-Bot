@@ -202,9 +202,9 @@ export async function startWebServer(options:Options={}){
         }
         const key=(current.session?.id??createHash('sha256').update(req.headers.authorization??'').digest('hex'))+':'+requestId
         // Core's durable receipt rechecks live queues and current authority on every retry.
-        const coreReceipt=request.cmd==='messenger.forward'||['session.send','session.enqueue','direct.send'].includes(request.cmd)&&request.args?.clientMessageId!==undefined
+        const coreReceipt=request.cmd==='messenger.forward'||['session.send','session.enqueue','direct.send','worker.send','worker.command'].includes(request.cmd)&&request.args?.clientMessageId!==undefined
         const readOnly=apiReadOnly(request.cmd,request.args),keepReply=!coreReceipt&&!readOnly
-        const nativeInput=request.cmd==='worker.input'||request.cmd==='terminal.input',replay=nativeInput?nativeInputs:requests,capacity=nativeInput?4096:512
+        const nativeInput=['worker.input','terminal.input','terminal.resize'].includes(request.cmd)||request.cmd==='worker.terminal'&&(request.args?.operation==='input'||request.args?.operation==='resize'),replay=nativeInput?nativeInputs:requests,capacity=nativeInput?4096:512
         for(const cache of [requests,nativeInputs])for(const [id,item] of cache)if(item.at&&Date.now()-item.at>60000)cache.delete(id)
         const signature=createHash('sha256').update(JSON.stringify(request)).digest('hex'),previous=requests.get(key)??nativeInputs.get(key)
         if(previous&&previous.signature!==signature)throw failure('Request ID was reused for a different operation',409)

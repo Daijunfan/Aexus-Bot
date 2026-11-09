@@ -389,3 +389,6 @@ Team 位置使用 `room.place {name,column,row,expectedPlacement?}` 的整数工
 
 
 Worker 图形工作台中的斜杠命令、工具查询、原生模式、上下文归档/分叉、文件和可选 Shell 均通过 `worker.*` 复查直接所有权。`worker.inspect` 的 account/mcp，以及 `worker.configure` 的权限和高级 nativeOptions，以及手动 Shell `worker.terminal` 只允许用户/Secretary；普通员工仍可设置自身直属 Worker 的已公布模型与模式。原生进程不获得 Core principal 或令牌。附件、传输与文件操作使用 Worker 当前物理工作目录和固定主机边界。背景任务 ID 仅能来自本 Worker 原生会话；删除等待原生进程树与其手动 Shell 退出，其他 Worker 不受影响。
+
+
+Worker 的只读斜杠查询（如 `/help`、`/status`、无参数的 `/model` 和历史/导出读取）沿用 `worker.inspect`、`worker.history` 等读取操作的权限，不额外索要原生写入批准；这不绕过 Worker 归属、账户/MCP 管理权或当前任务检查。带参数的设置、重置、分叉、停止、压缩、评审及未知原生命令仍按写入处理，Plan/dontAsk 与原生批准边界保持有效。

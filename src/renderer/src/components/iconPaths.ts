@@ -65,3 +65,34 @@ export const iconPaths:Record<string,string>={
  'eye-closed':'M3 9c3 8 15 8 18 0M5 13l-2 3m6-1-1 4m7-4 1 4m3-6 2 3',
  'screen-full':'M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5'
 }
+
+// Shared application controls use the same original rounded stroke vocabulary.
+Object.assign(iconPaths,{
+ 'file-text':iconPaths.file,'gear':iconPaths['settings-gear'],'star-full':iconPaths.star,
+ 'terminal':'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm2 5 3 3-3 3m7 0h5',
+ 'table':'M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1ZM3 9h18M3 15h18M9 3v18',
+ 'layout':'M3 4h7v16H3zM14 4h7v7h-7zM14 15h7v5h-7z',
+ 'filter':'M4 6h16M7 12h10M10 18h4',
+ 'folder':'M3 7V5a2 2 0 0 1 2-2h4l3 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z',
+ 'cloud-download':'M6 17a5 5 0 0 1-1-10 7 7 0 0 1 13 0 5 5 0 0 1 0 10M12 11v10m-4-4 4 4 4-4',
+ 'cloud-upload':'M6 17a5 5 0 0 1-1-10 7 7 0 0 1 13 0 5 5 0 0 1 0 10M12 21V11m-4 4 4-4 4 4',
+ 'shield':'M12 2 3 6v6c0 5 6 9 9 10 3-1 9-5 9-10V6L12 2Z',
+ 'person-add':'M15 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M3 21v-2a7 7 0 0 1 11-6M19 13v8m-4-4h8',
+ 'account':'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M15 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0M5 18a8 8 0 0 1 14 0',
+ 'question':'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M9 8a3 3 0 0 1 6 0c0 2-3 2-3 5m0 4h.01',
+ 'bell':'M5 10a7 7 0 0 1 14 0c0 6 2 6 2 8H3c0-2 2-2 2-8Zm4 11h6M12 1v2',
+ 'server':'M4 3h16v7H4zM4 14h16v7H4zM7 6.5h.01M7 17.5h.01M11 6.5h6M11 17.5h6',
+ 'extensions':'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+ 'plug':'M7 3v5m10-5v5M5 8h14v3a7 7 0 0 1-14 0V8Zm7 10v4',
+ 'debug-disconnect':'M7 2v5m10-5v5M5 7h14v3a7 7 0 0 1-14 0V7Zm7 10v5M3 3l18 18',
+ 'target':'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0M12 12h.01',
+ 'eye':'M2 12c4-8 16-8 20 0-4 8-16 8-20 0ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
+ 'pass':'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0m-14 0 3 3 7-7',
+ 'home':'m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z',
+ 'layers':'m12 3 10 5-10 5L2 8l10-5Zm-10 9 10 5 10-5M2 16l10 5 10-5',
+ 'clock':'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M12 6v6l4 2',
+ 'link-external':'M14 3h7v7M21 3 11 13M10 3H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-6',
+ 'device-desktop':'M3 3h18v13H3zM8 21h8M12 16v5',
+ 'loading':'M21 12a9 9 0 1 1-9-9',
+ 'zoom-in':'M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0m-2 5 6 6M7 10h6M10 7v6'
+})

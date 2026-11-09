@@ -5,12 +5,12 @@ import path from 'node:path'
 import assert from 'node:assert/strict'
 import {createRequire} from 'node:module'
 import {build} from 'esbuild'
-const root=path.resolve(import.meta.dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'ac-api-boundary-')),home=path.join(temp,'state'),previous=process.env.AGENTS_COMPANY_HOME
+const root=path.resolve(import.meta.dirname,'..'),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-api-boundary-'))),home=path.join(temp,'state'),previous=process.env.AGENTS_COMPANY_HOME
 fs.mkdirSync(home);process.env.AGENTS_COMPANY_HOME=home;fs.symlinkSync(path.join(root,'node_modules'),path.join(temp,'node_modules'),'dir')
 let core
 try{
  fs.writeFileSync(path.join(home,'sessions.json'),JSON.stringify({sessions:[{id:'secretary',title:'Secretary',engine:'codex',kind:'worker',group:'A',cwd:temp,createdAt:1,initialization:{status:'ready'},managementRole:'secretary'}],groups:['A'],teamRoots:{A:temp},rooms:{}}))
- const entry=path.join(temp,'test.cjs');await build({stdin:{contents:"export * from './src/main/api-tool';export {prepareDocumentationTool} from './src/main/documentation-tool';export {approvalsFor,answerApproval} from './src/main/approvals';export {revokeAgentCredential} from './src/main/agent-access';export {setManagementRole} from './src/main/management';export {withCaller,operatorContext} from './src/main/authorization';export {closeChannels} from './src/main/channels'",resolveDir:root},bundle:true,platform:'node',format:'cjs',packages:'external',outfile:entry,define:{__AGENTS_PROJECT_ROOT__:JSON.stringify(root)},logLevel:'silent'})
+ const entry=path.join(temp,'test.cjs');await build({stdin:{contents:"export * from './src/main/api-tool';export {createWorker,workerSnapshot} from './src/main/native-workers';export {prepareDocumentationTool} from './src/main/documentation-tool';export {approvalsFor,answerApproval} from './src/main/approvals';export {revokeAgentCredential} from './src/main/agent-access';export {setManagementRole} from './src/main/management';export {withCaller,operatorContext} from './src/main/authorization';export {closeChannels} from './src/main/channels'",resolveDir:root},bundle:true,platform:'node',format:'cjs',packages:'external',outfile:entry,define:{__AGENTS_PROJECT_ROOT__:JSON.stringify(root)},logLevel:'silent'})
  core=createRequire(import.meta.url)(entry);const state={cardId:'secretary',running:true,permissionMode:'default',currentTask:{messageId:'turn-a'}},sid='boundary-session',call=(command,args={},signal)=>core.invokeApiTool(state,{command,args},'fixture',signal)
  core.prepareDocumentationTool(state);core.prepareApiTool(state,sid,()=>{})
  const original=await call('settings.get');assert.equal(original.ok,true)
@@ -21,7 +21,11 @@ try{
  state.permissionMode='bypassPermissions';await assert.rejects(call('auth.agent-token',{id:'secretary'}),/not available/);await assert.rejects(call('settings.set',{createdBy:{kind:'operator'}}),/internal|reserved|cannot|Forbidden/i);await assert.rejects(call('not.real'),/not available/)
  const lateWrite=call('settings.set',{language:'zh-CN'});state.planMode=true;await assert.rejects(lateWrite,/permissions changed/);state.planMode=false
  const revokedBypass=call('settings.set',{language:'zh-CN'});state.permissionMode='default';await assert.rejects(revokedBypass,/permissions changed/)
- state.permissionMode='dontAsk';await assert.rejects(call('settings.set',{language:'zh-CN'}),/disabled/);state.permissionMode='default'
+ state.permissionMode='dontAsk';await assert.rejects(call('settings.set',{language:'zh-CN'}),/disabled/)
+ const worker=core.withCaller(core.operatorContext(),()=>core.createWorker({engine:'codex',employee:'secretary'}))
+ for(const text of ['/help','/status','/model','/permissions','/history','/export']){const result=await call('worker.command',{id:worker.id,text,clientMessageId:'query-'+text});assert.equal(result.ok,true);assert.equal(result.data.handled,true)}
+ for(const text of ['/plan','/new','/model changed-model','/not-a-declared-read'])await assert.rejects(call('worker.command',{id:worker.id,text,clientMessageId:'write-'+text}),/disabled/)
+ assert.equal(core.withCaller(core.operatorContext(),()=>core.workerSnapshot(worker.id)).receipts.length,0);assert.deepEqual(core.approvalsFor(sid),[]);state.permissionMode='default'
  const pending=async()=>{for(let i=0;i<100;i++){const item=core.approvalsFor(sid)[0];if(item)return item;await new Promise(r=>setTimeout(r,5))}throw Error('Missing native approval')},allow=item=>core.answerApproval(sid,item.id,true)
  let request=call('settings.set',{language:'zh-CN'}),rejected=assert.rejects(request,/current employee work turn/);let approval=await pending();state.currentTask={messageId:'turn-b'};allow(approval);await rejected
  request=call('settings.set',{language:'zh-CN'});rejected=assert.rejects(request,/permissions changed/);approval=await pending();state.planMode=true;allow(approval);await rejected;state.planMode=false

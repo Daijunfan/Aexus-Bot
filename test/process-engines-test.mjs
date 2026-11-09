@@ -8,7 +8,7 @@ writeNativeProfiles(test.env,{engines:['cline','pi']})
 const rpc=async(cmd,args)=>{const result=await request(null,cmd,args);assert.ok(result.ok,result.error);return result.data}
 try{
  await cli('group','add','A')
- assert.deepEqual((await cli('engine','list')).map(e=>e.engine).sort(),['claude','cline','codex','kilo','opencode','pi'])
+ assert.deepEqual((await cli('engine','list')).map(e=>e.engine).sort(),['claude','cline','codex','deepseek','kilo','opencode','pi'])
  for(const engine of ['cline','pi']){
   const models=await cli('engine','models','--engine',engine);assert.equal(models.defaultModel,'deepseek-flash');assert.ok(models.models.every(m=>m.supportsEffort===false))
   const card=await cli('card','create','--title',engine,'--group','A','--engine',engine)
@@ -33,5 +33,5 @@ try{
   if(engine==='pi')assert.match(before.piSessionId,/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i,JSON.stringify(before.nativeSessions))
   await cli('card','remove',card.id);assert.ok(!fs.existsSync(before[engine==='cline'?'clineConfigRoot':'piConfigRoot']))
  }
- console.log('PASS Cline/Pi Core CLI (native catalogs list all six engines; this fixture exercises Cline/Pi protocols only): defaults, Unicode streaming, approvals deny/allow, cancellation/errors, native resume and scoped history cleanup; fixture only')
+ console.log('PASS Cline/Pi Core CLI (native catalogs list all seven engines; this fixture exercises Cline/Pi protocols only): defaults, Unicode streaming, approvals deny/allow, cancellation/errors, native resume and scoped history cleanup; fixture only')
 }finally{await test.close()}

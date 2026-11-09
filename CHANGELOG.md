@@ -2,6 +2,14 @@
 
 > 项目当前名称为 **Aexus Bot**，分享地址：[Daijunfan/Aexus-Bot](https://github.com/Daijunfan/Aexus-Bot)。下文 Avalon / Anexus 为历史发布名称；安装包、命令和历史路径按实际记录保留。
 
+## main — 2026-11-10 quality update
+
+- Add reusable Mission view filters, saved sorting/property/density choices, true global-filter intersections and complete multi-assignee identity display. Preserve local choices during concurrent saved-view edits.
+- Add revision-checked Table batch pause/resume and archive/restore, with named partial failures and unchanged persistent-mission completion/reminder rules.
+- Keep long native Worker histories responsive without losing history, tool state or drafts; make expanded workbenches and primary navigation independent of stale layout/loading state.
+- Repair shared-file symlink checks, group storage naming conflicts, membership-based file-library filtering, asynchronous MCP publication, Web Worker queue receipts and interactive-terminal caching.
+- Break runtime authorization cycles without widening permissions; native read-only Worker inspection no longer requires write approval. Source, protocol, hidden desktop and headless Web checks use isolated data.
+
 ## main — 2026-11-09 development update
 
 - Rebuild local group collaboration with distinct group colors, an integrated overview, topics/threads, polls/quizzes, collaborative checklists, shared reactions/pins and local sticker packs.

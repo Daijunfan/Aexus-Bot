@@ -17,8 +17,8 @@ export async function assetWorkbenchFixture(application,extra={}){
   const a=await f.create('Alex','Product team'),b=await f.create('Alex','Research team')
   await rpc('workspace.write',{team:'Product team',path:'team-overview.md',content:'# Product team originals',create:true})
   await rpc('workspace.write',{employee:a.id,path:'personal.txt',content:'Alex Product personal',create:true});await rpc('workspace.write',{employee:b.id,path:'personal.txt',content:'Alex Research personal',create:true})
-  const group=await rpc('chat.create',{name:'项目评审',members:[a.id,b.id]}),conversation='group:'+group.id,workspace=await rpc('conversation.workspace',{conversation}),member=workspace.members.find(x=>x.employeeId===a.id),peer=workspace.members.find(x=>x.employeeId===b.id)
-  for(const [file,content] of [['brief.md','Shared group user original'],[member.directory+'/draft.md','Product member draft'],[peer.directory+'/peer.txt','Research member draft']])await rpc('conversation.file',{conversation,operation:'write',path:file,content,create:true})
+  const group=await rpc('chat.create',{name:'项目评审',members:[a.id,b.id]}),conversation='group:'+group.id,workspace=await rpc('conversation.workspace',{conversation}),member={directory:'Drafts'},peer={directory:'Reviews'}
+  for(const [file,content] of [['brief.md','Shared group user original'],[member.directory+'/draft.md','Shared draft'],[peer.directory+'/peer.txt','Shared review']])await rpc('conversation.file',{conversation,operation:'write',path:file,content,create:true})
   const source=await rpc('channel.source-add',{plugin:'telegram',locator:'asset_workspace_fixtures',name:'资料频道'})
   const access=await rpc('channel.access',{id:source.channelId});await rpc('channel.access',{id:source.channelId,employeeIds:[a.id,b.id],expectedRevision:access.revision})
   const channel='channel:'+source.channelId,channelWorkspace=await rpc('conversation.workspace',{conversation:channel})

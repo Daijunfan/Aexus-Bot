@@ -6,3 +6,5 @@ export const APP_VIEWS = [
 ] as const
 export type AppViewId = typeof APP_VIEWS[number]['id']
 export const appView = (id:unknown) => APP_VIEWS.find(view=>view.id===id)
+/** Serialize presentation writes while allowing reads and draft-flush operations to continue. */
+export const VIEW_MUTATIONS=new Set(['view.select','view.open','view.close','view.navigation','view.tools','view.details','view.shared'])

@@ -6,7 +6,7 @@ import type {ChatQuestion,QuestionSpec} from '../shared/chat-questions'
 import type {Delegation,PrincipalRef,RequestContext} from '../shared/management'
 import {atomicJson,readJson} from './atomic-file'
 import {readStore} from './store'
-import {requestContext,authorize,canReadEmployee,withCaller,validateDelegation} from './authorization'
+import {requestContext,authorize,canReadEmployee,withCaller,validateDelegation,registerDelegationValidator} from './authorization'
 import {credentialActive} from './agent-access'
 import {requireConversation} from './conversation-policy'
 import {postDirectMessage,linkDirectQuestion} from './direct-messages'
@@ -40,6 +40,7 @@ export function validateQuestionReply(delegation:Delegation,target:string){
  validateAuthor(item)
  if(item.missionId&&!['open','failed'].includes(missionTaskState(item.missionId)))throw Error('The linked mission is unavailable or already complete; the decision remains saved')
 }
+registerDelegationValidator('questionReply',validateQuestionReply)
 function choice(item:ChatQuestion,optionId:unknown,text:unknown){
  if(typeof optionId!=='string'||optionId!=='other'&&!item.options.some(option=>option.id===optionId))throw Error('Choose one of the published options or Other')
  if(text!==undefined&&(typeof text!=='string'||text.length>16000)||optionId==='other'&&(typeof text!=='string'||!text.trim()))throw Error('Other requires your written answer')

@@ -6,11 +6,11 @@ import {directoryName,needsDirectoryName} from '../shared/directory-names'
 export type DirectoryRename={from:string;to:string;inode:number;device:number}
 export type DirectoryPlan={roots:string[];renames:DirectoryRename[]}
 export {needsDirectoryName} from '../shared/directory-names'
-export async function planDirectoryNames(input:string[]):Promise<DirectoryPlan>{
+export async function planDirectoryNames(input:string[],preserved:string[]=[]):Promise<DirectoryPlan>{
  const roots:string[]=[]
  for(const value of input){try{const root=await fs.realpath(value);if(!roots.includes(root))roots.push(root)}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}}
  const sources=roots.filter(root=>!roots.some(parent=>parent!==root&&root.startsWith(parent+path.sep))),directories:string[]=[]
- const walk=async(folder:string)=>{directories.push(folder);for(const entry of await fs.readdir(folder,{withFileTypes:true}))if(entry.isDirectory()&&entry.name!=='.agents-company'&&!entry.name.startsWith('.agents-transfer-'))await walk(path.join(folder,entry.name))}
+ const walk=async(folder:string)=>{if(preserved.some(root=>folder===root||folder.startsWith(root+path.sep)))return;if(!preserved.some(root=>root.startsWith(folder+path.sep)))directories.push(folder);for(const entry of await fs.readdir(folder,{withFileTypes:true}))if(entry.isDirectory()&&entry.name!=='.agents-company'&&!entry.name.startsWith('.agents-transfer-'))await walk(path.join(folder,entry.name))}
  for(const root of sources)await walk(root)
  const siblings=new Map<string,Set<string>>(),renames:DirectoryRename[]=[]
  for(const from of directories.sort((a,b)=>b.length-a.length)){

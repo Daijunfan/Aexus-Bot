@@ -804,6 +804,96 @@
                     "type": "string",
                     "minLength": 1
                   }
+                },
+                "allOf": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 10,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "all",
+                          "mission",
+                          "schedule"
+                        ]
+                      },
+                      "recurring": {
+                        "enum": [
+                          "all",
+                          "once",
+                          "repeating"
+                        ]
+                      },
+                      "archived": {
+                        "enum": [
+                          "active",
+                          "archived",
+                          "all"
+                        ]
+                      },
+                      "excludeIds": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "search": {
+                        "type": "string",
+                        "maxLength": 240
+                      },
+                      "employee": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Employee ID or self"
+                      },
+                      "team": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "channel": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Publishing channel associated with action.channelId"
+                      },
+                      "states": {
+                        "type": "array",
+                        "items": {
+                          "enum": [
+                            "scheduled",
+                            "running",
+                            "paused",
+                            "completed",
+                            "attention"
+                          ]
+                        }
+                      },
+                      "priorities": {
+                        "type": "array",
+                        "items": {
+                          "enum": [
+                            "low",
+                            "normal",
+                            "high",
+                            "urgent"
+                          ]
+                        }
+                      },
+                      "tags": {
+                        "type": "array",
+                        "maxItems": 20,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  },
+                  "description": "Intersect 1–10 non-nested clauses with the outer filter. Archive mode is inherited unless a clause explicitly narrows it."
                 }
               }
             },
@@ -1142,6 +1232,96 @@
                 "type": "string",
                 "minLength": 1
               }
+            },
+            "allOf": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "all",
+                      "mission",
+                      "schedule"
+                    ]
+                  },
+                  "recurring": {
+                    "enum": [
+                      "all",
+                      "once",
+                      "repeating"
+                    ]
+                  },
+                  "archived": {
+                    "enum": [
+                      "active",
+                      "archived",
+                      "all"
+                    ]
+                  },
+                  "excludeIds": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "search": {
+                    "type": "string",
+                    "maxLength": 240
+                  },
+                  "employee": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Employee ID or self"
+                  },
+                  "team": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Publishing channel associated with action.channelId"
+                  },
+                  "states": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "scheduled",
+                        "running",
+                        "paused",
+                        "completed",
+                        "attention"
+                      ]
+                    }
+                  },
+                  "priorities": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "low",
+                        "normal",
+                        "high",
+                        "urgent"
+                      ]
+                    }
+                  },
+                  "tags": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "description": "Intersect 1–10 non-nested clauses with the outer filter. Archive mode is inherited unless a clause explicitly narrows it."
             }
           }
         },
@@ -1279,6 +1459,96 @@
                 "type": "string",
                 "minLength": 1
               }
+            },
+            "allOf": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "all",
+                      "mission",
+                      "schedule"
+                    ]
+                  },
+                  "recurring": {
+                    "enum": [
+                      "all",
+                      "once",
+                      "repeating"
+                    ]
+                  },
+                  "archived": {
+                    "enum": [
+                      "active",
+                      "archived",
+                      "all"
+                    ]
+                  },
+                  "excludeIds": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "search": {
+                    "type": "string",
+                    "maxLength": 240
+                  },
+                  "employee": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Employee ID or self"
+                  },
+                  "team": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Publishing channel associated with action.channelId"
+                  },
+                  "states": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "scheduled",
+                        "running",
+                        "paused",
+                        "completed",
+                        "attention"
+                      ]
+                    }
+                  },
+                  "priorities": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "low",
+                        "normal",
+                        "high",
+                        "urgent"
+                      ]
+                    }
+                  },
+                  "tags": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "description": "Intersect 1–10 non-nested clauses with the outer filter. Archive mode is inherited unless a clause explicitly narrows it."
             }
           }
         },
@@ -1401,6 +1671,96 @@
                 "type": "string",
                 "minLength": 1
               }
+            },
+            "allOf": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "all",
+                      "mission",
+                      "schedule"
+                    ]
+                  },
+                  "recurring": {
+                    "enum": [
+                      "all",
+                      "once",
+                      "repeating"
+                    ]
+                  },
+                  "archived": {
+                    "enum": [
+                      "active",
+                      "archived",
+                      "all"
+                    ]
+                  },
+                  "excludeIds": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "search": {
+                    "type": "string",
+                    "maxLength": 240
+                  },
+                  "employee": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Employee ID or self"
+                  },
+                  "team": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Publishing channel associated with action.channelId"
+                  },
+                  "states": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "scheduled",
+                        "running",
+                        "paused",
+                        "completed",
+                        "attention"
+                      ]
+                    }
+                  },
+                  "priorities": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "low",
+                        "normal",
+                        "high",
+                        "urgent"
+                      ]
+                    }
+                  },
+                  "tags": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "description": "Intersect 1–10 non-nested clauses with the outer filter. Archive mode is inherited unless a clause explicitly narrows it."
             }
           }
         },
@@ -1525,6 +1885,96 @@
                 "type": "string",
                 "minLength": 1
               }
+            },
+            "allOf": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "all",
+                      "mission",
+                      "schedule"
+                    ]
+                  },
+                  "recurring": {
+                    "enum": [
+                      "all",
+                      "once",
+                      "repeating"
+                    ]
+                  },
+                  "archived": {
+                    "enum": [
+                      "active",
+                      "archived",
+                      "all"
+                    ]
+                  },
+                  "excludeIds": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "search": {
+                    "type": "string",
+                    "maxLength": 240
+                  },
+                  "employee": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Employee ID or self"
+                  },
+                  "team": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Publishing channel associated with action.channelId"
+                  },
+                  "states": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "scheduled",
+                        "running",
+                        "paused",
+                        "completed",
+                        "attention"
+                      ]
+                    }
+                  },
+                  "priorities": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "low",
+                        "normal",
+                        "high",
+                        "urgent"
+                      ]
+                    }
+                  },
+                  "tags": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "description": "Intersect 1–10 non-nested clauses with the outer filter. Archive mode is inherited unless a clause explicitly narrows it."
             }
           }
         },
@@ -1650,6 +2100,96 @@
                 "type": "string",
                 "minLength": 1
               }
+            },
+            "allOf": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "all",
+                      "mission",
+                      "schedule"
+                    ]
+                  },
+                  "recurring": {
+                    "enum": [
+                      "all",
+                      "once",
+                      "repeating"
+                    ]
+                  },
+                  "archived": {
+                    "enum": [
+                      "active",
+                      "archived",
+                      "all"
+                    ]
+                  },
+                  "excludeIds": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "search": {
+                    "type": "string",
+                    "maxLength": 240
+                  },
+                  "employee": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Employee ID or self"
+                  },
+                  "team": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Publishing channel associated with action.channelId"
+                  },
+                  "states": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "scheduled",
+                        "running",
+                        "paused",
+                        "completed",
+                        "attention"
+                      ]
+                    }
+                  },
+                  "priorities": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "low",
+                        "normal",
+                        "high",
+                        "urgent"
+                      ]
+                    }
+                  },
+                  "tags": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "description": "Intersect 1–10 non-nested clauses with the outer filter. Archive mode is inherited unless a clause explicitly narrows it."
             }
           }
         },
@@ -1836,6 +2376,96 @@
                     "type": "string",
                     "minLength": 1
                   }
+                },
+                "allOf": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 10,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "all",
+                          "mission",
+                          "schedule"
+                        ]
+                      },
+                      "recurring": {
+                        "enum": [
+                          "all",
+                          "once",
+                          "repeating"
+                        ]
+                      },
+                      "archived": {
+                        "enum": [
+                          "active",
+                          "archived",
+                          "all"
+                        ]
+                      },
+                      "excludeIds": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "search": {
+                        "type": "string",
+                        "maxLength": 240
+                      },
+                      "employee": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Employee ID or self"
+                      },
+                      "team": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "channel": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Publishing channel associated with action.channelId"
+                      },
+                      "states": {
+                        "type": "array",
+                        "items": {
+                          "enum": [
+                            "scheduled",
+                            "running",
+                            "paused",
+                            "completed",
+                            "attention"
+                          ]
+                        }
+                      },
+                      "priorities": {
+                        "type": "array",
+                        "items": {
+                          "enum": [
+                            "low",
+                            "normal",
+                            "high",
+                            "urgent"
+                          ]
+                        }
+                      },
+                      "tags": {
+                        "type": "array",
+                        "maxItems": 20,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  },
+                  "description": "Intersect 1–10 non-nested clauses with the outer filter. Archive mode is inherited unless a clause explicitly narrows it."
                 }
               }
             },
@@ -1857,6 +2487,29 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "hiddenProperties": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "maxItems": 7,
+                  "items": {
+                    "enum": [
+                      "status",
+                      "employee",
+                      "rule",
+                      "nextAt",
+                      "lastRun",
+                      "priority",
+                      "tags"
+                    ]
+                  },
+                  "description": "Hidden table properties; task title and actions remain visible"
+                },
+                "density": {
+                  "enum": [
+                    "comfortable",
+                    "compact"
+                  ]
+                },
                 "timezone": {
                   "type": "string",
                   "minLength": 1,
@@ -2037,6 +2690,96 @@
                     "type": "string",
                     "minLength": 1
                   }
+                },
+                "allOf": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 10,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "all",
+                          "mission",
+                          "schedule"
+                        ]
+                      },
+                      "recurring": {
+                        "enum": [
+                          "all",
+                          "once",
+                          "repeating"
+                        ]
+                      },
+                      "archived": {
+                        "enum": [
+                          "active",
+                          "archived",
+                          "all"
+                        ]
+                      },
+                      "excludeIds": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "search": {
+                        "type": "string",
+                        "maxLength": 240
+                      },
+                      "employee": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Employee ID or self"
+                      },
+                      "team": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "channel": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Publishing channel associated with action.channelId"
+                      },
+                      "states": {
+                        "type": "array",
+                        "items": {
+                          "enum": [
+                            "scheduled",
+                            "running",
+                            "paused",
+                            "completed",
+                            "attention"
+                          ]
+                        }
+                      },
+                      "priorities": {
+                        "type": "array",
+                        "items": {
+                          "enum": [
+                            "low",
+                            "normal",
+                            "high",
+                            "urgent"
+                          ]
+                        }
+                      },
+                      "tags": {
+                        "type": "array",
+                        "maxItems": 20,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  },
+                  "description": "Intersect 1–10 non-nested clauses with the outer filter. Archive mode is inherited unless a clause explicitly narrows it."
                 }
               }
             },
@@ -2058,6 +2801,29 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "hiddenProperties": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "maxItems": 7,
+                  "items": {
+                    "enum": [
+                      "status",
+                      "employee",
+                      "rule",
+                      "nextAt",
+                      "lastRun",
+                      "priority",
+                      "tags"
+                    ]
+                  },
+                  "description": "Hidden table properties; task title and actions remain visible"
+                },
+                "density": {
+                  "enum": [
+                    "comfortable",
+                    "compact"
+                  ]
+                },
                 "timezone": {
                   "type": "string",
                   "minLength": 1,
@@ -7611,7 +8377,7 @@
   {
     "name": "assets.naming",
     "args": "[--id PREVIEW_ID --apply]",
-    "summary": "User-only: preview or apply English directory names across managed and externally bound workspaces, retaining identities and legacy references",
+    "summary": "User-only: preview or apply English directory names across managed and externally bound workspaces, retaining identities and legacy references; selected group storage locations and their ancestors stay fixed",
     "gui": "English folder names",
     "inputSchema": {
       "type": "object",
@@ -7937,7 +8703,7 @@
     "name": "conversation.workspaces",
     "args": "[--employee ID]",
     "summary": "List shared conversation content locations; these are not employee execution workspaces or per-member group folders",
-    "gui": "Employee workspace selector",
+    "gui": "Shared content locations",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -7955,7 +8721,7 @@
   {
     "name": "conversation.file",
     "args": "CONVERSATION --operation list|read|image|info|chunk|write|mkdir|move|trash|restore [--path PATH] [--to PATH] [--content TEXT] [--hash HASH] [--create] [--hidden] [--offset N] [--id TRASH_ID]",
-    "summary": "Group members have equal shared-file rights including root and peer folder contents. Named member folder identities and host metadata remain protected. Channel members write only their own subtree. info returns an opaque version for upload updates.",
+    "summary": "Group members have equal shared-file rights including root and peer folder contents. No per-employee group folder is allocated. Core metadata stays protected; legacy channel members write only their own named subtree. info returns an opaque version for upload updates.",
     "gui": "Shared file browser",
     "inputSchema": {
       "type": "object",
@@ -10735,8 +11501,8 @@
   },
   {
     "name": "view.navigation",
-    "args": "team|mission|plan --expanded true|false",
-    "summary": "Set the current client primary or nested navigation disclosure. Reveals selectors without leaving an editor; expanded rows collapse on primary navigation.",
+    "args": "team|mission|plan [--expanded true|false]",
+    "summary": "Set or toggle the current client primary or nested navigation disclosure. Reveals selectors without leaving an editor; expanded rows collapse on primary navigation.",
     "gui": "Primary navigation chevrons",
     "inputSchema": {
       "type": "object",
@@ -10750,12 +11516,12 @@
           ]
         },
         "expanded": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Set explicitly; omit to toggle atomically using the current client state."
         }
       },
       "required": [
-        "section",
-        "expanded"
+        "section"
       ]
     },
     "readOnly": false,
@@ -10764,7 +11530,7 @@
   },
   {
     "name": "view.select",
-    "args": "company|messages|plan [--team-view ID] [--team-tab characters|board|workers] [--mission-tab plan|engineering|research]",
+    "args": "company|messages|plan [--team-view ID] [--team-tab characters|board|workers] [--mission-tab plan|engineering|research] [--toggle-navigation]",
     "summary": "Select a presentation mode; Team has Characters, Board and Workers subviews; Messages resumes the last conversation for this client",
     "gui": "Shared views / group conversations",
     "inputSchema": {
@@ -10796,6 +11562,10 @@
             "engineering",
             "research"
           ]
+        },
+        "toggleNavigation": {
+          "type": "boolean",
+          "description": "Primary button intent: toggle the active root selector, otherwise resume the remembered child. Cannot be combined with explicit child selection."
         }
       },
       "required": [

@@ -1,9 +1,8 @@
 # Plan database layouts: parity, API design and interactive review
 
-The main Plan toolbar contains search and a task count. Team, employee, tag, state,
-priority, grouping and sorting selectors are removed from the browsing surface.
-Saved-view filters and Core/CLI query options still apply; Clear filters appears
-only when the selected view or search has an active filter.
+The Plan toolbar keeps search, a compact View control, global filters, retention and task counts. View controls expose per-view filters, sorting, direction, density and table property visibility without placing every setting on the browsing surface. Save the current configuration as a view, or update an existing saved view, to reuse it. Per-view and global filters use the same controls for task kind, repetition, archive, employee, Team, multiple states, priorities and exact tags. Global filters support multiple states and priorities, exact tags and familiar-task hiding; they intersect saved-view conditions instead of overwriting them.
+
+Table selection supports batch pause/resume of compatible schedules and archive/restore of schedules or missions. Selection is scoped to the visible page and clears when search, sorting, layout or pagination changes. Every mutation uses its original record revision and current Core authorization. A partial failure names the rejected records and preserves successful changes; changing visibility never marks a mission successful or stops its reminders. There is no second batch executor.
 
 ## Scope and reference
 
@@ -95,6 +94,12 @@ agents plan view-create --spec '{"name":"Europe release desk","layout":"timeline
 agents plan view-create --spec '{"name":"Run outcomes","layout":"chart","options":{"chartMetric":"runs","chartGroupBy":"status","chartType":"donut"}}' --json
 agents plan view-create --spec '{"name":"Morning agenda","layout":"plan","options":{"timezone":"Asia/Shanghai","plannerMode":"agenda"}}' --json
 ```
+
+`options` also accepts `hiddenProperties` (unique table property IDs from `plan.schema`, excluding the task title/actions) and `density:comfortable|compact`. These are display settings, never data permissions or task mutations.
+
+`filter.allOf` intersects flat clauses: up to 10 in saved views/global preferences, and 32 in read queries so those scopes can be combined without truncation. Outer criteria still apply. Within a clause, state/priority arrays select any listed value and tags require every listed value. With Default visibility, archive mode inherits from the other scope (active items when neither scope specifies it); an explicitly chosen archive mode remains an intersection condition and is counted as a filter. Contradictory clauses produce zero matches. Deleted-job activity cannot acquire current metadata through a nested clause.
+
+`plan.query` includes `assignees` for every current participant of a multi-person mission. This is identity metadata, not additional private conversation/workspace authority.
 
 `options` accepts `timezone`, `timelineScale:day|week|month`, `plannerMode:day|week|agenda`, `chartMetric:schedules|runs`, `chartGroupBy:status|employee|team|priority`, and `chartType:bar|horizontal|line|donut`. Updating options replaces that object. All fields have schemas in `agents api describe ...` and the role-specific handbook.
 

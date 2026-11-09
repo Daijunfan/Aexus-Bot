@@ -137,10 +137,11 @@ export async function conversationFile(args:Record<string,any>){
   const id=args.id.slice(5);if(!/^[a-f0-9-]{36}$/.test(id))throw Error('Invalid trash identity')
   const manifest=noLinks(root,'.agents-company/trash/'+id+'.json'),original=JSON.parse(fs.readFileSync(manifest,'utf8')).path
   if(typeof original!=='string'||info.kind!=='group'&&relative(original).split('/').length!==1||info.kind==='channel'&&Object.values(data.members).includes(original)||info.kind!=='group'&&!fs.lstatSync(noLinks(root,'.agents-company/trash/'+id)).isFile())throw Error('Cannot restore a managed workspace identity')
-  conversationFileEndpoint(info.conversation,original,true)
+  conversationFileEndpoint(info.conversation,original,true).validate?.(operation,{path:original})
  }
- conversationFileEndpoint(info.conversation,operation==='restore'&&info.kind!=='group'&&!isAppAdministrator(principal)&&principal.kind==='agent'&&!rootRestore?data.members[principal.employeeId]:file,writing)
+ const end=conversationFileEndpoint(info.conversation,operation==='restore'&&info.kind!=='group'&&!isAppAdministrator(principal)&&principal.kind==='agent'&&!rootRestore?data.members[principal.employeeId]:file,writing)
  if(target!==undefined)conversationFileEndpoint(info.conversation,target,true)
+ end.validate?.(operation,{...(operation==='restore'?{}:{path:file}),...(target!==undefined?{to:target}:{})})
  if(info.kind==='channel'&&writing&&operation!=='restore'&&(Object.values(data.members).includes(file)||target!==undefined&&Object.values(data.members).includes(target)))throw Error('Named employee workspace folders cannot be replaced, renamed or removed')
  const own=!isAppAdministrator(principal)&&principal.kind==='agent'?data.members[principal.employeeId]:undefined,rootWrite=writing&&info.kind==='group',useOwn=writing&&!!own&&info.kind!=='group',subroot=useOwn?path.join(root,own!):root
  const strip=(value:string)=>useOwn?path.relative(subroot,path.join(root,value)):value

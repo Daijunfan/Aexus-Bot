@@ -21,6 +21,7 @@ workspace.list workspace.read workspace.image workspace.suggest conversation.wor
 plugin.resources plugin.list plugin.describe plugin.windows host.list host.get host.fingerprints host.terminal-list host.terminal-read host.directories terminal.list terminal.read transfer.list transfer.get shared.info view.get view.list
 `.trim().split(/\s+/))
 export function apiReadOnly(command:string,args:Record<string,unknown>={}){
+ if(command==='worker.command'){const text=typeof args.text==='string'?args.text.trim():'';return /^\/(help|status|model|effort|permissions|skills|mcp|account|usage|config|history|export|ps)$/.test(text)||/^\/(fast|thinking)(\s+status)?$/.test(text)}
  if(command==='worker.terminal')return ['list','read'].includes(String(args.operation))
  if(command==='worker.file')return ['list','read','image','info','chunk'].includes(String(args.operation))
  if(command==='worker.export')return args.path===undefined

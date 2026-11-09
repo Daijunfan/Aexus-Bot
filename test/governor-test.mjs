@@ -19,8 +19,8 @@ try{
  fs.writeFileSync(path.join(named.cwd,'.agents-company-manager'),'not an authorization')
  assert.equal((await call(await token(named.id),'auth','whoami')).globalManager,false,'folder and Team names confer no rights')
  await cli('group','rename','A','Renamed');assert.equal((await call(g,'auth','whoami')).globalManager,true)
- await call(g,'room','bounds','B','--width','1400','--height','1000')
- for(const card of [governor,peer,remoteManager,other]){await call(g,'card','place',card.id,'--x','350','--y','230','--snap','off');checks++}
+ await call(g,'room','bounds','B','--columns','5','--rows','3')
+ for(const card of [governor,peer,remoteManager,other]){await call(g,'card','place',card.id,'--seat','2');checks++}
  const office=await call(g,'office','layout');assert.ok(office.rooms.every(room=>room.editable&&room.employees.every(card=>card.editable)))
  for(const card of [peer,remoteManager,other]){
    await call(g,'session','send','--employee',card.id,'--text','Please summarize the project status.')

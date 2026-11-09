@@ -150,12 +150,13 @@
     "test:group-collaboration": "node test/group-collaboration-core-test.mjs && node test/group-rebuild-ui-test.mjs && node test/group-rebuild-ui-test.mjs --web",
     "test:worker-workbench": "node test/worker-workbench-core-test.mjs && node test/worker-workbench-ui-test.mjs && node test/worker-workbench-ui-test.mjs --web",
     "test:desktop-quit": "node test/desktop-quit-ui-test.mjs",
-    "test:employee-input": "node test/employee-input-performance-ui-test.mjs",
-    "test:disclosure-navigation": "node test/disclosure-navigation-core-test.mjs && node test/disclosure-navigation-ui-test.mjs && node test/disclosure-navigation-ui-test.mjs --web",
+    "test:employee-input": "node test/employee-input-performance-ui-test.mjs && node test/employee-input-performance-ui-test.mjs --board && node test/worker-input-performance-ui-test.mjs",
+    "test:disclosure-navigation": "node test/navigation-sequencing-core-test.mjs && node test/disclosure-navigation-core-test.mjs && node test/disclosure-navigation-ui-test.mjs && node test/disclosure-navigation-ui-test.mjs --web",
     "test:channel-interactions": "node test/channel-interactions-ui-test.mjs && node test/channel-interactions-ui-test.mjs --web && node test/channel-source-filters-ui-test.mjs --web",
     "test:group-files-reader": "node test/group-files-reader-core-test.mjs && node test/group-files-reader-ui-test.mjs && node test/group-files-reader-ui-test.mjs --web && node test/conversation-files-core-test.mjs",
+    "test:plan-configuration": "node test/plan-view-configuration-core-test.mjs && node test/plan-view-configuration-ui-test.mjs && node test/plan-view-configuration-ui-test.mjs --web && node test/plan-batch-ui-test.mjs && node test/plan-batch-ui-test.mjs --web",
     "test:application-launcher": "node test/application-launcher-ui-test.mjs && node test/application-launcher-ui-test.mjs --web",
-    "test:group-storage": "node test/group-storage-core-test.mjs && node test/group-storage-ui-test.mjs && node test/group-storage-ui-test.mjs --web"
+    "test:group-storage": "node test/group-storage-naming-core-test.mjs && node test/group-storage-core-test.mjs && node test/group-storage-ui-test.mjs && node test/group-storage-ui-test.mjs --web"
   },
   "build": {
     "appId": "com.agentscompany.app",

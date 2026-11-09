@@ -1,4 +1,3 @@
-import {missionPendingQuestions} from './chat-questions'
 import {join} from 'node:path'
 import {createHash,randomUUID} from 'node:crypto'
 import {APP_HOME} from '../shared/protocol'
@@ -6,7 +5,7 @@ import type {Mission,MissionSpec} from '../shared/missions'
 import type {Delegation,PrincipalRef,RequestContext} from '../shared/management'
 import {atomicJson,readJson} from './atomic-file'
 import {readStore} from './store'
-import {authorize,canSchedule,requestContext,isAppAdministrator,withCaller,validateDelegation} from './authorization'
+import {authorize,canSchedule,requestContext,isAppAdministrator,withCaller,validateDelegation,registerDelegationValidator} from './authorization'
 import {credentialActive} from './agent-access'
 import {taskViewId} from './task-view'
 import {enqueueMessage,startSession,getLive,listLive} from './sessions'
@@ -53,7 +52,10 @@ export function validateMissionNotice(delegation:Delegation,target:string){
  creatorValid(item)
  if(!person(target)||!item.employeeIds.includes(target)&&!(item.type==='supervised'&&item.secretaryId===target&&person(target)?.managementRole==='secretary'))throw Error('Mission reminder recipient changed')
 }
+registerDelegationValidator('missionNotice',validateMissionNotice)
 async function deliver(item:Saved,reminder:Mission['reminders'][number],employee:string){
+ const {missionPendingQuestions}=await import('./chat-questions')
+ if(!running)throw Error('Service is stopping; reminder remains unfinished')
  const context:RequestContext={principal:item.authority.requestedBy,requestId:reminder.id+':'+employee,credentialHash:item.authority.credentialHash},delegation:Delegation={requestedBy:item.authority.requestedBy,requestId:context.requestId,credentialHash:item.authority.credentialHash,missionNotice:{id:item.id,authorityRequestId:item.authority.requestId}}
  return withCaller(context,async()=>{
   validateDelegation(delegation,employee)
@@ -101,6 +103,7 @@ export function missionRows(){return data().missions.filter(item=>visible(item))
 export function missionCapabilities(item:Mission){return {allowedActions:['mission.get',...(manageable(item)?['mission.update','mission.complete','mission.fail','mission.remind','mission.archive',...(item.status==='succeeded'?['mission.delete','mission.reopen']:[])]:[])],blockedActions:{}}}
 export function archiveMission(id:string,archived:boolean){const item=get(id);if(!manageable(item))throw Error('Forbidden mission');item.archivedAt=archived?stamp():undefined;bump(item);save(item);return publicMission(item)}
 export async function missionRequest(method:string,args:Record<string,any>,notify=true){
+ const pendingQuestions=method==='complete'?(await import('./chat-questions')).missionPendingQuestions:undefined
  const context=requestContext();authorize('mission.'+method,args)
  if(method==='summary'){
   const employees:Record<string,{open:number;failed:number;supervisedOpen:number;supervisedFailed:number}>={}
@@ -125,7 +128,7 @@ export async function missionRequest(method:string,args:Record<string,any>,notif
   if(item.status!=='succeeded')item.nextReminderAt=new Date(Date.now()+item.reminderSeconds*1000).toISOString()
  }else if(method==='complete'||method==='fail'){
   if(typeof args.result!=='string'||!args.result.trim())throw Error('Describe the actual result or blocking problem')
-  if(method==='complete'&&context.principal.kind!=='operator'&&missionPendingQuestions(item.id).length)throw Error('Mission is waiting for a saved user decision; answer or explicitly withdraw the obsolete question before confirming success')
+  if(method==='complete'&&context.principal.kind!=='operator'&&pendingQuestions!(item.id).length)throw Error('Mission is waiting for a saved user decision; answer or explicitly withdraw the obsolete question before confirming success')
   if(method==='fail'&&item.status==='succeeded')throw Error('Reopen the successful mission explicitly before reporting another failure')
   item.result=args.result.trim();item.status=method==='complete'?'succeeded':'failed'
   if(method==='complete'){item.completedAt=stamp();item.nextReminderAt=null;item.deliveryError=undefined}else{item.failedAt=stamp();item.nextReminderAt??=new Date(Date.now()+item.reminderSeconds*1000).toISOString()}

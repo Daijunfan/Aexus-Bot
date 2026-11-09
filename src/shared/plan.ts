@@ -20,8 +20,17 @@ export const PLAN_LAYOUT_CATALOG=[
 export const PLAN_RUN_STATES=['running','succeeded','failed','skipped','cancelled','timed_out','interrupted'] as const
 export type PlanState=typeof PLAN_STATES[number]
 export type PlanLayout=typeof PLAN_LAYOUTS[number]
-export type PlanFilter={kind?:'all'|'mission'|'schedule';recurring?:'all'|'once'|'repeating';archived?:'active'|'archived'|'all';excludeIds?:string[];search?:string;employee?:string;team?:string;channel?:string;states?:PlanState[];priorities?:typeof PLAN_PRIORITIES[number][];tags?:string[]}
+export const PLAN_TABLE_PROPERTIES=[
+ {id:'status',label:'State'},{id:'employee',label:'Employee'},{id:'rule',label:'Repeat'},
+ {id:'nextAt',label:'Next run'},{id:'lastRun',label:'Last run'},{id:'priority',label:'Priority'},{id:'tags',label:'Tags'}
+] as const
+export type PlanTableProperty=typeof PLAN_TABLE_PROPERTIES[number]['id']
+export type PlanFilterClause={kind?:'all'|'mission'|'schedule';recurring?:'all'|'once'|'repeating';archived?:'active'|'archived'|'all';excludeIds?:string[];search?:string;employee?:string;team?:string;channel?:string;states?:PlanState[];priorities?:typeof PLAN_PRIORITIES[number][];tags?:string[]}
+export type PlanFilter=PlanFilterClause&{allOf?:PlanFilterClause[]}
+export function planFilterCount(value:PlanFilter):number{return Object.entries(value).reduce((count,[key,entry])=>count+(key==='allOf'?(entry as PlanFilterClause[]).reduce((sum,clause)=>sum+planFilterCount(clause),0):Array.isArray(entry)?Number(entry.length>0):Number(entry!==undefined&&entry!==''&&(key==='archived'||entry!=='all'))),0)}
 export type PlanViewOptions={
+  hiddenProperties?:PlanTableProperty[]
+  density?:'comfortable'|'compact'
   timezone?:string
   timelineScale?:'day'|'week'|'month'
   plannerMode?:'day'|'week'|'agenda'
@@ -32,7 +41,7 @@ export type PlanViewOptions={
 export type PlanViewSpec={name:string;layout:PlanLayout;groupBy:'status'|'employee'|'priority';filter:PlanFilter;sort:'nextAt'|'name'|'updatedAt'|'priority';direction:'asc'|'desc';options?:PlanViewOptions}
 export type PlanView=PlanViewSpec&{id:string;owner?:PrincipalRef;revision:number;builtin?:boolean}
 export type PlanEmployee={id:string;title:string;team:string;avatar?:string;color?:string;engine:string;role?:import('./roles').ManagementRole}
-export type PlanRow=ScheduledJob&{status:PlanState;employee:PlanEmployee|null;lastRun?:ScheduleRun;target?:{id:string;exists:boolean;role:string|null;title:string|null;team:string|null;engine:string};timing?:{timezone:string|null;kind:ScheduledJob['rule']['kind'];nextAt:string|null;until:string|null;window:ScheduledJob['window']};allowedActions?:string[];blockedActions?:Record<string,string>}
+export type PlanRow=ScheduledJob&{status:PlanState;employee:PlanEmployee|null;assignees?:PlanEmployee[];lastRun?:ScheduleRun;target?:{id:string;exists:boolean;role:string|null;title:string|null;team:string|null;engine:string};timing?:{timezone:string|null;kind:ScheduledJob['rule']['kind'];nextAt:string|null;until:string|null;window:ScheduledJob['window']};allowedActions?:string[];blockedActions?:Record<string,string>}
 export type PlanQuery={now?:string;hostTimezone?:string;rows:PlanRow[];total:number;offset:number;hasMore:boolean;counts:Record<PlanState,number>;facets?:{tags:string[]}}
 export type PlanTimeEvent={
   id:string;jobId:string;runId?:string;name:string;employeeId:string;employee:PlanEmployee|null

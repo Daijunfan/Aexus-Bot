@@ -18,8 +18,8 @@ try{
  let saved=JSON.parse(fs.readFileSync(file))
  assert.equal(saved.access.version,2);assert.equal(saved.access.managerTeam,undefined);assert.deepEqual(saved.access.globalManagerIds,[])
  assert.deepEqual(saved.sessions.filter(c=>c.managementRole==='governor').map(c=>c.id).sort(),['explicit','team-employee','team-manager'])
- for(const old of cards){const next=saved.sessions.find(c=>c.id===old.id);assert.equal(next.cwd,old.cwd);assert.equal(next.threadId,old.threadId);assert.deepEqual(next.position,old.position);assert.equal(next.initialization,undefined,'upgrade must not spend model quota')}
- assert.deepEqual(saved.rooms,initial.rooms);assert.deepEqual(saved.viewport,initial.viewport)
+ for(const old of cards){const next=saved.sessions.find(c=>c.id===old.id);assert.equal(next.cwd,old.cwd);assert.equal(next.threadId,old.threadId);assert.equal(next.position,undefined);assert.ok(Number.isInteger(next.seatNumber)&&next.seatNumber>0);assert.equal(next.initialization,undefined,'upgrade must not spend model quota')}
+ for(const room of (await cli('office','layout')).rooms){assert.equal(new Set(room.employees.map(e=>e.seatNumber)).size,room.employees.length);assert.equal(room.bounds.arrangement,'grid');assert.equal(room.bounds.shape,'rounded')}assert.deepEqual(saved.viewport,initial.viewport)
  assert.equal(saved.access.globalGrants['team-employee'],'existing-epoch');assert.equal(fs.readFileSync(history,'utf8'),content)
  assert.equal((await call(await token('plain'),'auth','whoami')).globalManager,false)
  const newcomer=await f.create('Newcomer','OldControl');assert.equal((await call(await token(newcomer.id),'auth','whoami')).globalManager,false,'joining the old Team grants nothing')
@@ -28,5 +28,5 @@ try{
  assert.equal((await call(await token('team-manager'),'auth','whoami')).managementRole,'governor')
  assert.equal((await cli('management','team')).team,null)
  assert.equal(fs.readFileSync(history,'utf8'),content)
- console.log('PASS one-time role migration: existing explicit/team grants become per-employee Governor, ordinary marker folders stay ordinary, native references/workspaces/history retained, new members and stale v1 flags grant nothing, no model calls')
+ console.log('PASS one-time role migration: existing explicit/team grants become per-employee Governor, ordinary marker folders stay ordinary, free coordinates migrated to unique numbered seats; native references/workspaces/history retained, new members and stale v1 flags grant nothing, no model calls')
 }finally{await f.close()}

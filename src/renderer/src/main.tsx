@@ -77,3 +77,5 @@ import './styles/avatar-surfaces.css'
 import './styles/disclosure-navigation.css'
 
 import './styles/application-launcher.css'
+
+import './styles/plan-view-options.css'

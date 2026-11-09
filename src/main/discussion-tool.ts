@@ -32,11 +32,11 @@ export async function invokeDiscussionTool(state:Live,input:unknown,callId:strin
  if(value.conversationType!==target.conversationType||value.conversationId!==target.conversationId||value.messageId!==target.messageId)throw Error('Publication target does not match the current shared request')
  if(emptyAgentPost(value.text))throw Error('Public text must be nonempty')
  validateDelegation(task.delegation,state.cardId)
- return withCaller(authenticate(scope.credential),()=>{
+ return withCaller(authenticate(scope.credential),async()=>{
   const policy=discussionPolicy(scope.context,state.cardId),text=value.text as string
   if(policy.mode==='awareness'||policy.muted)throw Error('Context-only or muted recipients cannot publish from this turn')
   if(scope.decision){if(scope.decision.text!==text)throw Error('A public reply was already posted by this tool');return scope.decision.result}
-  const result={...postDiscussionMessage(scope.context,text,scope.clientMessageId),nextAction:'end_turn' as const,instruction:'Public reply posted.'}
+  const result={...await postDiscussionMessage(scope.context,text,scope.clientMessageId),nextAction:'end_turn' as const,instruction:'Public reply posted.'}
   scope.decision={text,result};return result
  })
 }

@@ -39,7 +39,7 @@ Read-only channels bring together Telegram, X, YouTube, and other sources. Emplo
 
 ### Mission — schedule work and follow it through
 
-Mission brings together one-time, recurring, event-triggered, and persistent work through ten layouts, including calendars, boards, and timelines. Track assignees, schedules, execution records, and results, with Secretary supervision or independent employee execution.
+Mission brings together one-time, recurring, event-triggered, and persistent work through ten layouts, including calendars, boards, and timelines. Track assignees, schedules, execution records, and results, with Secretary supervision or independent employee execution. Save project-specific filters, sorting and property layouts, apply global display filters, and pause, resume or archive compatible records in batches.
 
 Reminders, supervision, user decisions, and completion states remain in the system. Incoming messages retain their own context so work can continue and be reviewed later.
 

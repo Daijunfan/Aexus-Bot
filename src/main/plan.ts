@@ -9,7 +9,7 @@ import {authorize,requestContext,visibleEmployees,canSchedule,isAppAdministrator
 import {readStore} from './store'
 import {scheduleRequest,scheduleCapabilities} from './scheduler/service'
 import {instant,forecastSchedule} from './scheduler/time'
-import {BUILTIN_PLAN_VIEWS,PLAN_STATES,PLAN_PRIORITIES,PLAN_LAYOUTS,PLAN_LAYOUT_CATALOG,PLAN_RUN_STATES,planState,type PlanView,type PlanViewSpec,type PlanViewOptions,type PlanFilter,type PlanRow,type PlanEmployee,type PlanTimeEvent,type PlanFeedEntry} from '../shared/plan'
+import {BUILTIN_PLAN_VIEWS,PLAN_STATES,PLAN_PRIORITIES,PLAN_LAYOUTS,PLAN_LAYOUT_CATALOG,PLAN_RUN_STATES,PLAN_TABLE_PROPERTIES,planState,type PlanView,type PlanViewSpec,type PlanViewOptions,type PlanFilter,type PlanRow,type PlanEmployee,type PlanTimeEvent,type PlanFeedEntry} from '../shared/plan'
 import type {ScheduledJob,ScheduleRun} from '../shared/scheduler'
 
 const file=join(APP_HOME,'plan-views.json')
@@ -21,19 +21,21 @@ function fields(value:Record<string,any>,allowed:string[]){
   if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Expected an object')
   for(const key of Object.keys(value))if(!allowed.includes(key)&&value[key]!==undefined)throw Error('Unknown Plan field: '+key)
 }
-function filter(value:PlanFilter={}):PlanFilter{
-  fields(value,['search','employee','team','channel','states','priorities','tags','kind','recurring','archived','excludeIds'])
+function filter(value:PlanFilter={},clause=false,maxClauses=32):PlanFilter{
+  fields(value,['search','employee','team','channel','states','priorities','tags','kind','recurring','archived','excludeIds','allOf'])
   for(const [key,values]of [['kind',['all','mission','schedule']],['recurring',['all','once','repeating']],['archived',['active','archived','all']]] as const)if(value[key]!==undefined&&!(values as readonly string[]).includes(value[key]!))throw Error('Invalid '+key)
   if(value.excludeIds!==undefined&&(!Array.isArray(value.excludeIds)||value.excludeIds.some(id=>typeof id!=='string'||!id)))throw Error('Invalid excluded task IDs')
   for(const key of ['search','employee','team','channel'] as const)if(value[key]!==undefined&&(typeof value[key]!=='string'||value[key]!.length>240))throw Error('Invalid '+key)
   for(const [key,allowed] of [['states',PLAN_STATES],['priorities',PLAN_PRIORITIES]] as const)if(value[key]!==undefined&&(!Array.isArray(value[key])||value[key]!.some(v=>!(allowed as readonly string[]).includes(v))))throw Error('Invalid '+key)
   if(value.tags!==undefined&&(!Array.isArray(value.tags)||value.tags.length>20||value.tags.some(tag=>typeof tag!=='string'||!tag.trim()||tag.length>40)))throw Error('Invalid tags')
+  if(value.allOf!==undefined&&(clause||!Array.isArray(value.allOf)||!value.allOf.length||value.allOf.length>maxClauses))throw Error('Use 1–'+maxClauses+' non-nested filter clauses')
+  const allOf=value.allOf?.map(item=>filter(item,true,maxClauses))
   if(value.employee==='self'){
     const p=requestContext().principal
     if(p.kind!=='agent')throw Error('self requires an authenticated employee')
-    return {...value,employee:p.employeeId}
+    return {...value,employee:p.employeeId,...(allOf?{allOf}:{})}
   }
-  return {...value}
+  return {...value,...(allOf?{allOf}:{})}
 }
 function timezone(value:unknown):string{
   const zone=value??Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -42,9 +44,10 @@ function timezone(value:unknown):string{
   return zone
 }
 function options(value:PlanViewOptions={}):PlanViewOptions{
-  fields(value,['timezone','timelineScale','plannerMode','chartMetric','chartGroupBy','chartType'])
-  const choices={timelineScale:['day','week','month'],plannerMode:['day','week','agenda'],chartMetric:['schedules','runs'],chartGroupBy:['status','employee','team','priority'],chartType:['bar','horizontal','line','donut']}
-  for(const [key,values] of Object.entries(choices))if(value[key as keyof PlanViewOptions]!==undefined&&!values.includes(value[key as keyof PlanViewOptions]!))throw Error('Invalid '+key)
+  fields(value,['timezone','timelineScale','plannerMode','chartMetric','chartGroupBy','chartType','hiddenProperties','density'])
+  if(value.hiddenProperties!==undefined&&(!Array.isArray(value.hiddenProperties)||new Set(value.hiddenProperties).size!==value.hiddenProperties.length||value.hiddenProperties.some(id=>!PLAN_TABLE_PROPERTIES.some(property=>property.id===id))))throw Error('Choose unique table properties from plan.schema')
+  const choices={density:['comfortable','compact'],timelineScale:['day','week','month'],plannerMode:['day','week','agenda'],chartMetric:['schedules','runs'],chartGroupBy:['status','employee','team','priority'],chartType:['bar','horizontal','line','donut']}
+  for(const [key,values] of Object.entries(choices))if(value[key as keyof typeof choices]!==undefined&&!values.includes(value[key as keyof typeof choices]!))throw Error('Invalid '+key)
   return {...value,...(value.timezone!==undefined?{timezone:timezone(value.timezone)}:{})}
 }
 const viewFields=['name','layout','groupBy','filter','sort','direction','options']
@@ -54,20 +57,23 @@ function viewSpec(value:PlanViewSpec):PlanViewSpec{
   if(!PLAN_LAYOUTS.includes(value.layout))throw Error('Choose a layout returned by plan.schema')
   if(!['status','employee','priority'].includes(value.groupBy??'status'))throw Error('Invalid grouping')
   if(!['nextAt','name','updatedAt','priority'].includes(value.sort??'nextAt')||!['asc','desc'].includes(value.direction??'asc'))throw Error('Invalid Plan sorting')
-  return {name:value.name.trim(),layout:value.layout,groupBy:value.groupBy??'status',filter:filter(value.filter),sort:value.sort??'nextAt',direction:value.direction??'asc',...(value.options===undefined?{}:{options:options(value.options)})}
+  return {name:value.name.trim(),layout:value.layout,groupBy:value.groupBy??'status',filter:filter(value.filter,false,10),sort:value.sort??'nextAt',direction:value.direction??'asc',...(value.options===undefined?{}:{options:options(value.options)})}
 }
-function matches(row:PlanRow,query:PlanFilter){
-  return (!query.excludeIds?.includes(row.id))&&(query.archived==='all'||(query.archived==='archived'?!!row.archivedAt:!row.archivedAt))&&(!query.kind||query.kind==='all'||(query.kind==='mission')===!!row.mission)&&(!query.recurring||query.recurring==='all'||(query.recurring==='once')===(row.rule.kind==='once'))&&(!query.channel||row.action.channelId===query.channel||row.source==='channel:'+query.channel)&&(!query.employee||(row.mission?row.mission.employeeIds.includes(query.employee):row.action.employeeId===query.employee))&&(!query.team||(row.mission?readStore().sessions.some(person=>row.mission!.employeeIds.includes(person.id)&&person.group===query.team):row.employee?.team===query.team))&&(!query.states?.length||query.states.includes(row.status))&&(!query.priorities?.length||query.priorities.includes(row.plan?.priority??'normal'))&&(!query.tags?.length||query.tags.every(tag=>row.plan?.tags.includes(tag)))&&(!query.search||[row.id,row.name,row.action.employeeId,row.action.prompt,row.employee?.title,row.employee?.team,row.employee?.role,row.plan?.notes,...(row.plan?.tags??[])].join(' ').toLowerCase().includes(query.search.toLowerCase()))
+function matches(row:PlanRow,query:PlanFilter,inheritedArchive:PlanFilter['archived']='active'){
+  const archived=query.archived??inheritedArchive
+  if(query.allOf?.some(clause=>!matches(row,clause,archived)))return false
+  return (!query.excludeIds?.includes(row.id))&&(archived==='all'||(archived==='archived'?!!row.archivedAt:!row.archivedAt))&&(!query.kind||query.kind==='all'||(query.kind==='mission')===!!row.mission)&&(!query.recurring||query.recurring==='all'||(query.recurring==='once')===(row.rule.kind==='once'))&&(!query.channel||row.action.channelId===query.channel||row.source==='channel:'+query.channel)&&(!query.employee||(row.mission?row.mission.employeeIds.includes(query.employee):row.action.employeeId===query.employee))&&(!query.team||(row.mission?row.assignees?.some(person=>person.team===query.team):row.employee?.team===query.team))&&(!query.states?.length||query.states.includes(row.status))&&(!query.priorities?.length||query.priorities.includes(row.plan?.priority??'normal'))&&(!query.tags?.length||query.tags.every(tag=>row.plan?.tags.includes(tag)))&&(!query.search||[row.id,row.name,row.action.employeeId,row.action.prompt,row.employee?.title,row.employee?.team,row.employee?.role,row.plan?.notes,...(row.plan?.tags??[])].join(' ').toLowerCase().includes(query.search.toLowerCase()))
 }
 /** Read models consume only scheduler-authorized records, never raw persistent files. */
 async function snapshot(){
   const jobs=await scheduleRequest('list',{}) as ScheduledJob[],runs=await scheduleRequest('history',{limit:1000}) as ScheduleRun[]
-  jobs.push(...missionRows().map(mission=>missionPlanRow(mission,readStore().sessions.find(card=>card.id===mission.employeeIds[0])?.engine??mission.employeeEngines?.[mission.employeeIds[0]]??'codex')))
+  const store=readStore()
+  jobs.push(...missionRows().map(mission=>missionPlanRow(mission,store.sessions.find(card=>card.id===mission.employeeIds[0])?.engine??mission.employeeEngines?.[mission.employeeIds[0]]??'codex')))
   const archives=planArchives()
-  const people=new Map<string,PlanEmployee>(readStore().sessions.filter(card=>!card.deleting).map(card=>[card.id,{id:card.id,title:card.title,team:card.group,avatar:card.avatar??(card.engine==='codex'?'robot':'cat'),color:card.color,engine:card.engine,role:card.managementRole??'employee'}]))
+  const people=new Map<string,PlanEmployee>(store.sessions.filter(card=>!card.deleting).map(card=>[card.id,{id:card.id,title:card.title,team:card.group,avatar:card.avatar??(card.engine==='codex'?'robot':'cat'),color:card.color,engine:card.engine,role:card.managementRole??'employee'}]))
   const latest=new Map<string,ScheduleRun>()
   for(const run of runs)if(!latest.has(run.jobId)||run.status==='running')latest.set(run.jobId,run)
-  const rows:PlanRow[]=jobs.map(job=>({...job,archivedAt:job.mission?.archivedAt??archives[job.id],status:planState(job,latest.get(job.id)),lastRun:latest.get(job.id),employee:people.get(job.action.employeeId)??null,target:{id:job.action.employeeId,exists:people.has(job.action.employeeId),role:people.get(job.action.employeeId)?.role??null,title:people.get(job.action.employeeId)?.title??null,team:people.get(job.action.employeeId)?.team??null,engine:job.action.engine},timing:{timezone:'timezone' in job.rule?job.rule.timezone:null,kind:job.rule.kind,nextAt:job.nextAt,until:job.until??null,window:job.window??null},...(job.mission?missionCapabilities(job.mission):scheduleCapabilities(job))}))
+  const rows:PlanRow[]=jobs.map(job=>({...job,archivedAt:job.mission?.archivedAt??archives[job.id],status:planState(job,latest.get(job.id)),lastRun:latest.get(job.id),employee:people.get(job.action.employeeId)??null,assignees:(job.mission?.employeeIds??[job.action.employeeId]).flatMap(id=>people.has(id)?[people.get(id)!]:[]),target:{id:job.action.employeeId,exists:people.has(job.action.employeeId),role:people.get(job.action.employeeId)?.role??null,title:people.get(job.action.employeeId)?.title??null,team:people.get(job.action.employeeId)?.team??null,engine:job.action.engine},timing:{timezone:'timezone' in job.rule?job.rule.timezone:null,kind:job.rule.kind,nextAt:job.nextAt,until:job.until??null,window:job.window??null},...(job.mission?missionCapabilities(job.mission):scheduleCapabilities(job))}))
   return {jobs,rows,runs,people,byId:new Map(rows.map(row=>[row.id,row]))}
 }
 function dateRange(args:Record<string,any>,required=false){
@@ -76,6 +82,12 @@ function dateRange(args:Record<string,any>,required=false){
   const from=Date.parse(instant(args.from)),to=Date.parse(instant(args.to))
   if(to<=from||to-from>93*86400000)throw Error('Range must be greater than zero and at most 93 days')
   return {from,to}
+}
+function matchesRemovedRun(run:ScheduleRun,employee:PlanEmployee|undefined,query:PlanFilter,inheritedArchive:PlanFilter['archived']='active'):boolean{
+ const archived=query.archived??inheritedArchive
+ if(query.allOf?.some(clause=>!matchesRemovedRun(run,employee,clause,archived)))return false
+ if(query.states?.length||query.priorities?.length||query.tags?.length||query.kind==='mission'||query.excludeIds?.includes(run.jobId)||archived==='archived'||query.recurring&&query.recurring!=='all')return false
+ return (!query.channel||run.action.channelId===query.channel)&&(!query.employee||query.employee===run.action.employeeId)&&(!query.team||query.team===employee?.team)&&(!query.search||[run.jobName,run.action.prompt,employee?.title,employee?.team,run.message].join(' ').toLowerCase().includes(query.search.toLowerCase()))
 }
 function runEntries(data:Awaited<ReturnType<typeof snapshot>>,query:PlanFilter,args:Record<string,any>):PlanFeedEntry[]{
   const range=dateRange(args),states=args.outcomes
@@ -86,9 +98,7 @@ function runEntries(data:Awaited<ReturnType<typeof snapshot>>,query:PlanFilter,a
     const row=data.byId.get(run.jobId)
     // Deleted schedules have no current priority/tags/state; never invent those properties.
     if(row)return matches({...row,name:run.jobName,action:run.action,employee:data.people.get(run.action.employeeId)??null},query)
-    if(query.states?.length||query.priorities?.length||query.tags?.length||query.kind==='mission'||query.excludeIds?.includes(run.jobId)||query.archived==='archived'||query.recurring&&query.recurring!=='all')return false
-    const employee=data.people.get(run.action.employeeId)
-    return (!query.channel||run.action.channelId===query.channel)&&(!query.employee||query.employee===run.action.employeeId)&&(!query.team||query.team===employee?.team)&&(!query.search||[run.jobName,run.action.prompt,employee?.title,employee?.team,run.message].join(' ').toLowerCase().includes(query.search.toLowerCase()))
+    return matchesRemovedRun(run,data.people.get(run.action.employeeId),query)
   }).map(run=>({...run,employee:data.people.get(run.action.employeeId)??null,jobAvailable:data.byId.has(run.jobId),plan:data.byId.get(run.jobId)?.plan}))
 }
 function missionFeed(data:Awaited<ReturnType<typeof snapshot>>,query:PlanFilter,args:Record<string,any>):PlanFeedEntry[]{
@@ -133,7 +143,7 @@ async function temporalView(args:Record<string,any>,timeline:boolean){
 export async function planRequest(method:string,args:Record<string,any>){
   authorize('plan.'+method,args)
   if(method==='schema')return {
-    version:1,layouts:PLAN_LAYOUTS,layoutCatalog:PLAN_LAYOUT_CATALOG,states:PLAN_STATES,runStates:PLAN_RUN_STATES,priorities:PLAN_PRIORITIES,
+    version:1,layouts:PLAN_LAYOUTS,layoutCatalog:PLAN_LAYOUT_CATALOG,tableProperties:PLAN_TABLE_PROPERTIES,viewPresentation:{density:['comfortable','compact'],alwaysVisible:['name','actions']},states:PLAN_STATES,runStates:PLAN_RUN_STATES,priorities:PLAN_PRIORITIES,
     properties:[{id:'name',type:'title'},{id:'status',type:'computed-status',editable:false},{id:'employee',type:'employee-relation'},{id:'nextAt',type:'computed-date',editable:false},{id:'rule',type:'recurrence'},{id:'priority',type:'select'},{id:'tags',type:'multi-select'},{id:'notes',type:'text'},{id:'durationMinutes',type:'estimate-minutes',description:'Optional timeline estimate, independent of timeout and actual run duration'},{id:'prompt',type:'long-text'},{id:'lastRun',type:'run-relation',editable:false}],
     scheduler:await scheduleRequest('schema',{}),targets:visibleEmployees().filter(card=>canSchedule(requestContext().principal,card.id)).map(card=>({id:card.id,title:card.title,team:card.group,engine:card.engine,role:card.managementRole??'employee'})),
     data:{records:'plan.query',details:'schedule.get',create:'schedule.create',edit:'schedule.update',pause:'schedule.pause',resume:'schedule.resume',remove:'schedule.delete',preview:'schedule.preview',run:'schedule.run',history:'schedule.history',cancel:'schedule.cancel',timeline:'plan.timeline',analytics:'plan.analytics',feed:'plan.feed'},

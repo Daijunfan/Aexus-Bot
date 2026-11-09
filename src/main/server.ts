@@ -51,7 +51,7 @@ import { channelOperation,channelRequest,channelFileEndpoint,getChannel } from '
 import { syncChannelIngress,channelIngressStatus } from './channel-ingress'
 import { exportChannelPost } from './channel-export'
 import { planRequest } from './plan'
-import { APP_VIEWS,appView } from '../shared/app-views'
+import { APP_VIEWS,appView,VIEW_MUTATIONS } from '../shared/app-views'
 import { listChatGroups,getChatGroup,groupMediaRoot } from './chat-groups'
 import { assertEngineWorkspace } from '../shared/engines'
 import { hostTerminals,openHostTerminal,requireHostTerminal,assertHostIdle,closeHostTerminals } from './host-connections'
@@ -211,8 +211,15 @@ const RENDERED_CHANNELS = new Set([
 
 function employeeId(value:unknown){const id=String(value??'');return readStore().sessions.some(card=>card.id===id)?id:sessionInfo(id)?.cardId}
 function creationFingerprint(value:unknown):string{const stable=(value:any):any=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([name,value])=>[name,stable(value)])):value;return createHash('sha256').update(JSON.stringify(stable(value))).digest('hex')}
+const navigationRequests=new Map<string,Promise<unknown>>()
 export async function handleRequest(req:Request,context?:RequestContext&{signal?:AbortSignal}):Promise<any>{
   if(context)return withCaller(context,()=>handleRequest(req))
+  if(!VIEW_MUTATIONS.has(req.cmd))return handleCurrentRequest(req)
+  const caller=requestContext(),key=caller.clientId??'desktop',previous=navigationRequests.get(key)??Promise.resolve(),result=previous.catch(()=>{}).then(()=>{if(caller.signal?.aborted)throw Error('Request cancelled before navigation');return withCaller(caller,()=>handleCurrentRequest(req))})
+  navigationRequests.set(key,result)
+  try{return await result}finally{if(navigationRequests.get(key)===result)navigationRequests.delete(key)}
+}
+async function handleCurrentRequest(req:Request):Promise<any>{
   const caller=requestContext(),a={...(req.args??{})} as Record<string,any>
   for(const field of ['crossReply','chat','connectorAnchors','localWorkspaceRoot','createdBy','requestedBy','approvedBy','delegation','access','managerTeam','globalManagerIds','globalGrants','deleting','initialization','lastReply'])if(field in a||a.patch&&field in a.patch||a.spec&&field in a.spec)throw Error('Internal field cannot be supplied: '+field)
   if(a.patch&&'managementRole' in a.patch||a.managementRole!==undefined&&req.cmd!=='card.create')throw Error('Use card.management-role to assign roles')
@@ -491,16 +498,20 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
 
     case 'view.list': return {views:APP_VIEWS,current:getView(),company:teamViewList(),shared:{employees:'session.list',conversations:'session.transcript',inbox:'session.inbox',readReceipts:'session.acknowledge',groups:'chat.list',bindings:'management.topology',schedules:'schedule.list',plans:'plan.query',planViews:'plan.views'}}
     case 'view.navigation': {
-      validateApiArguments(req.cmd,a);const view=getView(),section=s(a.section),company=!['messages','plan'].includes(view.kind)&&view.returnTo?.kind!=='messages'&&view.returnTo?.kind!=='plan';if(section==='team'?!company:view.kind!=='plan'||section==='plan'&&((view.missionTab??'plan')!=='plan'||a.expanded&&!view.missionNavigationOpen))throw Error('Open the matching primary view before expanding its navigation');return setView({...view,[section==='team'?'teamNavigationOpen':section==='mission'?'missionNavigationOpen':'planNavigationOpen']:a.expanded})
+      validateApiArguments(req.cmd,a);const view=getView(),section=s(a.section),field=section==='team'?'teamNavigationOpen':section==='mission'?'missionNavigationOpen':'planNavigationOpen',expanded=a.expanded??!view[field],company=!['messages','plan'].includes(view.kind)&&view.returnTo?.kind!=='messages'&&view.returnTo?.kind!=='plan';if(section==='team'?!company:view.kind!=='plan'||section==='plan'&&((view.missionTab??'plan')!=='plan'||expanded&&!view.missionNavigationOpen))throw Error('Open the matching primary view before expanding its navigation');return setView({...view,[field]:expanded})
     }
     case 'view.select': {
+      validateApiArguments(req.cmd,a)
       const mode=appView(a.id);if(!mode)throw Error('Unknown application view')
+      if(a.toggleNavigation&&(a.teamTab!==undefined||a.teamViewId!==undefined||a.missionTab!==undefined))throw Error('Primary activation cannot set a child view')
+      const current=getView(),root=mode.id==='company'?current.kind==='home'&&!current.pluginId:mode.id==='plan'&&current.kind==='plan'
+      if(a.toggleNavigation&&root)return setView({...current,[mode.id==='company'?'teamNavigationOpen':'missionNavigationOpen']:!(mode.id==='company'?current.teamNavigationOpen:current.missionNavigationOpen)})
       if(a.teamTab!==undefined&&(mode.id!=='company'||!['characters','board','workers'].includes(a.teamTab)))throw Error('Choose Characters, Board or Workers within Team')
       if(mode.id!=='company'&&a.teamViewId!==undefined)throw Error('Only Company selects a Team subview')
       if(mode.id==='company'&&a.teamViewId!==undefined&&!teamViewList().views.some(item=>item.id===a.teamViewId))throw Error('Unknown Company subview')
       if(a.missionTab!==undefined&&(mode.id!=='plan'||!['plan','engineering','research'].includes(a.missionTab)))throw Error('Choose Plan, Engineering or Research within Mission')
       const nextMissionTab=a.missionTab??getView().missionTab??'plan';await beforeViewChange(mode.id==='company'?'home':mode.id,mode.id==='plan'?nextMissionTab:undefined)
-      if(mode.id==='company')selectTeamView(a.teamViewId??(a.teamTab?teamViewList().activeId:'all'))
+      if(mode.id==='company')selectTeamView(a.teamViewId??(a.teamTab||a.toggleNavigation?teamViewList().activeId:'all'))
       if(mode.id==='messages'){
         const saved={...getMessagesView(),shared:getView().shared}
         try{
