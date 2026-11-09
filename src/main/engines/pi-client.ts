@@ -1,3 +1,6 @@
+import {nativeWorkerEnv} from '../native-worker-env'
+import {protocolJson} from '../protocol-lines'
+import type {ChildProcess} from 'node:child_process'
 import {nativePiConnection,copyNativeConnection} from './native-config'
 import {nativeToolResult} from '../native-tool-result'
 import fs from 'node:fs'
@@ -15,7 +18,7 @@ import {preparePiTunnel,type TunnelTool,type TunnelToolCall} from './pi-tunnel'
 
 type CoreTool={tool:{name:string;description:string;inputSchema:Record<string,unknown>};call:(input:unknown,callId:string)=>Promise<unknown>}
 
-export function piClient(options:{discussion?:CoreTool;documentation?:CoreTool;api?:CoreTool;cwd:string;directory:string;workRoot?:string;employeeId?:string;sessionFile?:string;model?:string;remoteLaunch?:RemoteLaunch;tunnelTools?:TunnelTool[];onTunnelCall?:(request:TunnelToolCall)=>Promise<unknown>;env?:NodeJS.ProcessEnv;onEvent?:(event:any)=>void;onPermission?:(request:{toolName:string;toolCallId:string;input:Record<string,unknown>})=>Promise<boolean>}){
+export function piClient(options:{nativeWorker?:boolean;onProcess?:(child:ChildProcess)=>void;discussion?:CoreTool;documentation?:CoreTool;api?:CoreTool;cwd:string;directory:string;workRoot?:string;employeeId?:string;sessionFile?:string;model?:string;remoteLaunch?:RemoteLaunch;tunnelTools?:TunnelTool[];onTunnelCall?:(request:TunnelToolCall)=>Promise<unknown>;env?:NodeJS.ProcessEnv;onEvent?:(event:any)=>void;onPermission?:(request:{toolName:string;toolCallId:string;input:Record<string,unknown>})=>Promise<boolean>}){
   fs.mkdirSync(options.directory,{recursive:true,mode:0o700})
   const provider=processProvider('pi'),modelsFile=path.join(options.directory,'models.json')
   const native=provider.native?nativePiConnection():undefined
@@ -37,15 +40,17 @@ export function piClient(options:{discussion?:CoreTool;documentation?:CoreTool;a
   const secrets=Object.entries(env).filter(([k,v])=>/key|token|password/i.test(k)&&v&&v.length>8).map(([,v])=>v!).concat(native?.apiKey?[native.apiKey]:[])
   const redact=(text:string)=>secrets.reduce((value,secret)=>value.replaceAll(secret,'[redacted]'),text)
   const args=['--mode','rpc','--provider',provider.provider,'--model',options.model||provider.model,...(provider.thinkingLevel?['--thinking',provider.thinkingLevel]:[]),'--session-dir',path.join(options.directory,'sessions'),'--no-approve','--extension',policy,...(coreTools.length?['--extension',discussion]:[]),...(options.remoteLaunch?['--no-builtin-tools','--no-context-files','--system-prompt',options.remoteLaunch.instructions,'--extension',preparePiTunnel(options.directory,options.tunnelTools??[],coreTools.map(item=>item.descriptor.tool.name))]:[]),...(options.sessionFile?['--session',options.sessionFile]:[])]
-  const processOptions={cwd:options.cwd,env,stdio:['pipe','pipe','pipe'] as ['pipe','pipe','pipe'],windowsHide:true,detached:process.platform!=='win32'}
+  const processOptions={cwd:options.cwd,env:options.nativeWorker?nativeWorkerEnv(env):env,stdio:['pipe','pipe','pipe'] as ['pipe','pipe','pipe'],windowsHide:true,detached:process.platform!=='win32'}
   const child=options.employeeId?spawnEmployeeProcess(options.employeeId,engineExecutable('pi'),args,processOptions):spawn(engineExecutable('pi'),args,processOptions)
+  options.onProcess?.(child)
   let sequence=0,stderr='',closed=false,buffer='';const decoder=new StringDecoder('utf8')
   const pending=new Map<string,{resolve:(value:any)=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>()
   const fail=(error:Error)=>{for(const value of pending.values()){clearTimeout(value.timer);value.reject(error)}pending.clear()}
+  child.stdin?.on('error',error=>fail(Error(redact(error.message))))
   child.stderr?.on('data',data=>stderr=redact(stderr+String(data)).slice(-4096))
   child.once('error',error=>fail(Error(redact(error.message))))
   const exited=new Promise<void>(resolve=>child.once('close',code=>{closed=true;const error='Pi exited ('+code+'): '+stderr;fail(Error(error));options.onEvent?.({type:'process_error',error});resolve()}))
-  const send=(value:unknown)=>{if(closed||!child.stdin?.writable)throw Error('Pi connection is closed');child.stdin.write(JSON.stringify(value)+'\n')}
+  const send=(value:unknown)=>{if(closed||!child.stdin?.writable)throw Error('Pi connection is closed');child.stdin.write(protocolJson(value)+'\n')}
   const consume=(line:string)=>{
     let message:any
     try{message=JSON.parse(line)}catch{fail(Error('Pi emitted invalid RPC JSON'));return}
@@ -67,6 +72,7 @@ export function piClient(options:{discussion?:CoreTool;documentation?:CoreTool;a
   // Pi framing is LF-only; Unicode line/paragraph separators are valid JSON text.
   child.stdout?.on('data',chunk=>{buffer+=decoder.write(chunk);let end:number;while((end=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,end).replace(/\r$/,'');buffer=buffer.slice(end+1);if(line)consume(line)}})
   return {
+    alive:()=>!closed&&child.exitCode==null&&child.signalCode==null,
     ...provider,
     call(type:string,params:Record<string,unknown>={},timeout=30000):Promise<any>{return new Promise((resolve,reject)=>{const id=String(++sequence),timer=setTimeout(()=>{pending.delete(id);reject(Error('Pi '+type+' timed out'))},timeout);pending.set(id,{resolve,reject,timer});try{send({id,type,...params})}catch(error){pending.delete(id);clearTimeout(timer);reject(error)}})},
     // Late tool replies must stop before stdin ends, not after the process exits.

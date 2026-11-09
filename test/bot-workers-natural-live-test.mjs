@@ -26,6 +26,7 @@ const server=http.createServer(async(req,res)=>{let input;try{
  input=JSON.parse(bytes);const a=input.args??{};fixtureCalls.push(input);let result
  switch(input.method){
   case 'list':result=remote.filter(b=>b.provider===a.provider);break
+  case 'status':result={issue:null,checkedAt:Date.now()};break;
   case 'messages':result=histories.get(a.binding.remoteId)??[];break
   case 'create':{let b=remote.find(b=>b.id===a.id);if(!b){b={id:a.id,name:a.name,provider:'grok',kind:a.members?'group':'private',participantIds:a.members};remote.push(b);histories.set(b.id,[])}result=b;break}
   case 'send':{

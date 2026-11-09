@@ -18,7 +18,7 @@ export function useCatalog<T>(command:string,enabled:boolean,matches:(event:Even
   if(!enabled)return
   active.current=true;generation.current++;let timer:ReturnType<typeof setTimeout>|undefined
   void refresh()
-  const off=api.onEvent(event=>{if(filter.current(event)&&!timer)timer=setTimeout(()=>{timer=undefined;void refresh()},delay)})
+  const off=api.onEvent(event=>{if((event.channel==='client:connected'||filter.current(event))&&!timer)timer=setTimeout(()=>{timer=undefined;void refresh()},delay)})
   return()=>{active.current=false;generation.current++;off();clearTimeout(timer)}
  },[enabled,refresh,delay])
  return {value,ready,loading,error,refresh}

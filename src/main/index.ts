@@ -22,6 +22,7 @@ if(REMOTE_WEB_URL){
 const HEADLESS = process.env.AGENTS_COMPANY_HEADLESS === '1'
 const OFFSCREEN = process.env.AGENTS_COMPANY_OFFSCREEN === '1'
 const HIDDEN = OFFSCREEN || process.env.AGENTS_COMPANY_HIDDEN === '1'
+const BACKGROUND_START = process.env.AGENTS_COMPANY_BACKGROUND_START === '1'
 if ((HEADLESS || HIDDEN) && process.platform === 'darwin') app.setActivationPolicy('prohibited')
 // Keep the existing Electron profile when the product display name changes.
 app.commandLine.appendSwitch('disable-http-cache')
@@ -60,8 +61,8 @@ ipcMain.handle('shell:openExternal', async (event, url: string) => {
 
 setFileRevealer(file=>shell.showItemInFolder(file))
 
-setViewGuard(async () => {
-  if (mainWindow&&rendererReady(mainWindow.webContents)) await askRenderer('flush', {}, 12000)
+setViewGuard(async nextKind => {
+  if (mainWindow&&rendererReady(mainWindow.webContents)) await askRenderer('flush', {nextKind}, 12000)
 })
 
 setUiHandler(async (op, args) => {
@@ -117,7 +118,7 @@ function createWindow() {
     width: Number(process.env.AGENTS_COMPANY_WIDTH) || 1168,
     height: Number(process.env.AGENTS_COMPANY_HEIGHT) || 1096,
     minWidth: 720, minHeight: 600,
-    show: !HIDDEN,
+    show: !HIDDEN && !BACKGROUND_START,
     titleBarStyle: process.platform==='darwin'?'hiddenInset':'default',
     trafficLightPosition: { x: 14, y: 20 },
     backgroundColor: '#141724',
@@ -174,7 +175,10 @@ app.whenReady().then(() => {
   })
   if (!HEADLESS){pluginDesktop=attachPluginDesktop(()=>mainWindow,HIDDEN,join(__dirname,'../preload/plugin.js'));createWindow()}
   app.on('activate', () => {
-    if (!HEADLESS && !HIDDEN && !mainWindow) createWindow()
+    if (!HEADLESS && !HIDDEN) {
+      if (!mainWindow) createWindow()
+      mainWindow?.show()
+    }
   })
 })
 app.on('window-all-closed', () => { if (!HEADLESS && process.platform !== 'darwin') app.quit() })

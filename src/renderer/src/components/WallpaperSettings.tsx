@@ -9,7 +9,7 @@ import {Icon} from './Icon'
 import '../styles/wallpaper-settings.css'
 
 const labels={telegram:'Telegram',daydream:'Daydream',botanical:'Botanical',cosmos:'Cosmos',studio:'Studio',geometric:'Geometry',none:'No pattern'}
-const DARK_THEMES=['black','space','midnight']
+const DARK_THEMES=['black','space','midnight','sage']
 const DEFAULT_CUSTOM_COLORS=['#b2cee1']
 const HEX=/^#[0-9a-fA-F]{6}$/
 export function WallpaperSettings({value,appearance,onChange}:{value:MessageWallpaperSettings;appearance:ViewAppearance;onChange:(patch:Partial<MessageWallpaperSettings>,delay?:number)=>void}){
@@ -20,10 +20,10 @@ export function WallpaperSettings({value,appearance,onChange}:{value:MessageWall
  const customDetails=useRef<HTMLDetailsElement>(null),draftsKey=useRef(colorsKey)
  if(draftsKey.current!==colorsKey){draftsKey.current=colorsKey;setDrafts(colors)}
  const selectCustom=()=>{
-  onChange({palette:'custom',pattern:'telegram',opacity:37.5,colors})
+  onChange({palette:'custom',colors})
   if(customDetails.current)customDetails.current.open=true
  }
- const setColors=(next:string[],delay?:number)=>onChange({palette:'custom',pattern:'telegram',colors:next},delay)
+ const setColors=(next:string[],delay?:number)=>onChange({palette:'custom',colors:next},delay)
  const commitColor=(index:number,raw:string)=>{
   const text=raw.trim()
   if(!HEX.test(text)){setDrafts(colors);return}
@@ -38,18 +38,18 @@ export function WallpaperSettings({value,appearance,onChange}:{value:MessageWall
    <MessageWallpaper settings={value} dark={dark}/><div className="wallpaper-preview-caption"><Icon name="eye"/>{uiText('Live preview')}</div>
    <div className="wallpaper-preview-bubbles"><span>{uiText('A little room for good ideas.')}<small>10:24</small></span><span>{uiText('Make it feel like you.')}<small>10:25 <Icon name="check-all"/></small></span></div>
   </div>
+  <div className="wallpaper-patterns" role="group" aria-label={uiText('Pattern collection')}>{(['none',...WALLPAPER_PATTERNS.filter(pattern=>pattern!=='none'&&pattern!=='telegram')] as const).map(pattern=><button type="button" key={pattern} data-pattern-option={pattern} aria-label={uiText(labels[pattern])} aria-pressed={value.pattern===pattern} onClick={()=>onChange({pattern})}>
+   <span className={`wallpaper-swatch ${themeSample}`} style={style} aria-hidden="true"><MessageWallpaper settings={{...value,pattern,opacity:24,density:130}} dark={dark}/>{pattern==='none'&&<Icon name="circle-slash"/>}</span>
+   <span className="wallpaper-pattern-label">{uiText(labels[pattern])}{value.pattern===pattern&&<Icon name="check"/>}</span>
+  </button>)}</div>
   <div className="wallpaper-palettes-heading">{uiText('Colors')}</div>
-  <div className="wallpaper-palettes" role="group" aria-label={uiText('Colors')}>
-   <button type="button" data-wallpaper-palette-option="theme" aria-label={uiText('Default wallpaper')} aria-pressed={!value.palette||value.palette==='theme'} onClick={()=>onChange({palette:'theme',pattern:'telegram',opacity:37.5})}>
-    <TelegramWallpaper className="wallpaper-palette-swatch" settings={{...value,palette:'theme',pattern:'telegram'}} dark={dark}/>
+  <div className="wallpaper-palettes wallpaper-primary-colors" role="group" aria-label={uiText('Colors')}>
+   <button type="button" data-wallpaper-palette-option="theme" aria-label={uiText('Default wallpaper')} aria-pressed={!value.palette||value.palette==='theme'} onClick={()=>onChange({...DEFAULT_MESSAGE_WALLPAPER,palette:'theme',colors:DEFAULT_CUSTOM_COLORS,rotation:0})}>
+    <span className="wallpaper-palette-swatch"><MessageWallpaper settings={{...value,palette:'theme'}} dark={dark}/></span><span>{uiText('Default wallpaper')}</span>
     {(!value.palette||value.palette==='theme')&&<Icon name="check"/>}
    </button>
-   {TELEGRAM_WALLPAPERS.map(wallpaper=><button type="button" key={wallpaper.id} data-wallpaper-palette-option={wallpaper.id} aria-label={uiText(wallpaper.name)} title={uiText(wallpaper.name)} aria-pressed={value.palette===wallpaper.id} onClick={()=>onChange({palette:wallpaper.id,pattern:'telegram',opacity:37.5})}>
-    <TelegramWallpaper className="wallpaper-palette-swatch" settings={{...value,pattern:'telegram',palette:wallpaper.id}} dark={dark}/>
-    {value.palette===wallpaper.id&&<Icon name="check"/>}
-   </button>)}
    <button type="button" data-wallpaper-palette-option="custom" aria-label={uiText('Custom wallpaper')} aria-pressed={value.palette==='custom'} onClick={selectCustom}>
-    <TelegramWallpaper className="wallpaper-palette-swatch" settings={{...value,pattern:'telegram',palette:'custom',colors}} dark={dark}/>
+    <span className="wallpaper-palette-swatch"><MessageWallpaper settings={{...value,palette:'custom',colors}} dark={dark}/></span><span>{uiText('Custom wallpaper')}</span>
     {value.palette==='custom'&&<Icon name="check"/>}
    </button>
   </div>
@@ -63,14 +63,17 @@ export function WallpaperSettings({value,appearance,onChange}:{value:MessageWall
    {colors.length<4&&<button type="button" className="wallpaper-color-add" onClick={()=>setColors([...colors,DEFAULT_CUSTOM_COLORS[0]])}><Icon name="add"/>{uiText('Add color')}</button>}
    <label className="settings-range"><span>{uiText('Angle')}<output>{value.rotation??0}°</output></span><input name="wallpaper-rotation" aria-label={uiText('Angle')} type="range" min="0" max="360" step="1" value={value.rotation??0} onChange={event=>onChange({rotation:Number(event.target.value)},180)}/></label>
   </details>
-  <div className="wallpaper-patterns" role="group" aria-label={uiText('Pattern collection')}>{WALLPAPER_PATTERNS.map(pattern=><button type="button" key={pattern} data-pattern-option={pattern} aria-label={uiText(labels[pattern])} aria-pressed={value.pattern===pattern} onClick={()=>onChange({pattern})}>
-   <span className={`wallpaper-swatch ${themeSample}`} style={style} aria-hidden="true"><MessageWallpaper settings={{...value,pattern,opacity:24,density:130}} dark={dark}/>{pattern==='none'&&<Icon name="circle-slash"/>}</span>
-   <span className="wallpaper-pattern-label">{uiText(labels[pattern])}{value.pattern===pattern&&<Icon name="check"/>}</span>
-  </button>)}</div>
-  <fieldset className="wallpaper-adjustments" disabled={value.pattern==='none'}><legend>{uiText('Pattern arrangement')}</legend>
+  <details className="wallpaper-imported" open={value.pattern==='telegram'}><summary>{uiText('Imported wallpapers')}</summary><div className="wallpaper-palettes" role="group" aria-label={uiText('Imported wallpapers')}>
+   <button type="button" data-pattern-option="telegram" aria-label="Telegram" aria-pressed={value.pattern==='telegram'} onClick={()=>onChange({pattern:'telegram',opacity:37.5})}><TelegramWallpaper className="wallpaper-palette-swatch" settings={{...value,pattern:'telegram'}} dark={dark}/>{value.pattern==='telegram'&&<Icon name="check"/>}</button>
+   {TELEGRAM_WALLPAPERS.map(wallpaper=><button type="button" key={wallpaper.id} data-wallpaper-palette-option={wallpaper.id} aria-label={uiText(wallpaper.name)} title={uiText(wallpaper.name)} aria-pressed={value.palette===wallpaper.id} onClick={()=>onChange({palette:wallpaper.id,pattern:'telegram',opacity:37.5})}>
+    <TelegramWallpaper className="wallpaper-palette-swatch" settings={{...value,pattern:'telegram',palette:wallpaper.id}} dark={dark}/>
+    {value.palette===wallpaper.id&&<Icon name="check"/>}
+   </button>)}
+  </div></details>
+  {value.pattern!=='none'?<fieldset className="wallpaper-adjustments"><legend>{uiText('Pattern arrangement')}</legend>
    {value.pattern!=='telegram'&&<div className="wallpaper-layouts" role="group" aria-label={uiText('Pattern arrangement')}>{(['ordered','scattered'] as const).map(layout=><button type="button" key={layout} data-wallpaper-layout-option={layout} aria-pressed={value.layout===layout} onClick={()=>onChange({layout})}><Icon name={layout==='ordered'?'layout':'sparkle'}/><span>{uiText(layout==='ordered'?'Ordered':'Scattered')}<small>{uiText(layout==='ordered'?'Aligned, even spacing':'Loose, gently rotated')}</small></span><Icon name={value.layout===layout?'pass-filled':'circle-large-outline'}/></button>)}</div>}
    <label className="settings-range"><span>{uiText('Pattern density')}<output>{value.density}%</output></span><input name="wallpaper-density" aria-label={uiText('Pattern density')} type="range" min="70" max="160" step="5" value={value.density} onChange={event=>onChange({density:Number(event.target.value)},180)}/><small>{uiText('Higher density makes the drawings smaller and closer together.')}</small></label>
    <label className="settings-range"><span>{uiText('Pattern opacity')}<output>{value.opacity}%</output></span><input name="wallpaper-opacity" aria-label={uiText('Pattern opacity')} type="range" min="0" max="45" step="0.5" value={value.opacity} onChange={event=>onChange({opacity:Number(event.target.value)},180)}/></label>
-  </fieldset>
+  </fieldset>:<p className="settings-help wallpaper-no-pattern-help">{uiText('Choose a pattern to adjust its layout, density and opacity.')}</p>}
  </section>
 }

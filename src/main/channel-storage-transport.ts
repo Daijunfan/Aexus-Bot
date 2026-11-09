@@ -21,6 +21,8 @@ export function configureChannelStorage(patch?:Record<string,any>){
 }
 export function channelStorageRpc<T=any>(operation:string,args:Record<string,any>={},timeout=25000):Promise<T>{
  const storage=channelStorageSettings();if(!storage)return Promise.reject(fail('Configure the channel storage server before loading news'))
+ const activity=one('SELECT last_seen_at FROM collector_activity WHERE collector_id=?',storage.collectorId)
+ if(activity?.last_seen_at&&Date.now()-activity.last_seen_at>90000)return Promise.reject(fail('Channel storage collector is offline; inspect channel.subscription-status and channel.settings before retrying. Nothing was cached on this Mac'))
  return new Promise((resolve,reject)=>{
   const id=randomUUID(),timer=setTimeout(()=>{jobs.delete(id);reject(fail('Channel storage server did not respond; nothing was cached on this Mac'))},timeout)
   jobs.set(id,{id,operation,args,collector:storage.collectorId,state:'queued',resolve,reject,timer});for(const wake of listeners)wake()

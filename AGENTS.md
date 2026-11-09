@@ -32,6 +32,8 @@ Keep changes small and preserve the existing CLI-first boundaries. Read `CONTRIB
 - Test with temporary `AGENTS_COMPANY_HOME`, workspace and native-profile directories. Never create/delete test employees or run sample schedules in real user state.
 - Use deterministic protocol/model fixtures by default. Billed model calls, real-host changes and native child Agents require explicit authorization; record what actually ran.
 - Test desktop rendering in hidden windows and Web rendering in headless browsers. Do not claim another operating system passed based on a local build.
+- 构建、测试和验收默认全部在后台执行。禁止自动弹出、聚焦或切换用户窗口；安装后也不主动打开可见应用窗口，除非用户明确要求打开界面。
+- macOS 必要重启使用 `open -g -j --env AGENTS_COMPANY_BACKGROUND_START=1`，由应用在初始化时保持窗口隐藏，并只读确认屏幕上没有应用窗口。用户主动点击 Dock 时才显示界面。生产界面不用于自动导航验收。
 - Preserve existing edits. Never reset the repository, clear credentials, overwrite user documents, or publish a repository/tag/package without explicit permission.
 - Builds do not imply installation. Do not stop or replace another developer's running app automatically. When a user explicitly requests installation, inspect active tasks, back up state and stop the old process before replacing its ASAR.
 - For an authorized macOS installation, use `npm run install:mac -- --source '/path/Aexus Bot.app'`, then verify the installed app in an isolated hidden-window test. Do not hand-roll hot replacement.

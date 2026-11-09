@@ -57,16 +57,16 @@
 .plan-task-name .codicon{color:var(--accent);flex:none;opacity:.7}
 .plan-status{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:550;background:var(--bg-alt);color:var(--fg-dim);white-space:nowrap}
 .plan-status i{width:5px;height:5px;border-radius:50%;background:currentColor}
-.plan-status.state-scheduled{color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.plan-status.state-scheduled{color:color-mix(in srgb,var(--accent) 85%,var(--fg));background:color-mix(in srgb,var(--accent) 9%,transparent)}
 .plan-status.state-running{color:#51816e;background:#6eaa8e16}
-.plan-status.state-attention{color:#b47a50;background:#c5906018}
-.plan-status.state-completed{color:#66806c;background:#829b7217}
+.plan-status.state-attention{color:color-mix(in srgb,#b45309 50%,var(--fg));background:color-mix(in srgb,#b45309 8%,var(--bg-elev))}
+.plan-status.state-completed{color:color-mix(in srgb,#15803d 50%,var(--fg));background:color-mix(in srgb,#15803d 7%,var(--bg-elev))}
 .plan-person{display:flex;align-items:center;gap:9px;min-width:0;font-size:12px;color:var(--fg-dim)}
 .plan-person .message-avatar{width:30px;height:30px;border-radius:10px;flex:none}
 .plan-person>span:last-child{overflow:hidden;text-overflow:ellipsis;max-width:170px;white-space:nowrap}
 .plan-priority{font-size:11px;color:var(--fg-dim)}
-.plan-priority.priority-high{color:#b88c5f}
-.plan-priority.priority-urgent{color:#cf776e}
+.plan-priority.priority-high{color:color-mix(in srgb,#b45309 50%,var(--fg))}
+.plan-priority.priority-urgent{color:color-mix(in srgb,#dc2626 50%,var(--fg))}
 .plan-tags{display:flex;gap:4px;flex-wrap:wrap}
 .plan-tags span{background:var(--bg-alt);padding:4px 7px;color:var(--fg-dim);font-size:10px;border-radius:5px;line-height:1.4}
 .plan-board{display:flex;gap:14px;padding:0 0 16px;min-height:320px}
@@ -227,7 +227,7 @@
 .plan-day-event strong{font-size:12px}
 .plan-day-event>.plan-run-outcome{max-width:80px;white-space:normal}
 .plan-day-agenda>header{padding:20px}}
-.plan-person>span>small{display:block;color:var(--fg-faint);font-size:9px;line-height:1.5;margin-top:3px}
+.plan-person>span>small{display:block;color:var(--fg-dim);font-size:9px;line-height:1.5;margin-top:3px}
 
 /* Ten layouts share one schedule database. Forecast, estimate and execution remain distinct. */
 .plan-time-controls,.plan-insight-controls{display:flex;align-items:center;gap:8px;padding:10px 0;margin-bottom:12px;flex-wrap:wrap;background:var(--bg)}
@@ -311,7 +311,7 @@
 .plan-filter-bar{gap:7px;padding:12px 0}.plan-search{flex:1 1 280px;min-width:0;max-width:440px;padding:8px 10px}.plan-task-count{margin-left:auto;flex:none;color:var(--fg-faint);font-size:11px;white-space:nowrap}
 .plan-database-content{scrollbar-width:thin}.plan-table :is(th,td):last-child{position:sticky;right:0;z-index:1;background:var(--bg-elev);box-shadow:-1px 0 var(--border-soft)}.plan-table th:last-child{background:var(--bg-alt);z-index:3}.plan-table :is(th,td):first-child{z-index:2}.plan-table th:first-child{z-index:4}
 .plan-table .plan-task-name>span{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;text-align:left;line-height:1.45}.plan-table .plan-tags{max-width:160px;flex-wrap:wrap}
-.plan-column-dot.state-running{background:var(--accent)}.plan-status.state-running{color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--bg-elev))}
+.plan-column-dot.state-running{background:var(--accent)}.plan-status.state-running{color:color-mix(in srgb,var(--accent) 85%,var(--fg));background:color-mix(in srgb,var(--accent) 10%,var(--bg-elev))}
 .plan-timezone-field{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}.plan-timezone-field>.app-select{min-width:0}
 .plan-editor input:not([type=checkbox]),.plan-editor textarea{background:var(--bg-alt)}.plan-editor .app-select-trigger{background:var(--bg-alt);border:1px solid var(--border);min-height:40px}.plan-editor textarea[name=plan-prompt]{background:var(--bg-elev);border-color:color-mix(in srgb,var(--accent) 24%,var(--border))}
 .plan-editor>footer{flex-wrap:wrap;padding:12px 20px;row-gap:8px}.plan-editor footer .plan-delete{background:color-mix(in srgb,var(--red) 6%,var(--bg-elev));border-color:color-mix(in srgb,var(--red) 20%,var(--border-soft))}
@@ -320,3 +320,13 @@
 @media(max-width:500px){.plan-editor>footer>span{flex:1 0 100%;height:0}.plan-editor>footer>button:nth-last-child(-n+2){order:2;flex:1}.plan-editor>footer{padding:11px 14px;gap:6px}.plan-heading-actions .plan-health>span:last-child{display:none}}
 
 .plan-timezone-field>button{min-height:40px;padding:8px 12px;border:1px solid var(--border);border-radius:9px;background:var(--bg-alt);color:var(--fg);font:inherit;font-size:12px}
+
+/* Each date owns a bounded two-axis viewport; event labels are never discarded. */
+.plan-calendar-events{overflow:auto;scrollbar-width:auto;padding-bottom:2px}
+.plan-calendar-events:has(.calendar-event){overscroll-behavior:contain}
+.plan-calendar-events .calendar-event{width:max-content;min-width:100%;max-width:none;box-sizing:border-box}
+.plan-calendar-events .calendar-event span{flex:0 0 auto;overflow:visible;text-overflow:clip}
+.plan-calendar-events .calendar-event small{flex:none;max-width:none;overflow:visible;text-overflow:clip}
+.plan-board-column{max-height:70vh;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.plan-board-column>header{position:sticky;top:0;z-index:1;background:var(--bg-alt);padding-block:7px;margin-block:0 9px}
+.plan-board-card p{display:block;max-height:110px;overflow:auto;-webkit-line-clamp:unset;overscroll-behavior:contain}

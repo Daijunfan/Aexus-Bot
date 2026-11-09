@@ -110,7 +110,8 @@ Public discovery (`api.list/describe --all`) never changes authorization at disp
 
 Ordinary local Managers can call the authenticated Core endpoint (Unix socket or Windows named pipe). New Coding Agents default to Ask; Full access is an explicit user choice, and upgrades preserve existing permission selections. Management commands remain identity-scoped in Core. An explicitly selected lower Codex permission profile can still allow the exact Core socket. Cloud-local Workers retain Tunnel-only tool routing with no Core-local command fallback. Scope and model-wire fixture tests exercise these paths using actual engines.
 
-`management-layout.ts` is a bounded pure packing/routing module. Creation provenance defines visual groups; full-size Managers and Employees reserve a routing corridor, then isolated employees occupy available cells. Store writes apply it on creation topology or group membership changes; visual binding mutations skip re-layout. Explicit management.relayout uses all effective relations, including multiple sources. SVG paths share the Core coordinates, use only horizontal/vertical segments with bounded corner curves, and preserve the selected view camera. This is presentation over the existing relation state, not another authority graph.
+Team seating is a rectangular seat grid with a default of three columns defined in `canvas.ts`. `office-layout.ts` normalizes legacy positions into stable one-based `seatNumber` values and derives room geometry from roster capacity. Manager relationships affect connection routing, never employee placement. `card.place {id,seat}` atomically swaps occupied seats and authorizes both employees. Room placement uses numbered finite-board slots; room resizing changes complete seat row/column counts and retains occupant row/column positions. Free pixel coordinate and outline mutation inputs explicitly fail. Native identities, workspace bindings and authority remain independent of seating. Seat changes and legacy geometry conversion reroute affected manual connector rails while preserving their selected endpoint docks.
+
 
 
 ### 隐藏初始化
@@ -119,7 +120,8 @@ Ordinary local Managers can call the authenticated Core endpoint (Unix socket or
 
 ## Office geometry and reply receipts (0.40)
 
-`office-layout.ts` fits Teams after roster or topology changes and moves colliding neighbors in one atomic Store write. Manual Team movement and resizing preserve all other Team positions, both in the drag preview and persisted Core state. Read receipts and streamed content do not repack the office; Team views do not own separate geometry.
+Characters renders shared, persistent room origins at a fixed scale per breakpoint in finite scroll bounds. Room dimensions never recompute display columns or global cell spacing. Core collision resolution gives the resizing target first priority and preserves its origin. Employee dragging previews only numbered seats. Team dragging swaps finite board positions; right/bottom/corner grips resize whole seat rows and columns. Both retain the fixed display scale. Board persists its maximum column count through `settings.set {boardMaxColumns}`, with responsive reduction on narrow windows. Compact primary navigation stays centered on the whole window. These layout changes retain composer drafts and native terminals.
+
 
 `office.ts` exposes a geometry-only `office.layout` projection and repairs legacy overlaps on startup. Layout permission is checked before the global shortcut: Governors can edit all Team/employee geometry, including peers; Managers can adjust their own Team, themselves and its Employees. UI automation writes stay user-only to prevent geometry restrictions being bypassed through simulated user actions.
 
@@ -165,9 +167,15 @@ The Node daemon and Electron shell share `runtime.ts` and authenticated `handleR
 
 ## Shared presentation modes and group conversations
 
-`shared/app-views.ts` defines the Company and Messages modes. `view.list` exposes their
+`shared/app-views.ts` defines Team, Message and Mission. `view.list` exposes their
 canonical data contracts and `view.select` routes through Core with editor flushing.
-Company's primary click selects All Team before opening its subview menu on a later click.
+Team's primary click selects All Team and restores the client’s Characters/Board tab.
+`presentation.ts` persists the tab independently of saved Team groupings. Characters uses
+automatic, compact overview fitting over the actual saved bounds, with bounded scrolling.
+The camera does not rewrite geometry; pointer deltas convert through the fitted scale. Board reads only visible
+conversation snapshots/history and never opens engines on mount. Independent composers
+use the existing atomic session queue and request receipts, retaining drafts during
+navigation and keeping load failures separate from send failures.
 The renderer reuses one button contract and canonical store data; presentation-specific
 read copies are not introduced. `useVisibleReceipt` observes late-mounted transcript
 markers and reattaches across modes, while native IPC still checks actual window focus.
@@ -266,7 +274,12 @@ A successful history refresh cannot clear an uncertain-send warning or silently 
 
 ## Native Worker
 
-`native-workers.ts` 独立保存直属关系与启动元数据，通过既有 PTY broker 直接启动原生 Coding Agent CLI。与员工的初始化、角色提示、消息路由、插件工具及原生会话绑定相互独立；仅原样传递明确输入。`native-worker-env.ts` 移除控制器身份和路由环境，保留用户原生配置认证。Worker 无 Core 身份，不加入 Company 消息/角色动画。员工资料的 Workers 面板只使用引擎图标和原生终端。
+`native-workers.ts` 保存直属关系、设置、持久草稿和幂等任务接收状态，`engines/worker-runtime.ts` 复用原生 Codex app-server、Claude SDK、ACP 和 Pi RPC 传输；使用共享 transcript reducer 构建独立 Worker 会话，不使用 PTY/TUI，不注入员工身份、初始化或 Company 工具。`native-worker-env.ts` 仅移除控制器身份/路由，保留用户原生配置和认证；SDK 所需的自身运行标记单独保留。
+
+Workers 只在独立子视图展示。连接与读取不启动模型；点击发送的文本先持久接收再调度。消息重试键、草稿 CAS、发送写入屏障与延迟清空分别保护执行去重和新输入。模型/推理原地设置，权限变更显式重新连接后生效。GUI/CLI 调用相同认证 Core 操作，普通员工只控制直属 Worker，权限变更限用户/Secretary。
+
+`worker-processes.ts` 在关闭协议前捕获拥有的进程树，在父进程退出或子进程保留输出管道时仍执行有界终止与退出确认；不按进程名称结束其他工作。历史保存失败不能阻止停止进程，也不能伪造任务已持久接收。移除成功只删除连接记录，原生配置、目录和包含会话引用/最后草稿的 `worker-conversations/ID.json` 档案保留。
+
 
 ## Channel content on Linux, Mac memory only
 
@@ -310,3 +323,41 @@ reads ahead of background writes. Server previews, request deduplication, bounde
 RAM caches, visible-image release and shared Posts virtualization reduce transfer
 and decoded-image memory. All main-app selects reuse AppSelect; its native proxy
 is inert and never opens a platform picker.
+
+
+## DeepSeek Harness adapter
+
+`shared/engines.ts` adds the stable `deepseek` ID. The existing ACP transport and
+runtime normalize its model tuple IDs, `reasoning_effort` choices and `session/resume`
+semantics. Core remains the owner of role authority, queues, transcripts, publishing
+and schedules. Native history restoration does not replay Company messages.
+
+`deepseek-config.ts` reads the user's native YAML/credential sources without evaluating
+embedded code or returning secrets. It creates a private employee overlay for native
+persistence and required policy hooks. `bin/deepseek-policy.mjs` uses Harness's public
+permission service to synchronize restored sessions, preserving native identity and
+making permission downgrades real. Native delegation and Goal drivers are disabled in
+company employees. Invalid credential documents cannot leak parser excerpts or break
+the global engine catalog.
+
+`bin/deepseek-worker.cjs` is a terminal client for the original ACP engine, launched by
+the existing PTY broker. It passes no Company identity, tools or role prompt. A private
+input frame preserves multiline tasks without displaying transport JSON. The internal
+Node bootstrap flag is removed before launching the native engine. Worker ownership,
+stop/remove behavior and file/history preservation stay in the existing Core APIs.
+
+Team creation validates and commits optional frame/design data with the Team and its caller-bound creation key in one store write. Native PTY input uses a nonblocking bounded queue and per-write acknowledgements while output continues draining; closing the terminal rejects incomplete input. Web reconnect refreshes query owners without dispatching work or replacing current drafts.
+
+The employee workbench uses one FileWorkspace split: explorer on the left, editor/conversation and terminal stacked in the right column. Explorer visibility and section collapse are shared presentation preferences, independent of workspace authorization and native sessions. Collapsed explorers suspend directory polling; unchanged directory snapshots retain their React identity. Board conversations and Calendar dates expose bounded two-axis scroll areas instead of truncating tool or schedule names.
+
+Board cards reuse EmployeeWorkbench directly. File and terminal polling pauses outside the visible Board region; editor state is retained. Board only lists existing terminals until the user opens a new one. Returning from the full workbench refreshes a clean preview without replacing unsaved input.
+
+Board categories are an independent Core-owned presentation field in Store, served through authenticated board.* operations. Category membership is a projection over stable employee/Worker IDs, intersected with the current Team view. The left directory reuses Message category sorting/menu primitives; group-wide multi-selection is committed through one revisioned save. Shared workbench instances stay mounted when filtered, preserving file drafts and terminal input while hidden panels pause their polling. Characters keeps the same anchored, discrete room geometry under the new presentation surface.
+
+Characters now uses signed employee-seat-grid Team placements and an expandable finite surface. The same pure collision resolver runs for pointer previews and Core commits, including all Teams even when the current employee view hides some. Room dimensions remain seat-derived. The edited Team anchors the resolver; neighboring placements move by grid units. Workers is a separate Team subview and module, with independent native terminals/search/drafts; employee Board categories never render or filter native Workers.
+
+Bounded panel scrollbars are transient presentation state: idle tracks/thumbs are transparent, wheel/scroll interaction inside a panel reveals them, and inactivity or pointer departure hides them. A delegated renderer handler covers native bars and ScrollArea's overlay fallback; active thumb dragging and keyboard access remain visible. Gutter sizes and overflow behavior do not change.
+
+## Durable missions and application questions
+
+`missions.ts` owns persistent goals, explicit success/failure, supervision and coalesced reminders. It uses the existing employee queue and immutable employee/native identity rather than native Goal/subagent interfaces. `chat-questions.ts` owns saved private/group user decisions and bounded network waits; only the asking task is gated, incoming tasks stay independent. Both validate current delegated authority before dispatch and after asynchronous session opening. `plan-preferences.ts` owns cross-layout display preferences and retention of ended work; filtering/archiving is separate from execution. Plan read models project both schedules and goals without turning a reminder receipt or native turn completion into goal success. These stores are private Core state and use atomic writes.

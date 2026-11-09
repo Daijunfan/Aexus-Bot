@@ -33,7 +33,7 @@ export async function checkEngine(engine:EngineId,options:{team?:string;force?:b
     const result:EngineHealth={engine,label:definition.label,target:options.team??os.hostname(),installed:false,protocol:'unchecked',authentication:'unknown',ready:false,checkedAt:Date.now(),managed:!!configuration.managedPath,hasApiKey:publicEngineConfiguration(engine).hasApiKey,capabilities:{...definition.capabilities}}
     try{
       if(options.team){
-        if(isNativeAcp(engine))throw Error('OpenCode/Kilo Code currently require a Core-local workspace')
+        if(isNativeAcp(engine))throw Error(definition.label+' currently requires a Core-local workspace')
         if(engine==='cline'||engine==='pi')throw Error('Cline/Pi run on the Core host; check without --team and use kind:worker for Tunnel cloud workspaces')
         const remote=await checkCloudNative(options.team,engine)
         Object.assign(result,{installed:true,protocol:'compatible',authentication:remote.authentication,target:remote.host,version:remote.version,ready:remote.authentication==='configured'})
@@ -42,7 +42,7 @@ export async function checkEngine(engine:EngineId,options:{team?:string;force?:b
         const version=await command(engine,['--version'])
         if(version.code!==0)throw Error(version.stderr||version.stdout||'CLI 不可执行')
         result.installed=true;result.version=(version.stdout||version.stderr).split('\n')[0]
-        if(isNativeAcp(engine)){const discovery=await import('./opencode-runtime').then(m=>m.discoverNativeAcp(engine));result.version=discovery.version??result.version;result.protocol='compatible';result.authentication=result.hasApiKey?'configured':'unknown';result.ready=result.hasApiKey&&discovery.models.length>0;return result}
+        if(isNativeAcp(engine)){const discovery=await import('./opencode-runtime').then(m=>m.discoverNativeAcp(engine));result.protocol='compatible';result.authentication=result.hasApiKey?'configured':'unknown';result.ready=result.hasApiKey&&discovery.models.length>0;return result}
         if(engine==='cline'||engine==='pi'){
           const discovery=engine==='cline'?await import('./cline-runtime').then(m=>m.discoverCline()):await import('./pi-runtime').then(m=>m.discoverPi())
           result.version=discovery.version??result.version;result.protocol='compatible';result.authentication=result.hasApiKey?'configured':'not-signed-in';result.ready=result.hasApiKey;return result

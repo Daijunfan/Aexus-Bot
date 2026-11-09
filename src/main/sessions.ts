@@ -143,9 +143,9 @@ export function reserveEmployee(cardId: string, owner: string) {
   const card = readStore().sessions.find(c => c.id === cardId)
   if (!card) throw new Error('Unknown employee')
   assertTeamAvailable(card.group)
-  if ([...live].some(([id,s]) => s.cardId === cardId && (s.running||s.pendingMessages?.length||approvalsFor(id).length))) throw new Error('Employee is busy')
+  if ([...live].some(([id,s]) => s.cardId === cardId && (s.running||s.acknowledging||s.queueDispatching||s.pendingMessages?.length||approvalsFor(id).length))) throw new Error('Employee is busy')
   taskOwners.set(cardId, owner)
-  return () => { if (taskOwners.get(cardId) === owner) taskOwners.delete(cardId) }
+  return () => { if (taskOwners.get(cardId) === owner){taskOwners.delete(cardId);for(const [id,state] of live)if(state.cardId===cardId)dispatchQueued(state,id)} }
 }
 export function setEmitter(fn: Emitter): void {
   broadcast = fn
@@ -277,7 +277,7 @@ const queuedPrivateSends=new Map<string,PrivateSendAttempt>()
 export function privateSendQueued(employeeId:string,queueId:string){return [...live.values()].some(state=>state.cardId===employeeId&&(state.pendingMessages?.some(message=>message.id===queueId)||state.privateSend?.queueId===queueId))}
 function interruptQueuedPrivateSend(id:string,reason:string){const attempt=queuedPrivateSends.get(id);try{attempt?.interrupted(reason)}catch(error){return error}finally{queuedPrivateSends.delete(id)}}
 function dispatchQueued(s:Live,id:string){
-  if(!live.has(id)||s.running||s.acknowledging||s.queueDispatching||!s.pendingMessages?.length)return
+  if(!live.has(id)||taskOwners.has(s.cardId)||s.running||s.acknowledging||s.queueDispatching||!s.pendingMessages?.length)return
   s.queueDispatching=true
   const next=s.pendingMessages.shift()!,privateSend=queuedPrivateSends.get(next.id);queuedPrivateSends.delete(next.id);rememberMeta(id,{pendingMessages:[...s.pendingMessages]})
   void sendMessage(id,next.text,undefined,next.images,next.delegation,next.viewId,next.chat,next.replyTo,next.replyQuote,next.crossReply,next.files,privateSend,next.sourceView).then(sent=>{if(!sent)privateSend?.interrupted('Private message preparation was interrupted. It was not replayed.')}).catch(error=>{try{privateSend?.failed(error)}catch(saveError){emit('session:error',{sessionId:id,message:String(saveError)})};updateChatDelivery(s.cardId,next.chat,{status:'failed',error:String(error)});if(!next.delegation?.groupNotice&&!next.delegation?.channelNotice)emit('session:error',{sessionId:id,message:String(error)})}).finally(()=>{s.queueDispatching=false;if(!s.running)queueMicrotask(()=>dispatchQueued(s,id))})
@@ -289,7 +289,7 @@ function isGroupNotice(delegation:Delegation,chat:ChatTaskContext|undefined,empl
   return !!notice
 }
 export function enqueueMessage(id:string,text:string,images:string[]=[],delegation?:Delegation,viewId?:string,chat?:ChatTaskContext,replyTo?:string,replyQuote?:MessageQuote,crossReply?:MessageReply,filePaths:string[]=[],privateSend?:PrivateSendAttempt,sourceView?:MessageSourceView){
-  const s=require_(id);assertEmployeeControl(s.cardId)
+  const s=require_(id);assertNotRemoving(s.cardId);assertEmployeeReady(s.cardId)
   if(!Array.isArray(images)||images.some(p=>typeof p!=='string')||images.length>16)throw new Error('images 必须是最多 16 个工作目录内的图片路径')
   filePaths=attachmentPaths(filePaths);if(images.length+filePaths.length>16)throw Error('Choose at most 16 attachments')
   if(!text.trim()&&!images.length&&!filePaths.length)throw new Error('Message cannot be empty')
@@ -321,7 +321,7 @@ export async function backgroundProcesses(id:string,processId?:string,stop=false
 }
 export function queuedMessages(id:string){return [...(require_(id).pendingMessages??[])]}
 export function removeQueuedMessage(id:string,messageId:string){
-  const s=require_(id);assertEmployeeControl(s.cardId);let receiptError:unknown;const removed=s.pendingMessages?.find(message=>message.id===messageId);if(removed){receiptError=interruptQueuedPrivateSend(removed.id,'The queued private message was cancelled. It was not replayed.');updateChatDelivery(s.cardId,removed.chat,{status:'interrupted',error:'Queued message cancelled'})};s.pendingMessages=(s.pendingMessages??[]).filter(m=>m.id!==messageId)
+  const s=require_(id);assertNotRemoving(s.cardId);assertEmployeeReady(s.cardId);let receiptError:unknown;const removed=s.pendingMessages?.find(message=>message.id===messageId);if(removed){receiptError=interruptQueuedPrivateSend(removed.id,'The queued private message was cancelled. It was not replayed.');updateChatDelivery(s.cardId,removed.chat,{status:'interrupted',error:'Queued message cancelled'})};s.pendingMessages=(s.pendingMessages??[]).filter(m=>m.id!==messageId)
   rememberMeta(id,{pendingMessages:[...s.pendingMessages]});if(receiptError)throw receiptError;return queuedMessages(id)
 }
 export async function setPlanMode(id:string,enabled:boolean,owner?:string){

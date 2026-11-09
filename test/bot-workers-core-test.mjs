@@ -12,6 +12,7 @@ let heldList
 const server=http.createServer(async(req,res)=>{try{let bytes='';for await(const b of req)bytes+=b;const input=JSON.parse(bytes);calls.push(input);const a=input.args;let result
  switch(input.method){
   case 'list':if(a.provider==='grok'&&heldList){const held=heldList;heldList=null;held.started();await held.wait}result=remote.filter(b=>b.provider===a.provider);break
+  case 'status':result={issue:null,checkedAt:Date.now()};break;
   case 'messages':result=histories.get(a.binding.remoteId)??[];break
   case 'create':{let b=remote.find(b=>b.id===a.id);if(!b){b={id:a.id,name:a.name,provider:'grok',kind:a.members?'group':'private',participantIds:a.members};remote.push(b);histories.set(b.id,[])}result=b;break}
   case 'send':{histories.get(a.binding.remoteId).push({id:a.requestId,requestId:a.requestId,cursor:a.requestId,revision:a.requestId,role:'user',text:a.text,createdAt:Date.now(),files:[]});result={id:a.requestId,accepted:true};break}
@@ -33,15 +34,15 @@ try{
  const rpc=async(command,args={},token=null)=>{const r=await f.request(token,command,args);assert.ok(r.ok,r.error);return r.data},deny=async(command,args,token)=>{const r=await f.request(token,command,args);assert.equal(r.ok,false,command+' should fail');return r.error},pass=s=>{checks.push(s);console.log('PASS '+s)},finish=async(id,token)=>f.until(async()=>{const d=await rpc('conversation.download-status',{id},token);if(d.state==='failed')throw Error(d.error);return d.state==='completed'&&d},'attachment download')
  await rpc('group.add',{name:'A'});const a=await f.create('Alice'),b=await f.create('Blake'),secretary=await f.create('Secretary','A','secretary'),ta=await f.token(a.id),tb=await f.token(b.id),ts=await f.token(secretary.id)
  let synced=await rpc('bot.sync');assert.ok(synced.providers.every(p=>p.connected));let bots=await rpc('bot.list'),dot=bots.find(g=>g.bot.provider==='dots'),grok=bots.find(g=>g.bot.provider==='grok')
- const dotAppearance=await rpc('bot.appearance',{id:dot.id},ts);assert.equal(dotAppearance.avatar,'fate-saber-chibi')
- const dotAppearanceNext=await rpc('bot.appearance',{id:dot.id,avatar:'fate-illya-chibi',expectedRevision:dotAppearance.revision},ts);assert.equal(dotAppearanceNext.avatar,'fate-illya-chibi')
+ const dotAppearance=await rpc('bot.appearance',{id:dot.id},ts);assert.equal(dotAppearance.avatar,'codex');assert.equal(dotAppearance.native,true);assert.equal(dotAppearance.editable,false)
+ const dotAppearanceNext=await rpc('bot.appearance',{id:dot.id,avatar:'codex',expectedRevision:dotAppearance.revision},ts);assert.equal(dotAppearanceNext.avatar,'codex')
  await deny('bot.appearance',{id:dot.id,avatar:'fate-rin-chibi',expectedRevision:dotAppearanceNext.revision},ta)
  await deny('bot.appearance',{id:dot.id,avatar:'missing-character',expectedRevision:dotAppearanceNext.revision},ts)
  await deny('bot.appearance',{id:dot.id,avatar:'fate-rin-chibi',expectedRevision:dotAppearance.revision},ts)
  await deny('bot.appearance',{id:grok.id,avatar:'fate-rin-chibi',expectedRevision:1},ts)
- await rpc('bot.sync');assert.equal((await rpc('bot.appearance',{id:dot.id},ts)).avatar,'fate-illya-chibi')
- pass('Dot appearance survives native sync and uses independent user/Secretary authorization; Grok keeps its original visual identity')
- assert.equal(dot.bot.role,'worker');assert.equal(dot.bot.kind,'private');assert.equal(dot.memberIds.length,0);assert.ok((await rpc('messenger.directory',{type:'outsource'})).entries.some(e=>e.id===dot.id));assert.ok(!(await rpc('messenger.directory',{type:'private'})).entries.some(e=>e.id===dot.id));assert.ok(!(await rpc('messenger.directory',{type:'groups'})).entries.some(e=>e.id===dot.id))
+ await rpc('bot.sync');assert.equal((await rpc('bot.appearance',{id:dot.id},ts)).avatar,'codex')
+ pass('Dot uses fixed original Codey across sync and rejects employee character overrides; Grok keeps its original visual identity')
+ assert.equal(dot.bot.role,'worker');assert.equal(dot.bot.kind,'private');assert.equal(dot.memberIds.length,0);assert.ok((await rpc('messenger.directory',{type:'outsource'})).entries.some(e=>e.id===dot.id));assert.ok((await rpc('messenger.directory',{type:'private'})).entries.some(e=>e.id===dot.id));assert.ok(!(await rpc('messenger.directory',{type:'groups'})).entries.some(e=>e.id===dot.id))
  assert.deepEqual(await rpc('bot.list',{},ta),[]);await deny('direct.send',{employee:dot.id,text:'denied',clientMessageId:'denied'},ta);await deny('chat.history',{id:dot.id},ta)
  const access=await rpc('bot.access',{id:dot.id});await rpc('bot.access',{id:dot.id,employeeIds:[a.id],expectedRevision:access.revision})
  assert.ok((await rpc('api.list',{},ta)).some(c=>c.name==='direct.send'));assert.equal((await rpc('bot.list',{},ta)).length,1)
@@ -58,6 +59,7 @@ try{
  const reply=message('A first reply',[{id:fileId,remotePath:fileId,name:'report.txt',bytes:blob.length,mimeType:'text/plain'}]);histories.get('primary-dot').push(reply);await rpc('bot.sync')
  const history=await rpc('direct.history',{employee:dot.id},ta),incoming=history.items.find(m=>m.role==='assistant');assert.equal(incoming.blocks[0].text,'A first reply')
  assert.equal((await rpc('chat.history',{id:dot.id},ta)).messages.find(m=>m.id===incoming.id).text,'A first reply')
+ const library=await rpc('conversation.files',{conversation:'group:'+dot.id},ta);assert.equal(library.readOnly,true);assert.ok(library.files.every(file=>!file.canTrash&&file.state==='external'));await deny('conversation.file-trash',{conversation:'group:'+dot.id,files:[{path:library.files[0].path,version:library.files[0].version}]},ta)
  const pub=await rpc('conversation.entry',{conversation:'employee:'+dot.id,id:incoming.id},ta),download=await rpc('conversation.download',{conversation:'employee:'+dot.id,entryId:incoming.id,attachmentId:pub.attachments[0].id,clientRequestId:'bot-own-copy'},ta),done=await finish(download.id,ta)
  assert.ok(fs.readFileSync(path.join(a.cwd,done.name)).equals(blob))
  const local=path.join(temp,'secretary-save.txt');await rpc('conversation.download-local',{conversation:'group:'+dot.id,entryId:incoming.id,attachmentId:pub.attachments[0].id,path:local},ts);assert.ok(fs.readFileSync(local).equals(blob))

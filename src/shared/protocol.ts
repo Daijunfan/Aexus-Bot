@@ -81,5 +81,5 @@ export type {ConnectorAnchor,ConnectorSetting} from './connector'
 // host.terminal-read waitMs: 0..15000 (default 0) waits for data or exit; cursor semantics are unchanged.
 
 
-// Engine IDs: codex, claude, cline, pi, opencode, kilo. Cline/Pi use DeepSeek Flash with Thinking off by default.
+// Engine IDs: codex, claude, cline, pi, opencode, kilo, deepseek. Cline/Pi use DeepSeek Flash with Thinking off by default.
 // Cline/Pi support Core-local Build and Tunnel cloud workspaces; native-cloud/plugin targets fail before execution.

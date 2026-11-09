@@ -15,6 +15,7 @@ function state(id:string){
   return value!
 }
 export function clientStore(store:Store,id=currentClientId()):Store{
+  const {teamCreations,employeeCreations,...visible}=store;store=visible
   if(!id)return store
   const value=state(id),active=value.activeId
   return {...store,activeTeamViewId:active&&(active==='all'||store.teamViews?.some(view=>view.id===active))?active:store.activeTeamViewId,

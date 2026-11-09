@@ -1,0 +1,27 @@
+import {SCHEDULE_SPEC_SCHEMA} from './schedule-schema.ts'
+import {nonemptySchema,objectSchema} from './api-schema.ts'
+import type {PrincipalRef} from './management'
+import type {ScheduledJob,PlanMetadata} from './scheduler'
+
+export type MissionSpec={name:string;prompt:string;employeeIds:string[];type:'supervised'|'independent';secretaryId?:string;reminderSeconds:number;viewId?:string;plan?:PlanMetadata}
+export type Mission=MissionSpec&{employeeEngines?:Record<string,import('./types').Engine>;id:string;revision:number;createdAt:string;updatedAt:string;createdBy:PrincipalRef;status:'open'|'failed'|'succeeded';result?:string;completedAt?:string;failedAt?:string;nextReminderAt:string|null;archivedAt?:string;deliveryError?:string;source?:{employeeId:string;messageId:string};reminders:Array<{id:string;at:string;finishedAt?:string;trigger?:'created'|'interval'|'manual';recipients:string[];accepted:string[];errors:Record<string,string>}>}
+const string=nonemptySchema,id={...string},revision={type:'integer',minimum:1}
+export const MISSION_SPEC_SCHEMA=objectSchema({name:{...string,maxLength:160},prompt:{...string,maxLength:64000},employeeIds:{type:'array',minItems:1,uniqueItems:true,items:id},type:{enum:['supervised','independent']},secretaryId:id,reminderSeconds:{type:'integer',minimum:10,maximum:31536000,default:1800},viewId:id,plan:SCHEDULE_SPEC_SCHEMA.properties.plan},['name','prompt','employeeIds','type','reminderSeconds'])
+export const MISSION_COMMANDS=[
+ {cli:{},name:'mission.create',args:'--spec JSON|@file [--client-request-id KEY]',summary:'Create a durable mission until explicitly marked successful. supervised reminds assignees and a Secretary; independent reminds assignees only. Uses current self/subordinate scheduling authority. Native turn completion never completes a mission.',inputSchema:objectSchema({spec:MISSION_SPEC_SCHEMA,clientRequestId:string},['spec'])},
+ {cli:{},name:'mission.update',args:'--id ID --patch JSON|@file --expected-revision N',summary:'Update an authorized mission and its reminder interval or assignment; rechecks every assignee. Updating does not mark success.',inputSchema:objectSchema({id,patch:objectSchema(MISSION_SPEC_SCHEMA.properties),expectedRevision:revision},['id','patch','expectedRevision'])},
+ {cli:{},name:'mission.get',args:'--id ID',summary:'Read an authorized mission, explicit outcome and reminder delivery evidence.',inputSchema:objectSchema({id},['id'])},
+ {cli:{},name:'mission.list',args:'[--employee ID --status open|failed|succeeded --archived active|archived|all]',summary:'List missions in the current scheduling scope. Archived unresolved missions still send reminders.',inputSchema:objectSchema({clientRequestId:{...string,description:'Only the actual creator can recover its request key'},employee:id,status:{enum:['open','failed','succeeded']},archived:{enum:['active','archived','all']}})},
+ {cli:{},name:'mission.complete',args:'--id ID --result TEXT --expected-revision N',summary:'Explicitly confirm the goal was achieved, record evidence and stop future reminders. Only success stops a mission.',inputSchema:objectSchema({id,result:{...string,maxLength:64000},expectedRevision:revision},['id','result','expectedRevision'])},
+ {cli:{},name:'mission.fail',args:'--id ID --result TEXT --expected-revision N',summary:'Mark a mission as needing attention, record the reason and keep reminding until success.',inputSchema:objectSchema({id,result:{...string,maxLength:64000},expectedRevision:revision},['id','result','expectedRevision'])},
+ {cli:{},name:'mission.reopen',args:'--id ID --expected-revision N',summary:'Explicitly reopen a previously successful mission and resume reminders.',inputSchema:objectSchema({id,expectedRevision:revision},['id','expectedRevision'])},
+ {cli:{},name:'mission.remind',args:'--id ID',summary:'Request a reminder now without falsely completing the mission; pending reminders are coalesced.',inputSchema:objectSchema({id},['id'])},
+ {cli:{},name:'mission.archive',args:'--id ID --archived true|false --expected-revision N',summary:'Archive or restore a mission in Mission views. Archiving does not stop unresolved reminders or clear Secretary counts.',inputSchema:objectSchema({id,archived:{type:'boolean'},expectedRevision:revision},['id','archived','expectedRevision'])},
+ {cli:{},name:'mission.delete',args:'--id ID --expected-revision N',summary:'Delete an explicitly successful mission. An unresolved mission cannot be deleted to bypass completion.',inputSchema:objectSchema({id,expectedRevision:revision},['id','expectedRevision'])},
+ {cli:{},name:'mission.summary',args:'',summary:'Read authorized unfinished/failed counts by assigned employee and supervising Secretary; archived unresolved missions are included.',inputSchema:objectSchema({})}
+].map(command=>({...command,gui:'Mission / persistent work'}))
+
+/** Presentation adapter only: the scheduler never executes this projection. */
+export function missionPlanRow(mission:Mission,engine:ScheduledJob['action']['engine']):ScheduledJob&{mission:Mission}{
+ return {id:mission.id,name:mission.name,action:{type:'agent',employeeId:mission.employeeIds[0],engine,prompt:mission.prompt,viewId:mission.viewId},rule:{kind:'interval',everySeconds:mission.reminderSeconds,anchor:mission.createdAt},enabled:mission.status!=='succeeded',nextAt:mission.nextReminderAt,timeoutSeconds:1800,graceSeconds:60,createdAt:mission.createdAt,updatedAt:mission.updatedAt,revision:mission.revision,createdBy:mission.createdBy,plan:mission.plan,mission}
+}

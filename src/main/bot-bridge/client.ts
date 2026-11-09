@@ -2,14 +2,14 @@ import path from 'node:path'
 import os from 'node:os'
 import {createHash,randomUUID} from 'node:crypto'
 import {APP_HOME} from '../../shared/protocol'
-import type {BotBinding,BotFile,BotProvider} from '../../shared/bot-workers'
+import type {BotBinding,BotFile,BotProvider,BotIssue} from '../../shared/bot-workers'
 import {getChatGptAuth,getGrokAuth} from './credentials'
 import * as dots from './dots'
 import * as grok from './grok'
 import {httpJson,httpStream} from './http'
 
 export type RemoteBot={id:string;name:string;provider:BotProvider;kind:'private'|'group';participantIds?:string[];grokShape?:string;grokColor?:string}
-export type RemoteMessage={version?:number;id:string;revision:string;cursor:string;role:'user'|'assistant';text:string;createdAt:number;authorName?:string;requestId?:string;files:BotFile[]}
+export type RemoteMessage={version?:number;id:string;revision:string;cursor:string;role:'user'|'assistant';text:string;createdAt:number;authorName?:string;requestId?:string;turnId?:string;files:BotFile[]}
 export type UploadSource={name:string;bytes:number;mimeType?:string;read:(offset:number,length:number)=>Promise<Buffer>}
 const digest=(s:string)=>createHash('sha256').update(s).digest('hex')
 function fixtureUrl(){
@@ -23,6 +23,7 @@ async function fixture(method:string,args:unknown){const r=await httpJson(fixtur
 export async function remoteBots(provider:BotProvider):Promise<RemoteBot[]>{
  if(fixtureUrl())return fixture('list',{provider})
  if(provider==='dots')return [{id:await dots.getPrimaryRoom(),name:'Dot',provider,kind:'private'}]
+ grok.invalidateUsage()
  const result=await grok.rpc('ListGrokBotAgents',{})
  return (result.agents??[]).map((a:any)=>({id:a.agentId||a.legacyAgentId,name:a.name||'Grok Bot',provider,kind:a.kind==='GROK_BOT_AGENT_KIND_ROOM'?'group':'private',participantIds:a.memberAgentIds??[],grokShape:a.avatarShape??'blob',grokColor:a.avatarColor??'black'}))
 }
@@ -52,8 +53,14 @@ export function grokMessage(raw:any):RemoteMessage|null{
  const files:BotFile[]=paths.map((p:string,i:number)=>({id:digest(p),remotePath:p,name:names[i]??path.posix.basename(p),bytes:0}))
  if(reply&&m.type==='attachment'&&typeof m.url==='string'){const url=new URL(m.url);if(url.protocol==='file:'){const remotePath=decodeURIComponent(url.pathname);files.push({id:digest(remotePath),remotePath,name:m.file_name??path.posix.basename(remotePath),bytes:Number(m.size_bytes??0)})}}
  if(!text&&!files.length)return null
- return {id:raw.entryId??String(raw.seq),cursor:String(raw.updatedSeq??raw.seq??0),revision:digest(JSON.stringify([text,files])),version:Number(raw.updatedSeq??raw.seq??0),role:user?'user':'assistant',text,files,createdAt:Number(b.timestampMs)||Date.now(),authorName:b.author?.name??b.fromAgent?.name??m.authorName,requestId:b.clientNonce??b.requestId}
+ return {id:raw.entryId??String(raw.seq),cursor:String(raw.updatedSeq??raw.seq??0),revision:digest(JSON.stringify([text,files])),version:Number(raw.updatedSeq??raw.seq??0),role:user?'user':'assistant',text,files,createdAt:Number(b.timestampMs)||Date.now(),authorName:b.author?.name??b.fromAgent?.name??m.authorName,requestId:b.clientNonce??b.requestId,turnId:b.requestId}
 }
+export async function remoteStatus(binding:BotBinding):Promise<{issue:BotIssue|null;checkedAt:number}|undefined>{
+ if(binding.provider!=='grok')return
+ if(fixtureUrl())return fixture('status',{binding})
+ return grok.usageStatus().catch(()=>undefined)
+}
+export async function prepareRemote(binding:BotBinding){if(!fixtureUrl()&&binding.provider==='grok')await grok.ensureRunning()}
 /** Catch-up uses provider pagination; no fixed recent-N window drops an offline reply. */
 export async function remoteMessages(binding:BotBinding,known:Set<string>):Promise<RemoteMessage[]>{
  if(fixtureUrl())return fixture('messages',{binding})
@@ -90,7 +97,7 @@ export async function remoteSend(binding:BotBinding,text:string,requestId:string
   if(r.status<200||r.status>=300)throw Error('Dot delivery failed: HTTP '+r.status)
   return {id:r.data.id,accepted:true}
  }
- const r=await grok.rpc('SendGrokBotUserMessage',{agentId:binding.remoteId,messageId:requestId,text,sentAtMs:String(Date.now()),sessionId:'',attachmentPaths:files.map(f=>f.path),attachmentNames:files.map(f=>f.name),...(replyTo?{replyToId:replyTo}:{})})
+ const r=await grok.rpc('SendGrokBotUserMessage',{agentId:binding.remoteId,messageId:requestId,text,sentAtMs:String(Date.now()),sessionId:'',source:'GROK_BOT_CLIENT_SURFACE_DESKTOP',initiator:'GROK_BOT_USER_MESSAGE_INITIATOR_USER',sendSource:'GROK_BOT_SEND_SOURCE_CHAT',attachmentPaths:files.map(f=>f.path),attachmentNames:files.map(f=>f.name),...(replyTo?{replyToId:replyTo}:{})})
  if(r.refusal||String(r.delivery).endsWith('REFUSED')||r.dispatched===false&&!String(r.delivery).endsWith('DUPLICATE'))throw Error(r.refusal?.message??'Grok rejected this message')
  return {id:requestId,accepted:true}
 }
@@ -150,12 +157,14 @@ export async function remoteRead(binding:BotBinding,file:BotFile,offset:number,l
  return {data:Buffer.concat(parts),totalSize:total,mimeType:r.data.mime_type??file.mimeType,name:r.data.name}
 }
 /** The caller owns reconnect and durable cursors. Closing is independent of UI navigation. */
-export async function watchRemote(binding:BotBinding,onMessage:(m:RemoteMessage)=>void,onLost:()=>void):Promise<()=>void>{
+export async function watchRemote(binding:BotBinding,onMessage:(m:RemoteMessage)=>void,onLost:()=>void,onFailure?:(issue:BotIssue)=>void):Promise<()=>void>{
  if(fixtureUrl())return ()=>{}
  if(binding.provider==='grok'){
   const w=await grok.openWatch({agentId:binding.remoteId,afterUpdatedSeq:Number(binding.cursor??0),auth:getGrokAuth()})
   w.on('rows',(rows:any)=>{for(const e of rows.entries??[]){const m=grokMessage(e);if(m)onMessage(m)}})
-  for(const e of ['tooOld','end','endStream','streamError'])w.once(e,onLost)
+  w.on('turnFailed',(value:any)=>{grok.invalidateUsage();onFailure?.(grok.turnFailure(value))})
+  let lost=false;const reportLost=()=>{if(!lost){lost=true;onLost()}}
+  for(const e of ['tooOld','end','endStream','streamError'])w.once(e,reportLost)
   return ()=>w.close()
  }
  const live=await dots.openLiveStream({auth:getChatGptAuth(),room:binding.remoteId})

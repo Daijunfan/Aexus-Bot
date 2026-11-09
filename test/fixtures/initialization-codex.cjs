@@ -2,9 +2,9 @@
 // Native protocol fixture only. Shared receipts use real registered tool calls, never parsed assistant output.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),rl=require('node:readline').createInterface({input:process.stdin})
 const control=process.env.AC_INIT_FIXTURE;if(!control)throw Error('AC_INIT_FIXTURE is required')
-const employee=process.env.AGENTS_COMPANY_EMPLOYEE||'catalog',send=value=>process.stdout.write(JSON.stringify(value)+'\n')
+const employee=process.env.AGENTS_COMPANY_EMPLOYEE||(process.env.AC_NATIVE_WORKER_FIXTURE?path.basename(process.cwd()):'catalog'),send=value=>process.stdout.write(JSON.stringify(value)+'\n')
 const event=(method,params)=>send({method,params})
-let thread='',cwd=process.cwd(),turn='',timer,generation=0,environments=[],discussionUrl,enabledTools=[]
+let thread='',cwd=process.cwd(),turn='',timer,generation=0,environments=[],discussionUrl,enabledTools=[],boardApproval
 const note=(suffix,value)=>{const file=path.join(control,employee+'-'+suffix+'.json'),temporary=file+'.'+process.pid+'.tmp';fs.writeFileSync(temporary,JSON.stringify(value));fs.renameSync(temporary,file)}
 async function nativeTool(name,input,callId='fixture-tool-'+crypto.randomUUID()){
  if(!discussionUrl||!enabledTools.includes(name))throw Error('Fixture received no enabled native '+name)
@@ -47,18 +47,27 @@ async function acknowledgmentText(text,active){
 rl.on('line',line=>{
   const request=JSON.parse(line),p=request.params||{},result=value=>send({id:request.id,result:value})
   if(request.id===undefined)return
+  if(!request.method){if(request.id==='board-approval'){note('board-approval',request.result);boardApproval?.();boardApproval=undefined}return}
   switch(request.method){
-    case 'initialize':return result({userAgent:'initialization-fixture'})
+    case 'initialize':if(process.env.AC_NATIVE_WORKER_FIXTURE){note('process',{pid:process.pid,controllerEnvironment:Object.keys(process.env).filter(key=>/^(AGENTS_|AEXUS_)/.test(key))});if(fs.existsSync(path.join(control,employee+'.hold-initialize')))return}return result({userAgent:'initialization-fixture'})
     case 'model/list':return result({data:[{id:'gpt-6-luna',model:'gpt-6-luna',displayName:'Fixture',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'low'}],defaultReasoningEffort:'low'},{id:'fixture-alt',model:'fixture-alt',displayName:'Fixture alternate'}],nextCursor:null})
     case 'thread/fork':return result({thread:{id:crypto.randomUUID(),turns:[]}})
     case 'thread/start':case 'thread/resume':thread=p.threadId||crypto.randomUUID();cwd=p.cwd||cwd;discussionUrl=p.config?.['mcp_servers.agents_company']?.url;enabledTools=p.config?.['mcp_servers.agents_company']?.enabled_tools??[];environments=p.environments??[{environmentId:'local',cwd,runtimeWorkspaceRoots:[cwd]}];note('thread-start',{resumed:request.method==='thread/resume',readingTools:enabledTools.includes('agents_company_discussion_post'),documentationTools:enabledTools.includes('agents_company_documentation'),disabledNativeAgents:p.config?.['features.multi_agent']===false,developerInstructions:p.developerInstructions??null,permissions:p.permissions??null,sandbox:p.sandbox??null});return result({thread:{id:thread,turns:[]}})
     case 'thread/backgroundTerminals/list':return result({data:[],nextCursor:null})
     case 'thread/unsubscribe':note('thread-unsubscribe',{threadId:p.threadId});return result({})
     case 'thread/read':if(thread&&p.threadId===thread&&p.includeTurns===false)return result({thread:{id:thread,cwd,environments,turns:[]}});return send({id:request.id,error:{code:-32000,message:'thread not found'}})
+    case 'turn/steer':note('steer',{thread,turn,input:p.input});return result({turnId:turn})
     case 'turn/start':{
       turn=crypto.randomUUID();if(p.environments!==undefined)environments=p.environments
       const active=++generation,text=(p.input||[]).map(x=>x.text||'').join(''),hidden=text.includes('[Agents Company private initialization]'),ack=/^\[Agents Company (group|channel) acknowledgment\]\n/.test(text)
+      if(!hidden&&!ack&&process.env.AC_NATIVE_WORKER_FIXTURE&&fs.existsSync(path.join(control,employee+'.spawn-tools'))&&!fs.existsSync(path.join(control,employee+'-tools.json'))){
+       const {spawn}=require('node:child_process'),file=path.join(control,employee+'-tools.json'),ready=file+'.grandchild-ready'
+       const grandchild="const fs=require('node:fs');process.on('SIGTERM',()=>{});fs.writeFileSync(process.argv[1],String(process.pid));setInterval(()=>{},1000)"
+       const script="const fs=require('node:fs'),{spawn}=require('node:child_process');process.on('SIGTERM',()=>{});const child=spawn(process.execPath,['-e',"+JSON.stringify(grandchild)+",process.argv[2]],{stdio:['ignore','inherit','inherit'],detached:true});fs.writeFileSync(process.argv[1],JSON.stringify({parent:"+process.pid+",child:process.pid,grandchild:child.pid}));setInterval(()=>{},1000)"
+       spawn(process.execPath,['-e',script,file,ready],{stdio:['ignore','inherit','inherit'],detached:true})
+      }
       const input={thread,turn,text,cwd,model:p.model,environments,explicitEnvironments:p.environments!==undefined,readingTools:enabledTools.includes('agents_company_discussion_post'),documentationTools:enabledTools.includes('agents_company_documentation'),at:Date.now()}
+      if(!hidden&&!ack&&process.env.AC_NATIVE_WORKER_FIXTURE)fs.appendFileSync(path.join(control,employee+'-native-turns.jsonl'),JSON.stringify({pid:process.pid,...input})+'\n')
       if(ack)note('ack',input)
       else{note(hidden?'initializing':'user',hidden?input:{thread,turn,text,cwd,model:p.model});if(!hidden)note('work',input)}
       result({turn:{id:turn,status:'inProgress'}});event('turn/started',{threadId:thread,turn:{id:turn}})
@@ -72,6 +81,7 @@ rl.on('line',line=>{
           if(text.length>streamed.length){event('item/agentMessage/delta',{threadId:thread,turnId:turn,itemId:'answer',delta:text.slice(streamed.length)});streamed=text}
         }
         if(!hidden&&!ack&&fs.existsSync(path.join(control,employee+'.hold-user')))return
+        const holdText=path.join(control,employee+'.hold-text');if(!hidden&&!ack&&fs.existsSync(holdText)&&text.includes(fs.readFileSync(holdText,'utf8')))return
         clearInterval(timer)
         if(ack)note('ack',{...input,response:ackText,finishedAt:Date.now()})
         const failure=hidden&&fs.existsSync(path.join(control,employee+'.fail'))||ack&&fs.existsSync(path.join(control,employee+'.ack-fail'))
@@ -82,7 +92,10 @@ rl.on('line',line=>{
         event('item/completed',{threadId:thread,turnId:turn,item:{id:'answer',type:'agentMessage',text:ack?ackText:hidden?(fs.existsSync(path.join(control,employee+'.bad-ok'))?'NOT_READY':'OK'):(fs.existsSync(path.join(control,employee+'.reply.txt'))?fs.readFileSync(path.join(control,employee+'.reply.txt'),'utf8'):'VISIBLE_REPLY')}})
         event('turn/completed',{threadId:thread,turn:{id:turn,status:'completed'}})
       }
-      void (ack?acknowledgmentText(text,active).then(value=>{ackText=value}):hidden?initialize(active):readWorkDocument(text)).then(()=>{if(active===generation)timer=setInterval(complete,50)},error=>{if(active===generation)event('turn/completed',{threadId:thread,turn:{id:turn,status:'failed',error:{message:(ack?'Fixture acknowledgment failed: ':'Fixture initialization failed: ')+error.message}}})});return
+      void (ack?acknowledgmentText(text,active).then(value=>{ackText=value}):hidden?initialize(active):readWorkDocument(text)).then(async()=>{
+        if(!hidden&&!ack&&fs.existsSync(path.join(control,employee+'.board-approval')))await new Promise(resolve=>{boardApproval=resolve;send({id:'board-approval',method:'tool/requestUserInput',params:{threadId:thread,turnId:turn,questions:[{id:'choice',header:'Design review',question:'Approve the Board design?',options:[{label:'Continue',description:'Proceed with the implementation'},{label:'Revise',description:'Rework the design'}]}]}})})
+        if(active===generation)timer=setInterval(complete,50)
+      },error=>{if(active===generation)event('turn/completed',{threadId:thread,turn:{id:turn,status:'failed',error:{message:(ack?'Fixture acknowledgment failed: ':'Fixture initialization failed: ')+error.message}}})});return
     }
     case 'turn/interrupt':generation++;clearInterval(timer);result({});return event('turn/completed',{threadId:thread,turn:{id:turn,status:'interrupted'}})
     default:return result({})

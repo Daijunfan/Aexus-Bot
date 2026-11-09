@@ -25,6 +25,12 @@ try{
   await f.until(async()=>fetch(url+'/api/health').then(r=>r.ok).catch(()=>false),'HTTP service')
   assert.equal((await fetch(url+'/api/bootstrap')).status,401);pass('browser requires authentication')
   const a=await login(),b=await login();pass('login exchanges token for HttpOnly session; no token response')
+  const originalPreferences=await call(a,'settings.get'),colorWrite=randomUUID();await call(a,'settings.set',{pageZoom:1.1},colorWrite)
+  const reads=['plan.preferences','plan.query','mission.summary','board.categories']
+  for(let batch=0;batch<24;batch++)await Promise.all(Array.from({length:24},(_,i)=>call(a,reads[(batch*24+i)%reads.length],{})))
+  await call(a,'settings.set',{pageZoom:1.2});await call(a,'settings.set',{pageZoom:1.1},colorWrite);assert.equal((await call(a,'settings.get')).pageZoom,1.2,'read traffic cannot evict a mutation receipt and replay an older write');await call(a,'settings.set',{pageZoom:originalPreferences.pageZoom})
+  pass('Hundreds of read queries do not exhaust mutation replay capacity; retrying an old write still returns its receipt without reapplying it')
+
   const newsSource=await call(a,'channel.source-add',{plugin:'x',locator:'web_fixture'}),news=await call(a,'channel.publish',{sourceId:newsSource.id,externalId:'web-news',publishedAt:Date.now(),title:'External news',body:'Keep the source URL.',url:'https://example.test/story'})
   const savedNews=await call(a,'channel.save',{id:news.id,saved:true}),readNews=await call(a,'channel.post',{id:news.id})
   assert.equal(savedNews.url,'https://example.test/story');assert.equal(readNews.plugin,'x');assert.equal(readNews.attached,undefined);pass('news plugin/source fields never create an internal plugin-view grant or rewrite its URL')
@@ -50,9 +56,7 @@ try{
   await call(a,'group.add',{name:'B'})
   const one=await call(a,'team-view.create',{name:'View A',teams:['A']})
   assert.equal((await call(a,'team-view.list')).activeId,one.id);assert.equal((await call(b,'team-view.list')).activeId,'all')
-  await call(a,'canvas.set',{viewId:one.id,x:91,y:42,zoom:.8})
-  assert.deepEqual(await call(a,'canvas.view',{viewId:one.id}),{x:91,y:42,zoom:.8})
-  assert.notDeepEqual(await call(b,'canvas.view',{viewId:one.id}),{x:91,y:42,zoom:.8});pass('browser tabs have independent view selection and cameras')
+  const camera=await call(a,'canvas.view',{viewId:one.id});assert.equal((await request(a,'canvas.set',{viewId:one.id,x:91,y:42,zoom:.8})).body.ok,false);assert.deepEqual(await call(a,'canvas.view',{viewId:one.id}),camera);pass('browser tabs have independent Team selections; Characters rejects free pan and zoom without changing geometry')
   await call(a,'view.open',{kind:'settings'});assert.equal((await call(b,'view.get')).kind,'home');pass('presentation navigation is per client')
   const events=[]
   const ws=new WebSocket(url.replace('http','ws')+'/api/events?client='+a.client,{headers:{Origin:url,Cookie:a.cookie}});sockets.push(ws)

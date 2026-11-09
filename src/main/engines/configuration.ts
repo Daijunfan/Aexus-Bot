@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {APP_HOME} from '../../shared/protocol'
 import {isEngine,isNativeAcp,type EngineId} from '../../shared/engines'
+import {deepseekHasCredential} from './deepseek-config'
 import {codeHasCredential} from './opencode-config'
 import {atomicJson,readJson} from '../atomic-file'
 export type Config={inheritNative?:boolean;sharedClineConfig?:boolean;sharedPiConfig?:boolean;path?:string;managedPath?:string;sdkPath?:string;baseUrl?:string;model?:string;secret?:string}
@@ -18,7 +19,7 @@ export function processProvider(engine:'cline'|'pi'){
 export function publicEngineConfiguration(engine:EngineId){
  const {secret,...config}=engineConfiguration(engine),inheritNative=usesNativeConfiguration(engine),native=inheritNative?engine==='cline'?nativeClineConnection():engine==='pi'?nativePiConnection():undefined:undefined
  const claude=engine==='claude'&&inheritNative?nativeClaudeSettings():undefined
- const hasApiKey=inheritNative?isNativeAcp(engine)?codeHasCredential(engine):engine==='claude'?!!(claude?.env?.ANTHROPIC_AUTH_TOKEN||claude?.env?.ANTHROPIC_API_KEY||claude?.apiKeyHelper):engine==='pi'?!!nativePiConnection()?.credentialConfigured:!!native?.apiKey:!!secret
+ const hasApiKey=inheritNative?engine==='deepseek'?deepseekHasCredential():isNativeAcp(engine)?codeHasCredential(engine):engine==='claude'?!!(claude?.env?.ANTHROPIC_AUTH_TOKEN||claude?.env?.ANTHROPIC_API_KEY||claude?.apiKeyHelper):engine==='pi'?!!nativePiConnection()?.credentialConfigured:!!native?.apiKey:!!secret
  const {baseUrl,model,...nativeConfig}=config
  return {...nativeConfig,inheritNative,hasApiKey}
 }
@@ -40,7 +41,7 @@ export function engineProcessEnvironment(engine:EngineId,base:NodeJS.ProcessEnv)
   for(const name of Object.keys(env)){
     const claude=/^(ANTHROPIC_|CLAUDE_CODE_USE_|CLAUDE_CONFIG_DIR$|CLAUDE_API_KEY$|CLAUDE_CODE_API_KEY$)/.test(name)
     const openai=name.startsWith('OPENAI_'),processKey=['CLINE_API_KEY','DEEPSEEK_API_KEY','PI_API_KEY'].includes(name)
-    if(processKey||claude&&engine!=='claude'||openai&&(processAdapter||engine==='claude'))delete env[name]
+    if(processKey&&!(engine==='deepseek'&&name==='DEEPSEEK_API_KEY')||claude&&engine!=='claude'||openai&&(processAdapter||engine==='claude'||engine==='deepseek'))delete env[name]
   }
   return {...env,...engineEnvironment(engine)}
 }

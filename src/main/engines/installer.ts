@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import {execFileSync} from 'node:child_process'
 import spawn from 'cross-spawn'
 import {resolveBinary,childEnv} from '../exec'
 import {terminateTree} from '../platform'
@@ -15,7 +16,7 @@ import {invalidateEngine} from './registry'
 import {emitCoreEvent} from '../core-events'
 import {exposeClaudeSdk} from './claude-sdk'
 
-type Recipe={runtime?:'node';engine:EngineId;platform:string;arch:string;libc?:string;package:string;version:string;url:string;integrity:string;executable:string}
+type Recipe={runtime?:'node';nodeVersion?:string;dependencyLock?:string;dependencyLockSha256?:string;engine:EngineId;platform:string;arch:string;libc?:string;package:string;version:string;url:string;integrity:string;executable:string}
 type PackageRecipe=Pick<Recipe,'package'|'version'|'url'|'integrity'|'executable'>
 export type InstallJob={id:string;engine:EngineId;state:'running'|'succeeded'|'failed'|'cancelled';startedAt:number;finishedAt?:number;log:string;error?:string;path?:string;downloadedBytes:number}
 const jobs=new Map<string,{job:InstallJob;controller:AbortController;done:Promise<void>}>()
@@ -37,21 +38,21 @@ function validatePackage(found:PackageRecipe){
   if(path.isAbsolute(found.executable)||found.executable.split(/[\\/]/).includes('..'))throw Error('Invalid engine executable path')
 }
 
-export function engineInstallPlan(engine:EngineId){const plan=recipe(engine);return {...plan,target:'Core host',directory:path.join(APP_HOME,'engines',engine),requires:plan.runtime==='node'?['Node.js >=22.19 and npm on the Core host']:[],changesGlobalPath:false,runsPackageScripts:false,verification:'Committed SHA-512',nativeDownload:plan.runtime!=='node'}}
+export function engineInstallPlan(engine:EngineId){const plan=recipe(engine);return {...plan,target:'Core host',directory:path.join(APP_HOME,'engines',engine),requires:plan.runtime==='node'?[`Node.js >=${plan.nodeVersion??'22.19'} and npm on the Core host`]:[],changesGlobalPath:false,runsPackageScripts:false,verification:'Committed SHA-512',nativeDownload:plan.runtime!=='node'}}
 export function installEngine(engine:EngineId,confirmed:boolean){
   const plan=recipe(engine)
   if(confirmed!==true)throw Error('Review engine.install-plan and explicitly confirm installation')
   const active=[...jobs.values()].find(value=>value.job.engine===engine&&value.job.state==='running');if(active)return {...active.job}
   if([...jobs.values()].some(value=>value.job.state==='running'))throw Error('Another Coding Agent installation is running; wait for it to finish')
   const id=randomUUID(),directory=path.join(APP_HOME,'engines',engine,plan.version+'-'+id),controller=new AbortController()
-  const job:InstallJob={id,engine,state:'running',startedAt:Date.now(),log:'下载官方原生程序；不需要额外安装 Node/npm，不修改全局 PATH。\n',downloadedBytes:0}
+  const job:InstallJob={id,engine,state:'running',startedAt:Date.now(),log:plan.runtime==='node'?'下载官方程序与锁定依赖；禁用安装脚本，不修改全局 PATH。\n':'下载官方原生程序；不需要额外安装 Node/npm，不修改全局 PATH。\n',downloadedBytes:0}
   const entry={job,controller,done:Promise.resolve()};jobs.set(id,entry)
   const changed=()=>emitCoreEvent({channel:'engine:install',payload:{...job}})
   entry.done=(async()=>{
     const timer=setTimeout(()=>controller.abort(Error('安装超过 5 分钟，已停止')),300000)
     try{
       const executable=await downloadPackage(plan,directory,controller,job,changed)
-      if(plan.runtime==='node')await installNodeDependencies(directory,controller,job,changed)
+      if(plan.runtime==='node')await installNodeDependencies(directory,controller,job,changed,plan)
       const sdkPath=plan.sdk?await downloadPackage(plan.sdk,path.join(directory,'sdk'),controller,job,changed):undefined
       controller.signal.throwIfAborted();setManagedEngine(engine,executable,sdkPath);invalidateEngine(engine);exposeClaudeSdk()
       job.path=executable;job.state='succeeded';job.log+='安装完成。已有任务不重启；新建或重新打开会话时使用新程序。\n'
@@ -107,19 +108,27 @@ export async function cancelInstallation(id:string){const value=jobs.get(id);if(
 export async function closeInstallations(){await Promise.all([...jobs.keys()].map(cancelInstallation))}
 
 /** Pi publishes a shrinkwrap; install its pinned dependencies without lifecycle scripts. */
-async function installNodeDependencies(directory:string,controller:AbortController,job:InstallJob,changed:()=>void){
-  if(!fs.existsSync(path.join(directory,'npm-shrinkwrap.json')))throw Error('Pi package is missing its pinned dependency manifest')
+async function installNodeDependencies(directory:string,controller:AbortController,job:InstallJob,changed:()=>void,plan:Recipe){
+  if(plan.dependencyLock){
+    const source=path.resolve(applicationRoot(),plan.dependencyLock)
+    if(!source.startsWith(applicationRoot()+path.sep))throw Error('Invalid engine dependency manifest')
+    const content=fs.readFileSync(source);if(createHash('sha256').update(content).digest('hex')!==plan.dependencyLockSha256)throw Error('Engine dependency manifest checksum mismatch')
+    fs.writeFileSync(path.join(directory,'npm-shrinkwrap.json'),content,{mode:0o600})
+    const node=resolveBinary('node'),version=execFileSync(node,['--version'],{env:childEnv(),encoding:'utf8',timeout:5000,windowsHide:true}).trim().replace(/^v/,'').split('.').map(Number),minimum=(plan.nodeVersion??'22.19').split('.').map(Number)
+    if(version[0]<minimum[0]||version[0]===minimum[0]&&version[1]<minimum[1])throw Error('This engine requires Node.js >='+plan.nodeVersion+' on the Core host')
+  }
+  if(!fs.existsSync(path.join(directory,'npm-shrinkwrap.json')))throw Error('Engine package is missing its pinned dependency manifest')
   // Published Pi shrinkwrap locks runtime dependencies; source-only dev tools are not included.
   const metadataPath=path.join(directory,'package.json'),metadata=JSON.parse(fs.readFileSync(metadataPath,'utf8'))
   delete metadata.devDependencies;fs.writeFileSync(metadataPath,JSON.stringify(metadata,null,2)+'\n')
-  const npm=resolveBinary('npm');if(npm==='npm')throw Error('Pi requires Node.js >=22.19 and npm on the Core host')
+  const npm=resolveBinary('npm');if(npm==='npm')throw Error('This engine requires Node.js and npm on the Core host')
   controller.signal.throwIfAborted()
-  job.log+='安装 Pi 锁定的依赖（禁用安装脚本）…\n';changed()
+  job.log+='安装锁定的依赖（禁用安装脚本）…\n';changed()
   await new Promise<void>((resolve,reject)=>{
     const child=spawn(npm,['ci','--omit=dev','--ignore-scripts','--no-audit','--no-fund','--registry','https://registry.npmjs.org'],{cwd:directory,env:childEnv(),stdio:['ignore','pipe','pipe'],windowsHide:true,detached:process.platform!=='win32'})
     let output='';const cancel=()=>terminateTree(child,true);controller.signal.addEventListener('abort',cancel,{once:true})
     const collect=(data:Buffer)=>{output=(output+String(data)).slice(-8192)};child.stdout?.on('data',collect);child.stderr?.on('data',collect)
     child.once('error',error=>{controller.signal.removeEventListener('abort',cancel);reject(error)})
-    child.once('close',code=>{controller.signal.removeEventListener('abort',cancel);code===0?resolve():reject(Error('Pi dependency installation failed: '+output))})
+    child.once('close',code=>{controller.signal.removeEventListener('abort',cancel);code===0?resolve():reject(Error('Engine dependency installation failed: '+output))})
   })
 }

@@ -5,10 +5,8 @@ import path from 'node:path'
 import {createHash,randomUUID} from 'node:crypto'
 import {APP_HOME} from '../shared/protocol'
 import type {ChatGroup,ChatMessage} from '../shared/chat-groups'
-import type {BotFile,BotProvider} from '../shared/bot-workers'
+import type {BotFile,BotProvider,BotIssue} from '../shared/bot-workers'
 import {DEFAULT_DOT_AVATAR} from '../shared/bot-workers'
-import {resolveAvatar} from '../shared/avatars'
-import {activeAvatarIds} from './avatar-catalog'
 import type {MessageAttachment} from '../shared/message-attachments'
 import {attachmentPaths,attachmentInfo,fileMime} from '../shared/message-attachments'
 import {atomicJson,readJson} from './atomic-file'
@@ -22,7 +20,7 @@ import {remoteFiles} from './tunnel'
 import type {FileEndpoint} from './transfers'
 import {SingleFlight} from './single-flight'
 import {removeIndexedConversation} from './message-index-client'
-import {remoteBots,remoteCreate,remoteMessages,remoteRead,remoteSend,remoteUpload,watchRemote,type RemoteBot,type RemoteMessage} from './bot-bridge/client'
+import {remoteBots,remoteCreate,remoteMessages,remoteRead,remoteSend,remoteUpload,remoteStatus,prepareRemote,watchRemote,type RemoteBot,type RemoteMessage} from './bot-bridge/client'
 
 const hash=(v:unknown)=>createHash('sha256').update(JSON.stringify(v)).digest('hex')
 const flights=new SingleFlight<any>(),watches=new Map<string,()=>void>(),syncing=new Set<string>()
@@ -53,7 +51,7 @@ export function botDirectRequest(command:string,args:Record<string,any>):any{
  if(command==='direct.send-status'){
   const principal=requestContext().principal,entry=all.find(m=>m.clientMessageId===args.clientMessageId&&JSON.stringify(m.author)===JSON.stringify(principal))
   if(!entry)throw Error('Unknown bot send receipt for this caller')
-  return {status:entry.bot?.delivery,directMessageId:entry.id,clientMessageId:entry.clientMessageId,error:entry.bot?.error}
+  return {status:entry.bot?.delivery,directMessageId:entry.id,clientMessageId:entry.clientMessageId,error:entry.bot?.error,executionFailure:entry.bot?.failure}
  }
  if(command==='direct.acknowledge'){
   requireAppAdministrator();const entry=all.find(m=>m.id===args.messageId);if(!entry)throw Error('Unknown private bot message')
@@ -71,22 +69,48 @@ export function botDirectRequest(command:string,args:Record<string,any>):any{
 async function receive(id:string,message:RemoteMessage,bootstrap=false){
  const group=botGroup(id);if(!group)return
  let all=messages(id),matched=all.find(m=>m.bot?.remoteId===message.id||message.role==='user'&&message.requestId&&m.bot?.requestId===message.requestId)
- if(matched?.bot?.revision===message.revision||matched?.bot?.version&&message.version&&matched.bot.version>message.version)return
+ if(matched?.bot?.revision===message.revision&&(!message.turnId||matched.bot.turnId===message.turnId)||matched?.bot?.version&&message.version&&matched.bot.version>message.version)return
  // The provider's user echo updates an existing send receipt; it never impersonates a bot reply.
  if(matched&&message.role==='user'){
-  matched.bot={...matched.bot!,remoteId:message.id,revision:message.revision,delivery:'accepted'};saveMessages(id,all,matched);return
+  matched.bot={...matched.bot!,remoteId:message.id,revision:message.revision,version:message.version,turnId:message.turnId,delivery:'accepted',...(message.turnId&&group.bot!.issue?.turnId===message.turnId?{failure:group.bot!.issue}:{})};saveMessages(id,all,matched)
+  mutate(id,g=>{if(!g.bot!.cursor||g.bot!.provider==='dots'||Number(message.cursor)>Number(g.bot!.cursor))g.bot!.cursor=message.cursor});return
  }
  for(const f of message.files)if(f.bytes===0){try{const info=await remoteRead(group.bot!,f,0,1);f.bytes=info.totalSize;f.mimeType??=info.mimeType;if(f.name==='attachment'&&info.name)f.name=info.name}catch{}}
  const files=message.files.map(f=>({...f,mimeType:f.mimeType??(/\.(png|jpe?g|gif|webp)$/i.test(f.name)?'image/'+(f.name.split('.').at(-1)==='jpg'?'jpeg':f.name.split('.').at(-1)):fileMime(f.name))}))
  const attachments:MessageAttachment[]=files.map(f=>({path:'@bot/'+message.id+'/'+hash(f.id).slice(0,24),name:f.name,bytes:f.bytes,mimeType:f.mimeType,kind:f.mimeType.startsWith('image/')?'image':'file'}))
  all=messages(id);matched=all.find(m=>m.bot?.remoteId===message.id)
  if(matched?.bot?.revision===message.revision||matched?.bot?.version&&message.version&&matched.bot.version>message.version)return
+ if(message.role==='assistant'&&message.turnId)for(const row of all)if(row.bot?.turnId===message.turnId&&row.bot.failure)delete row.bot.failure
  const entry:ChatMessage=matched??{id:'gm_'+randomUUID(),sequence:(all.at(-1)?.sequence??0)+1,createdAt:message.createdAt,author:message.role==='user'?{kind:'operator'}:{kind:'agent',employeeId:id},authorName:message.role==='user'?'You':message.authorName??group.name,text:message.text,kind:'message',mentions:[],deliveries:[],clientMessageId:'remote:'+message.id,fingerprint:message.revision}
- entry.text=message.text;entry.attachments=attachments;entry.bot={remoteId:message.id,revision:message.revision,version:message.version,files,requestId:message.requestId,...(message.role==='user'?{delivery:'accepted' as const}:{})}
+ entry.text=message.text;entry.attachments=attachments;entry.bot={...matched?.bot,remoteId:message.id,revision:message.revision,version:message.version,files,requestId:message.requestId,turnId:message.turnId,...(message.role==='user'?{delivery:'accepted' as const}:{})}
  if(matched){entry.editRevision=(entry.editRevision??0)+1;entry.editedAt=Date.now()}else all.push(entry)
  saveMessages(id,all,entry,message.role==='assistant'&&!bootstrap)
  if(bootstrap)mutate(id,g=>{g.readSequence=Math.max(g.readSequence,entry.sequence);if(message.role==='assistant')g.lastIncomingSequence=Math.max(g.lastIncomingSequence,entry.sequence)})
  mutate(id,g=>{if(!g.bot!.cursor||g.bot!.provider==='dots'||Number(message.cursor)>Number(g.bot!.cursor))g.bot!.cursor=message.cursor})
+ if(message.role==='assistant'&&group.bot!.issue&&message.createdAt>=group.bot!.issue.at)mutate(id,g=>{delete g.bot!.issue})
+}
+function updateStatus(id:string,status:Awaited<ReturnType<typeof remoteStatus>>){
+ if(!status)return
+ if(status.issue){
+  const all=messages(id),pending=[...all].reverse().find(m=>m.bot?.delivery==='accepted')
+  // Older app versions missed native failures. Keep an unanswered accepted
+  // turn visibly blocked until an explicit retry or its actual reply arrives.
+  if(pending?.bot&&!pending.bot.failure&&!all.some(m=>m.author.kind==='agent'&&!m.bot?.delivery&&(pending.bot!.turnId&&m.bot?.turnId?m.bot.turnId===pending.bot!.turnId:m.sequence>pending.sequence))){
+   pending.bot.failure={...status.issue,turnId:pending.bot.turnId};saveMessages(id,all,pending)
+  }
+ }
+ mutate(id,g=>{
+  if(status.issue){if(!g.bot!.issue||g.bot!.issue.code!==status.issue.code||g.bot!.issue.retryAt!==status.issue.retryAt)g.bot!.issue=status.issue}
+  else if(g.bot!.issue?.code==='GROK_BOT_TURN_FAILURE_CODE_USAGE_LIMIT'&&status.checkedAt>=g.bot!.issue.at)delete g.bot!.issue
+ })
+}
+async function receiveFailure(id:string,issue:BotIssue){
+ if(!botGroup(id))return
+ await syncMessages(id).catch(()=>{})
+ if(!botGroup(id))return
+ const all=messages(id),entry=issue.turnId?all.find(m=>m.bot?.delivery&&m.bot.turnId===issue.turnId):undefined
+ if(entry?.bot){entry.bot.failure=issue;saveMessages(id,all,entry)}
+ mutate(id,g=>{if(!g.bot!.issue||g.bot!.issue.at<=issue.at)g.bot!.issue=issue})
 }
 async function syncMessages(id:string){
  if(syncing.has(id)||!botGroup(id))return
@@ -94,18 +118,20 @@ async function syncMessages(id:string){
  try{
   const g=botGroup(id)!,known=new Set(messages(id).filter(m=>m.bot).map(m=>m.bot!.remoteId)),bootstrap=!g.bot!.initialized
   for(const m of await remoteMessages(g.bot!,known))await receive(id,m,bootstrap)
+  updateStatus(id,await remoteStatus(g.bot!))
   mutate(id,g=>{g.bot!.initialized=true;g.bot!.connection='connected';delete g.bot!.error})
  }catch(error){if(botGroup(id))mutate(id,g=>{g.bot!.connection='error';g.bot!.error=(error as Error).message});throw error}
  finally{syncing.delete(id)}
 }
 async function connect(id:string){
  if(stopped||watches.has(id)||!botGroup(id))return
- // Reserve before opening a network stream so refreshes cannot duplicate watchers.
- watches.set(id,()=>{})
+ // Concurrent refresh/send calls await the same subscription becoming ready.
+ return flights.run('watch:'+id,async()=>{
  try{
-  const close=await watchRemote(botGroup(id)!.bot!,m=>{if(!stopped)void withCaller(operatorContext(),()=>receive(id,m)).catch(e=>console.error('[Bot receive]',e.message))},()=>{const close=watches.get(id);watches.delete(id);close?.();if(!stopped)void withCaller(operatorContext(),()=>syncMessages(id)).catch(()=>{})})
+  const close=await watchRemote(botGroup(id)!.bot!,m=>{if(!stopped)void withCaller(operatorContext(),()=>receive(id,m)).catch(e=>console.error('[Bot receive]',e.message))},()=>{const close=watches.get(id);watches.delete(id);close?.();if(!stopped)void withCaller(operatorContext(),()=>syncMessages(id)).catch(()=>{})},issue=>{if(!stopped)void withCaller(operatorContext(),()=>receiveFailure(id,issue)).catch(e=>console.error('[Bot execution]',e.message))})
   if(stopped||!botGroup(id)){close();watches.delete(id)}else watches.set(id,close)
  }catch{watches.delete(id)}
+ })
 }
 export function startBotWorkers(){
  stopped=false
@@ -154,14 +180,11 @@ export async function botRequest(command:string,args:Record<string,any>){
   return {id:g.id,employeeIds:g.memberIds,revision:g.bot!.accessRevision??1,automaticRoles:['secretary'],employees:readStore().sessions.filter(c=>!c.deleting).map(c=>({id:c.id,title:c.title,role:c.managementRole??'employee',team:c.group}))}
  }
  if(command==='bot.appearance'){
-  let g=requireBot(args.id)
-  if(args.avatar!==undefined){
-   if(g.bot!.provider!=='dots')throw Error('Grok uses its native appearance')
-   if(args.expectedRevision!==(g.bot!.appearanceRevision??1))throw Error('Bot appearance changed; reload before saving')
-   const avatar=resolveAvatar({avatar:args.avatar},activeAvatarIds())!
-   g=mutate(g.id,g=>{g.bot!.avatar=avatar;g.bot!.appearanceRevision=(g.bot!.appearanceRevision??1)+1})
-  }
-  return {id:g.id,avatar:g.bot!.provider==='dots'?g.bot!.avatar??DEFAULT_DOT_AVATAR:undefined,revision:g.bot!.appearanceRevision??1,editable:g.bot!.provider==='dots'}
+  const g=requireBot(args.id)
+  if(args.avatar!==undefined&&args.avatar!==DEFAULT_DOT_AVATAR)throw Error('Dot uses its fixed native OpenAI Codey animation; custom character overrides are unsupported.')
+  if(args.avatar!==undefined&&g.bot!.provider!=='dots')throw Error('Grok uses its native appearance')
+  if(args.expectedRevision!==undefined&&args.expectedRevision!==(g.bot!.appearanceRevision??1))throw Error('Bot appearance changed; reload before saving')
+  return {id:g.id,avatar:g.bot!.provider==='dots'?DEFAULT_DOT_AVATAR:undefined,revision:g.bot!.appearanceRevision??1,editable:false,native:true,renderer:g.bot!.provider==='dots'?'openai-codey':'grok-native'}
  }
  if(command==='bot.create'||command==='bot.group-create'){
   if(typeof args.name!=='string'||!args.name.trim()||args.name.length>80||typeof args.clientRequestId!=='string'||!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(args.clientRequestId))throw Error('Provide a name and stable UUID clientRequestId')
@@ -204,6 +227,10 @@ export async function sendBotMessage(args:Record<string,any>):Promise<any>{
  if(flights.has(flightKey)){await flights.get(flightKey);return sendBotMessage(args)}
  return flights.run(flightKey,async()=>{
   requireBot(id)
+  const status=await remoteStatus(g.bot!);updateStatus(id,status)
+  if(status?.issue)throw Error(status.issue.message)
+  await prepareRemote(g.bot!)
+  await connect(id)
   const requestId=randomUUID(),attachmentSources=[...images.map(p=>({p,kind:'image' as const})),...files.map(p=>({p,kind:'file' as const}))],prepared:Array<{descriptor:MessageAttachment;source:FileEndpoint;stat:any}>=[]
   for(const {p,kind} of attachmentSources){const source=sourceFor(g,p),info=await endpointRead(source,'copy-info',{path:source.path});prepared.push({source,stat:info,descriptor:attachmentInfo(p,info,kind,kind==='image'?(/\.png$/i.test(p)?'image/png':'image/jpeg'):undefined)})}
   const all=messages(id)
@@ -216,7 +243,7 @@ export async function sendBotMessage(args:Record<string,any>):Promise<any>{
    const receipt=await remoteSend(g.bot!,remoteText,requestId,uploads,original?.bot?.remoteId)
    // Re-read: an instant remote reply may have appended while the request was in flight.
    const current=messages(id),saved=current.find(m=>m.id===entry.id)!
-   saved.bot={...saved.bot!,remoteId:receipt.id,delivery:'accepted'};saveMessages(id,current,saved)
+   saved.bot={...saved.bot!,remoteId:saved.bot!.remoteId===requestId?receipt.id:saved.bot!.remoteId,delivery:'accepted'};saveMessages(id,current,saved)
    void syncMessages(id).catch(()=>{});await connect(id)
    return {message:saved,sent:true,status:'accepted',directMessageId:saved.id,clientMessageId:key}
   }catch(error){

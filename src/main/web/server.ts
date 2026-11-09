@@ -1,4 +1,5 @@
 import {isAppAdministrator} from '../application-authority'
+import {apiReadOnly} from '../../shared/api-effects'
 import {mediaResponse} from '../media-response'
 import {mediaAvailable,closeMedia} from '../media'
 import {Readable as NodeReadable} from 'node:stream'
@@ -50,6 +51,9 @@ export async function startWebServer(options:Options={}){
   const grants=new Map<string,{session:WebSession;url:URL;plugin:string;workspace:string;clientId?:string}>()
   const mediaSessions=new Map<string,{session:WebSession;context:RequestContext}>()
   const requests=new Map<string,{signature:string;reply:Promise<unknown>;at:number}>()
+  // Interactive terminal keystrokes retain replay protection without consuming the UI mutation budget.
+  const nativeInputs=new Map<string,{signature:string;reply:Promise<unknown>;at:number}>()
+  let pendingReads=0
   const sockets=new Set<net.Socket>()
   // Revocation must close already-open HTTP streams as well as future requests.
   const streams=new Set<{valid:()=>boolean;close:()=>void}>()
@@ -100,7 +104,7 @@ export async function startWebServer(options:Options={}){
     }
   })
 
-  setViewGuard(async()=>{if(requestContext().clientId&&peers.has(requestContext().clientId!))await ask('flush')})
+  setViewGuard(async nextKind=>{if(requestContext().clientId&&peers.has(requestContext().clientId!))await ask('flush',{nextKind})})
   const server=http.createServer(async(req,res)=>{
     res.setHeader('referrer-policy','no-referrer')
     try{
@@ -198,16 +202,19 @@ export async function startWebServer(options:Options={}){
         }
         const key=(current.session?.id??createHash('sha256').update(req.headers.authorization??'').digest('hex'))+':'+requestId
         // Core's durable receipt rechecks live queues and current authority on every retry.
-        const coreReceipt=request.cmd==='messenger.forward'||['session.send','session.enqueue'].includes(request.cmd)&&request.args?.clientMessageId!==undefined
-        const signature=createHash('sha256').update(JSON.stringify(request)).digest('hex'),previous=requests.get(key)
+        const coreReceipt=request.cmd==='messenger.forward'||['session.send','session.enqueue','direct.send'].includes(request.cmd)&&request.args?.clientMessageId!==undefined
+        const readOnly=apiReadOnly(request.cmd,request.args),keepReply=!coreReceipt&&!readOnly
+        const nativeInput=request.cmd==='worker.input'||request.cmd==='terminal.input',replay=nativeInput?nativeInputs:requests,capacity=nativeInput?4096:512
+        for(const cache of [requests,nativeInputs])for(const [id,item] of cache)if(item.at&&Date.now()-item.at>60000)cache.delete(id)
+        const signature=createHash('sha256').update(JSON.stringify(request)).digest('hex'),previous=requests.get(key)??nativeInputs.get(key)
         if(previous&&previous.signature!==signature)throw failure('Request ID was reused for a different operation',409)
-        for(const [id,item] of requests)if(item.at&&Date.now()-item.at>60000)requests.delete(id)
-        if(!coreReceipt&&!previous&&requests.size>=512)throw failure('Too many pending requests',429)
+        if(keepReply&&!previous&&replay.size>=capacity||readOnly&&pendingReads>=512)throw failure('Too many pending requests',429)
+        if(readOnly)pendingReads++
         const reply=(!coreReceipt?previous?.reply:undefined)??handleRequest(request,current.context)
-        if(!coreReceipt&&!previous){const item={signature,reply,at:0};requests.set(key,item);void reply.then(()=>{item.at=Date.now()},()=>{item.at=Date.now()})}
+        if(keepReply&&!previous){const item={signature,reply,at:0};replay.set(key,item);void reply.then(()=>{item.at=Date.now()},()=>{item.at=Date.now()})}
         try{const result=await reply;if(request.cmd==='messenger.media-open'&&current.session)mediaSessions.set(result.id,{session:current.session,context:current.context});if(request.cmd==='messenger.media-close')mediaSessions.delete(String(request.args?.id));json(res,{ok:true,data:['plugin.open','plugin.windows','plugin.place','plugin.mode','plugin.view'].includes(request.cmd)?projectPluginView(result,current.session??peers.get(current.context.clientId??'')?.session):result})}finally{
-          // Only mutation responses need replay protection; large transcript reads are not retained.
-          if(/\.(list|get|posts|post|sources|collectors|info|snapshot|transcript|layout|read|read-state|timeline|context|image|status|forward-status|activity|models|describe|docs|roles|view|queue|history|gallery|search|media-info|media-read|download-chunk)$/.test(request.cmd))requests.delete(key)
+          // Read concurrency stays bounded without retaining completed query responses.
+          if(readOnly)pendingReads--
           if(['plugin.dismiss','plugin.close'].includes(request.cmd)){const id=String(request.args?.id);grants.delete(id);}
         }
         return
@@ -233,9 +240,13 @@ export async function startWebServer(options:Options={}){
       if(!/^[a-zA-Z0-9_-]{8,80}$/.test(client))throw failure('Invalid client')
       const context:RequestContext={principal:{kind:'operator'},requestId:randomUUID(),clientId:'web-'+client}
       wss.handleUpgrade(req,socket,head,ws=>{
-        const id=context.clientId!,previous=peers.get(id);previous?.socket.close(4000,'Client reconnected')
+        const id=context.clientId!,previous=peers.get(id)
+        // Duplicated tabs inherit sessionStorage. Let the newcomer choose a fresh identity;
+        // replacing the original socket would discard its navigation and save guards.
+        if(previous?.socket.readyState===WebSocket.OPEN){ws.close(4000,'Client already connected');return}
         const peer={socket:ws,session,context};peers.set(id,peer)
         const send=(data:unknown)=>{if(ws.readyState===WebSocket.OPEN){if(ws.bufferedAmount>8*1024*1024){ws.close(1013,'Resync required');return};ws.send(JSON.stringify(data))}}
+        send({type:'ready'})
         const off=onCoreEvent(event=>{
           if(event.clientId&&event.clientId!==id)return
           if(!auth.valid(session)){ws.close(4001,'Session expired');return}
@@ -246,7 +257,7 @@ export async function startWebServer(options:Options={}){
         send({type:'event',channel:'plugin:windows',payload:projectPluginView(pluginWindows().filter(value=>value.clientId===id),session)})
         send({type:'event',channel:'store:changed',payload:{resync:true}})
         ws.on('message',raw=>{try{const answer=JSON.parse(raw.toString()),item=pending.get(answer.id);if(answer.type!=='ui:response'||!item||item.clientId!==id)return;clearTimeout(item.timer);pending.delete(answer.id);answer.error?item.reject(Error(String(answer.error))):item.resolve(answer.data)}catch{ws.close(1008,'Invalid response')}})
-        ws.on('close',()=>{off();if(peers.get(id)===peer)peers.delete(id);for(const [key,item] of pending)if(item.clientId===id){clearTimeout(item.timer);pending.delete(key);item.reject(Error('Browser disconnected before acknowledgement'))}})
+        ws.on('close',()=>{off();if(peers.get(id)===peer){peers.delete(id);for(const [key,item] of pending)if(item.clientId===id){clearTimeout(item.timer);pending.delete(key);item.reject(Error('Browser disconnected before acknowledgement'))}}})
         ws.on('error',()=>{})
       })
     }catch{socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n')}

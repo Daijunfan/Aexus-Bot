@@ -1,5 +1,7 @@
 import {rolePolicy} from '../../../shared/roles'
 import {AppSelect} from './AppSelect'
+import {onPluginFlush} from '../plugins'
+import {useBeforeUnloadGuard} from './useBeforeUnloadGuard'
 import {translate as uiText,useI18n,interfaceLocale} from '../i18n'
 import {useEffect,useLayoutEffect,useRef,useState} from 'react'
 import {createPortal} from 'react-dom'
@@ -17,7 +19,7 @@ import {EmployeePortrait} from './EmployeePortrait'
 const localTime=(at:string,zone:string)=>Temporal.Instant.from(at).toZonedDateTimeISO(zone).toPlainDateTime().toString({smallestUnit:'millisecond'})
 const instant=(value:string,zone:string)=>Temporal.PlainDateTime.from(value).toZonedDateTime(zone).toInstant().toString()
 const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
-export function PlanEditor({job,initial,store,timezone,onClose,onSaved,onReload,onConversation,inline=false,onDirtyChange,onSavingChange}:{job?:ScheduledJob;initial?:{name:string;employeeId:string;prompt:string;channelId:string};store:Store;timezone:string;onClose:()=>void;onSaved:(job?:ScheduledJob)=>void;onReload?:(job:ScheduledJob)=>void;onConversation:(id:string)=>void;inline?:boolean;onDirtyChange?:(dirty:boolean)=>void;onSavingChange?:(busy:boolean)=>void}){
+export function PlanEditor({job,initial,store,timezone,onClose,onSaved,onReload,onConversation,inline=false,retainOnPlanNavigation=false,onDirtyChange,onSavingChange}:{job?:ScheduledJob;initial?:{name:string;employeeId:string;prompt:string;channelId:string};store:Store;timezone:string;onClose:()=>void;onSaved:(job?:ScheduledJob)=>void;onReload?:(job:ScheduledJob)=>void;onConversation:(id:string)=>void;inline?:boolean;retainOnPlanNavigation?:boolean;onDirtyChange?:(dirty:boolean)=>void;onSavingChange?:(busy:boolean)=>void}){
   useI18n()
 
  useDialogFocus('.plan-editor-overlay > .plan-editor',!inline)
@@ -65,6 +67,12 @@ export function PlanEditor({job,initial,store,timezone,onClose,onSaved,onReload,
  const act=async(work:()=>Promise<unknown>,close=false)=>{if(guard.current)return;guard.current=true;setBusy(true);setError('');try{const result=await work();if(close)onSaved(result&&typeof result==='object'&&'rule' in result?result as ScheduledJob:undefined)}catch(cause){setError((cause as Error).message)}finally{guard.current=false;setBusy(false)}}
  const save=()=>act(()=>{const payload=spec(),signature=JSON.stringify(payload);if(signature!==lastPayload.current){key.current=crypto.randomUUID();lastPayload.current=signature}return api.call(job?'schedule.update':'schedule.create',job?{id:job.id,patch:payload,expectedRevision:job.revision??0}:{spec:payload,clientRequestId:key.current})},true)
  const editorRoot=useRef<HTMLElement>(null),dirty=draft!==initialDraft.current
+ useEffect(()=>onPluginFlush(async context=>{
+  if(retainOnPlanNavigation&&context?.nextKind==='plan')return
+  if(guard.current)throw Error('Wait for the schedule operation to finish.')
+  if(dirty){setConfirm('discard');throw Error(retainOnPlanNavigation?'Your Mission form has unsaved changes. Return to Form to save or reset it before leaving.':'Save or discard schedule changes before leaving.')}
+ }),[dirty,inline,retainOnPlanNavigation])
+ useBeforeUnloadGuard(dirty||busy)
  const requestClose=()=>{if(guard.current)return;if(dirty)setConfirm('discard');else onClose()}
  const toggleSchedule=()=>act(()=>api.call(job!.enabled?'schedule.pause':'schedule.resume',{id:job!.id,expectedRevision:job!.revision??0}),true)
  useEffect(()=>{if(confirm)editorRoot.current?.querySelector<HTMLButtonElement>('.plan-confirm button:last-child')?.focus({preventScroll:true})},[confirm])
@@ -112,7 +120,7 @@ export function PlanEditor({job,initial,store,timezone,onClose,onSaved,onReload,
      <div className="plan-field-row"><label>{uiText("Allowed window starts")}<input name="plan-window-start" type="time" value={windowStart} onChange={e=>setWindowStart(e.target.value)}/></label><label>{uiText("Allowed window ends")}<input name="plan-window-end" type="time" value={windowEnd} onChange={e=>setWindowEnd(e.target.value)}/></label></div>
      {(windowStart||windowEnd)&&<><label>{uiText("Window time zone")}<input value={windowZone} onChange={e=>setWindowZone(e.target.value)}/></label><div className="plan-weekdays" aria-label={uiText("Allowed window days")}>{days.map((day,i)=><button key={day} aria-pressed={windowDays.includes(i+1)} onClick={()=>setWindowDays(prev=>prev.includes(i+1)?prev.filter(d=>d!==i+1):[...prev,i+1])}>{uiText(day)}</button>)}</div><small>{uiText("Overnight windows belong to their starting day. Leave both times empty for no restriction.")}</small></>}
      <label>{uiText("Model override")}<input name="plan-model" value={model} onChange={e=>setModel(e.target.value)} placeholder={uiText("Inherit the employee’s model")}/></label>
-     <div className="plan-field-row"><label>{uiText("Reasoning effort")}<AppSelect name="plan-effort" disabled={target?.engine==='cline'||target?.engine==='pi'} value={effort} onChange={e=>setEffort(e.target.value as typeof effort)}><option value="">{uiText("Inherit")}</option>{['low','medium','high','xhigh','max'].map(value=><option key={value} value={value}>{uiText(value)}</option>)}</AppSelect></label><label>{uiText("Thinking")}<AppSelect name="plan-thinking" disabled={target?.engine==='codex'||target?.engine==='opencode'||target?.engine==='kilo'} value={thinking} onChange={e=>setThinking(e.target.value)}><option value="inherit">{uiText("Inherit")}</option><option value="off">{uiText("Off")}</option><option value="on" disabled={target?.engine==='pi'||target?.engine==='cline'}>{uiText("On")}</option></AppSelect></label></div>
+     <div className="plan-field-row"><label>{uiText("Reasoning effort")}<AppSelect name="plan-effort" disabled={target?.engine==='cline'||target?.engine==='pi'} value={effort} onChange={e=>setEffort(e.target.value as typeof effort)}><option value="">{uiText("Inherit")}</option>{(target?.engine==='deepseek'?['none','low','high','max']:['low','medium','high','xhigh','max']).map(value=><option key={value} value={value}>{uiText(value)}</option>)}</AppSelect></label><label>{uiText("Thinking")}<AppSelect name="plan-thinking" disabled={target?.engine==='codex'||target?.engine==='opencode'||target?.engine==='kilo'||target?.engine==='deepseek'} value={thinking} onChange={e=>setThinking(e.target.value)}><option value="inherit">{uiText("Inherit")}</option><option value="off">{uiText("Off")}</option><option value="on" disabled={target?.engine!=='claude'}>{uiText("On")}</option></AppSelect></label></div>
      <p>{uiText("Overrides must be supported by the selected engine and model. They apply to this run only; employee settings and permissions stay unchanged.")}</p>
     </details>
     <label className="plan-enabled"><input name="plan-enabled" type="checkbox" role="switch" checked={enabled} onChange={e=>setEnabled(e.target.checked)}/><span>{uiText("Enable automatic scheduling")}</span></label>

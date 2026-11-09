@@ -1,13 +1,16 @@
-import {useRef,useState} from 'react'
-/** Pointer drafts are local; only an explicit drop/key press commits through Core. */
+import {useEffect,useRef,useState} from 'react'
+/** Draft locally at display rate; commit only after the captured pointer is released. */
 export function PanelDivider({axis,value,min,max,label,onDraft,onCommit}:{axis:'x'|'y';value:number;min:number;max:number;label:string;onDraft:(value:number|undefined)=>void;onCommit:(value:number)=>Promise<unknown>}){
- const drag=useRef<{start:number;size:number;value:number}|null>(null),[error,setError]=useState('')
+ const drag=useRef<{pointer:number;start:number;size:number;value:number;scale:number;element:HTMLDivElement}|null>(null),frame=useRef(0),callbacks=useRef({onDraft,onCommit}),[error,setError]=useState('');callbacks.current={onDraft,onCommit}
  const bound=(v:number)=>Math.round(Math.max(min,Math.min(max,v)))
- const save=async(v:number)=>{try{setError('');await onCommit(v)}catch(e){setError((e as Error).message);onDraft(undefined)}}
+ const cancel=()=>{const d=drag.current;if(!d)return;drag.current=null;cancelAnimationFrame(frame.current);if(d.element.hasPointerCapture(d.pointer))d.element.releasePointerCapture(d.pointer);callbacks.current.onDraft(undefined)}
+ useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.key==='Escape'&&drag.current){e.preventDefault();e.stopPropagation();cancel()}};window.addEventListener('keydown',key,true);window.addEventListener('blur',cancel);return()=>{window.removeEventListener('keydown',key,true);window.removeEventListener('blur',cancel);cancelAnimationFrame(frame.current)}},[])
+ const save=async(v:number)=>{try{setError('');await callbacks.current.onCommit(v)}catch(e){setError((e as Error).message);callbacks.current.onDraft(undefined)}}
+ const next=(d:NonNullable<typeof drag.current>,coordinate:number)=>bound(d.size+(coordinate-d.start)/d.scale*(axis==='x'?1:-1))
  return <><div className={`panel-divider divider-${axis}`} role="separator" aria-label={label} aria-orientation={axis==='x'?'vertical':'horizontal'} aria-valuemin={min} aria-valuemax={max} aria-valuenow={Math.round(value)} tabIndex={0}
-  onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);const parent=e.currentTarget.parentElement!,size=axis==='x'?(parent.querySelector('.file-list')??parent).getBoundingClientRect().width:parent.getBoundingClientRect().height;drag.current={start:axis==='x'?e.clientX:e.clientY,size,value:size}}}
-  onPointerMove={e=>{const d=drag.current;if(!d)return;d.value=bound(d.size+((axis==='x'?e.clientX:e.clientY)-d.start)*(axis==='x'?1:-1));onDraft(d.value)}}
-  onPointerUp={e=>{const d=drag.current;if(!d)return;drag.current=null;e.currentTarget.releasePointerCapture(e.pointerId);void save(d.value)}}
-  onPointerCancel={()=>{drag.current=null;onDraft(undefined)}}
-  onKeyDown={e=>{if(e.key==='Escape'&&drag.current){e.preventDefault();e.stopPropagation();drag.current=null;onDraft(undefined);return}const decrease=axis==='x'?'ArrowLeft':'ArrowDown',increase=axis==='x'?'ArrowRight':'ArrowUp';if([decrease,increase,'Home','End'].includes(e.key)){e.preventDefault();void save(e.key==='Home'?min:e.key==='End'?max:bound(value+(e.key===increase?10:-10)))}}}/>{error&&<span className="resize-error" role="alert">{error}</span>}</>
+  onPointerDown={e=>{if(drag.current||e.button!==0||!e.isPrimary)return;e.preventDefault();e.stopPropagation();const parent=e.currentTarget.parentElement!,pane=(axis==='x'?parent.querySelector<HTMLElement>('.file-list'):parent)??parent,box=pane.getBoundingClientRect(),size=axis==='x'?pane.offsetWidth:pane.offsetHeight;drag.current={pointer:e.pointerId,start:axis==='x'?e.clientX:e.clientY,size,value:size,scale:(axis==='x'?box.width:box.height)/size||1,element:e.currentTarget};e.currentTarget.setPointerCapture(e.pointerId)}}
+  onPointerMove={e=>{const d=drag.current;if(!d||e.pointerId!==d.pointer)return;d.value=next(d,axis==='x'?e.clientX:e.clientY);cancelAnimationFrame(frame.current);frame.current=requestAnimationFrame(()=>callbacks.current.onDraft(d.value))}}
+  onPointerUp={e=>{const d=drag.current;if(!d||e.pointerId!==d.pointer)return;drag.current=null;cancelAnimationFrame(frame.current);if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);d.value=next(d,axis==='x'?e.clientX:e.clientY);if(d.value===d.size){callbacks.current.onDraft(undefined);return}callbacks.current.onDraft(d.value);void save(d.value)}}
+  onPointerCancel={e=>{if(e.pointerId===drag.current?.pointer)cancel()}} onLostPointerCapture={e=>{if(e.pointerId===drag.current?.pointer)cancel()}}
+  onKeyDown={e=>{const decrease=axis==='x'?'ArrowLeft':'ArrowDown',increase=axis==='x'?'ArrowRight':'ArrowUp';if([decrease,increase,'Home','End'].includes(e.key)){e.preventDefault();void save(e.key==='Home'?min:e.key==='End'?max:bound(value+(e.key===increase?10:-10)))}}}/>{error&&<span className="resize-error" role="alert">{error}</span>}</>
 }

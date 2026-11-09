@@ -1,3 +1,6 @@
+import {PendingQuestions} from './components/ChatQuestions'
+import {TaskQueue} from './components/TaskQueue'
+import {ComposerActions} from './components/ComposerActions'
 import {AvatarCatalogContext} from './components/AvatarCatalog'
 import {useDirectMessages} from './chat/useDirectMessages'
 import {MessageWorking} from './chat/MessageWorking'
@@ -21,7 +24,7 @@ import {MessageSelectionBar} from './components/MessageSelectionBar'
 import {ComposerTools} from './components/ComposerTools'
 import {PinnedMessages} from './components/PinnedMessages'
 import {MessengerContext,useMessengerState} from './components/useMessenger'
-import {conversationKey,messageKey,type MessageDraft} from '../../shared/messenger'
+import {conversationKey,workDraftKey,messageKey,type MessageDraft} from '../../shared/messenger'
 import {PlanView} from './components/PlanView'
 import {MessageView,MessageHeader,MessageProfile,MessageAvatar} from './components/MessageView'
 import {ChannelConversation} from './components/ChannelConversation'
@@ -44,7 +47,7 @@ import {useReplyRead,useVisibleReceipt,useReadAtBottom} from './chat/useReplyRea
 import {Icon} from './components/Icon'
 import {AgentApproval} from './components/AgentApproval'
 import {EngineTools} from './components/EngineTools'
-import {activeModel,modelEfforts,supportsFast,fastTier} from '../../shared/engine-commands'
+import {activeModel,modelEfforts,supportsFast,fastTier,enginePermissionModes} from '../../shared/engine-commands'
 import {FileWorkspace} from './components/FileWorkspace'
 import {EmployeeTerminal} from './components/EmployeeTerminal'
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -63,6 +66,11 @@ import {EmployeeProfile} from './components/EmployeeProfile'
 import {BackButton} from './components/BackButton'
 import {EmployeeDeleteDialog} from './components/EmployeeDeleteDialog'
 
+function composerDraftCache(){return {
+ drafts:{current:{} as Record<string,string>},imageDrafts:{current:{} as Record<string,string[]>},fileDrafts:{current:{} as Record<string,string[]>},
+ replyDrafts:{current:{} as Record<string,string|undefined>},quoteDrafts:{current:{} as Record<string,MessageQuote|undefined>},originDrafts:{current:{} as Record<string,{conversation?:string;textOnly?:boolean}>}
+}}
+
 export default function App() {
   useI18n()
 
@@ -80,14 +88,15 @@ export default function App() {
   const [opening,setOpening]=useState(false),[openError,setOpenError]=useState(''),[savedItems,setSavedItems]=useState<Item[]>([])
   const openSequence=useRef(0)
   const [input, setInput] = useState('')
+  const [sendPending,setSendPending]=useState<Record<string,'send'|'steer'>>({})
+  const [stopping,setStopping]=useState(false)
   const [images,setImages]=useState<string[]>([])
-  const [files,setFiles]=useState<string[]>([]),fileDrafts=useRef<Record<string,string[]>>({})
-  const imageDrafts=useRef<Record<string,string[]>>({})
+  const [files,setFiles]=useState<string[]>([])
+  const draftCaches=useRef({messages:composerDraftCache(),company:composerDraftCache()})
   const [returnToMessage,setReturnToMessage]=useState<string|undefined>(undefined)
-  const [replyTo,setReplyTo]=useState<string|undefined>(undefined),replyDrafts=useRef<Record<string,string|undefined>>({})
-  const [replyQuote,setReplyQuote]=useState<MessageQuote|undefined>(undefined),quoteDrafts=useRef<Record<string,MessageQuote|undefined>>({})
-  const [replyOrigin,setReplyOrigin]=useState<{conversation?:string;textOnly?:boolean}>({}),originDrafts=useRef<Record<string,{conversation?:string;textOnly?:boolean}>>({})
-  const drafts=useRef<Record<string,string>>({})
+  const [replyTo,setReplyTo]=useState<string|undefined>(undefined)
+  const [replyQuote,setReplyQuote]=useState<MessageQuote|undefined>(undefined)
+  const [replyOrigin,setReplyOrigin]=useState<{conversation?:string;textOnly?:boolean}>({})
   const [sidebarDraft,setSidebarDraft]=useState<number|undefined>(undefined)
   const [assetDrawerDraft,setAssetDrawerDraft]=useState<number>()
   const [error, setError] = useState('')
@@ -101,20 +110,23 @@ export default function App() {
   },[presentation,appearance.theme,appearance.themeColor])
   const messageMode=view.kind==='messages'
   const inputSource=messageMode?'messages':'company'
-  const messenger=useMessengerState(messageMode||view.kind==='conversation'),channelCatalog=useChannelCatalog(messageMode)
+  const cache=draftCaches.current[inputSource],{drafts,imageDrafts,fileDrafts,replyDrafts,quoteDrafts,originDrafts}=cache
+  const privateDraftKey=useCallback((id:string)=>messageMode?conversationKey('employee',id):workDraftKey(id),[messageMode])
+  const currentSurface=useRef(inputSource);currentSurface.current=inputSource
+  const messenger=useMessengerState(true),channelCatalog=useChannelCatalog(messageMode)
   const privateMessages=useDirectMessages(messageMode?view.employee:undefined,messageMode&&!!view.employee,messenger.jump?.conversation==='employee:'+view.employee?messenger.jump.id:undefined)
-  const privateDraftFor=useCallback((id:string,value:Omit<MessageDraft,'updatedAt'>)=>reuseDraft(value,messenger.getDraft(conversationKey('employee',id))),[messenger.getDraft])
-  const localPrivateDraft=useCallback((id:string)=>({text:drafts.current[id]??'',images:imageDrafts.current[id]??[],files:fileDrafts.current[id]??[],replyTo:replyDrafts.current[id],replyQuote:quoteDrafts.current[id],replyConversation:originDrafts.current[id]?.conversation,replyTextOnly:originDrafts.current[id]?.textOnly}),[])
+  const privateDraftFor=useCallback((id:string,value:Omit<MessageDraft,'updatedAt'>)=>reuseDraft(value,messenger.getDraft(privateDraftKey(id))),[messenger.getDraft,privateDraftKey])
+  const localPrivateDraft=useCallback((id:string)=>({text:drafts.current[id]??'',images:imageDrafts.current[id]??[],files:fileDrafts.current[id]??[],replyTo:replyDrafts.current[id],replyQuote:quoteDrafts.current[id],replyConversation:originDrafts.current[id]?.conversation,replyTextOnly:originDrafts.current[id]?.textOnly}),[cache])
   const schedulePrivateDraft=useCallback((id:string,value:Omit<MessageDraft,'updatedAt'>)=>{
     const draft=privateDraftFor(id,value)
     drafts.current[id]=draft.text;imageDrafts.current[id]=draft.images??[];fileDrafts.current[id]=draft.files??[];replyDrafts.current[id]=draft.replyTo;quoteDrafts.current[id]=draft.replyQuote;originDrafts.current[id]={conversation:draft.replyConversation,textOnly:draft.replyTextOnly}
-    messenger.scheduleDraft(conversationKey('employee',id),draft)
-  },[privateDraftFor,messenger.scheduleDraft])
+    messenger.scheduleDraft(privateDraftKey(id),draft)
+  },[privateDraftFor,messenger.scheduleDraft,privateDraftKey,cache])
   const jumpScope=messageMode&&view.chatId?conversationKey('group',view.chatId):(messageMode||view.kind==='conversation')&&view.employee?conversationKey('employee',view.employee):undefined
   useEffect(()=>()=>{if(jumpScope)messenger.setJump(current=>current?.conversation===jumpScope?null:current)},[jumpScope,messenger.setJump])
   const [messageSettings,setMessageSettings]=useState(false),[messageProfile,setMessageProfile]=useState(false)
   const [messageSearch,setMessageSearch]=useState(false),[awayFromLatest,setAwayFromLatest]=useState(false)
-  const imageInput=useRef<HTMLInputElement>(null),currentEmployee=useRef<string|null>(null),sending=useRef(false)
+  const imageInput=useRef<HTMLInputElement>(null),currentEmployee=useRef<string|null>(null),sending=useRef(new Set<string>())
   const wording=(english:string,chinese:string)=>interfaceLanguage()==='en'?english:chinese
   useEffect(()=>{setMessageSettings(false);setMessageProfile(false);setMessageSearch(false);setAwayFromLatest(false);setReturnToMessage(undefined);messenger.setSelection(null)},[view.employee,view.chatId,view.channelId,view.kind])
   useEffect(()=>setMessageProfile(false),[view.revision])
@@ -142,12 +154,12 @@ export default function App() {
   const visibleItems=messageMode?privateMessages.items:active?.items??[]
   useLayoutEffect(()=>{const id=active?.cardId??active?.id;if(transcriptScroll.current.employee!==id){transcriptScroll.current={employee:id,follow:true};privatePositioned.current=false}},[active?.cardId,active?.id])
   useEffect(()=>{
-    if(!messenger.ready||!employee||Object.hasOwn(drafts.current,employee.id))return
-    const saved=messenger.getDraft(conversationKey('employee',employee.id))
+    if(!messenger.ready||!employee||(!messageMode&&view.kind!=='conversation'))return
+    const saved=messenger.getDraft(privateDraftKey(employee.id))
     drafts.current[employee.id]=saved?.text??'';imageDrafts.current[employee.id]=saved?.images??[];fileDrafts.current[employee.id]=saved?.files??[];replyDrafts.current[employee.id]=saved?.replyTo;setReplyTo(saved?.replyTo);quoteDrafts.current[employee.id]=saved?.replyQuote;setReplyQuote(saved?.replyQuote);originDrafts.current[employee.id]={conversation:saved?.replyConversation,textOnly:saved?.replyTextOnly};setReplyOrigin(originDrafts.current[employee.id])
     setInput(saved?.text??'');setImages(saved?.images??[]);setFiles(saved?.files??[])
-  },[messenger.ready,employee?.id])
-  useEffect(()=>{const intent=messenger.replyIntent;if(!employee||intent?.conversation!==conversationKey('employee',employee.id))return
+  },[messenger.ready,employee?.id,inputSource])
+  useEffect(()=>{const intent=messenger.replyIntent;if(!messageMode||!employee||intent?.conversation!==conversationKey('employee',employee.id))return
     replyDrafts.current[employee.id]=intent.source.id;quoteDrafts.current[employee.id]=intent.source.quote;originDrafts.current[employee.id]={conversation:intent.source.conversation,textOnly:intent.textOnly};setReplyTo(intent.source.id);setReplyQuote(intent.source.quote);setReplyOrigin(originDrafts.current[employee.id]);messenger.setReplyIntent(null)
   },[messenger.replyIntent,employee?.id])
   const crossReference=useReplyReference(replyOrigin.conversation,replyTo,replyQuote,replyOrigin.textOnly)
@@ -178,8 +190,8 @@ export default function App() {
     void messageViewport.current?.scrollToMessage(privateUnread,{block:'start',signal:cancellation.signal}).then(node=>{if(node&&!cancellation.signal.aborted)privatePositioned.current=true})
     return()=>cancellation.abort()
   },[employee?.id,messageMode,privateEntryReady,privateUnread,messenger.ready])
-  const changeInput=(value:string)=>{setInput(value);if(employee){drafts.current[employee.id]=value;if(messageMode||replyTo)schedulePrivateDraft(employee.id,{text:value,images,files,replyTo,replyQuote,replyConversation:replyOrigin.conversation,replyTextOnly:replyOrigin.textOnly})}}
-  const removeImage=(path:string)=>{const next=images.filter(value=>value!==path);setImages(next);if(employee){imageDrafts.current[employee.id]=next;if(messageMode||replyTo)schedulePrivateDraft(employee.id,{text:input,images:next,files,replyTo,replyQuote,replyConversation:replyOrigin.conversation,replyTextOnly:replyOrigin.textOnly})}}
+  const changeInput=(value:string)=>{setInput(value);if(employee){drafts.current[employee.id]=value;schedulePrivateDraft(employee.id,{text:value,images,files,replyTo,replyQuote,replyConversation:replyOrigin.conversation,replyTextOnly:replyOrigin.textOnly})}}
+  const removeImage=(path:string)=>{const next=images.filter(value=>value!==path);setImages(next);if(employee){imageDrafts.current[employee.id]=next;schedulePrivateDraft(employee.id,{text:input,images:next,files,replyTo,replyQuote,replyConversation:replyOrigin.conversation,replyTextOnly:replyOrigin.textOnly})}}
   const closeConversation=()=>void act('view.close')
   const openWorkspace=(details=false)=>employee&&void act('view.open',{kind:'conversation',employee:employee.id,details})
   const chooseReply=useCallback((item:Item,quote?:MessageQuote)=>{
@@ -191,7 +203,7 @@ export default function App() {
   const cancelReply=useCallback(()=>{const id=currentEmployee.current;if(!id)return;replyDrafts.current[id]=undefined;setReplyTo(undefined);quoteDrafts.current[id]=undefined;setReplyQuote(undefined);originDrafts.current[id]={};setReplyOrigin({});schedulePrivateDraft(id,{text:drafts.current[id]??'',images:imageDrafts.current[id]??[],files:fileDrafts.current[id]??[]});composer.current?.focus()},[schedulePrivateDraft])
   const replySource=visibleItems.find(item=>item.id===replyTo),localReply=useMemo(()=>{try{return replySource?messageReply(replySource,replyQuote):null}catch{return null}},[replySource,replyQuote]),selectedReply=replyOrigin.conversation?crossReference.reply:localReply
   const authorNames=useMemo(()=>Object.fromEntries(store.sessions.map(card=>[card.id,card.title])),[store.sessions])
-  useComposerHeight(composer,input,messageMode,active?.id)
+  useComposerHeight(composer,input,true,view.kind+':'+(active?.id??''))
   const displayItems=visibleItems
   const searchItems=useMemo(()=>displayItems.filter(item=>item.role!=='notice').map(item=>({id:item.id,images:item.role==='user'?[...item.images??[],...(item.files??[]).map(file=>file.path)]:[],text:item.role==='assistant'?item.blocks.filter(block=>block.kind==='text').map(block=>block.text).join('\n'):item.text})),[displayItems])
   const galleryImages=useMemo(()=>displayItems.flatMap(item=>item.role!=='notice'&&employee&&!messenger.state.messages[messageKey(conversationKey('employee',employee.id),item.id)]?.hidden?(item.images??[]).map(path=>({employee:employee.id,path,messageId:item.id,caption:item.role==='user'?item.text:item.blocks.filter(b=>b.kind==='text').map(b=>b.text).join('\n')})):[]),[displayItems,employee?.id,messenger.state.messages])
@@ -230,24 +242,25 @@ export default function App() {
     const schedule = (full=false,detail=false,live=true) => {
       configuration ||= full;conversation ||= detail;status ||= live||detail
       if (timer) return
-      timer = setTimeout(() => { timer = undefined; const full=configuration,detail=conversation,live=status;configuration=false;conversation=false;status=false;void refresh(full,detail,live).catch((e) => setError(String(e))) }, 35)
+      timer = setTimeout(() => { timer = undefined; const full=configuration,detail=conversation,live=status;configuration=false;conversation=false;status=false;void refresh(full,detail,live).catch((e) => setError((e as Error).message??String(e))) }, 35)
     }
     const showActivity=(state:ManagementActivity)=>setManagementActivity(previous=>state.revision>=previous.revision?state:previous)
     const off = api.onEvent(event=>{
-      if(event.channel==='management:activity')showActivity(event.payload)
+      if(event.channel==='client:connected'){schedule(true,true);void api.call<ManagementActivity>('management.activity').then(showActivity).catch(cause=>setError((cause as Error).message))}
+      else if(event.channel==='management:activity')showActivity(event.payload)
       else if(event.channel==='view:changed')showView(event.payload)
       else if(event.channel==='store:changed')schedule(true,false,!event.payload?.changes||event.payload.changes.authority)
       else if(event.channel==='hosts:changed'||event.channel==='access:changed')schedule(true)
       else if(event.channel.startsWith('session:'))schedule(false,!!viewedSession.current&&event.payload?.sessionId===viewedSession.current)
     })
-    void api.call<ManagementActivity>('management.activity').then(showActivity).catch(e=>setError(String(e)))
-    void api.call<ViewState>('view.get').then(showView).catch(e=>setError(String(e)))
-    void refresh().catch((e) => setError(String(e)))
+    void api.call<ManagementActivity>('management.activity').then(showActivity).catch(e=>setError((e as Error).message??String(e)))
+    void api.call<ViewState>('view.get').then(showView).catch(e=>setError((e as Error).message??String(e)))
+    void refresh().catch((e) => setError((e as Error).message??String(e)))
     return () => { off(); clearTimeout(timer) }
   }, [refresh])
-  const act = useCallback(async (cmd: string, args?: Record<string, unknown>) => {
-    try { setError(''); const result = await api.call(cmd, args); await refresh(true,/^(session|config|approval|commands)\./.test(cmd)); return result }
-    catch (e) { setError(String(e)); return undefined }
+  const act = useCallback(async (cmd: string, args?: Record<string, unknown>, propagateError=false) => {
+    try { setError(''); const result = await api.call(cmd, args); await refresh(true,/^(session|config|approval|commands)\./.test(cmd)).catch(error=>setError(uiText('Change applied, but the display could not refresh: {0}',[(error as Error).message??String(error)]))); return result }
+    catch (e) { if(propagateError)throw e; setError((e as Error).message??String(e)); return undefined }
   }, [refresh])
   useEffect(()=>{
     let zoom=store.preferences?.pageZoom??1
@@ -263,7 +276,8 @@ export default function App() {
     if(!employeeReady(card)){await act('view.open',{kind:'initialization',employee:card.id});return}
     const sequence=++openSequence.current
     currentEmployee.current=card.id
-    const saved=messenger.getDraft(conversationKey('employee',card.id))
+    const saved=messenger.getDraft(privateDraftKey(card.id))
+    if(messenger.ready){drafts.current[card.id]=saved?.text??'';imageDrafts.current[card.id]=saved?.images??[];fileDrafts.current[card.id]=saved?.files??[];replyDrafts.current[card.id]=saved?.replyTo;quoteDrafts.current[card.id]=saved?.replyQuote;originDrafts.current[card.id]={conversation:saved?.replyConversation,textOnly:saved?.replyTextOnly}}
     viewedSession.current=null;setSelectedCardId(card.id);setActiveId(null);setInput(drafts.current[card.id]??saved?.text??'');setImages(imageDrafts.current[card.id]??saved?.images??[]);setFiles(fileDrafts.current[card.id]??saved?.files??[]);fileDrafts.current[card.id]??=saved?.files??[];setReplyTo(Object.hasOwn(drafts.current,card.id)?replyDrafts.current[card.id]:saved?.replyTo);setReplyQuote(Object.hasOwn(drafts.current,card.id)?quoteDrafts.current[card.id]:saved?.replyQuote);setReplyOrigin(Object.hasOwn(drafts.current,card.id)?originDrafts.current[card.id]??{}:{conversation:saved?.replyConversation,textOnly:saved?.replyTextOnly});setMenu(null);setSavedItems([]);setOpenError(card.workspaceError??'');setOpening(!card.workspaceError)
     if(!messageMode)void api.call<{items:Item[]}>('session.transcript',{id:card.id}).then(data=>{if(sequence===openSequence.current)setSavedItems(data.items)}).catch(()=>{})
     if(card.workspaceError)return
@@ -277,22 +291,23 @@ export default function App() {
     else {openSequence.current++;currentEmployee.current=null;viewedSession.current=null;setActiveId(null);setSelectedCardId(null);setOpenError('');setOpening(false);setMenu(null)}
   },[view.kind,view.employee,store.sessions.some(c=>c.id===view.employee)])
   const persistAttachments=(id:string)=>schedulePrivateDraft(id,localPrivateDraft(id))
-  const attachFor=(id:string,path:string,kind:'image'|'file'='image')=>{const target=kind==='image'?imageDrafts:fileDrafts,next=[...new Set([...(target.current[id]??[]),path])];target.current[id]=next;persistAttachments(id);if(currentEmployee.current===id)(kind==='image'?setImages:setFiles)(next)}
+  const attachFor=(id:string,path:string,kind:'image'|'file'='image')=>{const saved=messenger.getDraft(privateDraftKey(id))??localPrivateDraft(id),field=kind==='image'?'images':'files',next=[...new Set([...(saved[field]??[]),path])];schedulePrivateDraft(id,{...saved,[field]:next});if(currentEmployee.current===id&&currentSurface.current===inputSource)(kind==='image'?setImages:setFiles)(next)}
   const attachImage=(path:string)=>{if(employee)attachFor(employee.id,path)}
-  const uploads=useAttachmentUploads(employee?conversationKey('employee',employee.id):'',(conversation,path,kind)=>attachFor(conversation.slice(9),path,kind),images.length+files.length)
+  const uploads=useAttachmentUploads(employee?conversationKey('employee',employee.id):'',(conversation,path,kind)=>attachFor(conversation.slice(9),path,kind),images.length+files.length,employee?privateDraftKey(employee.id):'')
   const pasteImages=(selected:File[])=>{if(!employee)return;try{uploads.add(selected)}catch(cause){setError((cause as Error).message)}}
   const removeAttachment=(path:string)=>{if(!employee)return;if(images.includes(path))removeImage(path);else{const next=files.filter(file=>file!==path);fileDrafts.current[employee.id]=next;setFiles(next);persistAttachments(employee.id)}}
-  const send = async (value=input,newRequest=false) => {
-    if (sending.current || uploads.pending || !liveActive || !active || (!value.trim()&&!images.length&&!files.length)) return
+  const send = async (value=input,newRequest=false,steering=false) => {
+    const requestKey=privateDraftKey(employee?.id??active?.id??'')
+    if (sending.current.has(requestKey) || uploads.pending || !liveActive || !active || (!value.trim()&&!images.length&&!files.length)) return
     if(crossReference.loading)return
     if(replyTo&&value.trim().startsWith('/')){setError(uiText('Cancel the reply before running a command.'));return}
     if(replyTo&&!selectedReply){setError(uiText(replySource&&replyQuote?'Selected text changed. Choose a new quote.':'Original message unavailable. Cancel this reply to send a new message.'));return}
-    const text=value.trim(),id=employee?.id,conversation=id?conversationKey('employee',id):undefined,slash=!messageMode&&text.startsWith('/'),attached=slash?[]:images,snapshot=id?privateDraftFor(id,{text:input,images,files,replyTo,replyQuote,replyConversation:replyOrigin.conversation,replyTextOnly:replyOrigin.textOnly}):undefined,persistent=!!conversation&&(!slash||messageMode||!!replyTo||!!messenger.getDraft(conversation))
+    const text=value.trim(),id=employee?.id,conversation=id?privateDraftKey(id):undefined,slash=!steering&&!messageMode&&text.startsWith('/'),attached=slash?[]:images,snapshot=id?privateDraftFor(id,{text:input,images,files,replyTo,replyQuote,replyConversation:replyOrigin.conversation,replyTextOnly:replyOrigin.textOnly}):undefined,persistent=!!conversation&&(!slash||messageMode||!!replyTo||!!messenger.getDraft(conversation))
     if(newRequest){if(slash||!snapshot||!sendRecovery||sendRecovery.employeeId!==id||messenger.getDraft(conversation!)?.clientMessageId!==sendRecovery.clientMessageId||privateDraftContent(snapshot)!==sendRecovery.content)return;snapshot.clientMessageId=crypto.randomUUID();delete snapshot.viewId;delete snapshot.sourceView}
     if(snapshot&&!slash)snapshot.sourceView??=inputSource
     if(snapshot&&!slash&&employee?.managementRole==='governor')snapshot.viewId??=store.activeTeamViewId??'all'
     if(id&&snapshot){drafts.current[id]=snapshot.text;imageDrafts.current[id]=snapshot.images??[];fileDrafts.current[id]=snapshot.files??[];replyDrafts.current[id]=snapshot.replyTo;quoteDrafts.current[id]=snapshot.replyQuote;originDrafts.current[id]={conversation:snapshot.replyConversation,textOnly:snapshot.replyTextOnly}}
-    sending.current=true;setError('');setSendRecovery(null)
+    sending.current.add(requestKey);setSendPending(previous=>({...previous,[requestKey]:steering?'steer':'send'}));setError('');setSendRecovery(null)
     transcriptScroll.current.follow=true;scrollToLatest();if(messageMode)void privateBottomError.acknowledge();setAwayFromLatest(false)
     let cancelMotion:(()=>void)|undefined
     try{
@@ -300,8 +315,8 @@ export default function App() {
         await messenger.prepareSend(conversation!,snapshot)
       }
       cancelMotion=messageMode&&!active.busy&&!slash?prepareMessageSend(text):undefined
-      const sent=await api.call(messageMode?'direct.send':active.busy?'session.enqueue':'session.send',{...(messageMode?{employee:employee!.id,mode:active.busy?'enqueue':'send'}:{id:active.id}),text,...(!messageMode?{sourceView:slash?inputSource:snapshot?.sourceView}:{}),images:attached,files:slash?[]:files,replyTo,replyQuote,replyConversation:replyOrigin.conversation,replyTextOnly:replyOrigin.textOnly,...(!slash&&snapshot?{clientMessageId:snapshot.clientMessageId}:{}),...(employee?.managementRole==='governor'?{viewId:slash?store.activeTeamViewId??'all':snapshot?.viewId}:{})})
-      if(!sent||sent.sent===false){cancelMotion?.();return}
+      const sent=await api.call(messageMode?'direct.send':steering?'session.steer':active.busy?'session.enqueue':'session.send',{...(messageMode?{employee:employee!.id,mode:steering?'steer':active.busy?'enqueue':'send'}:{id:active.id}),text,...(!messageMode?{sourceView:slash?inputSource:snapshot?.sourceView}:{}),...(!steering?{images:attached,files:slash?[]:files,replyTo,replyQuote,replyConversation:replyOrigin.conversation,replyTextOnly:replyOrigin.textOnly}:{}),...(!slash&&snapshot&&(!steering||messageMode)?{clientMessageId:snapshot.clientMessageId}:{}),...(!steering&&employee?.managementRole==='governor'?{viewId:slash?store.activeTeamViewId??'all':snapshot?.viewId}:{})})
+      if(!sent||sent.sent===false){cancelMotion?.();setError(uiText('The request was not accepted. Your draft is retained.'));return}
       cancelMotion=undefined
       const retained=slash&&id&&(images.length||files.length)?privateDraftFor(id,{text:'',images,files}):undefined
       const cleared=!persistent||await messenger.draft(conversation!,retained??{text:''},snapshot!.clientMessageId)
@@ -309,19 +324,19 @@ export default function App() {
       const remaining=persistent?messenger.getDraft(conversation!):retained
       if(cleared&&id&&snapshot&&privateDraftContent(localPrivateDraft(id))===privateDraftContent(snapshot)){
         drafts.current[id]=remaining?.text??'';imageDrafts.current[id]=remaining?.images??[];fileDrafts.current[id]=remaining?.files??[];replyDrafts.current[id]=remaining?.replyTo;quoteDrafts.current[id]=remaining?.replyQuote;originDrafts.current[id]={conversation:remaining?.replyConversation,textOnly:remaining?.replyTextOnly}
-        if(currentEmployee.current===id){transcriptScroll.current.follow=true;setAwayFromLatest(false);setInput(drafts.current[id]);setImages(imageDrafts.current[id]);setFiles(fileDrafts.current[id]);setReplyTo(remaining?.replyTo);setReplyQuote(remaining?.replyQuote);setReplyOrigin(originDrafts.current[id]);setReturnToMessage(undefined);if(text==='/model')setMenu('model');if(text==='/effort')setMenu('effort');if(['/permissions','/approvals'].includes(text))setMenu('perm')}
+        if(currentEmployee.current===id&&currentSurface.current===inputSource){transcriptScroll.current.follow=true;setAwayFromLatest(false);setInput(drafts.current[id]);setImages(imageDrafts.current[id]);setFiles(fileDrafts.current[id]);setReplyTo(remaining?.replyTo);setReplyQuote(remaining?.replyQuote);setReplyOrigin(originDrafts.current[id]);setReturnToMessage(undefined);if(text==='/model')setMenu('model');if(text==='/effort')setMenu('effort');if(['/permissions','/approvals'].includes(text))setMenu('perm')}
       }
       // A refresh failure cannot turn an accepted send into an apparent transport failure.
-      await refresh(true,true).catch(cause=>setError(String(cause)))
+      await refresh(true,true).catch(cause=>setError((cause as Error).message??String(cause)))
     }catch(cause){
-      cancelMotion?.();const code=(cause as {code?:string}).code,recovery=code==='PRIVATE_SEND_UNCERTAIN'?'The previous request could not be confirmed. Review the conversation before starting a new request.':code==='PRIVATE_SEND_INTERRUPTED'?'The previous queue was interrupted. Review the conversation before starting a new request.':undefined,message=uiText(recovery??(cause as Error).message??String(cause));setError(message)
+      cancelMotion?.();const code=(cause as {code?:string}).code,recovery=code==='PRIVATE_SEND_UNCERTAIN'?'The previous request could not be confirmed. Review the conversation before starting a new request.':code==='PRIVATE_SEND_INTERRUPTED'?'The previous queue was interrupted. Review the conversation before starting a new request.':undefined,detail=uiText(recovery??(cause as Error).message??String(cause)),message=active.title+': '+detail;setError(message)
       if(id&&snapshot&&recovery)setSendRecovery({employeeId:id,clientMessageId:snapshot.clientMessageId,content:privateDraftContent(snapshot),error:message})
-    }finally{sending.current=false;if(currentEmployee.current===id)composer.current?.focus()}
+    }finally{sending.current.delete(requestKey);setSendPending(previous=>{const next={...previous};delete next[requestKey];return next});if(currentEmployee.current===id&&currentSurface.current===inputSource)composer.current?.focus()}
   }
 
   const showEmployee=useCallback((card:StoredSession)=>void act('view.open',{kind:'conversation',employee:card.id}),[act])
-  const activeSendRecovery=sendRecovery&&sendRecovery.error===error&&view.employee===sendRecovery.employeeId&&(view.kind==='messages'||view.kind==='conversation')&&messenger.getDraft(conversationKey('employee',sendRecovery.employeeId))?.clientMessageId===sendRecovery.clientMessageId&&privateDraftContent({text:input,images,files,replyTo,replyQuote,replyConversation:replyOrigin.conversation,replyTextOnly:replyOrigin.textOnly})===sendRecovery.content
-  const stop = () => active && act('session.interrupt', { id: active.id,expectedMessageId:active.currentTask?.messageId })
+  const activeSendRecovery=sendRecovery&&sendRecovery.error===error&&view.employee===sendRecovery.employeeId&&(view.kind==='messages'||view.kind==='conversation')&&messenger.getDraft(privateDraftKey(sendRecovery.employeeId))?.clientMessageId===sendRecovery.clientMessageId&&privateDraftContent({text:input,images,files,replyTo,replyQuote,replyConversation:replyOrigin.conversation,replyTextOnly:replyOrigin.textOnly})===sendRecovery.content
+  const stop = async () => {if(!active||stopping)return;setStopping(true);try{await act('session.interrupt',{id:active.id,expectedMessageId:active.currentTask?.messageId})}finally{setStopping(false)}}
   const configure = (cmd: string, args: Record<string, unknown>) => active && act(cmd, { id: active.id, ...args })
   useLayoutEffect(() => {
     const el = transcript.current
@@ -343,11 +358,7 @@ export default function App() {
       .filter((c) => c.name.includes(term) || c.aliases?.some(a=>a.includes(term)) || c.description.toLowerCase().includes(term))
   }, [active, input, replyTo])
   useEffect(() => setCmdIndex(0), [input])
-  const permissions = active?.engine === 'codex' ? [
-    { value: 'default', label: 'Read only', hint: 'Inspect files; no file changes' },
-    { value: 'acceptEdits', label: 'Workspace write', hint: 'Allow edits within this workspace' },
-    { value: 'bypassPermissions', label: 'Full access', hint: 'Run without sandbox restrictions' }
-  ] : PERMISSION_MODES.filter(p=>!active||!['cline','pi','opencode','kilo'].includes(active.engine)||p.value!=='auto'&&(p.value!=='plan'||['cline','opencode','kilo'].includes(active.engine)))
+  const permissions=enginePermissionModes(active?.engine??'codex')
   const model=active?activeModel(active.models,active.model):undefined
   const efforts=active?modelEfforts(active.engine,model):[]
   const fastAvailable=active?supportsFast(active.engine,model):false
@@ -361,7 +372,7 @@ export default function App() {
       {!messageMode&&<div className="conversation-backdrop" onClick={closeConversation} />}
       <section className="conversation-dialog" role={messageMode?'region':'dialog'} aria-modal={messageMode?undefined:!view.shared&&!view.pluginId} aria-label={messageMode?uiText("Conversation with {0}",[active.title]):uiText("Conversation with {0}",[active.title])}>
       <main className="main session-main">
-        {editingEmployee||view.tools?null:messageMode&&employee?<MessageHeader employee={employee} session={liveActive} opening={opening} settings={messageSettings} search={messageSearch} onSearch={()=>setMessageSearch(!messageSearch)} onSettings={()=>setMessageSettings(!messageSettings)} onBack={closeConversation} onWorkspace={()=>openWorkspace()} onProfile={()=>setMessageProfile(!messageProfile)}/>:<header className="toolbar employee-details-toolbar">
+        {editingEmployee||view.tools?null:messageMode&&employee?<MessageHeader employee={employee} session={liveActive} opening={opening} settings={messageSettings} search={messageSearch} onSearch={()=>setMessageSearch(!messageSearch)} onSettings={()=>setMessageSettings(!messageSettings)} onBack={()=>void act('view.open',{kind:'messages'})} onWorkspace={()=>openWorkspace()} onProfile={()=>setMessageProfile(!messageProfile)}/>:<header className="toolbar employee-details-toolbar">
           <BackButton className="back" label={view.returnTo?.kind==='messages'?'Back to conversation':'Back to company'} ariaLabel="Close conversation" onClick={closeConversation}/>
           <span className="session-heading"><EngineMark engine={active.engine} size={20} /><SessionTitle title={employee?.title??active.title}/><small className="execution-badge" title={employee?.remote?.host}>{employee?.kind==='cloud-native-worker'?uiText("Cloud Native Worker"):uiText("Local Worker")}</small></span>
           <button className="employee-details" aria-label={uiText("Employee details")} title={uiText("Employee details")} onClick={() => setEditingEmployee(true)}><Icon name="account"/><span className="toolbar-action-label">{uiText("Employee details")}</span></button>
@@ -373,7 +384,7 @@ export default function App() {
         {messageMode&&employee&&<PinnedMessages conversation={conversationKey('employee',employee.id)}/>}
         {employee&&deletingEmployee===employee.id&&<EmployeeDeleteDialog employee={employee} onCancel={()=>setDeletingEmployee(null)} onRemove={async deleteWorkspace=>{await api.call('card.remove',{id:employee.id,deleteWorkspace});setDeletingEmployee(null);setSelectedCardId(null);setActiveId(null);await act('view.close')}}/>}
         {!!active.approvals?.length&&<div className="agent-requests">{active.approvals?.map(p=><AgentApproval key={p.id} english={messageMode} compact={messageMode} approval={p} respond={async(decision,answers,form)=>{await api.call('approval.respond',{id:active.id,requestId:p.id,decision,answers,form});await refresh()}}/>)}</div>}
-        {view.tools&&liveActive?<EngineTools id={active.id} section={view.tools} onSection={section=>void act('view.tools',{section})} onClose={()=>void act('view.tools',{section:null})}/>:editingEmployee && employee ? <div className="employee-inspector"><EmployeeProfile key={employee.id} employee={employee} store={store} onBack={()=>setEditingEmployee(false)} onWorkspace={()=>setEditingEmployee(false)}/></div> : <ConversationBody messages={messageMode} explorerWidth={store.preferences?.explorerWidth} terminalHeight={store.preferences?.terminalHeight} onAttachImage={attachImage} key={'body-'+(employee?.id??active.id)} employee={employee?.id??active.cardId??active.id}>
+        {view.tools&&liveActive?<EngineTools id={active.id} section={view.tools} onSection={section=>void act('view.tools',{section})} onClose={()=>void act('view.tools',{section:null})}/>:editingEmployee && employee ? <div className="employee-inspector"><EmployeeProfile key={employee.id} employee={employee} store={store} onBack={()=>setEditingEmployee(false)} onWorkspace={()=>setEditingEmployee(false)}/></div> : <ConversationBody messages={messageMode} explorerWidth={store.preferences?.explorerWidth} explorerCollapsed={store.preferences?.explorerCollapsed} explorerTreeCollapsed={store.preferences?.explorerTreeCollapsed} terminalHeight={store.preferences?.terminalHeight} onAttachImage={attachImage} key={'body-'+(employee?.id??active.id)} employee={employee?.id??active.cardId??active.id}>
         {openError&&<div className="conversation-repair" role="alert"><span>{openError}</span><button onClick={()=>setEditingEmployee(true)}>{wording('Workspace settings','配置工作目录')}</button>{!employee?.workspaceError&&<button onClick={()=>employee&&void openCard(employee)}>{wording('Reconnect','重试连接')}</button>}</div>}
         {liveActive?<div className="session-settings controls" data-permission={active.permissionMode}>
           <span className="engine-readonly" data-control="engine" title={wording('The engine is fixed for this employee','引擎创建后固定；如需更换，请删除员工后重新添加')}><EngineMark engine={active.engine} size={15}/>{ENGINE_DEFINITIONS[active.engine].label}</span>
@@ -398,22 +409,23 @@ export default function App() {
         </div>:<div className="session-opening">{opening?wording('Connecting…','正在连接员工…'):wording('Conversation opened. Check the workspace to start messaging.','会话已打开，配置有效工作目录后即可开始。')}</div>}
         {!messageMode&&active.busy&&active.currentTask&&<div className="task-provenance" data-message-id={active.currentTask.messageId} data-source-view={active.currentTask.sourceView}>{wording('Task','任务')} {active.currentTask.messageId.slice(-6)} · {wording('From','来自')} {active.currentTask.delegation.requestedBy.kind==='operator'?wording('You','用户'):store.sessions.find(card=>active.currentTask!.delegation.requestedBy.kind==='agent'&&card.id===active.currentTask!.delegation.requestedBy.employeeId)?.title??uiText("Agent")}{active.currentTask.sourceView?' · '+uiText('Sent from {0} view',[uiText(SOURCE_VIEW_LABELS[active.currentTask.sourceView])]):''}{active.currentTask.runId?wording(' · Scheduled task',' · 定时任务'):''}{active.currentTask.viewId?wording(' · Target view: ',' · 目标视图：')+(active.currentTask.viewId==='all'?'All Team':store.teamViews?.find(view=>view.id===active.currentTask!.viewId)?.name??wording('Removed','已删除')):''}</div>}
         {messageMode&&(privateMessages.error||privateBottomError.error)&&<div className="message-read-error" role="alert"><span>{uiText(privateMessages.error||privateBottomError.error)}</span><button type="button" onClick={()=>privateBottomError.error?void privateBottomError.acknowledge():privateMessages.refresh()}>{uiText('Retry')}</button></div>}
+        {messageMode&&employee&&<PendingQuestions conversation={'employee:'+employee.id}/>}
         {messageMode&&<ConversationSearch conversation={employee?conversationKey('employee',employee.id):undefined} key={employee?.id} open={messageSearch} onOpen={setMessageSearch} items={searchItems} transcript={transcript} onReveal={revealMessage} onNavigate={gap=>{transcriptScroll.current.follow=gap<4;if(gap<4)transcriptScroll.current.targetTop=transcript.current?.scrollTop;setAwayFromLatest(gap>80)}}/>}
         <MessageGalleryContext.Provider value={{images:galleryImages,history:employee?{conversation:conversationKey('employee',employee.id)}:undefined}}><div className="transcript" ref={transcript} tabIndex={messageMode?0:undefined} aria-label={messageMode?uiText('Private messages'):undefined} onScroll={event=>{const el=event.currentTarget,gap=el.scrollHeight-el.clientHeight-el.scrollTop;if(Math.abs(el.scrollTop-(transcriptScroll.current.targetTop??-Infinity))>1&&(!messageMode||privatePositioned.current||gap>=4)){transcriptScroll.current.follow=gap<4;if(gap<4)transcriptScroll.current.targetTop=el.scrollTop};if(messageMode){setAwayFromLatest(gap>80);if(el.scrollTop<80&&privatePositioned.current&&!transcriptScroll.current.follow&&privateMessages.nextBefore)privateMessages.loadOlder()}}} onPointerDown={interruptPrivateEntry} onTouchStart={interruptPrivateEntry} onKeyDown={event=>{if(['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(event.key)&&!(event.target as Element).closest('input,textarea,[contenteditable=true]'))interruptPrivateEntry()}} onWheel={event=>{interruptPrivateEntry();if(event.deltaY<0&&event.currentTarget.scrollTop>0)transcriptScroll.current.follow=false}}>
           {!displayItems.length&&!active.busy && <div className="conversation-empty">{messageMode&&employee?<MessageAvatar employee={employee} large/>:<EngineMark engine={active.engine} size={48}/>}<div className="panel-eyebrow">{uiText("YOUR NEXT IDEA STARTS HERE")}</div><h1>{messageMode?uiText("Message {0}",[active.title]):uiText("What are we building?")}</h1><p>{liveActive?(messageMode?`${active.title} is ready. What would you like to work on?`:`${active.title} 已就绪，说说接下来要做什么。`):opening?wording('Connecting to the workspace…','正在连接工作环境…'):wording('Check the workspace to begin.','检查工作目录后，就可以开始对话。')}</p></div>}
-          <MessageViewport key={employee?.id??active.id} items={displayItems} scrollRef={transcript} apiRef={messageViewport} enabled={messageMode} following={()=>transcriptScroll.current.follow} onProgrammaticScroll={top=>{transcriptScroll.current.targetTop=top}} renderItem={(item) => <Fragment key={item.id}>{messageMode&&dateMarkers.has(item.id)&&<MessageDate value={dateMarkers.get(item.id)!}/>}{messageMode&&unreadEntry.key===employee?.id&&unreadEntry.id===item.id&&!messenger.state.messages[messageKey(conversationKey('employee',employee!.id),item.id)]?.hidden&&<UnreadDivider reply/>}<Turn item={item} bubbleGroup={messageMode?bubbleGroups.get(item.id):undefined} onReply={messageMode?chooseReply:undefined} conversationEmployee={employee?.id} requestAuthor={item.role==='user'&&item.author?.kind==='agent'?authorNames[item.author.employeeId]??uiText('Former teammate'):undefined} replyAuthor={item.role==='user'&&item.reply?replyAuthor(item.reply,employee?.title??uiText('Teammate'),authorNames):undefined} messageEmployee={messageMode?employee?.id:undefined} timestamp={messageMode?messageTime(item,employee?.lastReply):undefined} replyId={messageMode&&privateIncoming?.messageId===item.id?privateIncoming.messageId:item.id===employee?.lastReply?.itemId?employee.lastReply.id:undefined} /></Fragment>}/>
+          <MessageViewport key={employee?.id??active.id} items={displayItems} scrollRef={transcript} apiRef={messageViewport} enabled={messageMode} following={()=>transcriptScroll.current.follow} onProgrammaticScroll={top=>{transcriptScroll.current.targetTop=top}} renderItem={(item) => <Fragment key={item.id}>{messageMode&&dateMarkers.has(item.id)&&<MessageDate value={dateMarkers.get(item.id)!}/>}{messageMode&&unreadEntry.key===employee?.id&&unreadEntry.id===item.id&&!messenger.state.messages[messageKey(conversationKey('employee',employee!.id),item.id)]?.hidden&&<UnreadDivider reply/>}<Turn item={item} bubbleGroup={messageMode?bubbleGroups.get(item.id):undefined} onReply={messageMode?chooseReply:undefined} conversationEmployee={employee?.id} requestAuthor={item.role==='user'&&item.author?.kind==='agent'?authorNames[item.author.employeeId]??uiText('Former teammate'):undefined} replyAuthor={item.role==='user'&&item.reply?replyAuthor(item.reply,employee?.title??uiText('Teammate'),authorNames):undefined} messageEmployee={messageMode?employee?.id:undefined} messageAuthor={employee?.title} timestamp={messageMode?messageTime(item,employee?.lastReply):undefined} replyId={messageMode&&privateIncoming?.messageId===item.id?privateIncoming.messageId:item.id===employee?.lastReply?.itemId?employee.lastReply.id:undefined} /></Fragment>}/>
           {messageMode&&employee&&active.busy&&!!active.currentTask?.directMessageId&&!active.approvals?.length&&<MessageWorking employee={employee}/>}
           {!messageMode&&active.error && <div className="error">{active.error}</div>}
         </div></MessageGalleryContext.Provider>
         {messageMode&&<QuoteSelection container={transcript} messages={quoteSources} identity={employee?.id} onQuote={(id,quote)=>{const item=active.items.find(item=>item.id===id);if(item)chooseReply(item,quote)}}/>}
-        <div className="composer" onDragOver={event=>{if(messageMode&&Array.from(event.dataTransfer.items).some(item=>item.kind==='file')){event.preventDefault();event.dataTransfer.dropEffect='copy'}}} onDrop={event=>{if(!messageMode)return;const files=Array.from(event.dataTransfer.files);if(files.length){event.preventDefault();event.stopPropagation();void pasteImages(files)}}}>
+        <div className="composer" onDragOver={event=>{if(Array.from(event.dataTransfer.items).some(item=>item.kind==='file')){event.preventDefault();event.dataTransfer.dropEffect=liveActive?'copy':'none'}}} onDrop={event=>{const files=Array.from(event.dataTransfer.files);if(files.length){event.preventDefault();event.stopPropagation();if(liveActive)void pasteImages(files)}}}>
           {activeSendRecovery&&<div className="private-send-recovery" role="alert"><p>{sendRecovery.error}</p><button onClick={()=>void send(input,true)}>{uiText('Send as a new request')}</button></div>}
           {messageMode&&employee&&messenger.navigationReturn?.viewing===conversationKey('employee',employee.id)?<button className="message-jump-latest message-return-reply" onClick={()=>void messenger.navigate(messenger.navigationReturn!.from,undefined,conversationKey('employee',employee.id))}><Icon name="arrow-left"/> {uiText('Back to reply')}</button>:messageMode&&returnToMessage&&employee?<button className="message-jump-latest message-return-reply" onClick={()=>{messenger.setJump({conversation:conversationKey('employee',employee.id),id:returnToMessage});setReturnToMessage(undefined)}}><Icon name="arrow-left"/> {uiText('Back to reply')}</button>:messageMode&&awayFromLatest&&<button className="message-jump-latest" onClick={()=>{transcriptScroll.current.follow=true;scrollToLatest();if(messageMode)void privateBottomError.acknowledge();setAwayFromLatest(false)}}><Icon name="arrow-down"/>  {uiText("Latest messages")}</button>}
           {replyTo&&employee&&<ReplyPreview reply={selectedReply} author={selectedReply?replyAuthor(selectedReply,employee.title,authorNames):uiText('Original message')} unavailable={crossReference.loading?uiText('Loading quoted message…'):replyOrigin.conversation&&crossReference.error?uiText(crossReference.error):replySource&&replyQuote&&!selectedReply?uiText('Selected text changed. Choose a new quote.'):undefined} onNavigate={selectedReply?()=>replyOrigin.conversation?void messenger.navigate({conversation:replyOrigin.conversation,id:replyTo,quote:replyQuote},undefined,conversationKey('employee',employee.id)):messenger.setJump({conversation:conversationKey('employee',employee.id),id:replyTo,quote:replyQuote}):undefined} onElsewhere={selectedReply?()=>messenger.setReplyTarget({conversation:replyOrigin.conversation??conversationKey('employee',employee.id),id:replyTo,quote:replyQuote,text:selectedReply.text,images:(selectedReply.images?.length??selectedReply.omittedImages??0)+(selectedReply.files?.length??selectedReply.omittedFiles??0)}):undefined} onCancel={cancelReply}/>}
           {employee&&<DraftFiles conversation={conversationKey('employee',employee.id)} images={images} files={files} onRemove={removeAttachment}/>}<AttachmentTransfers uploads={uploads}/>
-          {!!active.pendingMessages?.length&&<div className="pending-messages" aria-label={wording('Queued messages','待发送消息')}>{active.pendingMessages.map(message=>{const source=active.items.find(item=>item.id===message.replyTo),reference=message.crossReply??(source?messageReply(source):null);return <div key={message.id}><span>{message.replyTo&&<small className="pending-message-reply"><Icon name="reply"/>{uiText('Replying to {0}',[reference?replyAuthor(reference,employee?.title??uiText('Teammate'),authorNames):uiText('Original message')])}</small>}{message.text||uiText('{0} attachments',[(message.images?.length??0)+(message.files?.length??0)])}</span><button aria-label={wording('Cancel queued message','取消排队')} onClick={()=>void act('session.dequeue',{id:active.id,messageId:message.id})}>×</button></div>})}</div>}
+          <TaskQueue key={active.id} messages={active.pendingMessages} replyLabel={message=>{const source=active.items.find(item=>item.id===message.replyTo),reference=message.crossReply??(source?messageReply(source):null);return reference?uiText('Replying to {0}',[replyAuthor(reference,employee?.title??uiText('Teammate'),authorNames)]):uiText('Reply attached')}} onRemove={async messageId=>{try{await api.call('session.dequeue',{id:active.id,messageId})}finally{await refresh(true,true)}}}/>
           {!!commands.length && <div className="menu commands" role="listbox" aria-label={wording('Slash commands','斜杠命令')}><div className="commands-heading"><span>{wording('Slash commands','斜杠命令')}</span><span>{wording('↑ ↓ Navigate · Enter run · Tab complete','↑ ↓ 选择 · Enter 执行 · Tab 补全')}</span></div>{commands.map((c, i) => <button key={c.name} role="option" aria-selected={i===cmdIndex} className={`menu-item ${i === cmdIndex ? 'hover' : ''}`} onClick={()=>{if(['model','effort','permissions'].includes(c.name)||!c.argumentHint)void send('/'+c.name);else setInput('/'+c.name+' ');composer.current?.focus()}}><span className="menu-name">/{c.name}</span><span className="menu-desc">{c.description}</span></button>)}</div>}
-          <div className={`composer-box${active.busy?' is-busy':''}`}>{messageMode&&<><input ref={imageInput} type="file" multiple hidden aria-label={uiText("Choose attachments")} onChange={event=>{const files=[...(event.target.files??[])];event.target.value='';void pasteImages(files)}}/><button className="message-attach" disabled={!liveActive} aria-label={uiText("Attach files")} title={uiText("Attach files")} onClick={()=>imageInput.current?.click()}><Icon name="attach"/></button>{employee&&<VoiceRecorder key={employee.id} conversation={conversationKey('employee',employee.id)} disabled={!liveActive||images.length+files.length+uploads.jobs.length>=16} onRecorded={file=>uploads.add([file])}/>}</>}<textarea ref={composer} disabled={!liveActive} value={input} rows={messageMode?1:3} placeholder={liveActive?uiText("Message {0}…",[active.title]):wording('Connect to the workspace to send a message','连接工作目录后即可发送消息')} onChange={event=>changeInput(event.target.value)} onPaste={event=>{const files=Array.from(event.clipboardData.items).filter(item=>item.kind==='file').map(item=>item.getAsFile()).filter((file):file is File=>!!file);if(files.length){event.preventDefault();void pasteImages(files)}}} onKeyDown={(e) => {
+          <div className={`composer-box task-composer${active.busy?' is-busy':''}`}><textarea ref={composer} disabled={!liveActive} value={input} rows={1} placeholder={liveActive?uiText("Message {0}…",[active.title]):wording('Connect to the workspace to send a message','连接工作目录后即可发送消息')} onChange={event=>changeInput(event.target.value)} onPaste={event=>{const files=Array.from(event.clipboardData.items).filter(item=>item.kind==='file').map(item=>item.getAsFile()).filter((file):file is File=>!!file);if(files.length){event.preventDefault();void pasteImages(files)}}} onKeyDown={(e) => {
             if(e.nativeEvent.isComposing)return
             if(e.key==='Escape'&&commands.length){e.preventDefault();e.stopPropagation();setInput('');return}
             if (commands.length && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter'].includes(e.key) && !e.shiftKey) {
@@ -422,7 +434,7 @@ export default function App() {
               else if (e.key === 'ArrowUp') setCmdIndex((i) => (i + commands.length - 1) % commands.length)
               else { const c = commands[cmdIndex];if(e.key==='Enter'&&(input==='/'+c.name||c.aliases?.includes(input.slice(1))||!c.argumentHint))void send(input==='/'+c.name?input:'/'+c.name);else setInput('/'+c.name+(c.argumentHint?' ':'')) }
             } else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() }
-          }} />{active.busy ? <><button className="send-btn steer" disabled={!ENGINE_DEFINITIONS[active.engine].capabilities.steer||!input.trim()||!!images.length||!!files.length||uploads.pending||!!replyTo} onClick={async()=>{const text=input;if(await act(messageMode?'direct.send':'session.steer',messageMode?{employee:employee!.id,text,mode:'steer',clientMessageId:crypto.randomUUID()}:{id:active.id,text,sourceView:inputSource})){setInput('');if(employee)delete drafts.current[employee.id]}}}>{wording('Steer','追加')}</button><button className="send-btn enqueue" disabled={uploads.pending||crossReference.loading||!!(replyTo&&!selectedReply)||!input.trim()&&!images.length&&!files.length} onClick={()=>void send()}>{wording('Queue','排队')}</button><button className="send-btn stop" onClick={() => void stop()}>{uiText("■ Stop")}</button></> : <button className="send-btn" disabled={!liveActive||uploads.pending||crossReference.loading||!!(replyTo&&!selectedReply)||(!input.trim()&&!images.length&&!files.length)} onClick={() => void send()} aria-label={uiText("Send message")} title={uiText("Send message")}>{messageMode?<Icon name="arrow-up"/>:"↑"}</button>}</div>
+          }} /><div className="composer-bar"><div className="composer-utilities"><input ref={imageInput} type="file" multiple hidden aria-label={uiText("Choose attachments")} onChange={event=>{const files=[...(event.target.files??[])];event.target.value='';void pasteImages(files)}}/><button className="message-attach" disabled={!liveActive} aria-label={uiText("Attach files")} title={uiText("Attach files")} onClick={()=>imageInput.current?.click()}><Icon name="attach"/></button>{messageMode&&employee&&<VoiceRecorder key={employee.id} conversation={conversationKey('employee',employee.id)} disabled={!liveActive||images.length+files.length+uploads.jobs.length>=16} onRecorded={file=>uploads.add([file])}/>}</div><ComposerActions busy={active.busy} disabled={!liveActive||!!sendPending[privateDraftKey(employee?.id??active.id)]||uploads.pending||crossReference.loading||!!(replyTo&&!selectedReply)||(!input.trim()&&!images.length&&!files.length)} pending={sendPending[privateDraftKey(employee?.id??active.id)]} stopping={stopping} queueCount={active.pendingMessages?.length} steer={ENGINE_DEFINITIONS[active.engine].capabilities.steer?{reason:images.length||files.length?uiText('Queue attachments as a separate task'):replyTo?uiText('Queue replies as a separate task'):uploads.pending?uiText('Wait for attachments to finish uploading'):!input.trim()?uiText('Write instructions to add to the running task'):undefined,send:()=>void send(input,false,true)}:undefined} onSend={()=>void send()} onStop={()=>void stop()}/></div></div>
           <div className="composer-foot">{messageMode&&<ComposerTools input={composer} value={input} onChange={changeInput} disabled={!liveActive}/>}{!messageMode&&<button className="slash-trigger" aria-label={wording('Open slash commands','打开斜杠命令')} title={replyTo?uiText('Cancel the reply before running a command.'):undefined} disabled={!liveActive||!!replyTo} onClick={()=>{setInput('/');composer.current?.focus()}}>{wording('/ Commands','/ 命令')}</button>}<span>{active.busy ? <span className="status-line"><span className="spinner" />{active.approvals?.length ? uiText("Waiting for permission") : messageMode?uiText("Working…"):active.activity || uiText("Working…")}</span> : uiText("Enter to send · Shift Enter for a new line")}</span><span>{ENGINE_DEFINITIONS[active.engine].label} · {active.group || uiText("Independent workspace")}</span></div>
         </div>
         </ConversationBody>}
@@ -432,7 +444,7 @@ export default function App() {
     </div>
   const audioTitle=useCallback((ref:string)=>{const [kind,id]=ref.split(':');return kind==='group'?chatCatalog.groups.find(group=>group.id===id)?.name??uiText('Former group'):store.sessions.find(card=>card.id===id)?.title??uiText('Former teammate')},[store.sessions,chatCatalog.groups])
   return <AvatarCatalogContext.Provider value={avatarCatalog}><MessengerContext.Provider value={messenger}><AudioPlaybackProvider titleFor={audioTitle} onReveal={track=>{messenger.setLibrary(null);void messenger.navigate({conversation:track.conversation,id:track.messageId})}}><div className={`app in-office ${view.pluginId?'in-plugin':''} ${messageMode?'in-messages':''}`} data-resizing={sidebarDraft!==undefined||assetDrawerDraft!==undefined} style={{'--shared-width':view.shared?`max(260px,min(${assetDrawerDraft??store.preferences?.assetDrawerWidth??320}px,calc(100vw - 360px)))`:'0px','--directory-width':`clamp(56px, ${sidebarDraft??store.preferences?.sidebarWidth??DEFAULT_PREFERENCES.sidebarWidth}px, 96px)`} as CSSProperties}>
-    <HomeView underHeader={<AudioDock/>} groupUnread={chatCatalog.groups.filter(group=>group.unread).length} store={store} view={view} interactions={managementActivity.interactions} activities={activities} busyIds={busyIds} disconnectedIds={disconnectedIds} onResize={setSidebarDraft} assetWidth={assetDrawerDraft??store.preferences?.assetDrawerWidth??320} onAssetResize={setAssetDrawerDraft} onOpen={showEmployee} act={act}>
+    <HomeView underHeader={<AudioDock/>} groupUnread={chatCatalog.groups.filter(group=>group.unread).length} sessions={sessions} store={store} view={view} interactions={managementActivity.interactions} activities={activities} busyIds={busyIds} disconnectedIds={disconnectedIds} onResize={setSidebarDraft} assetWidth={assetDrawerDraft??store.preferences?.assetDrawerWidth??320} onAssetResize={setAssetDrawerDraft} onOpen={showEmployee} act={act}>
       {messageMode?<MessageView store={store} channels={channelCatalog.channels} channelId={view.channelId} sourceId={view.sourceId} onChannel={(id,sourceId)=>void act('view.open',{kind:'messages',channelId:id,...(sourceId?{sourceId}:{})})} groups={chatCatalog.groups} groupError={chatCatalog.error} onRefresh={()=>{void chatCatalog.refresh();void channelCatalog.refresh()}} groupId={view.chatId} onGroup={id=>void act('view.open',{kind:'messages',chatId:id})} sessions={sessions} selectedId={view.employee} drafts={drafts.current} onNew={()=>void act('view.open',{kind:'employee'})} onOpen={card=>void act('view.open',{kind:employeeReady(card)?'messages':'initialization',employee:card.id})}>{view.channelId?(channelCatalog.channels.find(channel=>channel.id===view.channelId)?<ChannelConversation key={view.channelId+'/'+(view.sourceId??'')} sourceId={view.sourceId} store={store} channel={channelCatalog.channels.find(channel=>channel.id===view.channelId)!} onBack={closeConversation}/>:<div className="message-welcome"><h2>{channelCatalog.ready?uiText('Channel unavailable'):uiText('Loading channel…')}</h2><p>{channelCatalog.error}</p><button onClick={closeConversation}>{uiText('Back to conversations')}</button></div>):view.chatId?(chatCatalog.groups.find(group=>group.id===view.chatId)?<GroupConversation key={view.chatId} group={chatCatalog.groups.find(group=>group.id===view.chatId)!} store={store} sessions={sessions} drafts={groupDrafts.current} onBack={closeConversation} onPrivate={id=>void act('view.open',{kind:'messages',employee:id})}/>:<div className="message-welcome"><h2>{chatCatalog.ready?uiText("Group unavailable"):uiText("Loading group…")}</h2><p>{chatCatalog.error}</p><button onClick={closeConversation}>{uiText("Back to conversations")}</button></div>):conversation||undefined}</MessageView>:view.kind==='plan'?<PlanView store={store} view={view} act={act}/>:undefined}
     </HomeView>
     {!messageMode&&conversation}

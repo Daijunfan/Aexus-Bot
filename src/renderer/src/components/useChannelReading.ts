@@ -24,7 +24,7 @@ export function useChannelReading(id:string,root:RefObject<HTMLDivElement|null>,
   })
   refreshRef.current=()=>{for(const entry of wanted)pending.add(entry);void refresh()}
   if(pending.size)void refresh()
-  const off=api.onEvent(event=>{if(event.channel!=='channel:changed'||event.payload.kind!=='reads'||!event.payload.channelIds?.includes(id))return;for(const entry of event.payload.entryIds??wanted)if(wanted.has(entry))pending.add(entry);if(pending.size)void refresh()})
+  const off=api.onEvent(event=>{if(event.channel==='client:connected'){for(const entry of wanted)pending.add(entry);void refresh();return}if(event.channel!=='channel:changed'||event.payload.kind!=='reads'||!event.payload.channelIds?.includes(id))return;for(const entry of event.payload.entryIds??wanted)if(wanted.has(entry))pending.add(entry);if(pending.size)void refresh()})
   return()=>{alive=false;clearTimeout(retry);off()}
  },[id,key])
  const ready=entryIds.every(entry=>entries.has(entry))

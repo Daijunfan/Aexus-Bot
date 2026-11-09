@@ -7,6 +7,7 @@ import {WORKSPACE_FILE_PREFIX,sharedUploadNotice} from '../shared/conversation-w
 import {removeIndexedConversation} from './message-index-client'
 import {SingleFlight} from './single-flight'
 import {nextDelivery,routeRecipients} from './delivery'
+import {transcriptItems} from './transcripts'
 import {fileVersion} from './read-cache'
 import fs from 'node:fs'
 import {workspaceFiles} from './files'
@@ -20,9 +21,9 @@ import {authorize,callerEmployee,requestContext,delegationFor,validateDelegation
 import {employeeReady} from '../shared/types'
 import {taskViewId} from './task-view'
 import type {Delegation,PrincipalRef} from '../shared/management'
-import {GROUP_PUBLISH_POLICY,effectiveChatMute,emptyAgentPost,type ChatGroup,type ChatGroupView,type ChatMessage,type ChatDelivery,type ChatTaskContext,type ChatAcknowledgment,type ChatAcknowledgmentPolicy} from '../shared/chat-groups'
+import {GROUP_PUBLISH_POLICY,retryableChatDelivery,effectiveChatMute,emptyAgentPost,type ChatGroup,type ChatGroupView,type ChatMessage,type ChatDelivery,type ChatTaskContext,type ChatAcknowledgment,type ChatAcknowledgmentPolicy} from '../shared/chat-groups'
 export {effectiveChatMute} from '../shared/chat-groups'
-import {directory,indexFile,catalog,groupId,historyFile,messages,advanceGroupRead,emitChatChange as emit,type Catalog} from './chat-group-store'
+import {directory,indexFile,catalog,groupId,historyFile,messages,advanceGroupRead,emitChatChange as emit,type Catalog,type StoredChatGroup} from './chat-group-store'
 import {recordGroupReply,acknowledgeGroupReplies} from './reply-receipts'
 export {setChatEmitter} from './chat-group-store'
 const idString=(value:unknown,label:string)=>{if(typeof value!=='string'||!value.trim()||value!==value.trim())throw Error('Provide a valid '+label);return value}
@@ -35,7 +36,8 @@ function requireGroup(id:unknown,administrative=false){
 }
 function project(group:ChatGroup):ChatGroupView{
  const cards=readStore().sessions.filter(card=>!card.deleting&&group.memberIds.includes(card.id))
- return {...group,memberIds:cards.map(card=>card.id),members:cards.map(card=>({conversationRole:groupRole(group,card.id),id:card.id,title:card.title,group:card.group,managementRole:card.managementRole??'employee',avatar:card.avatar,engine:card.engine,mutedUntil:effectiveChatMute(group,card.id)})),unread:group.lastIncomingSequence>group.readSequence}
+ const {creation,...value}=group as StoredChatGroup
+ return {...value,memberIds:cards.map(card=>card.id),members:cards.map(card=>({conversationRole:groupRole(group,card.id),id:card.id,title:card.title,group:card.group,managementRole:card.managementRole??'employee',avatar:card.avatar,engine:card.engine,mutedUntil:effectiveChatMute(group,card.id)})),unread:group.lastIncomingSequence>group.readSequence}
 }
 function mutateGroup(id:string,change:(group:ChatGroup)=>void){
  const store=catalog(),group=store.groups.find(group=>group.id===id);if(!group)throw Error('Unknown chat group')
@@ -52,12 +54,14 @@ function memberIds(input:unknown,teams:unknown=[]){
 export function listChatGroups(){authorize('chat.list');const caller=callerEmployee();return catalog().groups.filter(group=>isAppAdministrator()||!caller||group.memberIds.includes(caller.id)).map(project)}
 export function getChatGroup(id:unknown){authorize('chat.get');return project(requireGroup(id,true))}
 export function createChatGroup(args:Record<string,any>){
- authorize('chat.create');fields(args,['name','members','team','ownerId'])
+ authorize('chat.create');fields(args,['name','members','team','ownerId','clientRequestId'])
  const name=idString(args.name,'group name');if(name.length>80)throw Error('Group name is too long')
  const ids=memberIds(args.members??[],args.team===undefined?[]:[args.team]);if(!ids.length)throw Error('Choose at least one employee')
  const principal=requestContext().principal,ownerId=args.ownerId??(!isAppAdministrator(principal)&&principal.kind==='agent'?principal.employeeId:ids[0]);if(!ids.includes(ownerId))throw Error('Choose an Owner from the selected Agent members');if(!isAppAdministrator(principal)&&principal.kind==='agent'&&ownerId!==principal.employeeId)throw Error('Agent creators must be their new group Owner')
- const now=Date.now(),group:ChatGroup={id:'cg_'+randomUUID(),ownerId,adminIds:[],name,memberIds:ids,sourceTeam:args.team,createdAt:now,updatedAt:now,revision:1,readSequence:0,lastIncomingSequence:0}
- const store=catalog();store.groups.push(group);atomicJson(indexFile,store,true);emit(group.id);return project(group)
+ const store=catalog(),key=args.clientRequestId,fingerprint=createHash('sha256').update(JSON.stringify([name,ids,ownerId,args.team??null])).digest('hex')
+ if(key!==undefined){if(typeof key!=='string'||!key.trim()||key.length>160)throw Error('clientRequestId must be 1–160 characters');const previous=store.groups.find(group=>group.creation?.key===key&&JSON.stringify(group.creation.caller)===JSON.stringify(principal));if(previous){if(previous.creation!.fingerprint!==fingerprint)throw Error('clientRequestId already used with different group settings');return project(requireGroup(previous.id))}}
+ const now=Date.now(),group:StoredChatGroup={id:'cg_'+randomUUID(),ownerId,adminIds:[],name,memberIds:ids,sourceTeam:args.team,createdAt:now,updatedAt:now,revision:1,readSequence:0,lastIncomingSequence:0,...(key?{creation:{caller:principal,key,fingerprint}}:{})}
+ store.groups.push(group);atomicJson(indexFile,store,true);emit(group.id);return project(group)
 }
 export function updateChatGroup(args:Record<string,any>){
  authorize('chat.update',{id:args.id});requireConversation('group:'+args.id,'admin');fields(args,['id','name','members','addTeams','expectedRevision']);const current=requireGroup(args.id,true)
@@ -121,7 +125,7 @@ function messageText(value:unknown,hasAttachments:boolean,max:number){
  if(Array.from(value).length>max)throw Error('Message exceeds '+max+' characters; keep group updates concise')
  return value
 }
-function append(group:ChatGroup,args:Record<string,any>,targets:string[],kind:ChatMessage['kind'],broadcast=false,workTargets:string[]=[],acknowledgment=false){
+function append(group:ChatGroup,args:Record<string,any>,targets:string[],kind:ChatMessage['kind'],broadcast=false,workTargets:string[]=[],acknowledgment=false,targetViews?:Map<string,string|undefined>){
  const principal=requestContext().principal,attachments=groupAttachments(group.id,args.images,args.files)
  const text=messageText(typeof args.text==='string'?args.text:'',attachments.length>0,!isAppAdministrator(principal)?GROUP_PUBLISH_POLICY.maxCharacters:16000)
  const clientMessageId=messageKey(args.clientMessageId)
@@ -134,7 +138,7 @@ function append(group:ChatGroup,args:Record<string,any>,targets:string[],kind:Ch
  const original=args.replyTo===undefined||args.crossReply?undefined:all.find(message=>message.id===args.replyTo)
  if(args.replyTo!==undefined&&!args.crossReply&&!original)throw Error('Unknown group reply target')
  if(quote&&!args.crossReply){if(!original)throw Error('A selected quote requires a reply message');validateQuote(original.text,quote)}
- const message:ChatMessage={id:'gm_'+randomUUID(),sequence:(all.at(-1)?.sequence??0)+1,createdAt:Date.now(),author:principal,authorName:callerEmployee()?.title??'You',text,...(attachments.length?{attachments}:{}),kind,mentions:broadcast?[]:targets,...(broadcast?{broadcast:true as const}:{}),...(acknowledgment?{acknowledgmentOf:args.replyTo}:{}),deliveries:project(group).memberIds.filter(id=>principal.kind!=='agent'||id!==principal.employeeId).map(employeeId=>({employeeId,mode:workTargets.includes(employeeId)?'work':'awareness',status:'pending'})),replyTo:args.replyTo,...(args.crossReply?{reply:args.crossReply}:{}),...(quote?{replyQuote:quote}:{}),clientMessageId,fingerprint}
+ const message:ChatMessage={id:'gm_'+randomUUID(),sequence:(all.at(-1)?.sequence??0)+1,createdAt:Date.now(),author:principal,authorName:callerEmployee()?.title??'You',text,...(attachments.length?{attachments}:{}),kind,mentions:broadcast?[]:targets,...(broadcast?{broadcast:true as const}:{}),...(acknowledgment?{acknowledgmentOf:args.replyTo}:{}),deliveries:project(group).memberIds.filter(id=>principal.kind!=='agent'||id!==principal.employeeId).map(employeeId=>({employeeId,mode:workTargets.includes(employeeId)?'work':'awareness',status:'pending',...(targetViews?.get(employeeId)!==undefined?{viewId:targetViews!.get(employeeId)}:{})})),replyTo:args.replyTo,...(args.crossReply?{reply:args.crossReply}:{}),...(quote?{replyQuote:quote}:{}),clientMessageId,fingerprint}
  atomicJson(historyFile(group.id),[...all,message],true)
  if(principal.kind==='agent')recordGroupReply(principal.employeeId,{groupId:group.id,messageId:message.id,sequence:message.sequence})
  mutateGroup(group.id,value=>{value.lastMessage={id:message.id,sequence:message.sequence,text:Array.from(text||attachments.map(file=>file.name).join(', ')).slice(0,240).join(''),createdAt:message.createdAt,authorName:message.authorName,author:message.author};if(principal.kind==='agent')value.lastIncomingSequence=message.sequence})
@@ -213,7 +217,7 @@ export function updateChatDelivery(employeeId:string,context:ChatTaskContext|und
 export function chatTaskPrompt(context:ChatTaskContext|undefined,employeeId:string,delegation:Delegation|undefined,text:string,reading=false){
  if(!context)return text
  const group=catalog().groups.find(group=>group.id===context.groupId),message=messages(context.groupId).find(item=>item.id===context.messageId)
- if(!group||!group.memberIds.includes(employeeId)||!message?.deliveries.some(delivery=>delivery.employeeId===employeeId)||!delegation||!authorEquals(message.author,delegation.requestedBy))throw Error('Group membership or message routing is no longer valid')
+ if(!group||!group.memberIds.includes(employeeId)||!message?.deliveries.some(delivery=>delivery.employeeId===employeeId)||!delegation||!authorEquals(message.author,delegation.requestedBy)&&!(delegation.groupRetry?.groupId===context.groupId&&delegation.groupRetry.messageId===context.messageId))throw Error('Group membership or message routing is no longer valid')
  if(message.author.kind==='agent'&&!isAppAdministrator(message.author)&&!group.memberIds.includes(message.author.employeeId))throw Error('Group sender is no longer a member')
  // append validated this immutable quote; a later source correction must not invalidate accepted work.
  if(message.replyQuote&&!message.reply&&!messages(group.id).some(item=>item.id===message.replyTo))throw Error('Unknown group reply target')
@@ -227,11 +231,11 @@ export function chatTaskPrompt(context:ChatTaskContext|undefined,employeeId:stri
 type PrepareGroupAttachments=(employee:string,groupId:string,message:ChatMessage)=>Promise<{images:string[];files:string[]}>
 const sending=new SingleFlight<ChatMessage>()
 /** The shared lifecycle retains this source's membership, attachments and work policy. */
-function routeChatMessage(group:ChatGroup,message:ChatMessage,delegations:Map<string,Delegation>,targetViews:Map<string,string|undefined>,prepare?:PrepareGroupAttachments):Promise<ChatMessage>{
+function routeChatMessage(group:ChatGroup,message:ChatMessage,delegations:Map<string,Delegation>,targetViews:Map<string,string|undefined>,prepare?:PrepareGroupAttachments,recipientIds?:string[]):Promise<ChatMessage>{
  const caller=requestContext(),context={groupId:group.id,messageId:message.id}
  return sending.run(message.id,async()=>{
-  await routeRecipients({context,recipients:message.deliveries,concurrency:3,
-   scope:target=>({delegation:delegations.get(target.employeeId)??{requestedBy:message.author,requestId:caller.requestId,credentialHash:caller.credentialHash,groupNotice:{...context,employeeId:target.employeeId}},viewId:targetViews.get(target.employeeId)}),
+  await routeRecipients({context,recipients:message.deliveries.filter(delivery=>!recipientIds||recipientIds.includes(delivery.employeeId)),concurrency:3,
+   scope:target=>({delegation:delegations.get(target.employeeId)??{requestedBy:message.author,requestId:caller.requestId,credentialHash:caller.credentialHash,groupNotice:{...context,employeeId:target.employeeId}},viewId:targetViews.get(target.employeeId)??target.viewId}),
    validate:(id,delegation)=>{validateDelegation(delegation,id);chatTaskPrompt(context,id,delegation,message.text)},
    input:()=>({text:sharedUploadNotice(message.text,message.attachments)}),
 
@@ -240,7 +244,7 @@ function routeChatMessage(group:ChatGroup,message:ChatMessage,delegations:Map<st
   return messages(group.id).find(item=>item.id===message.id)!
  })
 }
-export async function sendChatMessage(args:Record<string,any>,prepare?:PrepareGroupAttachments):Promise<ChatMessage>{
+export async function sendChatMessage(args:Record<string,any>,prepare?:PrepareGroupAttachments,recipientIds?:string[]):Promise<ChatMessage>{
  authorize('chat.send');fields(args,['id','text','mentions','clientMessageId','viewId','replyTo','replyQuote','replyConversation','replyTextOnly','crossReply','images','files'])
  const group=project(requireGroup(args.id)),mention=args.mentions??[]
  if(mention!=='all'&&(!Array.isArray(mention)||mention.some(id=>typeof id!=='string')))throw Error('Mentions must be employee IDs or all')
@@ -263,9 +267,34 @@ export async function sendChatMessage(args:Record<string,any>,prepare?:PrepareGr
   if(!card||!employeeReady(card))throw Error('Mentioned employee is not ready: '+id)
   delegations.set(id,delegationFor(id));targetViews.set(id,taskViewId(id,card.managementRole==='governor'?args.viewId:undefined))
  }
- const appended=append(group,args,explicit,'message',broadcast,targets)
+ const appended=append(group,args,explicit,'message',broadcast,targets,false,targetViews)
  if(!appended.created)return appended.message
  return routeChatMessage(group,appended.message,delegations,targetViews,prepare)
+}
+/** Explicit recovery never republishes text/files or replays a recipient that already began a native turn. */
+export async function retryChatMessage(args:Record<string,any>){
+ authorize('chat.retry');requireAppAdministrator();fields(args,['id','messageId','employeeIds'])
+ const pending=sending.get(String(args.messageId));if(pending)await pending
+ requestContext().signal?.throwIfAborted();authorize('chat.retry');requireAppAdministrator()
+ const group=requireGroup(args.id),all=messages(group.id),message=all.find(message=>message.id===args.messageId)
+ if(group.bot)throw Error('External Worker delivery uses its native send receipt')
+ if(!message)throw Error('Unknown group message')
+ if(args.employeeIds!==undefined&&(!Array.isArray(args.employeeIds)||!args.employeeIds.length||args.employeeIds.some(id=>typeof id!=='string'||!message.deliveries.some(delivery=>delivery.employeeId===id))))throw Error('Choose original message recipients')
+ const selected=message.deliveries.filter(delivery=>(!args.employeeIds||args.employeeIds.includes(delivery.employeeId))&&retryableChatDelivery(delivery))
+ const retried:string[]=[],skipped:string[]=[],delegations=new Map<string,Delegation>(),views=new Map<string,string|undefined>(),caller=requestContext(),context={groupId:group.id,messageId:message.id}
+ for(const delivery of selected){
+  const id=delivery.employeeId,seen=transcriptItems(id).some(item=>item.role==='user'&&item.context?.origin?.kind==='group'&&item.context.origin.id===group.id&&item.context.origin.messageId===message.id)
+  if(!group.memberIds.includes(id)||seen){skipped.push(id);continue}
+  const delegation:Delegation={...(delivery.mode==='awareness'?{requestedBy:caller.principal,requestId:caller.requestId,credentialHash:caller.credentialHash,groupNotice:{...context,employeeId:id}}:delegationFor(id)),groupRetry:context}
+  validateDelegation(delegation,id);chatTaskPrompt(context,id,delegation,message.text)
+  if(delivery.mode!=='awareness')views.set(id,taskViewId(id,delivery.viewId,true))
+  delegations.set(id,delegation);retried.push(id)
+ }
+ if(!retried.length)return {message,retriedEmployeeIds:retried,skippedEmployeeIds:skipped}
+ message.deliveries=message.deliveries.map(delivery=>retried.includes(delivery.employeeId)?{employeeId:delivery.employeeId,mode:delivery.mode,viewId:delivery.viewId,status:'pending',retry:{at:Date.now(),by:caller.principal,attempt:(delivery.retry?.attempt??0)+1,previousError:delivery.error}}:delivery)
+ atomicJson(historyFile(group.id),all,true);emit(group.id,undefined,message.id)
+ const result=await routeChatMessage(group,message,delegations,views,undefined,retried)
+ return {message:result,retriedEmployeeIds:retried,skippedEmployeeIds:skipped}
 }
 /** A group storage failure must not prevent private history persistence or engine cleanup. */
 export function recordChatDelivery(...args:Parameters<typeof updateChatDelivery>){

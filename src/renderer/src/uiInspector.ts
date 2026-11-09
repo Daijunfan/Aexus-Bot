@@ -116,7 +116,7 @@ export function installUiInspector(answer: Answer): void {
     try {
       switch (op) {
         case 'flush':
-          await flushPlugins()
+          await flushPlugins(args)
           return answer({id,data:{saved:true}})
         case 'view':
           return answer({ id, data: snapshot() })

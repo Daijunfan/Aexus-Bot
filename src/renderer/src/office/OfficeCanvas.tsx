@@ -1,3 +1,4 @@
+import {separateRooms,moveTeamRooms} from '../../../shared/office-layout'
 import {translate as uiText,useI18n,interfaceLocale,interfaceLanguage} from '../i18n'
 import {api} from '../api'
 import {cachedConnectionPlan} from './routing-cache'
@@ -5,20 +6,20 @@ import {CanvasMotion} from './motion'
 import {ConnectionLayer} from './ConnectionLayer'
 import {officeConnectionPlan,connectionGeometryKey} from '../../../shared/office-connections'
 import {ConnectorEditor,ConnectorSelection,type ConnectionSelection} from './ConnectorEditor'
-import {connectorKey,rerouteTeamConnections,type ConnectorSetting} from '../../../shared/connector'
+import {connectorKey,rerouteTeamConnections,rerouteEmployeeConnections,type ConnectorSetting} from '../../../shared/connector'
 import {crossTeamRoutes} from '../../../shared/cross-team-routing'
 import type {ManagementInteraction} from '../../../shared/management'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { teamSettings,type ActivityPreview,type Store,type StoredSession } from '../../../shared/types'
 import type {PluginDescriptor} from '../../../shared/plugins'
 import type {RemoteHealth} from '../../../shared/remote'
-import { DEFAULT_VIEW, EMPLOYEE_SIZE, fitViewport, constrainEmployee, planOffice, planRoom, snapEmployee, roomExtent, resizeRoom, resizeOccupiedRoom, type ResizeEdge, type SnapGuide, type PlannedRoom, type Point, type RoomBounds, type Viewport } from '../../../shared/canvas'
+import { EMPLOYEE_SIZE, planOffice,planRoom,roomExtent,TEAM_SEAT_STEP,minimumTeamSeating,resizeTeamSeating,teamBoardCapacity,type TeamPlacement,type TeamSeating,type PlannedRoom,type Point,type Viewport } from '../../../shared/canvas'
 import {DEFAULT_PREFERENCES} from '../../../shared/preferences'
 import { CanvasRoom } from './CanvasRoom'
-import {CanvasOverview} from './CanvasOverview'
+import { CanvasOverview } from './CanvasOverview'
 import '../styles/company-canvas.css'
 
-type Drag = { kind:'team'|'employee'|'resize'|'pan'; name:string; id?:string; edge?:ResizeEdge; resized?:RoomBounds; start:Point; origin:Point; room?:PlannedRoom; moved:boolean; x:number; y:number; rooms:PlannedRoom[]; sequence:number; guide?:SnapGuide;openOnClick?:boolean }
+type Drag={pointerId:number;pointer?:Point;kind:'employee'|'team'|'resize';name:string;id?:string;edge?:'e'|'s'|'se';start:Point;origin:Point;zoom:number;scale:number;scroll:Point;offset:Point;room:PlannedRoom;moved:boolean;seat?:number;placement?:TeamPlacement;seating?:TeamSeating;openOnClick?:boolean;rooms:PlannedRoom[];sequence:number}
 export type CanvasSelection={mode:'employee'|'team';ids:Set<string>;toggle:(id:string)=>void}
 type Props={obscured?:boolean;selection?:CanvasSelection;interactions:ManagementInteraction[];activities:Record<string,ActivityPreview>;cloudStatus:Record<string,RemoteHealth>;plugins:PluginDescriptor[];store:Store;busyIds:Set<string>;disconnectedIds:Set<string>;act:(cmd:string,args?:Record<string,unknown>)=>Promise<any>;onOpen:(card:StoredSession)=>void;onEdit:(name:string)=>void;onView:(view:Viewport,size:Point)=>void}
 export const OfficeCanvas=memo(function OfficeCanvas({obscured=false,selection,store,busyIds,disconnectedIds,activities,interactions:liveInteractions,cloudStatus,plugins,act,onOpen,onEdit,onView}:Props) {
@@ -34,55 +35,53 @@ export const OfficeCanvas=memo(function OfficeCanvas({obscured=false,selection,s
   useEffect(()=>{if(selection)closeConnection()},[selection?.mode,closeConnection])
   const preferences={...DEFAULT_PREFERENCES,...store.preferences}
   const selectedView=store.teamViews?.find(item=>item.id===store.activeTeamViewId)
-  const savedViewport=selectedView?selectedView.viewport:store.viewport
   const viewport=useRef<HTMLDivElement>(null)
-  const [size,setSize]=useState({x:1200,y:800})
-  const [view,setView]=useState(savedViewport??DEFAULT_VIEW)
-  const viewRef=useRef(view), dragRef=useRef<Drag|null>(null), space=useRef(false)
+  const [size,setSize]=useState({x:1200,y:800}),[scroll,setScroll]=useState({x:0,y:0})
+  const dragRef=useRef<Drag|null>(null),sequence=useRef(0),frame=useRef(0)
   const [draft,setDraft]=useState<Drag|null>(null)
-  const [panning,setPanning]=useState(false)
-  const [settled,setSettled]=useState(0)
-  const positioned=useRef(false),sequence=useRef(0),viewSequence=useRef(0),viewPending=useRef(false)
-  const frame=useRef(0),cameraFrame=useRef(0)
-  useEffect(()=>()=>{cancelAnimationFrame(frame.current);cancelAnimationFrame(cameraFrame.current)},[])
-  const pendingCamera=useRef<(Viewport&{viewId:string})|undefined>(undefined)
-  const saveTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined)
-  const updateView=useCallback((next:Viewport,save=true)=>{
-    viewRef.current=next;cancelAnimationFrame(cameraFrame.current);cameraFrame.current=requestAnimationFrame(()=>setView(viewRef.current))
-    if(save) {const request={...next,viewId:store.activeTeamViewId??'all'};pendingCamera.current=request;const token=++viewSequence.current;viewPending.current=true;clearTimeout(saveTimer.current);saveTimer.current=setTimeout(()=>{pendingCamera.current=undefined;void act('canvas.set',request).finally(()=>{if(token===viewSequence.current){viewPending.current=false;setSettled(v=>v+1)}})},250)}
-  },[act,store.activeTeamViewId])
-  useEffect(()=>{if(savedViewport&&!dragRef.current&&!viewPending.current)updateView(savedViewport,false)},[savedViewport?.x,savedViewport?.y,savedViewport?.zoom,updateView,settled])
-  useEffect(()=>{const el=viewport.current!;const observer=new ResizeObserver(()=>setSize({x:el.clientWidth,y:el.clientHeight}));observer.observe(el);return()=>{observer.disconnect();clearTimeout(saveTimer.current);if(pendingCamera.current){void act('canvas.set',pendingCamera.current);pendingCamera.current=undefined}}},[])
-  useEffect(()=>onView(view,size),[view,size,onView])
+  useEffect(()=>()=>cancelAnimationFrame(frame.current),[])
+  useLayoutEffect(()=>{const el=viewport.current!,measure=()=>setSize({x:el.clientWidth,y:el.clientHeight}),observer=new ResizeObserver(measure);measure();observer.observe(el);return()=>observer.disconnect()},[])
+  useEffect(()=>{const el=viewport.current!;const wheel=(event:WheelEvent)=>{if(event.ctrlKey||event.metaKey||dragRef.current?.kind==='resize')event.preventDefault()};el.addEventListener('wheel',wheel,{passive:false});return()=>el.removeEventListener('wheel',wheel)},[])
   const allRooms=useMemo(()=>planOffice(store),[store.groups,store.sessions,store.rooms])
-  const baseRooms=useMemo(()=>selectedView?allRooms.filter(room=>selectedView.teams.includes(room.name)):allRooms,[allRooms,selectedView?.teams])
-  useEffect(()=>{
-    if(positioned.current)return
-    if(savedViewport){positioned.current=true;return}
-    if(selectedView&&baseRooms.length){positioned.current=true;const el=viewport.current;updateView(fitViewport(baseRooms,el?.clientWidth||size.x,el?.clientHeight||size.y),false);return}
-    const occupied=baseRooms.find(room=>room.employees.length)
-    if(occupied){positioned.current=true;updateView({x:70-occupied.bounds.x,y:110-occupied.bounds.y,zoom:1},false)}
-  },[baseRooms,savedViewport,selectedView,size,updateView])
-  const rooms=useMemo(()=>{
-    if(!draft || draft.kind==='pan')return baseRooms
-    const preview=draft.rooms.map(room=>{
+  const scale=draft?draft.zoom:(viewport.current?.offsetWidth??size.x)<450?.44:.52
+  const selectedRooms=useMemo(()=>selectedView?allRooms.filter(room=>selectedView.teams.includes(room.name)):allRooms,[allRooms,selectedView?.teams])
+  const baseRooms=selectedRooms
+  const resolvedRooms=useMemo(()=>{
+    if(!draft?.moved)return allRooms
+    if(draft.kind==='team'&&draft.placement)return moveTeamRooms(allRooms,draft.name,draft.placement)
+    const changed=allRooms.map(room=>{
       if(room.name!==draft.name)return room
-      if(draft.kind==='team')return {...room,bounds:{...room.bounds,x:draft.x,y:draft.y,pinned:true}}
-      if(draft.kind==='resize')return resizeOccupiedRoom(room,draft.resized??room.bounds)
-      const cards=room.employees.map(({card,position})=>({...card,position:draft.kind==='employee'&&card.id===draft.id?{x:draft.x,y:draft.y}:position}))
-      const bounds={...room.bounds,arrangement:'free' as const}
-      return planRoom(room.name,cards,bounds)
+      if(draft.kind==='resize'&&draft.seating)return resizeTeamSeating(room,draft.seating)
+      if(draft.kind!=='employee'||!draft.seat)return room
+      const current=room.employees.find(entry=>entry.card.id===draft.id)!.card.seatNumber
+      const cards=room.employees.map(({card})=>({...card,seatNumber:card.id===draft.id?draft.seat:card.seatNumber===draft.seat?current:card.seatNumber}))
+      return {...planRoom(room.name,cards,room.bounds,room.seating),slot:room.slot,placement:room.placement}
     })
-    return preview
-  },[baseRooms,draft])
-  const routingRooms=useMemo(()=>allRooms.map(room=>rooms.find(preview=>preview.name===room.name)??room),[allRooms,rooms])
+    return draft.kind==='resize'?separateRooms(changed,[draft.name]):changed
+  },[allRooms,draft])
+  const rooms=useMemo(()=>resolvedRooms.filter(room=>baseRooms.some(value=>value.name===room.name)),[resolvedRooms,baseRooms]),routingRooms=resolvedRooms
+  const [area,setArea]=useState({minX:-450,minY:-570,maxX:1210,maxY:1281})
+  const bounds={minX:Math.min(area.minX,...resolvedRooms.map(room=>room.bounds.x-450)),minY:Math.min(area.minY,...resolvedRooms.map(room=>room.bounds.y-570)),maxX:Math.max(area.maxX,(baseRooms[0]?.bounds.x??0)+size.x/scale,...resolvedRooms.map(room=>room.bounds.x+room.bounds.width+450)),maxY:Math.max(area.maxY,(baseRooms[0]?.bounds.y??0)+size.y/scale,...resolvedRooms.map(room=>room.bounds.y+room.bounds.height+570))}
+  useLayoutEffect(()=>setArea(previous=>previous.minX===bounds.minX&&previous.minY===bounds.minY&&previous.maxX===bounds.maxX&&previous.maxY===bounds.maxY?previous:bounds),[bounds.minX,bounds.minY,bounds.maxX,bounds.maxY])
+  const extent={x:16-bounds.minX*scale,y:18-bounds.minY*scale,width:Math.max(size.x,(bounds.maxX-bounds.minX)*scale+32),height:Math.max(size.y,(bounds.maxY-bounds.minY)*scale+36),zoom:scale}
+  const cameraOrigin=useRef<Point|undefined>(undefined),initialized=useRef(false),geometry=useRef({x:extent.x,y:extent.y});geometry.current={x:extent.x,y:extent.y}
+  useLayoutEffect(()=>{
+    const el=viewport.current!,previous=cameraOrigin.current
+    if(!initialized.current&&rooms.length&&size.x===el.clientWidth&&size.y===el.clientHeight){el.scrollLeft=extent.x+rooms[0].bounds.x*scale-16;el.scrollTop=extent.y+rooms[0].bounds.y*scale-18;initialized.current=true}
+    else if(previous){el.scrollLeft+=extent.x-previous.x;el.scrollTop+=extent.y-previous.y}
+    cameraOrigin.current={x:extent.x,y:extent.y};setScroll(previous=>previous.x===el.scrollLeft&&previous.y===el.scrollTop?previous:{x:el.scrollLeft,y:el.scrollTop})
+  },[extent.x,extent.y,rooms.length,size.x,size.y])
+  const view={x:extent.x-scroll.x,y:extent.y-scroll.y,zoom:extent.zoom}
+  useEffect(()=>onView(view,size),[view.x,view.y,view.zoom,size,onView])
   const connectorAnchors=useMemo(()=>{
     let settings=anchorDraft?{...store.connectorAnchors,[connectorKey(anchorDraft.managerId,anchorDraft.employeeId)]:anchorDraft}:store.connectorAnchors
+    if(draft?.kind==='resize'&&draft.seating)settings=rerouteEmployeeConnections(settings,draft.room.employees.map(entry=>entry.card.id))
+    if(draft?.seat)settings=rerouteEmployeeConnections(settings,[draft.id!,...(draft.room.seats?.find(seat=>seat.number===draft.seat)?.employeeId?[draft.room.seats.find(seat=>seat.number===draft.seat)!.employeeId!]:[])])
     for(const room of routingRooms){const before=allRooms.find(item=>item.name===room.name)!
       if(room.bounds.x!==before.bounds.x||room.bounds.y!==before.bounds.y)settings=rerouteTeamConnections(settings,room.name,store.sessions)
     }
     return settings
-  },[store.connectorAnchors,store.sessions,anchorDraft,routingRooms,allRooms])
+  },[store.connectorAnchors,store.sessions,anchorDraft,routingRooms,allRooms,draft])
   const visibleTeams=new Set(rooms.map(room=>room.name))
   const routingKey=connectionGeometryKey(routingRooms,store.access?.relations??[],interactions,visibleTeams,connectorAnchors)
   // Geometry and edge membership trigger A*. Activity only recolors existing paths.
@@ -92,67 +91,71 @@ export const OfficeCanvas=memo(function OfficeCanvas({obscured=false,selection,s
   const displayConnections=useMemo(()=>routing.connections.map(r=>({...r,active:!!currentInteraction(r)})),[routing,interactions])
   const connectorContext=useMemo(()=>({selected:connection,select:selectConnection}),[connection,selectConnection])
   const saveConnection=useCallback((value:ConnectorSetting)=>act('connector.set',{manager:value.managerId,employee:value.employeeId,source:value.source,target:value.target,route:value.route}),[act])
-  const zoomAt=useCallback((factor:number,x:number,y:number)=>{
-    const old=viewRef.current,zoom=Math.min(3,Math.max(.08,old.zoom*factor))
-    updateView({x:x-(x-old.x)*zoom/old.zoom,y:y-(y-old.y)*zoom/old.zoom,zoom})
-  },[updateView])
+  const begin=useCallback((kind:Drag['kind'],room:PlannedRoom,e:React.PointerEvent,id?:string,edge?:Drag['edge'])=>{
+    e.preventDefault();e.stopPropagation()
+    if(dragRef.current||e.isPrimary===false||e.button!==0||obscured||!room.name&&kind!=='employee'||selection&&(kind==='resize'||kind==='team'&&selection.mode==='employee'))return
+    closeConnection();viewport.current!.setPointerCapture(e.pointerId)
+    const origin=kind==='employee'?room.employees.find(entry=>entry.card.id===id)!.position:{x:room.bounds.x,y:room.bounds.y}
+    const drag:Drag={pointerId:e.pointerId,kind,id,edge,rooms,sequence:++sequence.current,openOnClick:!!(e.target as Element).closest('.team-title'),zoom:extent.zoom,scale:extent.zoom*viewport.current!.getBoundingClientRect().width/viewport.current!.offsetWidth,scroll:{x:viewport.current!.scrollLeft,y:viewport.current!.scrollTop},offset:{x:extent.x,y:extent.y},name:room.name,room,start:{x:e.clientX,y:e.clientY},origin,moved:false}
+    dragRef.current=drag;setDraft(drag)
+  },[rooms,closeConnection,extent.x,extent.y,extent.zoom,obscured,selection])
+  const cancelDrag=useCallback((pointerId?:number)=>{
+    const drag=dragRef.current;if(!drag||pointerId!==undefined&&pointerId!==drag.pointerId)return
+    dragRef.current=null;cancelAnimationFrame(frame.current)
+    if(viewport.current?.hasPointerCapture(drag.pointerId))viewport.current.releasePointerCapture(drag.pointerId)
+    setDraft(null)
+  },[])
   useEffect(()=>{
-    const el=viewport.current!
-    const wheel=(event:WheelEvent)=>{if((event.target as Element).closest('.connector-editor'))return;event.preventDefault();if(dragRef.current)return;const unit=event.deltaMode===1?16:event.deltaMode===2?el.clientHeight:1;if(event.ctrlKey||event.metaKey){const r=el.getBoundingClientRect();zoomAt(Math.exp(-event.deltaY*unit*.005*preferences.zoomSensitivity),event.clientX-r.left,event.clientY-r.top)}else updateView({...viewRef.current,x:viewRef.current.x-event.deltaX*unit*preferences.panSensitivity,y:viewRef.current.y-event.deltaY*unit*preferences.panSensitivity})}
-    const key=(event:KeyboardEvent)=>{
-      if(document.querySelector('[role="dialog"],[role="alertdialog"],.plugin-page') || (event.target as HTMLElement).matches('input,select,textarea'))return
-      if(event.code==='Space'){event.preventDefault();space.current=true;setPanning(true)}
-      if(event.key==='0'){event.preventDefault();updateView(fitViewport(baseRooms,el.clientWidth,el.clientHeight))}
-      if(event.key==='+'||event.key==='='){event.preventDefault();zoomAt(1.2,el.clientWidth/2,el.clientHeight/2)}
-      if(event.key==='-'){event.preventDefault();zoomAt(1/1.2,el.clientWidth/2,el.clientHeight/2)}
-    }
-    const up=(e:KeyboardEvent)=>{if(e.code==='Space'){space.current=false;setPanning(false)}}
-    el.addEventListener('wheel',wheel,{passive:false});window.addEventListener('keydown',key);window.addEventListener('keyup',up)
-    return()=>{el.removeEventListener('wheel',wheel);window.removeEventListener('keydown',key);window.removeEventListener('keyup',up)}
-  },[baseRooms,updateView,zoomAt,preferences.panSensitivity,preferences.zoomSensitivity])
-  const begin=useCallback((kind:Drag['kind'],room:PlannedRoom|undefined,e:React.PointerEvent,id?:string,edge:ResizeEdge='se')=>{
-    if(e.button!==0&&e.button!==1)return
-    closeConnection()
-    e.preventDefault();e.stopPropagation();viewport.current!.setPointerCapture(e.pointerId)
-    if(selection||space.current||e.button===1)kind='pan'
-    const origin=kind==='pan'?viewRef.current:kind==='employee'?room!.employees.find(p=>p.card.id===id)!.position:kind==='resize'?{x:room!.bounds.width,y:room!.bounds.height}:room!.bounds
-    cancelAnimationFrame(frame.current)
-    const drag:Drag={rooms,sequence:++sequence.current,openOnClick:!!(e.target as Element).closest('.team-title'),kind,name:room?.name??'',id,edge,room,start:{x:e.clientX,y:e.clientY},origin:{x:origin.x,y:origin.y},moved:false,x:origin.x,y:origin.y}
-    dragRef.current=drag;setDraft(drag);if(kind==='pan')setPanning(true)
-  },[rooms,closeConnection,!!selection])
-  const move=(e:React.PointerEvent)=>{
-    const drag=dragRef.current;if(!drag)return
-    const dx=e.clientX-drag.start.x,dy=e.clientY-drag.start.y
-    if(!drag.moved && Math.hypot(dx,dy)<5)return
-    const scale=drag.kind==='pan'?1:viewRef.current.zoom
-    const next={...drag,moved:true,x:drag.origin.x+dx/scale,y:drag.origin.y+dy/scale}
-    if(next.kind==='resize'){
-      const candidate=resizeRoom(next.room!.bounds,next.edge!,{x:dx/scale,y:dy/scale})
-      next.resized=resizeOccupiedRoom(next.room!,candidate).bounds
-    }
-    if(next.kind==='employee'){
-      const point={x:next.x,y:next.y}
-      const snapped=preferences.snapEmployees&&!e.altKey?snapEmployee(next.room!,next.id!,point,scale,drag.guide):{position:point,guide:{}}
-      const bounded=constrainEmployee(next.room!.bounds,snapped.position,{x:drag.x,y:drag.y})
-      next.x=bounded.x;next.y=bounded.y;next.guide=bounded.x===snapped.position.x&&bounded.y===snapped.position.y?snapped.guide:{}
-    }
+    const key=(event:KeyboardEvent)=>{if(event.key==='Escape'&&!event.isComposing&&dragRef.current){event.preventDefault();event.stopPropagation();cancelDrag()}}
+    const hidden=()=>{if(document.hidden)cancelDrag()},blur=()=>cancelDrag()
+    document.addEventListener('keydown',key);document.addEventListener('visibilitychange',hidden);window.addEventListener('blur',blur)
+    return()=>{document.removeEventListener('keydown',key);document.removeEventListener('visibilitychange',hidden);window.removeEventListener('blur',blur)}
+  },[cancelDrag])
+  useEffect(()=>{if(obscured||selection)cancelDrag()},[obscured,selection,cancelDrag])
+  const moveRef=useRef<(point:Point,pointer:number)=>void>(()=>{})
+  useEffect(()=>{
+    if(draft?.kind!=='team'||!draft.moved)return
+    let animation=0
+    const tick=()=>{const drag=dragRef.current,el=viewport.current;if(!drag?.pointer||drag.kind!=='team'||!el)return
+      const rect=el.getBoundingClientRect(),{x,y}=drag.pointer,left=x<rect.left+28,right=x>rect.right-28,up=y<rect.top+28,down=y>rect.bottom-28
+      if(left&&el.scrollLeft<16)setArea(area=>({...area,minX:area.minX-TEAM_SEAT_STEP.x}))
+      if(right&&el.scrollWidth-el.clientWidth-el.scrollLeft<16)setArea(area=>({...area,maxX:area.maxX+TEAM_SEAT_STEP.x}))
+      if(up&&el.scrollTop<16)setArea(area=>({...area,minY:area.minY-TEAM_SEAT_STEP.y}))
+      if(down&&el.scrollHeight-el.clientHeight-el.scrollTop<16)setArea(area=>({...area,maxY:area.maxY+TEAM_SEAT_STEP.y}))
+      const before={x:el.scrollLeft,y:el.scrollTop};el.scrollBy(left?-14:right?14:0,up?-14:down?14:0)
+      if(before.x!==el.scrollLeft||before.y!==el.scrollTop)moveRef.current(drag.pointer,drag.pointerId)
+      animation=requestAnimationFrame(tick)
+    };animation=requestAnimationFrame(tick);return()=>cancelAnimationFrame(animation)
+  },[draft?.kind,draft?.moved])
+  const movePoint=(point:Point,pointerId:number)=>{
+    const drag=dragRef.current;if(!drag||pointerId!==drag.pointerId||selection)return
+    const el=viewport.current!,pageScale=el.getBoundingClientRect().width/el.offsetWidth,offset=geometry.current
+    const dx=(point.x-drag.start.x+(el.scrollLeft-drag.scroll.x-offset.x+drag.offset.x)*pageScale)/drag.scale,dy=(point.y-drag.start.y+(el.scrollTop-drag.scroll.y-offset.y+drag.offset.y)*pageScale)/drag.scale
+    if(!drag.moved&&Math.hypot(dx,dy)*drag.scale<5)return
+    const next={...drag,moved:true,pointer:point}
+    if(drag.kind==='resize'){
+      const minimum=minimumTeamSeating(drag.room),initial=drag.room.seating!
+      next.seating={columns:Math.max(minimum.columns,Math.min(12,initial.columns+(drag.edge!=='s'?Math.round(dx/225):0))),rows:Math.max(minimum.rows,Math.min(50,initial.rows+(drag.edge!=='e'?Math.round(dy/285):0)))}
+    }else if(drag.kind==='team')next.placement={column:Math.round((drag.origin.x+dx)/TEAM_SEAT_STEP.x),row:Math.round((drag.origin.y+dy)/TEAM_SEAT_STEP.y)}
+    else{const target={x:drag.origin.x+dx,y:drag.origin.y+dy},inside=target.x>-95&&target.x<drag.room.bounds.width-95&&target.y>100&&target.y<drag.room.bounds.height-125;next.seat=inside?[...(drag.room.seats??[])].sort((a,b)=>(a.position.x-target.x)**2+(a.position.y-target.y)**2-((b.position.x-target.x)**2+(b.position.y-target.y)**2))[0]?.number:undefined}
     dragRef.current=next
-    if(next.kind==='pan')updateView({...viewRef.current,x:next.x,y:next.y})
-    else {cancelAnimationFrame(frame.current);frame.current=requestAnimationFrame(()=>setDraft(next))}
-  }
+    const unchanged=drag.moved&&(drag.kind==='team'?next.placement?.column===drag.placement?.column&&next.placement?.row===drag.placement?.row:drag.kind==='resize'?next.seating?.columns===drag.seating?.columns&&next.seating?.rows===drag.seating?.rows:next.seat===drag.seat)
+    if(unchanged)return
+    cancelAnimationFrame(frame.current);frame.current=requestAnimationFrame(()=>setDraft(next))
+  };moveRef.current=movePoint
+  const move=(event:React.PointerEvent)=>movePoint({x:event.clientX,y:event.clientY},event.pointerId)
   const finish=async(e:React.PointerEvent)=>{
-    const drag=dragRef.current;if(!drag)return
-    cancelAnimationFrame(frame.current)
-    if(viewport.current?.hasPointerCapture(e.pointerId))viewport.current.releasePointerCapture(e.pointerId)
-    dragRef.current=null;setPanning(space.current)
-    setDraft(drag)
+    const drag=dragRef.current;if(!drag||e.pointerId!==drag.pointerId)return
+    dragRef.current=null;cancelAnimationFrame(frame.current);if(viewport.current?.hasPointerCapture(e.pointerId))viewport.current.releasePointerCapture(e.pointerId)
     if(e.type==='pointercancel'){setDraft(null);return}
-    if(!drag.moved){setDraft(null);if(drag.kind==='employee')onOpen(drag.room!.employees.find(p=>p.card.id===drag.id)!.card);else if(drag.kind==='team'&&drag.openOnClick)onEdit(drag.name);return}
-    try {
-      if(drag.kind==='team')await act('room.bounds',{name:drag.name,bounds:{x:drag.x,y:drag.y}})
-      else if(drag.kind==='resize'){const {x,y,width,height}=drag.resized!;await act('room.bounds',{name:drag.name,bounds:{x,y,width,height}})}
-      else if(drag.kind==='employee')await act('card.place',{id:drag.id,x:drag.x,y:drag.y,snap:false})
-    } finally {if(sequence.current===drag.sequence)setDraft(null)}
+    if(selection){setDraft(null);selection.toggle(selection.mode==='team'?drag.name:drag.id??drag.name);return}
+    if(!drag.moved){setDraft(null);if(drag.kind==='employee')onOpen(drag.room.employees.find(entry=>entry.card.id===drag.id)!.card);else if(drag.kind==='team'&&drag.openOnClick)onEdit(drag.name);return}
+    setDraft(drag)
+    try{
+      if(drag.kind==='team'&&drag.placement)await act('room.place',{name:drag.name,...drag.placement,expectedPlacement:drag.room.placement})
+      else if(drag.kind==='resize'&&drag.seating)await act('room.bounds',{name:drag.name,...drag.seating})
+      else if(drag.kind==='employee'&&drag.seat)await act('card.place',{id:drag.id,seat:drag.seat,expectedSeating:drag.room.seating})
+    }finally{if(sequence.current===drag.sequence)setDraft(null)}
   }
   // A stable overscan window avoids rebuilding all room children for each pixel.
   const cellX=Math.floor(-view.x/view.zoom/200),cellY=Math.floor(-view.y/view.zoom/200),columns=Math.ceil(size.x/view.zoom/200),rows=Math.ceil(size.y/view.zoom/200)
@@ -162,21 +165,23 @@ export const OfficeCanvas=memo(function OfficeCanvas({obscured=false,selection,s
       {rooms.map((room,i)=>{
         const b=roomExtent(room)
         if(draft?.name!==room.name&&(b.x+b.width<visible.x||b.y+b.height<visible.y||b.x>visible.x+visible.width||b.y>visible.y+visible.height))return null
-        return <CanvasRoom selection={selection} connectorAnchors={connectorAnchors} crossRoutes={crossRoutes} interactions={interactions} key={room.name} room={room} access={store.access} index={i} design={store.rooms?.[room.name]?.design} root={store.teamRoots?.[room.name]} mode={teamSettings(store,room.name).mode} plugin={plugins.find(item=>item.id===teamSettings(store,room.name).pluginId)} pluginId={teamSettings(store,room.name).pluginId} remote={teamSettings(store,room.name).remote} health={cloudStatus[room.name]} activities={activities} busyIds={busyIds} disconnectedIds={disconnectedIds} draggingId={draft?.moved?draft.id:undefined} visible={visible}
-          onOpen={onOpen} onEdit={()=>onEdit(room.name)} onStart={(kind,e,id,edge)=>begin(kind,room,e,id,edge)} />
+        return <CanvasRoom selection={selection} connectorAnchors={connectorAnchors} crossRoutes={crossRoutes} interactions={interactions} key={room.name} room={room} access={store.access} index={i} design={store.rooms?.[room.name]?.design} root={store.teamRoots?.[room.name]} mode={teamSettings(store,room.name).mode} plugin={plugins.find(item=>item.id===teamSettings(store,room.name).pluginId)} pluginId={teamSettings(store,room.name).pluginId} remote={teamSettings(store,room.name).remote} health={cloudStatus[room.name]} activities={activities} busyIds={busyIds} disconnectedIds={disconnectedIds} resizing={draft?.kind==='resize'&&draft.name===room.name} draggingId={draft?.moved?draft.id:undefined} visible={visible}
+          onOpen={onOpen} onEdit={()=>onEdit(room.name)} onStart={(kind,event,id,edge)=>begin(kind,room,event,id,edge)} onSeat={(id,seat)=>act('card.place',{id,seat,expectedSeating:room.seating})} onMove={placement=>act('room.place',{name:room.name,...placement,expectedPlacement:room.placement})} onResize={seating=>act('room.bounds',{name:room.name,...seating})} />
       })}
-    </>,[visible,displayConnections,rooms,connectorAnchors,view.zoom,saveConnection,selection,crossRoutes,interactions,store.access,store.rooms,store.teamRoots,store.teamSettings,plugins,cloudStatus,activities,busyIds,disconnectedIds,draft?.name,draft?.id,draft?.moved,onOpen,onEdit,begin])
-  // Omit minor grid lines when zoomed out; world coordinates and snapping stay unchanged.
-  const gridSpacing=32*view.zoom*2**Math.max(0,Math.ceil(Math.log2(24/(32*view.zoom))))
-  return <CanvasMotion.Provider value={animated}><ConnectorSelection.Provider value={connectorContext}><div data-animated={animated} ref={viewport} className={`infinite-canvas ${panning?'is-panning':''} ${selection?'is-editing-canvas':''}`} data-zoom={view.zoom.toFixed(3)} onPointerDown={e=>begin('pan',undefined,e)} onPointerMove={move} onPointerUp={e=>void finish(e)} onPointerCancel={e=>void finish(e)} onDoubleClick={e=>{if(e.target===e.currentTarget)updateView(fitViewport(baseRooms,size.x,size.y))}}>
-    <div className="canvas-grid" style={{backgroundSize:`${gridSpacing}px ${gridSpacing}px`,backgroundPosition:`${view.x}px ${view.y}px`}} />
-    <div ref={worldRef} className="canvas-world" style={{transform:`translate(${view.x}px,${view.y}px) scale(${view.zoom})`}}>
+    </>,[visible,displayConnections,rooms,connectorAnchors,view.zoom,saveConnection,selection,crossRoutes,interactions,store.access,store.rooms,store.teamRoots,store.teamSettings,plugins,cloudStatus,activities,busyIds,disconnectedIds,draft?.kind,draft?.name,draft?.id,draft?.moved,onOpen,onEdit,begin])
+  return <CanvasMotion.Provider value={animated}><ConnectorSelection.Provider value={connectorContext}><div className="characters-stage">
+   <div data-animated={animated} ref={viewport} className={`characters-canvas ${selection?'is-editing-canvas':''}`} data-zoom={extent.zoom.toFixed(3)} data-gesture={draft?.kind} style={{'--characters-scale':extent.zoom,'--resize-cursor':draft?.edge==='e'?'ew-resize':draft?.edge==='s'?'ns-resize':'nwse-resize'} as CSSProperties} onScroll={e=>{const el=e.currentTarget,drag=dragRef.current;if(drag?.kind==='resize'){el.scrollLeft=drag.scroll.x+extent.x-drag.offset.x;el.scrollTop=drag.scroll.y+extent.y-drag.offset.y}setScroll({x:el.scrollLeft,y:el.scrollTop})}} onPointerMove={move} onPointerUp={e=>{move(e);void finish(e)}} onPointerCancel={e=>cancelDrag(e.pointerId)} onLostPointerCapture={e=>cancelDrag(e.pointerId)}>
+    <div className="characters-extent" style={{width:extent.width,height:extent.height}}>
+
+    <div ref={worldRef} className="canvas-world" style={{left:extent.x,top:extent.y,transform:`scale(${extent.zoom})`}}>
+      {draft?.kind==='team'&&draft.moved&&<div className="team-placement-grid" aria-hidden="true" style={{left:visible.x,top:visible.y,width:visible.width,height:visible.height,backgroundPosition:`${-visible.x%225}px ${-visible.y%285}px`}}/>}
       {scene}
-      {draft?.moved&&draft.kind==='employee'&&(draft.guide?.x!==undefined||draft.guide?.y!==undefined)&&<div className="employee-snap-guide" aria-hidden="true" style={{left:draft.room!.bounds.x+draft.x,top:draft.room!.bounds.y+draft.y,width:EMPLOYEE_SIZE.width,height:EMPLOYEE_SIZE.height}}/>}
-    </div>
+
+    </div></div>
     {connection&&<ConnectorEditor connections={displayConnections} zoom={view.zoom} interactions={interactions} selected={connection} rooms={rooms} settings={connectorAnchors} relations={store.access?.relations??[]} crossRoutes={crossRoutes} world={worldRef.current} onClose={closeConnection} onPreview={setAnchorDraft} onSave={(value,reset)=>act(reset?'connector.reset':'connector.set',{manager:value.managerId,employee:value.employeeId,...(reset?{}:{source:value.source,target:value.target,route:value.route})})}/>}
-    {preferences.showTeamOverview&&<CanvasOverview rooms={rooms} view={view} size={size} onFocus={room=>updateView(fitViewport([room],size.x,size.y))} onFit={()=>updateView(fitViewport(rooms,size.x,size.y))}/>}
-    {!rooms.length&&<div className="canvas-empty"><span>{uiText("ROOM FOR EVERY POSSIBILITY")}</span>{selectedView?<><h1>{uiText("No teams in this view yet")}</h1><p>{uiText("Click the edit icon next to the view tab,")}<br />{uiText("then choose existing teams from All Team.")}</p></>:<><h1>{uiText("Start with one Team,")}<br />{uiText("and give your ideas a bigger world.")}</h1><p>{uiText("Add a Team and bind a project folder.")}<br />{uiText("Then invite your first companion.")}</p></>}</div>}
-    <div className="canvas-hud"><button className="snap-toggle" aria-pressed={preferences.snapEmployees} title={uiText("Snap to seats; hold Option / Alt to drag freely")} onPointerDown={e=>e.stopPropagation()} onClick={()=>void act('settings.set',{snapEmployees:!preferences.snapEmployees})}>{uiText("Snap")} {preferences.snapEmployees?uiText("On"):uiText("Off")}</button><span>{uiText("Drag empty space to pan · Two-finger scroll · ⌘ / Ctrl + wheel to zoom · 0 for overview")}</span><span>{Math.round(view.zoom*100)}% <b>·</b> {rooms.length}  {uiText("TEAMS")} <b>·</b> {rooms.reduce((sum,room)=>sum+room.employees.length,0)}  {uiText("TEAMMATES")}</span></div>
+    {!rooms.length&&<div className="canvas-empty"><span>{uiText("ROOM FOR EVERY POSSIBILITY")}</span>{selectedView?<><h1>{uiText("No teams in this view yet")}</h1><p>{uiText("Return to all teams or add a Team to this selection.")}</p><button type="button" onClick={()=>void act('view.select',{id:'company',teamViewId:'all',teamTab:'characters'})}>{uiText("Show all teams")}</button></>:<><h1>{uiText("Start with one Team,")}<br />{uiText("and give your ideas a bigger world.")}</h1><p>{uiText("Add a Team and bind a project folder.")}<br />{uiText("Then invite your first companion.")}</p></>}</div>}
+   </div>
+    {preferences.showTeamOverview&&<CanvasOverview rooms={rooms} view={view} size={size} onFocus={room=>viewport.current?.scrollTo({left:room.bounds.x*extent.zoom+extent.x-24,top:room.bounds.y*extent.zoom+extent.y-24,behavior:'instant'})} onFit={()=>viewport.current?.scrollTo({left:0,top:0,behavior:'instant'})}/>}
+    <div className="seating-hint">{uiText(draft?.kind==='resize'&&draft.seating?'Seat grid: {0} columns × {1} rows':'Drag teams by seats · Neighbors move aside · Drag edges to resize',[draft?.seating?.columns??0,draft?.seating?.rows??0])}</div>
   </div></ConnectorSelection.Provider></CanvasMotion.Provider>
 })

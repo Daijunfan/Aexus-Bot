@@ -1,7 +1,7 @@
 import type {Store,StoredSession} from './types'
 export type StoreChanges={baseRevision:number;revision:number;fields:string[];employeeIds:string[];authority:boolean;members:boolean;inbox:boolean}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b)
-const visual=new Set(['title','role','avatar','accessory','desk','seat','position','lastReply','createdBy','createdAt'])
+const visual=new Set(['title','role','avatar','accessory','desk','seat','seatNumber','position','lastReply','createdBy','createdAt'])
 const authority=(store:Store)=>({access:store.access,groups:store.groups,teamSettings:store.teamSettings,teamRoots:store.teamRoots,sessions:store.sessions.map(card=>Object.fromEntries(Object.entries(card).filter(([key])=>!visual.has(key))))})
 const members=(cards:StoredSession[])=>cards.map(({id,title,group,managementRole,avatar,engine,deleting})=>({id,title,group,managementRole,avatar,engine,deleting}))
 /** Conservative: new execution fields invalidate authority unless explicitly presentation-only. */

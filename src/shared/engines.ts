@@ -5,10 +5,12 @@ export const ENGINE_DEFINITIONS={
   pi:{label:'Pi',description:'Pi RPC · Native configuration',protocol:'rpc',capabilities:{streaming:true,images:false,approvals:true,resume:true,steer:true,plan:false,thinking:false,effort:false,background:false,clone:false}},
   opencode:{label:'OpenCode',description:'OpenCode ACP · Native configuration',protocol:'acp',capabilities:{streaming:true,images:true,approvals:true,resume:true,steer:false,plan:true,thinking:false,effort:true,background:false,clone:false}},
   kilo:{label:'Kilo Code',description:'Kilo Code ACP · Native configuration',protocol:'acp',capabilities:{streaming:true,images:true,approvals:true,resume:true,steer:false,plan:true,thinking:false,effort:true,background:false,clone:false}},
+  deepseek:{label:'DeepSeek Harness',description:'DeepSeek Harness ACP · Native configuration',protocol:'acp',capabilities:{streaming:true,images:false,approvals:true,resume:true,steer:false,plan:false,thinking:false,effort:true,background:false,clone:false}},
   claude:{label:'Claude Agent',description:'Claude Agent SDK',protocol:'agent-sdk',capabilities:{streaming:true,images:true,approvals:true,resume:true,steer:true,plan:true,thinking:true,effort:true,background:true,clone:true}}
 } as const
 export type EngineId=keyof typeof ENGINE_DEFINITIONS
-export const isNativeAcp=(engine:unknown):engine is 'opencode'|'kilo'=>engine==='opencode'||engine==='kilo'
+export type NativeAcpEngine='opencode'|'kilo'|'deepseek'
+export const isNativeAcp=(engine:unknown):engine is NativeAcpEngine=>engine==='opencode'||engine==='kilo'||engine==='deepseek'
 export function isEngine(value:unknown):value is EngineId{return typeof value==='string'&&Object.hasOwn(ENGINE_DEFINITIONS,value)}
 export function engineDefinition(value:string){if(!isEngine(value))throw Error('Unsupported Coding Agent engine: '+value);return ENGINE_DEFINITIONS[value]}
 export type EngineHealth={engine:EngineId;label:string;target:string;installed:boolean;path?:string;version?:string;protocol:'unchecked'|'compatible'|'incompatible';authentication:'configured'|'not-signed-in'|'unknown';ready:boolean;checkedAt:number;error?:string;managed:boolean;hasApiKey:boolean;capabilities:Record<string,boolean>}

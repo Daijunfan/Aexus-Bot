@@ -16,6 +16,7 @@
 import { EventEmitter } from 'node:events';
 import { getGrokAuth, CredentialError } from './credentials';
 import { httpJson, httpStream } from './http';
+import type {BotIssue} from '../../shared/bot-workers';
 
 const BASE = 'https://api2.cursor.sh/aiserver.v1.GrokBotService/';
 const WATCH_IDLE_MS = 150_000; // heartbeats every few seconds keep this alive
@@ -40,14 +41,14 @@ function headers(auth) {
   };
 }
 
-export async function rpc(method, body, { auth, timeoutMs = 45_000 } = {}) {
+export async function rpc(method, body, { auth, timeoutMs = 45_000, service = 'GrokBotService' } = {}) {
   const a = auth || getGrokAuth();
   if (a.expired) {
     throw new CredentialError('Grok Bot 登录已过期，请打开一次 Grok Bot 应用刷新会话。', 'expired');
   }
   let res;
   try {
-    res = await httpJson(BASE + method, {
+    res = await httpJson(`https://api2.cursor.sh/aiserver.v1.${service}/${method}`, {
       method: 'POST',
       body: body || {},
       headers: {...headers(a),'connect-timeout-ms':String(timeoutMs)},
@@ -64,6 +65,36 @@ export async function rpc(method, body, { auth, timeoutMs = 45_000 } = {}) {
     throw new Error(`Grok Bot ${method} 失败：HTTP ${res.status} ${detail}`);
   }
   return res.data || {};
+}
+
+export function turnFailure(value):BotIssue {
+  const details=value.errorDetails?.details,reset=Date.parse(details?.additionalInfo?.nextResetAt??'');
+  return {code:value.code||'GROK_BOT_TURN_FAILURE',message:value.summary||details?.title||'Grok Bot could not complete this request',detail:details?.detail,at:Number(value.failedAtMs)||Date.now(),turnId:value.turnId,...(Number.isFinite(reset)?{retryAt:reset}:{})};
+}
+
+let usageCache;
+export function invalidateUsage(){usageCache=undefined;}
+/** Read-only account availability; never changes a plan or enables spending. */
+export function usageStatus(){
+  const auth=getGrokAuth(),now=Date.now();
+  if(usageCache?.accountId===auth.accountId&&now-usageCache.at<60_000)return usageCache.promise;
+  const promise=rpc('GetSandUsageStatus',{}, {auth,service:'DashboardService'}).then(value=>{
+    if(typeof value.hasAvailableUsage!=='boolean')throw Error('Grok did not return account availability');
+    const reset=Date.parse(value.nextResetTimestampUtc??'');
+    // The native endpoint can report hasAvailableUsage=true at 100% while
+    // on-demand is disabled; actual turns then fail with USAGE_LIMIT.
+    const exhausted=!value.hasAvailableUsage||value.usagePercent>=100&&value.onDemandSettings?.enabled!==true;
+    const issue:BotIssue|null=exhausted?{code:'GROK_BOT_TURN_FAILURE_CODE_USAGE_LIMIT',message:'Your Grok Bot usage limit has been reached',at:now,...(Number.isFinite(reset)?{retryAt:reset}:{})}:null;
+    return {issue,checkedAt:now};
+  });
+  usageCache={accountId:auth.accountId,at:now,promise};
+  promise.catch(()=>{if(usageCache?.promise===promise)invalidateUsage();});
+  return promise;
+}
+
+export async function ensureRunning(){
+  const result=await rpc('EnsureSandBox',{wake:true,supportsAsleepBox:true},{timeoutMs:90_000});
+  if(result.runState!=='SAND_BOX_RUN_STATE_RUNNING')throw Error('Grok Bot is still starting. Try sending again shortly.');
 }
 
 export function replyText(body) {

@@ -1,3 +1,6 @@
+import {nativeWorkerEnv} from './native-worker-env'
+import {protocolLines,protocolJson} from './protocol-lines'
+import type {ChildProcess} from 'node:child_process'
 import {DOCUMENTATION_TOOL} from './documentation-tool'
 import {API_TOOL} from './api-tool'
 import {DISCUSSION_TOOL} from './discussion-tool'
@@ -9,7 +12,6 @@ import {readStore} from './store'
 import {remoteAgentBin} from './remote-agent-access'
 import {spawnEmployeeProcess} from './agent-process-isolation'
 import spawn from 'cross-spawn'
-import {createInterface} from 'node:readline'
 import {once} from 'node:events'
 import {APP_HOME,SOCKET_PATH} from '../shared/protocol'
 import {childEnv} from './exec'
@@ -22,7 +24,7 @@ import type {CodexEvent,SandboxMode} from './codex'
 
 export const nativeExecutionConfig=()=>['-c','mcp_servers={}','-c','skills.include_instructions=false','-c','skills.bundled.enabled=false',
   '-c','include_apps_instructions=false','-c','memories.use_memories=false','-c','memories.generate_memories=false','--disable','memories','--disable','apps','--disable','hooks','--disable','plugins','--disable','chronicle','--disable','multi_agent']
-type Args={employeeId?:string;connectionId?:string;prompt:string;images?:ImageInput[];cwd:string;workRoot?:string;permissionRoot?:string;remote?:RemoteTarget|null;nativeRemote?:RemoteTarget;remoteAdmin?:boolean;model?:string;effort?:string;serviceTier?:string;planMode?:boolean;resumeId?:string;sandbox:SandboxMode;signal:AbortSignal;onEvent:(event:CodexEvent)=>void;onRequest?:(method:string,params:any,signal:AbortSignal)=>Promise<unknown>;approvalPolicy?:string;acknowledging?:boolean;initializing?:boolean;discussionUrl?:string}
+type Args={nativeWorker?:boolean;onProcess?:(child:ChildProcess)=>void;employeeId?:string;connectionId?:string;prompt:string;images?:ImageInput[];cwd:string;workRoot?:string;permissionRoot?:string;remote?:RemoteTarget|null;nativeRemote?:RemoteTarget;remoteAdmin?:boolean;model?:string;effort?:string;serviceTier?:string;planMode?:boolean;resumeId?:string;sandbox:SandboxMode;signal:AbortSignal;onEvent:(event:CodexEvent)=>void;onRequest?:(method:string,params:any,signal:AbortSignal)=>Promise<unknown>;approvalPolicy?:string;acknowledging?:boolean;initializing?:boolean;discussionUrl?:string}
 class RemoteStartupError extends Error {}
 const sessions=new Map<string,NativeConnection>()
 type NativeConnection=Awaited<ReturnType<typeof connect>>
@@ -54,12 +56,17 @@ export async function runNativeCodexTurn(binary:string,args:Args){
   }catch(error){if(!args.signal.aborted)args.onEvent({kind:'notice',level:'error',text:error instanceof Error?error.message:String(error)})}
   finally{if(session&&(!args.connectionId||!session.alive())){if(args.connectionId)sessions.delete(args.connectionId);await session.close()}}
 }
+/** Start the native structured protocol without dispatching a model turn. */
+export async function startNativeCodexSession(binary:string,args:Args){
+ if(!args.connectionId)throw Error('A native connection identity is required')
+ if(!sessions.get(args.connectionId)?.alive())sessions.set(args.connectionId,await connect(binary,args))
+}
 async function connect(binary:string,initial:Args){
   const profile=initial.employeeId?readStore().sessions.find(card=>card.id===initial.employeeId)?.nativeConfigRoot:undefined
   const releaseStartup=await acquireCodexStartup(initial.nativeRemote,profile)
   try{
   let args=initial,threadId=initial.resumeId??'',turnId='',loaded=false,working=false,sequence=0,stderr='',dead=false,compact=false
-  let loadedInstructions='',loadedPolicy='',loadedPhase='work',configuredModel=initial.model
+  let loadedInstructions='',loadedPolicy='',loadedPhase='work',configuredModel=initial.nativeWorker?undefined:initial.model
   let restoreEnvironments:Array<{environmentId:string;cwd:string;runtimeWorkspaceRoots:string[]}>|undefined
   let waiting:{turnId?:string;acceptedTurnId?:string;processing:Set<string>;delivered?:boolean;read?:boolean;resolve:()=>void;reject:(error:Error)=>void}|undefined,closing:Promise<void>|undefined
   const receipt=()=>{
@@ -72,16 +79,18 @@ async function connect(binary:string,initial:Args){
   // Permit only the authenticated application socket while retaining read-only files.
   const localControl=!!args.employeeId&&!args.remote
   const controlFlags=localControl&&args.sandbox!=='danger-full-access'?[...(!args.workRoot?['-c','default_permissions="agents-company-readonly"']:[]),'-c','permissions.agents-company-readonly.extends=":read-only"','-c','permissions.agents-company-readonly.network.enabled=true','-c',`permissions.agents-company-readonly.network.unix_sockets={${JSON.stringify(SOCKET_PATH)}="allow"}`]:[]
-  const flags=[...controlFlags,...(args.model?['-c',`model=${JSON.stringify(args.model)}`]:[]),...(args.effort?['-c',`model_reasoning_effort=${JSON.stringify(args.effort)}`]:[]),'-c',`service_tier=${JSON.stringify(args.serviceTier??'default')}`,'-c','features.fast_mode=true']
-  const child=args.nativeRemote?spawnRemoteAgent(args.nativeRemote,'codex',[...flags,'--disable','multi_agent','app-server','--listen','stdio://'],undefined,args.employeeId):spawnEmployeeProcess(args.employeeId,binary,[...(args.remote?nativeExecutionConfig():args.workRoot&&args.sandbox!=='danger-full-access'?workCodexConfig(args.cwd,args.permissionRoot??args.workRoot,localControl?SOCKET_PATH:undefined):[]),...flags,'--disable','multi_agent','app-server'],
-    {cwd:args.remote?APP_HOME:args.cwd,env:{...childEnv(args.cwd,args.workRoot),...engineEnvironment('codex'),...(executor?{CODEX_EXEC_SERVER_URL:executor.url}:{})}})
-  const ended=once(child,'close').catch(()=>{}),lines=createInterface({input:child.stdout}),lifetime=new AbortController()
+  const flags=[...controlFlags,...(!args.nativeWorker&&args.model?['-c',`model=${JSON.stringify(args.model)}`]:[]),...(!args.nativeWorker&&args.effort?['-c',`model_reasoning_effort=${JSON.stringify(args.effort)}`]:[]),...(!args.nativeWorker?['-c',`service_tier=${JSON.stringify(args.serviceTier??'default')}`,'-c','features.fast_mode=true']:[])]
+  const environment={...childEnv(args.cwd,args.workRoot),...engineEnvironment('codex'),...(executor?{CODEX_EXEC_SERVER_URL:executor.url}:{})}
+  const child=args.nativeRemote?spawnRemoteAgent(args.nativeRemote,'codex',[...flags,...(!args.nativeWorker?['--disable','multi_agent']:[]),'app-server','--listen','stdio://'],undefined,args.employeeId):spawnEmployeeProcess(args.employeeId,binary,[...(args.remote?nativeExecutionConfig():args.workRoot&&args.sandbox!=='danger-full-access'?workCodexConfig(args.cwd,args.permissionRoot??args.workRoot,localControl?SOCKET_PATH:undefined):[]),...flags,...(!args.nativeWorker?['--disable','multi_agent']:[]),'app-server'],
+    {detached:args.nativeWorker&&process.platform!=='win32',cwd:args.remote?APP_HOME:args.cwd,env:args.nativeWorker?nativeWorkerEnv(environment):environment})
+  args.onProcess?.(child)
+  const ended=once(child,'close').catch(()=>{}),lines=protocolLines(child.stdout),lifetime=new AbortController()
   const pending=new Map<number,{resolve:(value:any)=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout}>(),incoming=new Map<string|number,AbortController>()
   const fail=(error:Error)=>{for(const p of pending.values()){clearTimeout(p.timer);p.reject(error)}pending.clear();waiting?.reject(error)}
   const call=(method:string,params:unknown)=>new Promise<any>((resolve,reject)=>{
     if(dead)return reject(new Error('Codex connection closed'))
     const id=++sequence,timer=setTimeout(()=>{pending.delete(id);reject(new Error(`${method} timed out`))},30000)
-    pending.set(id,{resolve,reject,timer});child.stdin.write(JSON.stringify({id,method,params})+'\n')
+    pending.set(id,{resolve,reject,timer});child.stdin.write(protocolJson({id,method,params})+'\n')
   })
   child.stderr.on('data',data=>{stderr=(stderr+data).slice(-4000);console.error('[codex]',String(data).trim())});child.on('error',fail);child.stdin.on('error',fail)
   child.on('close',()=>{const background=working&&!waiting&&!closing;dead=true;working=false;if(background)args.onEvent({kind:'background-turn',busy:false});fail(new Error(executor?.error()||stderr.trim()||'Working process stopped'));if(!closing)void close()})
@@ -90,7 +99,7 @@ async function connect(binary:string,initial:Args){
     if(event.id!==undefined&&event.method){
       if(waiting&&typeof event.params?.turnId==='string'&&['item/commandExecution/requestApproval','item/fileChange/requestApproval','tool/requestUserInput'].includes(event.method)){waiting.processing.add(event.params.turnId);receipt()}
       const controller=new AbortController(),parent=waiting?args.signal:lifetime.signal,cancel=()=>controller.abort();incoming.set(event.id,controller);parent.addEventListener('abort',cancel,{once:true});if(parent.aborted)cancel()
-      const reply=(value:unknown)=>{if(incoming.get(event.id)===controller&&!child.stdin.destroyed&&!child.stdin.writableEnded)child.stdin.write(JSON.stringify(value)+'\n')}
+      const reply=(value:unknown)=>{if(incoming.get(event.id)===controller&&!child.stdin.destroyed&&!child.stdin.writableEnded)child.stdin.write(protocolJson(value)+'\n')}
       const cleanup=()=>{if(incoming.get(event.id)===controller)incoming.delete(event.id);parent.removeEventListener('abort',cancel)}
       if(args.onRequest)void args.onRequest(event.method,event.params,controller.signal).then(result=>reply({id:event.id,result}),error=>reply({id:event.id,error:{code:-32000,message:String(error)}})).finally(cleanup)
       else{reply({id:event.id,error:{code:-32601,message:'Interactive requests are unavailable'}});cleanup()}
@@ -143,8 +152,9 @@ async function connect(binary:string,initial:Args){
     child.stdin.end();child.kill('SIGTERM');const timer=setTimeout(()=>child.kill('SIGKILL'),1500);await ended;clearTimeout(timer);lines.close()
     for(const item of pending.values())clearTimeout(item.timer);pending.clear();await executor?.close()
   })()
-  try{await call('initialize',{clientInfo:{name:'agents_company',version:'1'},capabilities:{experimentalApi:true,mcpServerOpenaiFormElicitation:true}});child.stdin.write(JSON.stringify({method:'initialized'})+'\n');releaseStartup()}
-  catch(error){await close();throw error}
+  const abortStartup=()=>void close();if(initial.nativeWorker)initial.signal.addEventListener('abort',abortStartup,{once:true})
+  try{await call('initialize',{clientInfo:{name:'agents_company',version:'1'},capabilities:{experimentalApi:true,mcpServerOpenaiFormElicitation:true}});child.stdin.write(protocolJson({method:'initialized'})+'\n');releaseStartup()}
+  catch(error){await close();throw error}finally{if(initial.nativeWorker)initial.signal.removeEventListener('abort',abortStartup)}
   let nativeConfig:Record<string,any>
   try{
   nativeConfig=(await call('config/read',{includeLayers:false,cwd:initial.nativeRemote?initial.cwd:codexControlCwd(initial.cwd,initial.remote)})).config??{}
@@ -154,7 +164,7 @@ async function connect(binary:string,initial:Args){
   }
   if(!configuredModel)throw Error('Codex 未返回可用默认模型；请在引擎设置中选择账户可用的模型')
   }catch(error){await close();throw error}
-  return {close,call,threadId:()=>threadId,turnId:()=>turnId,alive:()=>!dead&&(!executor||executor.connected()),busy:()=>working,
+  return {close,call,threadId:()=>threadId,turnId:()=>turnId,alive:()=>!dead&&child.exitCode==null&&child.signalCode==null&&(!executor||executor.connected()),busy:()=>working,
     async run(next:Args){
       args=next;let killTimer:NodeJS.Timeout|undefined
       const abort=()=>{if(threadId&&turnId)void call('turn/interrupt',{threadId,turnId}).catch(()=>{});else child.kill('SIGTERM');killTimer=setTimeout(()=>{if(args.signal.aborted&&working)void close()},1500)}

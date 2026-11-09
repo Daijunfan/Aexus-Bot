@@ -2,114 +2,95 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-**跨平台 AI 团队协作：Team 看分工，Message 聊任务，Mission 安排下一步。**
+**把多个原生 AI Agent 组织成一支能协作的团队。**
 
-Aexus Bot 把 Codex、Claude Code、Cline 和 Pi 等既有 Coding Agent 接入同一个 Core。你可以用界面操作，也可以让 Agent 通过相同的 CLI / API 协作：处理大型开发项目、整理日常事务、进行工作与社会互动实验，或搭建游戏与模拟。目标、角色、规则和流程由你定义。
+Aexus Bot 是一款自托管的 AI 团队协作软件。它把 Codex、Claude Code、Cline、Pi、OpenCode、Kilo Code 和 DeepSeek Harness 等 Coding Agent 接入同一个工作空间，让你通过团队、消息、文件和任务来组织它们的工作。
 
-**当前开发基线：0.58.1（`25d686e`）。后续开发固定在此版本，macOS 使用 `python3 build.py` 打包。** 应用显示名、窗口标题和 macOS 安装目录已统一为 Aexus Bot，旧 Anexus 应用沿用原有数据迁移。详见 [0.58.1 更新说明](docs/releases/0.58.1.zh-CN.md)。
+你可以亲自操作界面，也可以让 Agent 通过相同的 CLI / API 协作。原生引擎负责执行，Aexus Bot 负责团队关系、应用权限、工作区、沟通与任务跟进。目标、分工和流程由你决定。
 
-## 三个视图，同一支小队
+[安装与部署](docs/DEPLOYMENT.md) · [CLI / API](API.md) · [权限说明](PERMISSIONS.md) · [变更记录](CHANGELOG.md)
 
-### Team：把协作关系看清楚
+## 你可以用它做什么
 
-秘书居中协调六位 Manager，每位 Manager 管理两名员工。不同 Coding Agent 在同一画布中工作，团队绑定实际工作区；工作消息框、休息状态与绿色通信连线可以一起查看。
+- **开发项目**：把实现、测试、审查和资料整理交给不同员工，在多个工作台中同时跟进。
+- **研究与内容工作**：组织信息检索、文档阅读、讨论、写作和结果交付，保留过程与文件。
+- **日常事务**：安排定时或持续任务，让员工执行、秘书督办，并在需要时向用户提出问题。
+- **工作与协作实验**：定义角色、权限和沟通规则，观察多 Agent 如何配合，也可用于自定义游戏与模拟。
 
-![Aexus Bot Company 实拍：秘书、Manager 和员工的两层协作关系](docs/images/company-live.png)
+Aexus Bot 提供协作基础设施。具体目标、输入、规则和验收标准仍由你定义；一次回复不自动等于任务完成。
 
-### Message：群组里协作，频道里读新闻和 AI 摘要
+## 三个视图，同一个工作空间
 
-群消息送达全部成员，@ 点名和回复确定处理对象；员工通过显式 API 回复。Telegram、X、YouTube 频道提供来源筛选、搜索和多种阅读视图；员工经授权读取内容，再通过私聊或群组交付总结。频道保持只读，文件按需下载。
+### Team：组织团队，同时跟进多人工作
 
-![Aexus Bot Messages 实拍：真实新闻原帖与员工生成的中文摘要](docs/images/messages-live.png)
+Team 展示员工、职责、团队关系和工作状态。**Characters** 用角色场景呈现团队；**Board** 同时打开多个员工的完整工作台；**Workers** 独立管理原生 Coding Agent 会话。
 
-### Mission：把下一步排到日期上
+你可以按项目安排员工，也可以用分类组织当前要协作的人。文件浏览、编辑、终端、会话、工具调用、审批和任务队列共同构成工作台，方便在成员之间切换和并行处理。
 
-用月历、周计划、看板、时间线等十种布局管理一次、重复与事件任务。计划事项与实际执行记录分别呈现，方便查看负责人、后续安排和结果。
+![Team 历史运行截图：秘书、Manager 和员工组成的协作关系](docs/images/company-live.png)
 
-![Aexus Bot Plan 实拍：月历里的已保存任务与工作安排](docs/images/plan-live.png)
+### Message：私聊、群组与资讯
 
-三张均为 2026-10-04 的真实运行界面截图。Company 场景有 19 个角色，其中 18 个工作、1 个休息；使用 Codex、Claude Code、Cline、Pi 四种引擎，在 Mac Core 上通过 SSH 操作 Linux、Windows 和虚拟机工作区。Messages 中的摘要由实际员工生成；Plan 中的未来事项是已保存排期。截图保留拍摄时的 Anexus 显示名，当前软件名称为 Aexus Bot。各视图、角色与执行位置以实际能力为准。
+Message 是用户与员工、员工之间的沟通空间。私聊适合直接交办和交付，群组用于共享上下文与协作讨论；消息可以携带引用、图片和文件。Dot 和 Grok 等外部 Worker 也可在这里使用，保留各自的原生身份与历史。
 
-[下载安装包](https://github.com/Daijunfan/Aexus-Bot/releases) · [安装与部署](docs/DEPLOYMENT.md) · [全部 CLI / API](API.md) · [权限说明](PERMISSIONS.md) · [参与开发](CONTRIBUTING.md)
+只读频道汇集 Telegram、X、YouTube 等来源的资讯。员工可以读取授权内容，随后在会话中交付总结或开展进一步工作。会话、共享文件与访问权限由同一套 Core 管理。
 
-## 独立的社交媒体采集项目
+![Message 历史运行截图：新闻原帖与员工交付的中文摘要](docs/images/messages-live.png)
 
-Telegram、X、YouTube 的爬虫和服务器采集逻辑由另一个开源项目 [xhs_publisher](https://github.com/Daijunfan/xhs_publisher) 维护，不属于本客户端。Aexus Bot 通过受控接口管理订阅、读取与搜索内容，并在 Message 中展示；采集进程和内容存储运行在 Linux 服务器。跨项目集成测试通过 `AEXUS_COLLECTOR_SOURCE` 指向该仓库的 `integrations/aexus-bot`，不在客户端复制爬虫实现。
+### Mission：安排下一步，跟进到完成
 
-## 一个 Core，多种用法
+Mission 把一次、重复、事件触发和持续跟进的工作放在一起，提供日历、看板、时间线等十种布局。你可以查看负责人、排期、执行记录与结果，也可以安排秘书监督或员工独立完成。
 
-角色选择使用独立弹窗，支持搜索、随机选择和动作预览。默认启用 21 个圣杯战争可爱版形象；其他素材保留并可热启停。所有员工可查询实时目录，用户与 Secretary 可管理启用状态。省略创建形象参数时，从当前启用目录随机选择。详见 [角色 API](docs/AVATARS.md)；完整原始素材备份见 [Archive/Avatars](Archive/Avatars/2026-11-07)。
+任务提醒、督办、待用户决策的问题和完成状态保留在系统中。聊天和执行期间的新消息有各自的上下文，便于持续工作与回看。
 
-Aexus Bot 在传统 Coding Agent 外提供身份、Team、消息、文件、调度和插件能力。引擎负责执行；Core 管理应用内权限、工作空间和协作记录。Electron、浏览器、CLI 和 Agent 原生工具调用同一套认证操作。
+![Mission 历史运行截图：月历中的任务与工作安排](docs/images/plan-live.png)
 
-| 你想做的事 | 可组合的现有能力 |
-| --- | --- |
-| 重度开发 | 按项目组织 Team，分配员工，使用文件编辑器、终端、审批、任务队列和远程工作区 |
-| 日常任务 | 汇总资料、整理文档、定时处理工作，并在会话中查看结果 |
-| 工作实验 | 给不同角色设定任务与协作方式，观察过程、比较输出，保留文件和记录 |
-| 社会互动实验 | 组织群组与频道，设置成员和会话规则，观察受控条件下的 Agent 互动 |
-| 游戏与模拟 | 自行设计角色、规则和回合，用消息、状态、文件与 CLI 驱动流程 |
-| 自定义工作流 | 组合公开 Core API、原生引擎、自己的程序与插件 |
+以上图片来自 2026-10-04 的实际运行版本，保留历史界面名称；当前界面与能力以 `main` 为准。
 
-实验与游戏需要你定义具体规则、输入和评价方法。一次 Agent 输出并不保证任务正确完成；你可以检查执行记录、文件与实际结果。
+## 原生引擎与统一协作
 
-## 核心能力
+Aexus Bot 接入已有 Coding Agent，而不是要求所有员工使用同一种模型或引擎。支持 Codex、Claude Code、Cline、Pi、OpenCode、Kilo Code 和 DeepSeek Harness；具体执行范围、图片、恢复、审批和运行设置以[引擎适配说明](docs/ENGINE_ADAPTERS.md)及[能力文档](ENGINE_CAPABILITIES.md)为准。
 
-- **Team、Message、Mission**：在画布中组织团队，在会话中交流，在 Mission 中管理定时、重复与事件触发的员工工作。
-- **同一身份与工作空间**：员工跨视图保留原身份、引擎和目录；群组、频道拥有各自的成员关系与共享文件边界。
-- **文件与资产**：查找工作资料、查看和编辑文件、使用交互终端，并在授权范围内传输文件。
-- **本地与远端**：Team 绑定实际主机和目录。“本机”始终指运行 Core 的机器，浏览器中的文件需要上传。
-- **可见协作**：工作状态、未读回复与管理关系直接呈现；绿色活动提示对应正在发生的管理通信或仍在执行的委派任务。
-- **开放接口**：团队、员工、引擎、主机、文件和插件通过公开 CLI / Core API 操作；原生工具沿用员工本人的授权。
-- **可选外观**：主题、角色和动画提供另一种呈现方式，角色外观不决定权限。第三方素材保留各自声明与审核记录。
+引擎读取各自的原生配置与登录状态。模型服务商和执行引擎分别配置，账号、额度和费用由所选服务商提供。员工创建时确定引擎；同一引擎内可以调整其支持的模型和运行设置。
 
-Secretary 协助用户管理应用与插件，Governor 跨 Team 组织工作，Manager 管理本 Team 的员工。**权限来自职位与当前授权**，群组和频道还会检查真实成员身份；连线、名称和视图不会授予权限。只有用户可以任免 Secretary。详见[权限说明](PERMISSIONS.md)。
+所有入口使用同一个 Node Core：
 
-## 群聊与 Agent 规则
+- **桌面与浏览器**用于查看团队、处理会话、操作文件和跟进任务。
+- **CLI / API**用于脚本、自动化和自定义工作流。
+- **Agent 原生工具**让员工以自己的身份访问同一套协作能力。
 
-- 群消息送达全部当前成员；艾特和回复确定处理对象，其他成员同步知悉。
-- 员工公开发言通过发布 API；普通会话输出留在本人会话。
-- 文档与 Agent 说明只保留必要接口、事实和基本规则，具体理解与沟通由 LLM 自行判断。
+这些入口共用业务规则和权限检查，界面不会绕过 Core 授权。
 
-## 引擎与插件
+## 职责、权限与工作区
 
-| 引擎 | 接入协议 | 执行范围 |
-| --- | --- | --- |
-| Codex | App Server | Core 本地及已支持的 SSH / 云端原生工作区 |
-| Claude Code | Claude Agent SDK | Core 本地及已支持的 SSH / 云端原生工作区 |
-| Cline | ACP | Core 本地 Build / 插件目录，或通过 Tunnel 操作远端工作区 |
-| Pi | RPC | Core 本地 Build / 插件目录，或通过 Tunnel 操作远端工作区 |
+Secretary 负责整体协调，Governor、Manager 和员工承担各自职责。权限来自职位与当前授权；名称、连线和视图不会授予权限。只有用户可以任免 Secretary。
 
-模型服务商和编码引擎分别配置。Cline / Pi 暂不支持云端原生执行；具体图片、恢复、审批和运行设置以[引擎适配文档](docs/ENGINE_ADAPTERS.md)与实际能力查询为准。
+项目可以绑定 Core 本地目录或已登记的远端工作区。员工、原生会话和文件保持稳定身份；群组共享内容与个人工作区各有边界。详见[权限说明](PERMISSIONS.md)与[安全说明](SECURITY.md)。
 
-引擎默认读取各自原生 CLI / VS Code 扩展的配置。设置中会显示完整服务列表、模型、当前选择和密钥配置状态，并自动刷新；不会为 Bot 另建一套默认连接配置。
+## 插件与资讯来源
 
-**员工引擎在创建时确定。** 使用另一引擎需要重新创建员工；同一引擎内可调整其支持的模型和运行设置。引擎程序及 Claude SDK 控制库单独安装，兼容的已有安装可以复用。模型账号、额度和费用由所选服务商提供。
-
-三个插件的完整源码在 `PlugIns/`，包含各自 CLI、命令 schema 与运行时：
+仓库包含三个插件的源码、CLI、命令 schema 和运行时：
 
 - **Cloud Hosts**：SSH 主机、连接状态和交互终端。
-- **MiniNotion**：本地笔记、数据库、计划、日历和知识组织。
+- **MiniNotion**：笔记、数据库、计划、日历与知识组织。
 - **Margin Reader**：文档阅读、摘录和资料整理。
 
-插件工作资料与凭据位于应用安装包之外。已有工作目录不会因升级自动移动。
+插件独立打开，可按具体内容向员工授予阅读、修改或新增权限。工作资料和凭据保存在安装包之外，已有工作目录不会因升级自动移动。详见[插件开发](PLUGIN_SPEC.md)。
 
-## 分享 Aexus Bot
-
-项目主页：[https://github.com/Daijunfan/Aexus-Bot](https://github.com/Daijunfan/Aexus-Bot)。对外分享统一使用这个地址。
+Telegram、X、YouTube 的采集与服务端存储由独立项目 [xhs_publisher](https://github.com/Daijunfan/xhs_publisher) 维护。Aexus Bot 保留客户端和受控认证接口，不在本仓库嵌入爬虫实现。
 
 ## 开始使用
 
 1. 启动桌面版，或连接自己的 Core 浏览器后端。
-2. 在设置中配置所需引擎，查看程序路径、版本、协议和认证状态。
-3. 创建 Team 并绑定项目目录、插件工作区或已登记的 SSH 主机。
-4. 添加员工，确定角色与权限，再发送任务。也可以让管理者通过相同的 API 组织流程。
+2. 在设置中检查所需原生引擎的程序、配置和认证状态。
+3. 创建 Team，绑定项目目录或已有远端工作区，再添加员工。
+4. 通过 Team 或 Message 交办工作，通过 Mission 安排和跟进任务。需要独立编码会话时，也可直接添加 Worker。
 
-普通引擎检测不调用模型；测试调用会在确认后发送一次可能计费的请求。Claude Agent 使用 API Key / 服务商配置，本应用不提供 claude.ai 订阅登录。
+主要部署方式为 macOS / Windows 桌面，以及 Linux Core / Web 后端搭配浏览器。各平台应在目标系统上分别验证；支持边界和部署步骤见[安装与部署](docs/DEPLOYMENT.md)。
 
 ### 从源码启动
 
-需要 Node.js **22.18+**（Pi 需要 **22.19+**；验证基线为 Node 24）和 npm。SSH / POSIX 终端需要 Python 与 OpenSSH；Windows 本地终端使用 ConPTY。
+需要 Node.js **22.18+**（Pi 需要 **22.19+**；验证基线为 Node 24）、npm，以及对应引擎的原生配置。SSH / POSIX 终端需要 Python 和 OpenSSH。
 
 ```sh
 git clone https://github.com/Daijunfan/Aexus-Bot.git
@@ -121,27 +102,30 @@ npm run build
 npm run dev
 ```
 
-### CLI 与浏览器
+macOS 使用项目原有打包与安装流程：
 
-当前应用名称为 `Aexus Bot.app`，命令入口为 `aexus-bot`、`agents` 和兼容入口 `avalon`。旧 `Anexus.app` 会由安装器迁移，`anexus` 命令仍作为兼容入口连接同一 Core。
+```sh
+python3 build.py
+npm run install:mac -- --source 'release/mac-arm64/Aexus Bot.app'
+```
+
+升级保留已有用户数据、认证、工作区和原生历史；安装与恢复细节见部署文档。
+
+### CLI 与浏览器
 
 ```sh
 npm run build:server
 npm run build:web
-node bin/avalon serve --web --port 5151
+node bin/agents serve --web --port 5151
 ```
 
-另开终端运行 `node bin/avalon web token`，在 `http://127.0.0.1:5151` 输入令牌登录。令牌用于建立认证会话，不放入 URL。异机访问使用 HTTPS 或 SSH 转发。
+另开终端运行 `node bin/agents web token`，在 `http://127.0.0.1:5151` 登录。异机访问使用 HTTPS 或 SSH 转发。不要让桌面和独立后端同时打开同一个数据目录。
 
-`avalon`、兼容入口 `anexus` 和原有 `agents` 命令使用同一个解析器与 Core。旧脚本、API 名称、`AGENTS_COMPANY_*` 环境变量、默认 `~/AgentsCompany` 数据目录及员工 / 原生会话身份保持兼容。项目的 GitHub 地址为 [Daijunfan/Aexus-Bot](https://github.com/Daijunfan/Aexus-Bot)。
+命令入口包含 `aexus-bot`、`agents` 及历史兼容别名，连接相同的 Core。完整操作、权限和脚本接口见 [API.md](API.md)。
 
-不要让桌面和独立后端同时打开同一个数据目录。安装、存储与部署细节见[部署文档](docs/DEPLOYMENT.md)。
+## 开发与文档
 
-## 支持范围与验证
-
-主要使用方式为 Mac 桌面、Windows 桌面，以及 Linux Core / Web 后端搭配另一台设备的浏览器。各平台应在目标系统上分别验证；一次本机构建不代表其他平台通过。严格进程隔离当前仅支持 macOS。
-
-这是单用户、自托管、可从多设备访问的软件。执行主机、操作系统权限、引擎原生权限与 Core 应用权限各有边界，见[安全说明](SECURITY.md)。升级不会自动提高已有员工的权限。
+开发统一使用 `main`，在 0.58.1 基础上持续迭代。应用名称为 **Aexus Bot**，macOS 安装位置为 `/Applications/Aexus Bot.app`。
 
 ```sh
 npm run typecheck
@@ -150,16 +134,15 @@ npm run test:release-ui
 npm run test:release-engines
 ```
 
-普通验证使用临时数据与确定性协议 fixture。真实模型、真实云主机和生产数据操作需要单独明确授权。构建不等于安装；macOS 安装使用项目安装器，先停止旧应用并备份，再验证隔离的隐藏窗口。
+测试默认使用临时数据和确定性协议 fixture。真实模型、主机及生产数据操作需要单独授权；本机构建不代表其他操作系统已通过验证。
 
-- [架构与模块边界](ARCHITECTURE.md)
-- [CLI / API](API.md) · [插件开发](PLUGIN_SPEC.md)
-- [贡献与 CI](CONTRIBUTING.md) · [变更记录](CHANGELOG.md)
+- [架构](ARCHITECTURE.md) · [参与开发](CONTRIBUTING.md)
+- [CLI / API](API.md) · [权限](PERMISSIONS.md) · [安全](SECURITY.md)
+- [持续任务与用户决策](docs/MISSIONS_AND_QUESTIONS.md) · [外部 Worker](docs/BOT_WORKERS.md)
+- [引擎能力](ENGINE_CAPABILITIES.md) · [变更记录](CHANGELOG.md)
 
 ## 许可
 
-项目代码采用 **GNU GPL v3**。第三方代码与素材保留各自许可、声明及审核记录；项目 GPL 不额外授予第三方品牌素材的权利。单独安装的 Coding Agent 程序与模型服务遵守各自条款。
+项目代码采用 **GNU GPL v3**。第三方代码与素材保留各自许可、声明及审核记录；项目 GPL 不额外授予第三方品牌素材的权利。原生引擎和模型服务遵守各自条款。
 
 见 [LICENSE](LICENSE)、[LICENSING.md](LICENSING.md) 和[第三方声明](THIRD_PARTY_NOTICES.md)。
-
-插件不再绑定团队。打开插件，通过“授权人员”按 MiniNotion 页面、Margin Reader 文档/学习集或 Cloud Hosts 主机给员工配置阅读、修改、新增权限；Secretary 默认全权并可通过相同 CLI/API 管理授权。

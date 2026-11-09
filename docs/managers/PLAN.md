@@ -1,5 +1,7 @@
 # Plan: shared scheduling database and Agent API
 
+持续目标与原有排期不同：`mission.*` 保存需要明确验收成功才结束的目标，支持秘书监督/独立完成、多名执行人和提醒时间；`schedule.*` 保持本文件所述的定时、重复与事件运行语义。原生运行成功不等于目标成功。私聊/群聊中的持久选择题使用 `question.*`，跨布局筛选及清理使用 `plan.preferences`。完整说明可通过 `agents api docs core/missions` 或 [持续任务与聊天选择题](docs/MISSIONS_AND_QUESTIONS.md) 阅读。
+
 Plan is the third application view. Table, Board, Timeline, Calendar, Planner, List, Gallery, Chart, Feed and Form are projections of the existing Core `schedule.*` records, not another scheduler or another set of employee conversations. The desktop, browser, operator CLI and authenticated employee CLI use the same Core authorization. Creating or switching a database view never starts an engine.
 
 ## Discover before acting

@@ -187,7 +187,7 @@
 .app-select-trigger:hover,.app-select-trigger[aria-expanded=true] { border-color:var(--accent);background:var(--bg-hover); }
 .app-select-trigger:focus-visible { outline:2px solid var(--accent);outline-offset:2px; }
 .app-select-trigger:disabled { opacity:.5;cursor:default; }
-.app-select-trigger>span { overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }.app-select-trigger>b { flex:none;font-size:17px;font-weight:400;color:var(--fg-dim); }
+.app-select-trigger>span { overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }.app-select-trigger>.codicon { display:grid;place-items:center;flex:none;width:16px;height:16px;font-size:14px;color:var(--fg-dim);line-height:1; }.app-select-trigger>.codicon svg{display:block;width:14px;height:14px}
 .app-select-menu { position:fixed;z-index:12000;display:flex;flex-direction:column;overflow-y:auto;max-height:280px;padding:5px;border:1px solid var(--border);border-radius:9px;background:var(--bg-elev);color:var(--fg);box-shadow:0 14px 36px #0004; }
 .app-select-menu>button { border:0;border-radius:5px;background:none;color:inherit;padding:8px 10px;font:inherit;font-size:13px;text-align:left;cursor:pointer; }
 .app-select-menu>button:hover,.app-select-menu>button.active { background:var(--bg-hover); }.app-select-menu>button[aria-selected=true] { color:var(--accent);font-weight:650; }.app-select-menu>button:disabled { opacity:.45;cursor:default; }

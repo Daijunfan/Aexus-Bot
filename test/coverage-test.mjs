@@ -61,7 +61,10 @@ const {CONVERSATION_CONTROL_APIS}=await import('../src/shared/conversation-contr
 if(!server.includes('CONVERSATION_CONTROL_APIS.has(req.cmd)')||!server.includes('return conversationControlRequest(req.cmd,a)'))throw Error('Conversation controls are not dispatched by Core')
 const {CHANNEL_FETCH_APIS}=await import('../src/shared/channel-fetch.ts')
 if(!server.includes('CHANNEL_FETCH_APIS.has(command)')||!server.includes('return fetchChannelMessages(command,args)'))throw Error('Channel fetch APIs are not dispatched by Core')
+const {MISSION_COMMANDS}=await import('../src/shared/missions.ts'),{QUESTION_COMMANDS}=await import('../src/shared/chat-questions.ts'),{PLAN_PREFERENCE_COMMANDS}=await import('../src/shared/plan-preferences.ts')
+if(!server.includes("return missionRequest(req.cmd.slice(8),a)")||!server.includes("return questionRequest(req.cmd.slice(9),a)")||!server.includes("return planPreferencesRequest(req.cmd.slice(5),a)"))throw Error('Mission, question or global preference dispatch is missing')
 const serverCommands = new Set([
+  ...[...MISSION_COMMANDS,...QUESTION_COMMANDS,...PLAN_PREFERENCE_COMMANDS].map(command=>command.name),
   ...CHANNEL_FETCH_APIS,
   ...CONVERSATION_CONTROL_APIS,...MESSAGE_COLLABORATION_APIS,
   ...[...server.matchAll(/case '([a-z][a-z-]*\.[a-z][a-z-]*)'/g)].map((m) => m[1]),
@@ -79,6 +82,10 @@ const managerGuide=readFileSync(join(ROOT,'docs','managers','API.md'),'utf8')
 console.log('CLI / GUI coverage — static check\n')
 
 console.log('-- the surfaces line up --')
+
+const packageFiles=JSON.parse(readFileSync(join(ROOT,'package.json'),'utf8')).build.files,documentSource=readFileSync(join(ROOT,'src/main/api-documents.ts'),'utf8'),coreDocumentBlock=documentSource.slice(documentSource.indexOf('const coreDocuments='),documentSource.indexOf('] as const'))
+for(const [,id,file]of coreDocumentBlock.matchAll(/\['(core\/[^']+)','([^']+)'\]/g))ok(packageFiles.includes(file),'Core reference is included in the desktop bundle → '+id)
+
 const registry=JSON.parse(readFileSync(join(ROOT,'docs/managers/commands.json'),'utf8'))
 ok(registry.every(command=>typeof command.permission==='string'&&typeof command.target==='string'),'every API declares an authorization policy and resource target')
 for(const command of ['messenger.social','schedule.get','status','plan.query']){

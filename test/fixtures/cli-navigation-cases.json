@@ -1,0 +1,18 @@
+[
+  {
+    "args": [
+      "view",
+      "select",
+      "company",
+      "--team-tab",
+      "workers"
+    ],
+    "expected": {
+      "cmd": "view.select",
+      "args": {
+        "id": "company",
+        "teamTab": "workers"
+      }
+    }
+  }
+]

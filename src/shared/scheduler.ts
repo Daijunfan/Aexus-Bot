@@ -38,7 +38,7 @@ export type ScheduleSpec = {
   /** Maximum scheduled occurrences, including skipped ones. Manual runs do not consume this limit. */
   maxOccurrences?: number | null
 }
-export type ScheduledJob = ScheduleSpec & { delegation?:Delegation; id: string; createdAt: string; updatedAt: string; nextAt: string | null; disabledReason?: string; revision?:number; occurrences?:number; clientRequestId?:string; requestFingerprint?:string; createdBy?:import('./management').PrincipalRef; pendingEvents?:ScheduleEvent[];eventClaims?:Array<{id:string;at:string}> }
+export type ScheduledJob = ScheduleSpec & { mission?:import('./missions').Mission;archivedAt?:string; delegation?:Delegation; id: string; createdAt: string; updatedAt: string; nextAt: string | null; disabledReason?: string; revision?:number; occurrences?:number; clientRequestId?:string; requestFingerprint?:string; createdBy?:import('./management').PrincipalRef; pendingEvents?:ScheduleEvent[];eventClaims?:Array<{id:string;at:string}> }
 export type ScheduleRun = {
   delegation?:Delegation
   id: string

@@ -1,7 +1,6 @@
 import {AVATAR_CATALOG,displayAvatar,enabledAvatarIds,listAvatars,type AvatarCatalogState} from '../shared/avatars'
 import {DEFAULT_AVATAR,currentAvatar,type AvatarKind} from '../shared/office'
 import {readStore,writeStore} from './store'
-import {catalog as chatCatalog} from './chat-group-store'
 
 export const activeAvatarIds=()=>enabledAvatarIds(readStore().avatarCatalog)
 export function avatarCatalog(args:{id?:string;query?:string;style?:string;status?:string;all?:boolean}={}){
@@ -9,7 +8,7 @@ export function avatarCatalog(args:{id?:string;query?:string;style?:string;statu
  const status=args.status??(args.all?'all':'active')
  if(!['active','archived','all'].includes(status))throw Error('status must be active, archived or all')
  const assigned=new Map<string,number>(),usage=new Map<string,number>()
- for(const avatar of [...store.sessions.filter(c=>!c.deleting).map(c=>c.avatar??DEFAULT_AVATAR),...chatCatalog().groups.filter(g=>g.bot?.provider==='dots').map(g=>g.bot?.avatar??DEFAULT_AVATAR)]){
+ for(const avatar of store.sessions.filter(c=>!c.deleting).map(c=>c.avatar??DEFAULT_AVATAR)){
   const id=currentAvatar(avatar),display=displayAvatar(avatar,enabled);assigned.set(id,(assigned.get(id)??0)+1);usage.set(display,(usage.get(display)??0)+1)
  }
  return listAvatars({query:args.query,style:args.style,all:true,enabled}).filter(item=>(!args.id||item.id===currentAvatar(args.id as AvatarKind))&&(status==='all'||enabled.includes(item.id)===(status==='active'))).map(item=>({...item,enabled:item.selectable,status:item.selectable?'active':'archived',displayId:displayAvatar(item.id,enabled),assignedCount:assigned.get(item.id)??0,usageCount:usage.get(item.id)??0,inUse:!!usage.get(item.id),revision}))

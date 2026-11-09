@@ -1,5 +1,6 @@
 // Explicit maintainer operation. Runtime installation uses this committed checksum manifest.
 import fs from 'node:fs'
+import {createHash} from 'node:crypto'
 import path from 'node:path'
 const root=path.resolve(import.meta.dirname,'..'),entries=[]
 const platforms=[['darwin','arm64','aarch64-apple-darwin'],['darwin','x64','x86_64-apple-darwin'],['linux','x64','x86_64-unknown-linux-musl'],['linux','arm64','aarch64-unknown-linux-musl'],['win32','x64','x86_64-pc-windows-msvc'],['win32','arm64','aarch64-pc-windows-msvc']]
@@ -30,6 +31,10 @@ for(const [platform,arch] of platforms){
   entries.push({engine,platform,arch,package:name,version,url:metadata.dist.tarball,integrity:metadata.dist.integrity,executable:'bin/'+engine+(platform==='win32'?'.exe':'')})
  }
 }
+// DeepSeek ships a Node launcher; the reviewed dependency tree is committed separately.
+const deepseekLock='licenses/engines/deepseek/npm-shrinkwrap.json',deepseekVersion=JSON.parse(fs.readFileSync(path.join(root,deepseekLock),'utf8')).version
+const deepseekMetadata=await fetch('https://registry.npmjs.org/@deepseek-ai/dsh/'+deepseekVersion).then(response=>{if(!response.ok)throw Error('Cannot verify DeepSeek Harness');return response.json()})
+for(const [platform,arch] of platforms)entries.push({engine:'deepseek',platform,arch,runtime:'node',nodeVersion:'24.9',package:deepseekMetadata.name,version:deepseekMetadata.version,url:deepseekMetadata.dist.tarball,integrity:deepseekMetadata.dist.integrity,executable:'lib/bin.js',dependencyLock:deepseekLock,dependencyLockSha256:createHash('sha256').update(fs.readFileSync(path.join(root,deepseekLock))).digest('hex')})
 const file=path.join(root,'engine-downloads.json')
 const sdkPackage='@anthropic-ai/claude-agent-sdk',sdkVersion='0.3.272'
 const sdkResponse=await fetch(`https://registry.npmjs.org/${encodeURIComponent(sdkPackage)}/${sdkVersion}`)

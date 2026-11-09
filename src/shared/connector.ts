@@ -6,6 +6,15 @@ export type ConnectorSettings=Record<string,ConnectorSetting>
 export const connectorPoints:ConnectorAnchor[]=(['top','right','bottom','left'] as const).flatMap(side=>(side==='top'||side==='bottom'?[0,.1,.3,.5,.7,.9,1]:[.1,.3,.5,.7,.9]).map(offset=>({side,offset})))
 export const connectorKey=(managerId:string,employeeId:string)=>JSON.stringify([managerId,employeeId])
 export const connectorSetting=(settings:ConnectorSettings|undefined,managerId:string,employeeId:string):ConnectorSetting=>settings?.[connectorKey(managerId,employeeId)]??{managerId,employeeId,source:{side:'auto'},target:{side:'auto'}}
+/** Moving numbered seats invalidates manual rails, while retaining the selected docks. */
+export function rerouteEmployeeConnections(settings:ConnectorSettings|undefined,ids:Iterable<string>){
+  if(!settings)return settings
+  const changed=new Set(ids)
+  return Object.fromEntries(Object.entries(settings).map(([key,value])=>{
+    if(!value.route?.length||!changed.has(value.managerId)&&!changed.has(value.employeeId))return [key,value]
+    const {route,...anchors}=value;return [key,anchors]
+  }))
+}
 /** Moving a Team invalidates cross-Team rails, but preserves the chosen employee docks. */
 export function rerouteTeamConnections(settings:ConnectorSettings|undefined,team:string,employees:Array<{id:string;group:string}>){
   if(!settings)return settings

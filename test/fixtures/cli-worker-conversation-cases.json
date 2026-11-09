@@ -1,0 +1,135 @@
+[
+  {
+    "args": [
+      "worker",
+      "snapshot",
+      "worker-1"
+    ],
+    "expected": {
+      "cmd": "worker.snapshot",
+      "args": {
+        "id": "worker-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "send",
+      "worker-1",
+      "--text",
+      "First line\n第二行",
+      "--client-message-id",
+      "stable-task-1"
+    ],
+    "expected": {
+      "cmd": "worker.send",
+      "args": {
+        "id": "worker-1",
+        "text": "First line\n第二行",
+        "clientMessageId": "stable-task-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "dequeue",
+      "worker-1",
+      "--message-id",
+      "message-1"
+    ],
+    "expected": {
+      "cmd": "worker.dequeue",
+      "args": {
+        "id": "worker-1",
+        "messageId": "message-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "respond",
+      "worker-1",
+      "--request-id",
+      "request-1",
+      "--decision",
+      "allow",
+      "--answers",
+      "{\"choice\":[\"Continue\"]}"
+    ],
+    "expected": {
+      "cmd": "worker.respond",
+      "args": {
+        "id": "worker-1",
+        "requestId": "request-1",
+        "decision": "allow",
+        "answers": {
+          "choice": [
+            "Continue"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "configure",
+      "worker-1",
+      "--model",
+      "native/model",
+      "--effort",
+      "low",
+      "--permission-mode",
+      "acceptEdits"
+    ],
+    "expected": {
+      "cmd": "worker.configure",
+      "args": {
+        "id": "worker-1",
+        "model": "native/model",
+        "effort": "low",
+        "permissionMode": "acceptEdits"
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "draft",
+      "worker-1",
+      "--text",
+      "Same text",
+      "--expected-revision",
+      "7",
+      "--new-attempt"
+    ],
+    "expected": {
+      "cmd": "worker.draft",
+      "args": {
+        "id": "worker-1",
+        "text": "Same text",
+        "expectedRevision": 7,
+        "newAttempt": true
+      }
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "interrupt",
+      "worker-1",
+      "--expected-message-id",
+      "message-1"
+    ],
+    "expected": {
+      "cmd": "worker.interrupt",
+      "args": {
+        "id": "worker-1",
+        "expectedMessageId": "message-1"
+      }
+    }
+  }
+]

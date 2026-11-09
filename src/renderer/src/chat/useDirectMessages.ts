@@ -50,7 +50,7 @@ export function useDirectMessages(employeeId:string|undefined,enabled:boolean,ar
   let timer:ReturnType<typeof setTimeout>|undefined
   const off=api.onEvent(event=>{
    const payload=event.payload as {employee?:string}|undefined
-   if(event.channel!=='direct:changed'||payload?.employee!==employeeId)return
+   if(event.channel!=='client:connected'&&(event.channel!=='direct:changed'||payload?.employee!==employeeId))return
    clearTimeout(timer);timer=setTimeout(()=>{if(active.current===employeeId)void load('refresh')},120)
   })
   return()=>{clearTimeout(timer);off();request.current++}

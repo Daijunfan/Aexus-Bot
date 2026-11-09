@@ -4,6 +4,7 @@ import type { TeamSettings } from './types'
 export type ViewState = {
   kind: 'home' | 'team' | 'employee' | 'workspace' | 'conversation' | 'initialization' | 'settings' | 'plugin' | 'clone' | 'messages' | 'plan'
   revision: number
+  teamTab?: 'characters' | 'board' | 'workers'
   name?: string
   pluginId?: string
   employee?: string

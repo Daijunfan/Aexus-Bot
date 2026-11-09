@@ -2,6 +2,8 @@ import {BOT_WORKER_GUIDANCE} from '../shared/bot-workers'
 import {MESSAGE_REPLY_GUIDANCE} from '../shared/message-source'
 import {pluginMethodReadOnly} from './plugins/registry'
 import {randomUUID} from 'node:crypto'
+import {apiFailure,knownApi,validateApiArguments} from './api-contract'
+import {boundedApiResult} from './api-results'
 import {apiReadOnly} from '../shared/api-effects'
 import {allowedCommands,withCaller} from './authorization'
 import {documentationIdentity} from './documentation-tool'
@@ -10,7 +12,7 @@ import type {Live} from './sessions'
 
 export const API_TOOL={
  name:'agents_company_api',
- description:MESSAGE_REPLY_GUIDANCE+' '+BOT_WORKER_GUIDANCE+' Use this tool for application operations; ordinary Team replies use native text. Private direct.post is communication and remains available in native Plan/Ask modes. direct.send is user/Secretary input to an employee, not a reply API. For group files, all current members have equal shared-content rights. Use conversation.entry and conversation.download/download-status to copy attachments to your own Company execution workspace; edit there, then conversation.upload/upload-status with expectedVersion to update the shared file without overwriting another edit. Publish the completed @workspace paths with chat.post (images/files may be sent without text). User and Secretary use conversation.download-local to save an attachment to an explicit absolute Mac/Core-host file path, including when the Secretary is not a group member. Discover the schemas rather than assuming a Core path exists on your execution host. Call a documented Aexus Bot Core command as your authenticated employee. Discover schemas with api.list and api.describe. Core checks role, membership, workspace and execution permission. plan.query/schedule.* manage Plan. Group conversation.notice-* posts timed fixed text without Agent work. Channels are read-only news feeds: channel.list/get discover them; channel.sources with query finds authors by name or handle; channel.source-info returns their profile; channel.context lists sources inside a platform aggregate. sourceIds filters multiple authors (OR). since/until accept epoch milliseconds or ISO timestamps with UTC offsets; timeRanges combines separate date/time windows (OR). keywordsAll, keywordsAny and excludeKeywords combine AND/OR/NOT literal terms; filter groups combine with AND. Use system.info clock (Core time/timeZone) as a reference, honoring any timezone the user supplies. Resolve relative dates in the user timezone and explain the chosen time window. Follow nextCursor with unchanged filters to cover all matching news; channel.source-order lets user/Secretary persist author order independently of subscriptions; channel.fetch-text and channel.fetch-images read recent full messages with limit/cursor, and channel.search searches them. Authorized employees can explicitly fetch unsaved news; channel.access grants reading access. Secretary always accesses and manages all channels without a grant. Secretary can perform user-facing application operations through these same APIs, including messenger.reorder for channel/category order (read messenger.state first and supply expectedOrder), channel.access, subscriptions, groups, files and settings. fetch-images returns native image blocks; text reads never load image bytes. Explicit fetch results can persist in your native history. Plugins do not require plugin teams: plugin.resources lists your authorized pages/documents/hosts and nativeId; plugin.call {id,method,params} uses those content rights without --team or --employee. plugin.access lets user/Secretary grant read/write/create on selected content; Secretary always has full access. workspace.catalog lists your Company/Message workspaces; conversation.entry reads complete published posts and attachments; conversation.download/download-status copies attachments into your own selected workspace and reports completion. Queries need no approval; writes follow Ask/Full access and native planning mode.',
+ description:MESSAGE_REPLY_GUIDANCE+' '+BOT_WORKER_GUIDANCE+' Execute a documented Core command as your authenticated employee; ordinary Team replies use native text. Discover with {command:"api.list",args:{prefix:"schedule."}} (paged summaries by default), then {command:"api.describe",args:{command:"schedule.create"}} for the exact schema. Do not invent commands or field names. schedule.create takes {spec:{name,action:{type:"agent",employeeId,prompt},rule},clientRequestId?}; session/direct messages use text, not prompt. session.status returns stable employee id and temporary sessionId; session.activity accepts employee. Large successful responses return api-result-page: the operation already completed; follow nextCall or use api.result path to read the original JSON, never repeat a write to retrieve its output. direct.post is a private reply and does not dispatch work; direct.send is user/Secretary input to another employee (default enqueue). Reuse request IDs only for identical retries. Queries need no approval; writes obey current native permissions/planning and Core role, membership, workspace and version checks. Read core/secretary-api, core/channels, core/channel-filters or plugin/ID/index using the documentation tool only when needed. Channels are read-only feeds; Secretary automatically has reading access. fetch-images returns native image blocks. Core-host paths are not automatically execution-host paths: use workspace.catalog and conversation.entry/download/download-status before editing or publishing attachments. Follow nextCursor with unchanged filters to cover news results.',
  inputSchema:{type:'object',additionalProperties:false,required:['command'],properties:{command:{type:'string',minLength:1,description:'Exact existing Core command, e.g. plan.query, schedule.delete or plugin.call'},args:{type:'object',additionalProperties:true,description:'That command’s API arguments; no token, identity or wrapper. Omit for {}.'}}}
 } as const
 const approvals=new WeakMap<Live,ReturnType<typeof approvalHandler>>()
@@ -23,8 +25,11 @@ export async function invokeApiTool(state:Live,input:unknown,callId:string,signa
  const active=()=>{signal?.throwIfAborted();if(!task||!state.running||state.privateInitialization||state.acknowledging||state.currentTask?.messageId!==task)throw Error('Core API calls require the current employee work turn; unavailable during initialization or private context reading')}
  active()
  const context=documentationIdentity(state)
+ knownApi(command)
  const available=()=>withCaller(context,()=>{documentationIdentity(state);if(!allowedCommands(context).some(item=>item.name===command))throw Error('API not available to this caller: '+command)})
  available()
+ validateApiArguments(command,args)
+ if(command==='api.list'&&args.compact===undefined)args.compact=true
  // Replying to this application's user is communication, including in Plan mode.
  // direct.post cannot address peers, dispatch work or modify workspace files.
  const writing=command==='direct.post'?false:command==='plugin.call'?!pluginMethodReadOnly(String(args.id),String(args.method)):!apiReadOnly(command,args)
@@ -44,6 +49,8 @@ export async function invokeApiTool(state:Live,input:unknown,callId:string,signa
  active();available()
  if(writing&&(state.planMode||['plan','dontAsk'].includes(state.permissionMode)||state.permissionMode!=='bypassPermissions'&&!approved))throw Error('Execution permissions changed before dispatch')
  // Dispatcher binds authors, rechecks target authorization and validates all domain arguments.
- const data=await handleRequest({cmd:command,args},{...context,requestId:'native:'+state.cardId+':'+callId,...(signal?{signal}:{})})
- return {ok:true,data}
+ try{
+  const data=await handleRequest({cmd:command,args},{...context,requestId:'native:'+state.cardId+':'+callId,...(signal?{signal}:{})})
+  return command==='api.result'?{ok:true,data}:boundedApiResult(context,command,{ok:true,data})
+ }catch(error){throw apiFailure(error,command)}
 }

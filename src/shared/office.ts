@@ -39,7 +39,7 @@ export type ClaudeAvatar = typeof CLAUDE_AVATARS[number]
 export type CommunityAvatar = typeof COMMUNITY_AVATARS[number]
 export type AtlasAvatar = OfficialAvatar|CommunityAvatar
 export const isAtlasAvatar=(value?:string):value is AtlasAvatar=>[...OFFICIAL_AVATARS,...COMMUNITY_AVATARS].some(id=>id===value)
-export const SELECTABLE_AVATARS = FATE_CHARACTERS.map(character=>`fate-${character.id}-chibi` as FateAvatar)
+export const SELECTABLE_AVATARS:SpriteAvatar[] = ['codex',...FATE_CHARACTERS.map(character=>`fate-${character.id}-chibi` as FateAvatar)]
 export const DEFAULT_AVATAR = 'fate-saber-chibi' as const
 // Retired Claude avatar IDs remain valid for saved employees; omit them only from the picker.
 export type SpriteAvatar = AtlasAvatar|ClaudeAvatar|FateAvatar

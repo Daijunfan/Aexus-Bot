@@ -7,6 +7,8 @@ import {createHash} from 'node:crypto'
 import {DatabaseSync} from 'node:sqlite'
 import type {EngineId} from '../shared/engines'
 import {isEngine,isNativeAcp} from '../shared/engines'
+import {deepseekConfiguration} from './engines/deepseek-config'
+import {discoverNativeAcp} from './engines/opencode-runtime'
 import {codeConfig,codeCredential} from './engines/opencode-config'
 import type {EngineProviderCatalog,EngineProviderProfile} from '../shared/engine-providers'
 import {nativeJson,claudeConfigRoot,clineDataRoot,piConfigRoot,nativeClineConnection,nativePiConnection} from './engines/native-config'
@@ -54,6 +56,10 @@ export async function engineProviderCatalog(engine:EngineId):Promise<EngineProvi
   const root=piConfigRoot(),file=path.join(root,'models.json'),data=nativeJson(file),selected=nativePiConnection(),auth=nativeJson(path.join(root,'auth.json'))
   files.push(file,path.join(root,'settings.json'),path.join(root,'auth.json'));activeModel=selected?.model;endpoint=selected?.baseUrl
   for(const [id,entry] of Object.entries(data.providers??{}) as [string,any][]){const key=entry.apiKey||auth[id]?.key;profiles.push({id:'native:'+id,name:entry.name||id,source:'native',baseUrl:entry.baseUrl,models:(entry.models??[]).map((m:any)=>m.id),active:native&&id===selected?.id,credential:credential(key),sourceFile:file})}
+ }else if(engine==='deepseek'){
+  const catalog=await discoverNativeAcp(engine),config=deepseekConfiguration();files.push(...config.files);activeModel=catalog.defaultModel;endpoint=config.baseUrl
+  const providers=[...new Set(catalog.models.map(model=>model.value.split('/')[0]))]
+  for(const id of providers)profiles.push({id:'native:'+id,name:id==='deepseek-official'?'DeepSeek · Harness':id,source:'native',active:activeModel?.startsWith(id+'/')??false,baseUrl:config.baseUrl,models:catalog.models.filter(model=>model.value.startsWith(id+'/')).map(model=>model.value.slice(id.length+1)),credential:{configured:config.hasCredential,kind:config.hasCredential?'file':'none',...(config.hasCredential?{fingerprint:hash(config.secrets.join('\0'))}:{})},sourceFile:config.files.at(-1)??config.root})
  }else if(isNativeAcp(engine)){
   const config=codeConfig(engine),selected=config.model?.split('/')[0]
   files.push(...config.files,...(fs.existsSync(config.authFile)?[config.authFile]:[]));activeModel=config.model
@@ -73,6 +79,6 @@ export async function engineProviderCatalog(engine:EngineId):Promise<EngineProvi
  if(!native){const config=engineConfiguration(engine);profiles.forEach(p=>p.active=false);profiles.unshift({id:'app:override',name:'Aexus Bot override',source:'app',active:true,baseUrl:config.baseUrl,models:config.model?[config.model]:[],credential:{configured:!!config.secret,kind:config.secret?'key':'none'},sourceFile:path.join(APP_HOME,'engines/settings.json')});endpoint=config.baseUrl;activeModel=config.model||activeModel}
  for(const profile of profiles)profile.baseUrl=publicUrl(profile.baseUrl)
  endpoint=publicUrl(endpoint)
- const extensions=path.join(os.homedir(),'.vscode/extensions'),extensionId={claude:'anthropic.claude-code-',codex:'openai.chatgpt-',cline:'saoudrizwan.claude-dev-',pi:'',opencode:'sst-dev.opencode-',kilo:'kilocode.kilo-code-'}[engine],extensionInstalled=!!extensionId&&fs.existsSync(extensions)&&fs.readdirSync(extensions).some(name=>name.startsWith(extensionId))
+ const extensions=path.join(os.homedir(),'.vscode/extensions'),extensionId={claude:'anthropic.claude-code-',codex:'openai.chatgpt-',cline:'saoudrizwan.claude-dev-',pi:'',opencode:'sst-dev.opencode-',kilo:'kilocode.kilo-code-',deepseek:'harcochen.dsh-vsc-integration-'}[engine],extensionInstalled=!!extensionId&&fs.existsSync(extensions)&&fs.readdirSync(extensions).some(name=>name.startsWith(extensionId)||engine==='deepseek'&&name.startsWith('fengze233.dsh-vscode-panel-'))
  return {engine,source:native?'native':'app',activeModel,endpoint,profiles,files,updatedAt:Date.now(),clients:{cli:'Native configuration',vscode:extensionInstalled?'Native configuration':'Extension not installed',app:native?'Native configuration':'Explicit application override'}}
 }

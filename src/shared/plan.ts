@@ -20,7 +20,7 @@ export const PLAN_LAYOUT_CATALOG=[
 export const PLAN_RUN_STATES=['running','succeeded','failed','skipped','cancelled','timed_out','interrupted'] as const
 export type PlanState=typeof PLAN_STATES[number]
 export type PlanLayout=typeof PLAN_LAYOUTS[number]
-export type PlanFilter={search?:string;employee?:string;team?:string;channel?:string;states?:PlanState[];priorities?:typeof PLAN_PRIORITIES[number][];tags?:string[]}
+export type PlanFilter={kind?:'all'|'mission'|'schedule';recurring?:'all'|'once'|'repeating';archived?:'active'|'archived'|'all';excludeIds?:string[];search?:string;employee?:string;team?:string;channel?:string;states?:PlanState[];priorities?:typeof PLAN_PRIORITIES[number][];tags?:string[]}
 export type PlanViewOptions={
   timezone?:string
   timelineScale?:'day'|'week'|'month'
@@ -42,10 +42,11 @@ export type PlanTimeEvent={
   trigger?:ScheduleRun['trigger'];message?:string;scheduledAt?:string
 }
 export type PlanTimeline={events:PlanTimeEvent[];timezone:string;from:string;to:string;truncated:boolean;retainedHistoryLimit:number}
-export type PlanFeedEntry=ScheduleRun&{employee:PlanEmployee|null;jobAvailable:boolean;plan?:ScheduledJob['plan']}
+export type PlanFeedEntry=ScheduleRun&{activity?:'mission-reminder';employee:PlanEmployee|null;jobAvailable:boolean;plan?:ScheduledJob['plan']}
 export type PlanFeed={entries:PlanFeedEntry[];hasMore:boolean;nextCursor:string|null;retainedHistoryLimit:number}
 export type PlanAnalytics={metric:'schedules'|'runs';groupBy:'status'|'employee'|'team'|'priority';total:number;buckets:{key:string;label:string;value:number}[];scope:string;retainedHistoryLimit?:number}
 export function planState(job:ScheduledJob,run?:ScheduleRun):PlanState{
+  if(job.mission)return job.mission.status==='succeeded'?'completed':job.mission.status==='failed'||job.mission.deliveryError?'attention':'scheduled'
   if(run?.status==='running')return 'running'
   if(job.disabledReason)return 'attention'
   if(!job.enabled)return 'paused'

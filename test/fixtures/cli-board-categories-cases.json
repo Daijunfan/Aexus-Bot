@@ -1,0 +1,76 @@
+[
+  {
+    "args": [
+      "board",
+      "categories"
+    ],
+    "expected": {
+      "cmd": "board.categories",
+      "args": {}
+    }
+  },
+  {
+    "args": [
+      "board",
+      "category-save",
+      "bc_review",
+      "--name",
+      "Review",
+      "--employees",
+      "[\"employee-id\"]",
+      "--workers",
+      "[]",
+      "--expected-revision",
+      "0"
+    ],
+    "expected": {
+      "cmd": "board.category-save",
+      "args": {
+        "id": "bc_review",
+        "name": "Review",
+        "employeeIds": [
+          "employee-id"
+        ],
+        "workerIds": [],
+        "expectedRevision": 0
+      }
+    }
+  },
+  {
+    "args": [
+      "board",
+      "category-delete",
+      "bc_review",
+      "--expected-revision",
+      "1"
+    ],
+    "expected": {
+      "cmd": "board.category-delete",
+      "args": {
+        "id": "bc_review",
+        "expectedRevision": 1
+      }
+    }
+  },
+  {
+    "args": [
+      "board",
+      "category-order",
+      "--order",
+      "[\"bc_review\"]",
+      "--expected-order",
+      "[\"bc_review\"]"
+    ],
+    "expected": {
+      "cmd": "board.category-order",
+      "args": {
+        "order": [
+          "bc_review"
+        ],
+        "expectedOrder": [
+          "bc_review"
+        ]
+      }
+    }
+  }
+]

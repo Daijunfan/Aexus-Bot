@@ -1,0 +1,65 @@
+/* Team uses rigid rooms and discrete seats. Header height is shared by all three modes. */
+html[data-presentation] .app.in-office{--company-header-height:50px}
+html[data-presentation] .app.in-office .company-header{height:var(--company-header-height);min-height:var(--company-header-height);display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-rows:1fr;gap:20px;padding:0 18px;border-bottom:1px solid var(--border-soft)}
+html[data-presentation] .app.in-office .company-header .company-brand{grid-row:auto;grid-column:auto;gap:8px;padding-left:max(62px,calc(62px / var(--page-zoom,1)));font-size:12px}
+html[data-presentation] .app.in-office .company-header .company-brand .brand-symbol{display:block;width:25px;height:25px;border-radius:7px}
+html[data-presentation] .app.in-office .company-header .company-brand span{display:none}
+html[data-presentation] .app.in-office .company-navigation{grid-row:auto;grid-column:auto;justify-self:center;align-self:stretch;gap:2px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;width:auto}
+html[data-presentation] .app.in-office .company-navigation .app-view-button{height:100%;min-height:0;min-width:86px;width:auto;padding:0 12px;gap:7px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;box-shadow:none;font-size:12px;font-weight:600;transform:none}
+html[data-presentation] .app.in-office .company-navigation .app-view-button.active{color:var(--accent);border-bottom-color:var(--accent);background:transparent}
+html[data-presentation] .app.in-office .company-navigation .app-view-button:hover{background:var(--bg-hover)}
+html[data-presentation] .app.in-office .company-navigation .app-view-button.active:hover{background:transparent}
+html[data-presentation] .app.in-office .company-navigation .app-view-button>.codicon{font-size:16px}
+html[data-presentation] .app.in-office .company-header .company-actions{grid-row:auto;grid-column:auto;justify-self:end;gap:6px}
+html[data-presentation] .app.in-office .company-header .company-actions button{min-height:30px;height:30px;padding:0 10px;border-radius:6px;font-size:11px}
+.company-header .company-actions button>.codicon{font-size:14px}
+.team-content>.team-subviews{min-height:38px;height:38px;padding:0 18px;gap:12px;background:var(--bg-elev)}
+.team-content>.team-subviews>[role=tablist]{align-self:stretch;gap:18px;padding:0;border:0;border-radius:0;background:none}
+.team-content>.team-subviews [role=tab]{min-width:0;height:100%;padding:0 1px;border-radius:0;border-bottom:2px solid transparent;background:none;box-shadow:none;font-size:11px;font-weight:600;gap:7px;color:var(--fg-dim)}
+.team-content>.team-subviews [role=tab][aria-selected=true]{background:none;color:var(--accent);border-bottom-color:var(--accent);box-shadow:none}
+.team-content>.team-subviews [role=tab]:hover{color:var(--fg)}
+.team-content>.team-subviews [role=tab]>.codicon{font-size:14px}
+.team-content>.team-subviews>span{margin-left:auto;font-size:10px}
+.team-subviews .team-scope-pill{margin-left:0;padding:0 5px 0 8px;min-height:24px;border-radius:5px;font-size:10px}
+.characters-canvas{overflow-anchor:none;position:relative;flex:1;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;background:var(--bg-alt);scrollbar-width:thin;touch-action:pan-x pan-y}
+.characters-canvas .canvas-world{position:absolute;transform-origin:0 0}
+.characters-canvas .world-room{cursor:default}
+.characters-canvas .world-room[data-resizing=true]{z-index:20}
+.characters-canvas[data-gesture=resize]{cursor:var(--resize-cursor)}
+.characters-canvas[data-gesture=resize] *{cursor:inherit!important}
+.characters-canvas .team-header{height:128px;grid-template-rows:36px 34px 18px;gap:4px 12px;padding:12px 28px}
+.characters-canvas .team-title{cursor:grab}
+.room-resize-handle{position:absolute;z-index:32;touch-action:none;-webkit-app-region:no-drag}
+.room-resize-e{right:calc(-8px / var(--characters-scale));top:calc(14px / var(--characters-scale));bottom:calc(14px / var(--characters-scale));width:calc(16px / var(--characters-scale));cursor:ew-resize}
+.room-resize-s{bottom:calc(-8px / var(--characters-scale));left:calc(14px / var(--characters-scale));right:calc(14px / var(--characters-scale));height:calc(16px / var(--characters-scale));cursor:ns-resize}
+.room-resize-se{right:calc(-6px / var(--characters-scale));bottom:calc(-6px / var(--characters-scale));width:calc(24px / var(--characters-scale));height:calc(24px / var(--characters-scale));cursor:nwse-resize}
+.room-resize-handle{background:transparent;border:0;box-shadow:none}
+.room-resize-handle:focus-visible{outline:calc(2px / var(--characters-scale)) solid var(--accent);outline-offset:calc(2px / var(--characters-scale))}
+.characters-canvas[data-gesture=resize] .room-resize-handle:focus-visible{outline:none}
+.team-board-drop-slots{position:absolute;inset:0;pointer-events:none;z-index:35}.team-board-drop-slot{position:absolute;border:calc(1px / var(--characters-scale)) dashed var(--border);border-radius:22px}.team-board-drop-slot[data-target=true]{border:calc(2px / var(--characters-scale)) solid var(--accent);background:color-mix(in srgb,var(--accent) 5%,transparent)}.team-board-drop-slot>span{position:absolute;left:12px;top:-18px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--bg-elev);color:var(--fg-dim);font-size:calc(10px / var(--characters-scale))}
+.characters-canvas .team-title strong{font-size:29px;line-height:1.2}
+.characters-canvas .team-badges{height:34px}
+.characters-canvas .team-kind{font-size:15px;padding:4px 10px}
+.characters-canvas .team-os{height:32px;min-width:32px}
+.characters-canvas .team-os svg,.characters-canvas .team-os img{width:31px;height:31px}
+.characters-canvas .team-root-label{font-size:13px;line-height:18px}
+.characters-canvas .room-dimension{bottom:12px;font-size:12px;letter-spacing:0}
+.team-seats{position:absolute;inset:0;pointer-events:none;z-index:3}
+.team-seat{position:absolute;display:grid;place-items:center;border:2px dashed color-mix(in srgb,var(--fg-dim) 25%,transparent);border-radius:18px;color:var(--room-ink,var(--fg-dim));font-size:22px;background:color-mix(in srgb,var(--bg-elev) 15%,transparent)}
+.team-seat[data-occupied=true]{border-color:transparent;background:none}.team-seat[data-occupied=true]>span{display:none}
+.employee-seat-button{position:absolute;z-index:25;right:-8px;top:0;min-width:calc(38px / var(--characters-scale));height:calc(22px / var(--characters-scale));padding:0 calc(5px / var(--characters-scale));border:1px solid var(--border);border-radius:calc(5px / var(--characters-scale));background:var(--bg-elev);color:var(--fg-dim);font-family:inherit;font-weight:600;font-size:calc(10px / var(--characters-scale));line-height:1;cursor:pointer;box-shadow:0 1px 3px #0001}
+.employee-seat-button:hover{border-color:var(--accent);color:var(--accent)}.employee-seat-button:focus-visible{outline:calc(2px / var(--characters-scale)) solid var(--accent);outline-offset:calc(2px / var(--characters-scale))}
+.seating-hint{position:absolute;bottom:8px;left:18px;pointer-events:none;padding:4px 8px;border:1px solid var(--border-soft);border-radius:5px;background:var(--bg-elev);color:var(--fg-dim);font-size:10px}
+.office-panel-wrap.seat-picker-overlay{z-index:1000}
+.office-panel.seat-picker{width:min(440px,100%);padding:22px;border-radius:14px;background:var(--bg-elev);color:var(--fg)}
+.seat-picker>header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.seat-picker h2{margin:0;font-size:19px}.seat-picker p{font-size:12px;line-height:1.7;color:var(--fg-dim);margin:7px 0 16px}
+.seat-picker>header button{border:1px solid var(--border);border-radius:7px;background:var(--bg-alt);width:30px;height:30px;color:var(--fg);font-size:20px;cursor:pointer}
+.seat-picker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.seat-picker-grid button{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:78px;min-width:0;padding:12px;border:1px solid var(--border);border-radius:9px;background:var(--bg-alt);color:var(--fg);font:inherit;cursor:pointer}.seat-picker-grid button[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--bg-elev))}.seat-picker-grid strong{font-size:19px;font-variant-numeric:tabular-nums;color:var(--accent)}.seat-picker-grid span{font-size:11px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.seat-picker-grid button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.seat-picker button:disabled{opacity:.5;cursor:wait}
+.agent-board .agent-board-toolbar{padding:9px 18px;gap:12px}
+.agent-board .agent-board-grid{grid-template-columns:repeat(var(--board-columns,1),minmax(0,1fr))}
+.agent-board-toolbar>label:first-child{height:30px;max-width:320px;flex:1;margin:0;font-size:11px}
+.agent-board-toolbar>.app-select{margin-left:auto}
+.agent-board-toolbar>.board-column-control{flex:none;display:flex;align-items:center;width:auto;max-width:none;height:30px;padding:0;gap:7px;background:none;border:0;border-radius:0;color:var(--fg-dim);font-size:11px}
+.board-column-control .app-select{min-width:54px;width:54px}.board-column-control .app-select-trigger{min-height:30px;padding:4px 8px;gap:6px}
+@media(max-width:1050px){html[data-presentation] .app.in-office .company-header{gap:10px;padding-inline:12px}html[data-presentation] .app.in-office .company-header .company-actions button{width:30px;padding:0;font-size:0;gap:0}html[data-presentation] .app.in-office .company-header .company-actions button>span{display:block;font-size:18px}.seating-hint{font-size:9px}}
+@media(max-width:600px){html[data-presentation] .app.in-office{--company-header-height:84px}html[data-presentation] .app.in-office .company-header{grid-template-columns:1fr auto;grid-template-rows:40px 44px;gap:0;padding:0 12px}html[data-presentation] .app.in-office .company-header .company-brand{grid-column:1;grid-row:1;padding-left:0}html[data-presentation] .app.in-office .company-header .company-actions{grid-column:2;grid-row:1}html[data-presentation] .app.in-office .company-navigation{grid-column:1/-1;grid-row:2;justify-self:center;justify-content:center}html[data-presentation] .app.in-office .company-navigation .app-view-button{min-width:0;padding-inline:13px}.team-content>.team-subviews{padding-inline:12px}.agent-board .agent-board-toolbar{flex-wrap:wrap;padding:9px 12px}.agent-board-toolbar>label:first-child{flex-basis:100%;max-width:none;width:100%}.agent-board-toolbar>.app-select{margin-left:0;flex:1;max-width:none}.agent-board-toolbar>.board-column-control{min-width:0}.seating-hint{display:none}}

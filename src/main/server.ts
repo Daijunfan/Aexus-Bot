@@ -1,3 +1,12 @@
+import {planPreferencesRequest} from './plan-preferences'
+import {missionRequest,registerSecretaryRequest} from './missions'
+import {questionRequest,assertQuestionGate} from './chat-questions'
+import {listConversationFiles,trashConversationFiles,restoreConversationFiles} from './conversation-files'
+import {API_REVISION,knownApi,validateApiArguments} from './api-contract'
+import {readApiResult} from './api-results'
+import {employeeActivity} from '../shared/activity'
+import {protocolLines,protocolJson} from './protocol-lines'
+import {boardCategories,saveBoardCategory,deleteBoardCategory,orderBoardCategories} from './board-categories'
 import {monitorRequest} from './script-monitors'
 import {botRequest,botDirectTarget,botDirectRequest,botFileEndpoint,botGroup} from './bot-workers'
 import {hostRights} from './host-access'
@@ -21,7 +30,7 @@ import {WORKSPACE_FILE_PREFIX} from '../shared/conversation-workspaces'
 import { engineRequest } from './commands/engine'
 import { chatRequest } from './commands/chat'
 import { openMedia,mediaInfo,readMedia,closeMedia } from './media'
-import { randomUUID } from 'node:crypto'
+import { randomUUID,createHash } from 'node:crypto'
 import { readChatMessages } from './chat-groups'
 import { resolveMessageReply } from './transcripts'
 import { forwardMessages,forwardStatus } from './message-forwarding'
@@ -75,7 +84,7 @@ import { scheduleRequest,reconcileSchedules } from './scheduler/service'
 import { remoteTarget } from '../shared/remote'
 import { executeRemote,checkRemote,remoteFiles,closeRemote,resolveEmployeeWorkspace,teamConnectionId } from './tunnel'
 import { checkCloudNative,cloudNativeTarget,readCloudNativeSession } from './cloud-native'
-import {createWorker,listWorkers,startWorker,readWorker,inputWorker,resizeWorker,stopWorker,removeEmployeeWorkers} from './native-workers'
+import {createWorker,listWorkers,workerEngines,startWorker,readWorker,inputWorker,saveWorkerDraft,resizeWorker,stopWorker,removeEmployeeWorkers,workerSnapshot,sendWorker,dequeueWorker,respondWorker,configureWorker,interruptWorker} from './native-workers'
 import {beforeChannelRequest,flushChannelContent,saveChannelContent,loadChannelAsset,loadChannelPost,loadChannelMessage} from './channel-content'
 import { openTerminal,listTerminals,readTerminal,waitTerminalOutput,inputTerminal,resizeTerminal,closeTerminal,closeEmployeeTerminals } from './terminals'
 // A unix-socket server so the whole app can be driven from a terminal. Every
@@ -88,7 +97,6 @@ import { createServer,connect,type Server,type Socket } from 'node:net'
 import { existsSync,unlinkSync,cpSync,renameSync,rmSync,chmodSync,realpathSync,statSync } from 'node:fs'
 import { mkdirSync } from 'node:fs'
 import { dirname,basename,isAbsolute,resolve,join } from 'node:path'
-import { createInterface } from 'node:readline'
 import { APP_HOME,SOCKET_PATH,type Request,type Response } from '../shared/protocol'
 import {
 revokeInvalidDelegations,assertEmployeeControl,beginEmployeeRemoval,endEmployeeRemoval,beginTeamRemoval,endTeamRemoval,assertTeamAvailable,assertNotRemoving,
@@ -121,12 +129,12 @@ removeSession,
 setRoom,
 writeStore
 } from './store'
-import { renameGroup,designRoom,updateEmployee,employeeFields,setTeamRoot,bindTeamRoot,setBounds,placeEmployee,setViewport,configureTeam,validateTeamSettings,teamViewList,createTeamView,updateTeamView,removeTeamView,selectTeamView,canvasViewport } from './store'
+import { renameGroup,placeTeam,designRoom,updateEmployee,employeeFields,setTeamRoot,bindTeamRoot,setBounds,placeEmployee,setViewport,configureTeam,validateTeamSettings,validateNewTeamAppearance,teamViewList,createTeamView,updateTeamView,removeTeamView,selectTeamView,canvasViewport } from './store'
 import { teamSettings,employeeSettings,nativeSessionRefs,canBindNativeSession,type StoredSession } from '../shared/types'
 import { workspaceFiles } from './files'
 import {revealWorkspaceFile} from './file-reveal'
 import { employeeRoot,employeeWorkspace,executionEmployee,cloudDirectory,cloudRelative,workspaceStatus,teamRoot,managedTeamRoot,chooseTeamRoot,defaultPluginWorkspace,legacyPluginWorkspace,inside } from './workspaces'
-import { planOffice } from '../shared/canvas'
+import { planOffice,minimumTeamSeating } from '../shared/canvas'
 import { listPlugins,requirePlugin,installPlugin,pluginFile } from './plugins/registry'
 import { pluginRuntime,callPlugin,openPluginView,closePluginView,releaseWorkspacePlugins } from './plugins/runtime'
 import { provisionWorkspace,provisionEmployee,ensureEmployeeBootstrap } from './plugins/documents'
@@ -136,8 +144,8 @@ import { transcriptItems,deleteTranscript,seedTranscript } from './transcripts'
 import { renderTranscript } from '../shared/transcript'
 import type { EffortLevel,PermissionMode } from '@anthropic-ai/claude-agent-sdk'
 
-let beforeViewChange = async () => {}
-export function setViewGuard(guard: () => Promise<void>) { beforeViewChange = guard }
+let beforeViewChange:(nextKind?:ViewState['kind'])=>Promise<void> = async () => {}
+export function setViewGuard(guard: typeof beforeViewChange) { beforeViewChange = guard }
 let server: Server | null = null
 let ownsSocket = false
 let askRenderer: (op: string, args?: Record<string, unknown>) => Promise<unknown> = async () => { throw new Error('no window is open') }
@@ -166,14 +174,14 @@ export function publishEvent(channel: string, payload: unknown,clientId?:string)
     const p = payload as { sessionId?: string }
     if (p?.sessionId && p.sessionId !== sessionId) continue
     const context=followerContexts.get(sock)!
-    try{authorize('session.follow',{},employeeId(sessionId),context);assertEmployeeReady(employeeId(sessionId))}catch{sock.end(JSON.stringify({type:'done',error:'Access revoked'})+'\n');following.delete(sock);followerContexts.delete(sock);continue}
+    try{authorize('session.follow',{},employeeId(sessionId),context);assertEmployeeReady(employeeId(sessionId))}catch{sock.end(protocolJson({type:'done',error:'Access revoked'})+'\n');following.delete(sock);followerContexts.delete(sock);continue}
     if(!p?.sessionId&&context.principal.kind==='agent')continue
     // A raw follower gets every event verbatim; a normal one gets only the
     // channels needed to render a conversation.
     if (!rawFollowers.has(sock) && !RENDERED_CHANNELS.has(channel)) continue
-    sock.write(JSON.stringify({ type: 'event', channel, payload }) + '\n')
+    sock.write(protocolJson({ type: 'event', channel, payload }) + '\n')
     if (['session:turn-end', 'session:end', 'session:error', 'session:closed'].includes(channel)) {
-      sock.end(JSON.stringify({ type: 'done' }) + '\n')
+      sock.end(protocolJson({ type: 'done' }) + '\n')
       following.delete(sock)
       followerContexts.delete(sock)
       rawFollowers.delete(sock)
@@ -194,6 +202,7 @@ const RENDERED_CHANNELS = new Set([
 ])
 
 function employeeId(value:unknown){const id=String(value??'');return readStore().sessions.some(card=>card.id===id)?id:sessionInfo(id)?.cardId}
+function creationFingerprint(value:unknown):string{const stable=(value:any):any=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([name,value])=>[name,stable(value)])):value;return createHash('sha256').update(JSON.stringify(stable(value))).digest('hex')}
 export async function handleRequest(req:Request,context?:RequestContext&{signal?:AbortSignal}):Promise<any>{
   if(context)return withCaller(context,()=>handleRequest(req))
   const caller=requestContext(),a={...(req.args??{})} as Record<string,any>
@@ -220,6 +229,11 @@ export async function handleRequest(req:Request,context?:RequestContext&{signal?
     if(a.deleteWorkspace&&!isGlobal(caller.principal))throw Error('删除工作文件夹需要用户或全局管理授权；管理关系只允许移除员工')
   }else authorize(req.cmd,a,target,caller)
   assertInitializationRequest(req.cmd,target)
+  if(req.cmd.startsWith('mission.')||req.cmd.startsWith('question.')||['plan.preferences','plan.archive'].includes(req.cmd))validateApiArguments(req.cmd,a)
+  assertQuestionGate(req.cmd,caller)
+  if(['plan.preferences','plan.archive'].includes(req.cmd))return planPreferencesRequest(req.cmd.slice(5),a)
+  if(req.cmd.startsWith('mission.'))return missionRequest(req.cmd.slice(8),a)
+  if(req.cmd.startsWith('question.'))return questionRequest(req.cmd.slice(9),a)
   if(req.cmd.startsWith('monitor.'))return monitorRequest(req.cmd,a)
   if(req.cmd.startsWith('bot.'))return botRequest(req.cmd,a)
   if(botDirectTarget(req.cmd,a)){
@@ -235,12 +249,14 @@ export async function handleRequest(req:Request,context?:RequestContext&{signal?
     if(!target)throw Error('Unknown employee conversation')
     if(caller.principal.kind==='agent'&&caller.principal.employeeId===target)throw Error('Use direct.post to reply to the user; direct.send dispatches work to another employee')
     const mode=a.mode??'enqueue';if(!['send','enqueue','steer'].includes(mode))throw Error('Unknown private delivery mode')
-    const args={...a,sourceView:'messages',clientMessageId:a.clientMessageId??randomUUID()}
+    const args:Record<string,any>={...a,sourceView:'messages',clientMessageId:a.clientMessageId??randomUUID()}
     const reply=a.replyTo?(a.replyConversation&&a.replyConversation!=='employee:'+target?resolveConversationReply(a.replyConversation,a.replyTo,a.replyQuote,a.replyTextOnly):directReply(target,a.replyTo,a.replyQuote)):undefined
     const entry=await prepareDirectInput(target,{...args,resolvedReply:reply})
-    const work=(attempt:PrivateSendAttempt)=>{
+    const work=async(attempt:PrivateSendAttempt)=>{
+      const mission=await registerSecretaryRequest(target!,entry,caller)
+      const workArgs=mission?{...args,text:String(args.text??'')+'\n\n[Aexus durable Mission '+mission.id+'] This user request was registered before dispatch. Read mission.get, refine assignees/type/reminderSeconds using mission.update, and continue until the actual goal is achieved. Acknowledge success explicitly with mission.complete and concrete result evidence; a native turn ending is not success. Use question.ask with this missionId for a required user decision.'}:args
       const decorated:PrivateSendAttempt={directMessageId:entry.id,get queueId(){return attempt.queueId},queued:id=>{attempt.queued(id);directDelivery(target!,entry.id,'queued')},dispatching:id=>{attempt.dispatching(id);updateDirectInput(target!,entry.id,{nativeTaskId:id,outbound:{taskId:id}})},accepted:id=>{attempt.accepted(id);directDelivery(target!,entry.id,'accepted')},failed:error=>{attempt.failed(error);directDelivery(target!,entry.id,'failed',String((error as Error)?.message??error))},interrupted:reason=>{attempt.interrupted(reason);directDelivery(target!,entry.id,'interrupted',reason)}}
-      return handleAuthorizedRequest({cmd:mode==='enqueue'?'session.enqueue':'session.send'}, {...args,id:undefined,employee:target,...(reply?{crossReply:reply}:{}),replyConversation:undefined},target,caller,decorated)
+      return handleAuthorizedRequest({cmd:mode==='enqueue'?'session.enqueue':'session.send'}, {...workArgs,id:undefined,employee:target,...(reply?{crossReply:reply}:{}),replyConversation:undefined},target,caller,decorated)
     }
     if(mode==='steer'){
       if(a.images?.length||a.files?.length)throw Error('Queue attachments instead of steering them')
@@ -288,7 +304,8 @@ async function handleAuthorizedRequest(req:Request,a:Record<string,any>,target:s
     if(['session.send','session.enqueue','session.steer','session.open'].includes(req.cmd)&&!live){const opened=await startSession({cardId:a.employee,delegation:delegationFor(a.employee,caller)});authorize(req.cmd,a,target,caller);a.id=opened.sessionId}
   }
   if(req.cmd==='session.send'||req.cmd==='session.enqueue')a.delegation=delegationFor(target??employeeId(a.id)!,caller)
-  const result=await dispatchRequest({...req,args:a},privateSend)
+  let result=await dispatchRequest({...req,args:a},privateSend)
+  if(result?.sessions&&result?.groups){const {teamCreations,employeeCreations,boardCategories,...value}=result;result={...value,...(caller.principal.kind==='operator'||callerIdentity().appAdministrator?{boardCategories}:{})}}
   if(caller.principal.kind==='operator')return result?.sessions&&result?.groups?clientStore(result):result
   if(req.cmd==='session.search')return result.filter((card:StoredSession)=>canReadEmployee(caller.principal,card.id))
   if(req.cmd==='session.list'&&isGlobal(caller.principal)){const ids=new Set(visibleEmployees(caller.principal).map(card=>card.id));return a.live?result.filter((item:any)=>ids.has(item.cardId)):{...result,sessions:result.sessions.filter((item:StoredSession)=>ids.has(item.id))}}
@@ -313,6 +330,9 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
   if(req.cmd.startsWith('channel.')&&['channel.image','channel.export'].includes(req.cmd))await beforeChannelRequest(req.cmd,a)
   if(req.cmd.startsWith('channel.')&&!['channel.settings','channel.image','channel.export'].includes(req.cmd)){const result=await channelOperation(req.cmd,a);if(['channel.save','channel.delete'].includes(req.cmd))await saveChannelContent(String(a.id));if(['channel.publish','channel.media-put','channel.source-avatar-put','channel.message-send','channel.message-post'].includes(req.cmd))await flushChannelContent();return result}
   if(CONVERSATION_CONTROL_APIS.has(req.cmd))return conversationControlRequest(req.cmd,a)
+  if(req.cmd==='conversation.files')return listConversationFiles(a)
+  if(req.cmd==='conversation.file-trash')return trashConversationFiles(a)
+  if(req.cmd==='conversation.file-restore')return restoreConversationFiles(a)
   if(req.cmd.startsWith('conversation.'))return conversationWorkspaceRequest(req.cmd,a,fileEndpoint)
   if(req.cmd.startsWith('engine.'))return engineRequest(req.cmd,a)
   if(req.cmd.startsWith('chat.'))return chatRequest(req.cmd,a)
@@ -347,15 +367,22 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'auth.agent-token': return agentCredential(s(a.id))
     case 'auth.revoke': {const result=revokeAgentCredential(s(a.id));clearManagementInteraction(s(a.id));pruneManagementActivity();revokeInvalidDelegations();reconcileSchedules();reconcileConversationNotices();publishEvent('access:changed',{});return result}
     case 'api.list': {
-      for(const [key,max] of [['prefix',120],['search',200]] as const)if(a[key]!==undefined&&(typeof a[key]!=='string'||a[key].length>max))throw Error('Invalid API '+key)
-      if(Object.keys(a).some(key=>!['all','prefix','search'].includes(key)))throw Error('Unknown API discovery field')
-      return allowedCommands(requestContext(),readStore(),a.all).filter(command=>(!a.prefix||command.name.startsWith(a.prefix))&&(!a.search||[command.name,command.summary,command.gui].join(' ').toLowerCase().includes(a.search.toLowerCase())))
+      validateApiArguments('api.list',a)
+      const commands=allowedCommands(requestContext(),readStore(),a.all).filter(command=>(!a.prefix||command.name.startsWith(a.prefix))&&(!a.search||[command.name,command.summary,command.gui].join(' ').toLowerCase().includes(a.search.toLowerCase())))
+      if(!a.compact){if(a.offset!==undefined||a.limit!==undefined)throw Error('API pagination requires compact=true');return commands}
+      const offset=a.offset??0,limit=a.limit??40,selected=commands.slice(offset,offset+limit)
+      return {apiRevision:API_REVISION,total:commands.length,offset,nextOffset:offset+selected.length<commands.length?offset+selected.length:null,commands:selected.map(({name,summary,readOnly,permission})=>({name,summary,readOnly,permission}))}
     }
-    case 'api.describe': {const command=allowedCommands(requestContext(),readStore(),a.all).find(value=>value.name===a.command);if(!command)throw Error('API not available to this caller');return command}
-    case 'api.docs': return apiDocumentation(requestContext(),readStore(),a.document)
+    case 'api.describe': {validateApiArguments('api.describe',a);knownApi(a.command);const command=allowedCommands(requestContext(),readStore(),a.all).find(value=>value.name===a.command);if(!command)throw Error('API not available to this caller: '+a.command);return {...command,apiRevision:API_REVISION}}
+    case 'api.docs': return {...apiDocumentation(requestContext(),readStore(),a.document),apiRevision:API_REVISION}
+    case 'api.result': validateApiArguments('api.result',a);return readApiResult(requestContext(),a)
     case 'avatar.list': return avatarCatalog(a)
     case 'avatar.get': return getAvatar(s(a.id))
     case 'avatar.update': return updateAvatar({id:s(a.id),enabled:a.enabled,expectedRevision:a.expectedRevision})
+    case 'board.categories': return boardCategories()
+    case 'board.category-save': return saveBoardCategory(a as any)
+    case 'board.category-delete': return deleteBoardCategory(s(a.id),a.expectedRevision)
+    case 'board.category-order': return orderBoardCategories(a.order,a.expectedOrder)
     case 'office.layout': return officeLayout(a.team,a.viewId)
     case 'session.acknowledge': return acknowledgeReply(s(a.employee??employeeId(a.id)),a.replyId)
     case 'management.team': return setManagerTeam(a.clear===true?null:a.team)
@@ -366,7 +393,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'connector.reset':return setConnector(s(a.manager),s(a.employee),undefined,undefined,true)
     case 'management.activity': return managementActivity(a.team)
     case 'management.roles': return managementRoles()
-    case 'management.relayout': return relayoutManagement(s(a.team))
+    case 'management.relayout': throw Error('Teams use fixed numbered seats. Use card.place to adjust relative positions.')
     case 'management.request': return requestManagement(s(a.employee),a.manager)
     case 'management.decide': return decideManagement(s(a.id),s(a.decision))
     case 'management.bind': return bindManagement(a)
@@ -442,10 +469,11 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'view.list': return {views:APP_VIEWS,current:getView(),company:teamViewList(),shared:{employees:'session.list',conversations:'session.transcript',inbox:'session.inbox',readReceipts:'session.acknowledge',groups:'chat.list',bindings:'management.topology',schedules:'schedule.list',plans:'plan.query',planViews:'plan.views'}}
     case 'view.select': {
       const mode=appView(a.id);if(!mode)throw Error('Unknown application view')
+      if(a.teamTab!==undefined&&(mode.id!=='company'||!['characters','board','workers'].includes(a.teamTab)))throw Error('Choose Characters, Board or Workers within Team')
       if(mode.id!=='company'&&a.teamViewId!==undefined)throw Error('Only Company selects a Team subview')
       if(mode.id==='company'&&a.teamViewId!==undefined&&!teamViewList().views.some(item=>item.id===a.teamViewId))throw Error('Unknown Company subview')
-      await beforeViewChange()
-      if(mode.id==='company')selectTeamView(a.teamViewId??'all')
+      await beforeViewChange(mode.id==='company'?'home':mode.id)
+      if(mode.id==='company')selectTeamView(a.teamViewId??(a.teamTab?teamViewList().activeId:'all'))
       if(mode.id==='messages'){
         const saved={...getMessagesView(),shared:getView().shared}
         try{
@@ -456,12 +484,13 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
           return setView(saved)
         }catch{return setView({kind:'messages'})}
       }
-      return setView({kind:mode.kind})
+      return setView({kind:mode.kind,...(a.teamTab?{teamTab:a.teamTab}:{})})
     }
     case 'view.get': return getView()
     case 'view.open': {
       const kind=a.kind as ViewState['kind'],store=readStore()
       if(!['home','team','employee','workspace','conversation','initialization','settings','plugin','clone','messages','plan'].includes(kind))throw new Error('Unknown view kind')
+      if(a.teamTab!==undefined&&(kind!=='home'||!['characters','board','workers'].includes(a.teamTab)))throw Error('Choose Characters, Board or Workers within Team')
       if(a.planViewId!==undefined&&(kind!=='plan'||!((await planRequest('views',{})) as Array<{id:string}>).some((view:any)=>view.id===a.planViewId)))throw Error('Unknown Plan view')
       if([a.employee,a.chatId,a.channelId].filter(value=>value!==undefined).length>1)throw Error('Choose one conversation')
       if(a.chatId!==undefined){if(kind!=='messages')throw Error('Group conversations belong to Messages');getChatGroup(a.chatId)}
@@ -473,11 +502,11 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       const pluginId=a.pluginId??((kind==='settings'||kind==='employee'||kind==='clone')?getView().pluginId:undefined)
       if(kind==='plugin'||pluginId)requirePlugin(s(pluginId))
       if(kind==='conversation'&&pluginId){const card=store.sessions.find(c=>c.id===a.employee)!;if(teamSettings(store,card.group).pluginId!==pluginId)throw new Error('员工不属于当前插件')}
-      await beforeViewChange()
+      await beforeViewChange(kind)
       if(kind==='plugin'){await openPluginWindow(s(pluginId),pluginWorkspace({id:pluginId}));return setView({kind:'home',pluginId})}
       const previous=getView()
       const returnTo=!['home','messages','plugin','plan'].includes(kind)?(previous.kind==='plan'?{kind:'plan' as const,planViewId:previous.planViewId}:previous.kind==='messages'?{kind:'messages' as const,employee:previous.employee,...(previous.chatId?{chatId:previous.chatId}:{}),...(previous.channelId?{channelId:previous.channelId,...(previous.sourceId?{sourceId:previous.sourceId}:{})}:{})}:previous.returnTo):undefined
-      return setView({kind,name:a.name,employee:a.employee,chatId:a.chatId,channelId:a.channelId,sourceId:a.sourceId,planViewId:a.planViewId,settings:a.settings,pluginId,details:!!a.details,shared:previous.shared,returnTo})
+      return setView({kind,...(a.teamTab?{teamTab:a.teamTab}:{}),name:a.name,employee:a.employee,chatId:a.chatId,channelId:a.channelId,sourceId:a.sourceId,planViewId:a.planViewId,settings:a.settings,pluginId,details:!!a.details,shared:previous.shared,returnTo})
     }
     case 'view.close': {
       await beforeViewChange()
@@ -522,13 +551,20 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       if(a.employee&&!employee)throw new Error('Unknown employee')
       return checkRemote(employee?executionEmployee(readStore(),employee).remote:a.team?teamSettings(readStore(),a.team).remote:a.remote)
     }
-    case 'worker.create': return createWorker({employee:a.employee,engine:s(a.engine),title:a.title,cwd:a.cwd})
+    case 'worker.create': return createWorker({employee:a.employee,engine:s(a.engine),title:a.title,cwd:a.cwd,clientRequestId:a.clientRequestId})
     case 'worker.list': return listWorkers(a.employee)
+    case 'worker.engines': return workerEngines()
+    case 'worker.snapshot': return workerSnapshot(s(a.id))
+    case 'worker.send': return sendWorker(s(a.id),s(a.text),a.clientMessageId)
+    case 'worker.dequeue': return dequeueWorker(s(a.id),s(a.messageId))
+    case 'worker.respond': return respondWorker(s(a.id),s(a.requestId),s(a.decision),a.answers,a.form)
+    case 'worker.configure': return configureWorker(s(a.id),{...(a.model!==undefined?{model:a.model}:{}),...(a.effort!==undefined?{effort:a.effort}:{}),...(a.permissionMode!==undefined?{permissionMode:a.permissionMode}:{})})
     case 'worker.start': return startWorker(s(a.id),a.cols,a.rows)
     case 'worker.read': return readWorker(s(a.id),Number(a.cursor??0),Number(a.waitMs??0))
-    case 'worker.input': return inputWorker(s(a.id),s(a.data??''))
+    case 'worker.input': return inputWorker(s(a.id),s(a.data??''),a.terminal)
+    case 'worker.draft': return saveWorkerDraft(s(a.id),a.text,a.expectedRevision,a.newAttempt===true)
     case 'worker.resize': return resizeWorker(s(a.id),Number(a.cols),Number(a.rows))
-    case 'worker.interrupt': return inputWorker(s(a.id),'\x03')
+    case 'worker.interrupt': return interruptWorker(s(a.id),a.expectedMessageId)
     case 'worker.stop': return stopWorker(s(a.id))
     case 'worker.remove': return stopWorker(s(a.id),true)
     case 'terminal.open': {
@@ -622,7 +658,13 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       return startSession({ cardId: s(a.cardId),delegation:delegationFor(s(a.cardId)) })
     }
 
-    case 'session.activity': return sessionSnapshot(s(a.id)).activityPreview??null
+    case 'session.activity': {
+      validateApiArguments('session.activity',a)
+      const id=employeeId(a.id),card=readStore().sessions.find(card=>card.id===id)
+      if(!card)throw Error('Unknown employee/session; read session.status and use employee or id')
+      const live=listLive().find(item=>sessionInfo(item.id)?.cardId===card.id)
+      return employeeActivity(card,live?sessionSnapshot(live.id):undefined)
+    }
     case 'session.snapshot': return sessionSnapshot(s(a.id))
     case 'approval.list':
       return approvalsFor(s(a.id))
@@ -671,6 +713,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     }
 
     case 'session.info': {
+      if(!a.id)throw Error('Choose id or employee; session.status returns stable employee IDs and current sessionId')
       const info = sessionInfo(s(a.id))
       if (!info){const card=readStore().sessions.find(c=>c.id===a.id);if(card)return {...publicEmployee(card),lastReply:card.lastReply,busy:false,sessionId:null};throw new Error(`unknown session ${s(a.id)}`)}
       const card=readStore().sessions.find(card=>card.id===info.cardId)
@@ -785,9 +828,18 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'team-view.select': return selectTeamView(s(a.id))
     case 'group.add': {
       const name=s(a.name??'').trim();if(!name)throw new Error('Team 名称不能为空')
-      if(readStore().groups.includes(name))throw Error('Team 已存在；名称可修改，工作目录创建后不可更换')
+      const before=readStore(),principal=requestContext().principal,key=a.clientRequestId
+      let creation:NonNullable<ReturnType<typeof readStore>['teamCreations']>[string]|undefined
+      if(key!==undefined){
+        if(typeof key!=='string'||!key.trim()||key.length>160)throw Error('clientRequestId must be 1–160 characters')
+        const fingerprint=creationFingerprint({...a,name,clientRequestId:undefined}),previous=Object.entries(before.teamCreations??{}).find(([,value])=>value.key===key&&JSON.stringify(value.caller)===JSON.stringify(principal))
+        if(previous){if(previous[1].fingerprint!==fingerprint)throw Error('clientRequestId already used with different Team settings');if(!before.groups.includes(previous[0]))throw Error('Created Team is no longer available');return clientStore(before)}
+        creation={caller:principal,key,fingerprint}
+      }
+      if(before.groups.includes(name))throw Error('Team 已存在；名称可修改，工作目录创建后不可更换')
       assertTeamAvailable(name)
       const config=validateTeamSettings({mode:a.mode??(a.hostId?'cloud':'build'),pluginId:a.pluginId,directoryMode:a.directoryMode,hostId:a.hostId,directory:a.directory,remote:a.remote})
+      validateNewTeamAppearance(name,config,{design:a.design,bounds:a.bounds})
       const os=config.remote?.os??(process.platform==='darwin'?'macos':process.platform==='win32'?'windows':'linux')
       if(a.os!==undefined&&a.os!==os||a.distribution!==undefined&&a.distribution!==config.remote?.distribution)throw Error('目标操作系统与实际 Team 主机不符；先用 host list --summary 按 os/distribution 选择已登记主机，不要用 Team 名称代替主机绑定')
       if(config.mode==='cloud'){
@@ -798,7 +850,8 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
         config.directory=directory;config.remote={...config.remote!,directory}
         closeRemote(teamConnectionId(name))
       }
-      return addGroup(name,config.mode==='cloud'?config.remote!.directory:a.root,config)
+      authorize('group.add',a)
+      return clientStore(addGroup(name,config.mode==='cloud'?config.remote!.directory:a.root,config,{design:a.design,bounds:a.bounds,creation}))
     }
     case 'group.configure': {
       const store=readStore();if(!store.groups.includes(a.name))throw new Error('Unknown Team')
@@ -864,31 +917,30 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     // Room placement: the floor layout is state like any other, so the CLI can
     // set it and tests can assert on it.
     case 'room.place': {
-      const layout = {
-        col: Number(a.col ?? 0),
-        row: Number(a.row ?? 0),
-        w: Number(a.w ?? 1),
-        h: Number(a.h ?? 1)
-      }
-      return setRoom(s(a.name), layout)
+      if(a.slot!==undefined&&(a.column!==undefined||a.row!==undefined))throw Error('Choose a grid position or a legacy slot')
+      return placeTeam(s(a.name),a.slot!==undefined?a.slot:{column:a.column,row:a.row},a.expectedPlacement,(before,after)=>{for(const room of after){const previous=before.find(value=>value.name===room.name)!;if(room.name!==a.name&&(room.bounds.x!==previous.bounds.x||room.bounds.y!==previous.bounds.y))authorize('room.place',{name:room.name})}})
     }
     case 'room.design':
       return designRoom(s(a.name ?? ''), a.design ?? {})
     case 'room.bounds':
-      return setBounds(s(a.name),a.bounds ?? {})
+      if(a.bounds!==undefined||['x','y','width','height','shape','arrangement'].some(key=>a[key]!==undefined))throw Error('Resize with columns and rows, not free pixel bounds.')
+      return setBounds(s(a.name),{...(a.columns!==undefined?{columns:a.columns}:{}),...(a.rows!==undefined?{rows:a.rows}:{})},(before,after)=>{for(const room of after){const previous=before.find(value=>value.name===room.name)!;if(room.name!==a.name&&(room.bounds.x!==previous.bounds.x||room.bounds.y!==previous.bounds.y))authorize('room.place',{name:room.name})}})
     case 'room.layout': {
       const room=planOffice(readStore()).find(r=>r.name===a.name)
       if(!room)throw new Error('Unknown Team')
-      return requestContext().principal.kind==='operator'?room:{...room,employees:room.employees.map(({card,position})=>({card:publicEmployee(card),position}))}
+      const layout={...room,minimumSeating:minimumTeamSeating(room)}
+      return requestContext().principal.kind==='operator'?layout:{...layout,employees:room.employees.map(({card,position})=>({card:publicEmployee(card),position}))}
     }
-    case 'card.place':
-      if(a.snap!==undefined&&typeof a.snap!=='boolean')throw new Error('snap must be boolean')
-      if(a.zoom!==undefined&&(!Number.isFinite(a.zoom)||a.zoom<.08||a.zoom>3))throw new Error('Invalid canvas zoom')
-      return placeEmployee(s(a.id),{x:Number(a.x),y:Number(a.y)},{snap:a.snap,zoom:a.zoom})
+    case 'card.place': {
+      if(['x','y','snap','zoom'].some(key=>a[key]!==undefined))throw Error('Free coordinates are no longer supported. Use card.place with seat from room.layout.')
+      const card=readStore().sessions.find(card=>card.id===a.id)
+      const occupant=card&&readStore().sessions.find(other=>other.group===card.group&&other.seatNumber===a.seat&&other.id!==card.id)
+      if(occupant)authorize('card.place',{id:occupant.id,seat:card!.seatNumber},occupant.id)
+      return placeEmployee(s(a.id),a.seat,a.expectedSeating)
+    }
     case 'canvas.view':
       return canvasViewport(readStore(),a.viewId)
-    case 'canvas.set':
-      return setViewport({x:Number(a.x),y:Number(a.y),zoom:Number(a.zoom)},a.viewId)
+    case 'canvas.set': throw Error('Characters uses a fixed scale and a finite layout. Free pan and zoom are no longer supported.')
     case 'card.clone': return cloneEmployee(s(a.id),{title:s(a.title),cwd:a.cwd,directoryMode:a.directoryMode})
     case 'card.native-bind': {
       const sessionId=s(a.sessionId)
@@ -914,6 +966,14 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       }catch(error){deleteTranscript(card.id);throw error}
     }
     case 'card.create': {
+      if(a.position!==undefined||a.seatNumber!==undefined)throw Error('Create the employee first, then use card.place with a numbered seat.')
+      let creation:NonNullable<ReturnType<typeof readStore>['employeeCreations']>[string]|undefined
+      if(a.clientRequestId!==undefined){
+        const key=a.clientRequestId,principal=requestContext().principal;if(typeof key!=='string'||!key.trim()||key.length>160)throw Error('clientRequestId must be 1–160 characters')
+        const fields=Object.fromEntries(['title','group','character','avatarStyle','avatar','accessory','color','profession','role','engine','kind','model','effort','thinking','permissionMode','accessMode','workEnvironment','directoryMode','cwd','managementRole'].map(name=>[name,name==='title'?String(a.title??'').trim():a[name]])),fingerprint=creationFingerprint(fields),store=readStore(),previous=Object.entries(store.employeeCreations??{}).find(([,value])=>value.key===key&&JSON.stringify(value.caller)===JSON.stringify(principal))
+        if(previous){if(previous[1].fingerprint!==fingerprint)throw Error('clientRequestId already used with different employee settings');const card=store.sessions.find(card=>card.id===previous[0]&&!card.deleting);if(!card||!canReadEmployee(principal,card.id))throw Error('Created employee is no longer available');return executionEmployee(store,card)}
+        creation={caller:principal,key,fingerprint}
+      }
       if(a.thinking!==undefined&&typeof a.thinking!=='boolean')throw Error('thinking must be a boolean; CLI uses --thinking on|off')
       if(a.accessMode!==undefined&&!['trusted','isolated'].includes(a.accessMode))throw Error('Invalid process access mode')
       if(a.managementRole!==undefined&&!isManagementRole(a.managementRole))throw Error('Invalid management role')
@@ -952,7 +1012,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
         thinking: a.thinking??false,effort: engine==='cline'||engine==='pi'?undefined:a.effort??'low', permissionMode:a.permissionMode??getPreferences().defaultPermissionMode }
       employee.initialization=pendingInitialization()
       ensureEmployeeBootstrap(employee,latest)
-      const saved=patchSession(id,employee)
+      const saved=patchSession(id,employee,creation)
       if(employee.initialization.status==='pending')queueEmployeeInitialization(id)
       return executionEmployee(saved,saved.sessions.find((c) => c.id === id)!)
     }
@@ -978,6 +1038,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       if(patch.accessMode!==undefined)throw Error('Use card.access-mode')
       if(patch.kind!==undefined&&patch.kind!==(card.kind??'worker'))throw new Error('员工职位创建后不可更改')
       if(patch.chatProvider!==undefined||patch.chatMode!==undefined||patch.chromeProfile!==undefined)throw new Error('Web chat employees are no longer supported')
+      if(patch.position!==undefined||patch.seatNumber!==undefined)throw Error('Use card.place with a numbered seat; profile updates cannot change coordinates.')
       if(!Object.keys(employeeFields(patch,card)).length)throw Error('No editable profile fields in patch; use title, profession, role, avatar, accessory or color')
       assertEngineWorkspace(patch.engine??card.engine,employeeSettings(store,card).mode)
       if(patch.remote!==undefined)throw new Error('云主机连接由 Team 统一配置，员工不能覆盖主机')
@@ -1175,31 +1236,31 @@ export function startServer(onListening: () => void = () => {}): void {
     sock.on('close', drop)
     sock.on('error', drop)
 
-    const rl = createInterface({ input: sock })
+    const rl = protocolLines(sock)
     rl.on('error', drop)
     rl.on('line', async (line) => {
       let req: Request
       try {
         req = JSON.parse(line)
       } catch {
-        sock.write(JSON.stringify({ ok: false, error: 'malformed request' }) + '\n')
+        sock.write(protocolJson({ ok: false, error: 'malformed request' }) + '\n')
         return
       }
 
       let caller:RequestContext
-      try{caller=authenticate(req.auth)}catch(error){sock.end(JSON.stringify({ok:false,error:(error as Error).message,...((error as {code?:string}).code?{code:(error as {code:string}).code}:{})})+'\n');return}
+      try{caller=authenticate(req.auth)}catch(error){sock.end(protocolJson({ok:false,error:(error as Error).message,...((error as {code?:string}).code?{code:(error as {code:string}).code}:{})})+'\n');return}
       // `follow` keeps the connection open and streams instead of replying.
       // `raw: true` forwards every engine event, not just the rendered text.
       if (req.cmd === 'session.follow') {
         let sessionId=String((req.args??{}).id??(req.args??{}).employee)
         const card=employeeId(sessionId)
         const found=listLive().find(item=>sessionInfo(item.id)?.cardId===card);if(found)sessionId=found.id
-        try{authorize('session.follow',req.args,card,caller);assertEmployeeReady(card)}catch(error){sock.end(JSON.stringify({ok:false,error:(error as Error).message,...((error as {code?:string}).code?{code:(error as {code:string}).code}:{})})+'\n');return}
+        try{authorize('session.follow',req.args,card,caller);assertEmployeeReady(card)}catch(error){sock.end(protocolJson({ok:false,error:(error as Error).message,...((error as {code?:string}).code?{code:(error as {code:string}).code}:{})})+'\n');return}
         const info = sessionInfo(sessionId)
         if(info?.busy){followerActivity.get(sock)?.();followerActivity.set(sock,beginManagementInteraction(req.cmd,card,caller))}
         if (!info) {
-          if(card){const items=transcriptItems(card);sock.write(JSON.stringify({ok:true,data:{following:card,transcript:items,text:renderTranscript(items)}})+'\n');sock.end(JSON.stringify({type:'done'})+'\n')}
-          else sock.end(JSON.stringify({ ok: false, error: `unknown session ${sessionId}` }) + '\n')
+          if(card){const items=transcriptItems(card);sock.write(protocolJson({ok:true,data:{following:card,transcript:items,text:renderTranscript(items)}})+'\n');sock.end(protocolJson({type:'done'})+'\n')}
+          else sock.end(protocolJson({ ok: false, error: `unknown session ${sessionId}` }) + '\n')
           return
         }
         following.set(sock, sessionId);followerContexts.set(sock,caller)
@@ -1210,7 +1271,7 @@ export function startServer(onListening: () => void = () => {}): void {
             data: { following: sessionId, transcript: transcriptItems(sessionId), text: renderTranscript(transcriptItems(sessionId)) }
           }) + '\n'
         )
-        if (!info.busy) sock.end(JSON.stringify({ type: 'done' }) + '\n')
+        if (!info.busy) sock.end(protocolJson({ type: 'done' }) + '\n')
         return
       }
 
@@ -1220,7 +1281,7 @@ export function startServer(onListening: () => void = () => {}): void {
       } catch (err) {
         res = { ok: false, error: err instanceof Error ? err.message : String(err), ...((err as {code?:string})?.code?{code:(err as {code:string}).code}:{}) }
       }
-      if (sock.writable) sock.write(JSON.stringify(res) + '\n')
+      if (sock.writable) sock.write(protocolJson(res) + '\n')
     })
   })
 

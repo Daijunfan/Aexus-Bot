@@ -24,7 +24,7 @@ export function useChannelDiscussion(id:string,container:RefObject<HTMLElement|n
  }),[id,enabled,keepPosition])
  useEffect(()=>{
   alive.current=true;void refresh();let timer:ReturnType<typeof setTimeout>|undefined
-  const off=api.onEvent(event=>{if(!enabled||event.channel!=='channel:changed'||event.payload.kind!=='messages'||event.payload.channelIds&&!event.payload.channelIds.includes(id))return;for(const key of event.payload.messageIds??[])pending.current.add(key);if(!timer)timer=setTimeout(()=>{timer=undefined;void refresh()},40)})
+  const off=api.onEvent(event=>{if(enabled&&event.channel==='client:connected'){void refresh();return}if(!enabled||event.channel!=='channel:changed'||event.payload.kind!=='messages'||event.payload.channelIds&&!event.payload.channelIds.includes(id))return;for(const key of event.payload.messageIds??[])pending.current.add(key);if(!timer)timer=setTimeout(()=>{timer=undefined;void refresh()},40)})
   return()=>{alive.current=false;clearTimeout(timer);off()}
  },[id,refresh])
  const loadMore=async()=>{if(before===null||more)return;setMore(true);try{const page=await api.call<ChannelHistory>('channel.history',{id,before,limit:100});if(alive.current){merge(page.messages);setBefore(page.nextBefore);setError('')}}catch(cause){if(alive.current)setError((cause as Error).message)}finally{if(alive.current)setMore(false)}}

@@ -1,5 +1,5 @@
 import {ENGINE_DEFINITIONS} from './engines'
-import type {Engine,ModelInfo,SlashCommand} from './types'
+import {PERMISSION_MODES,type Engine,type ModelInfo,type SlashCommand} from './types'
 
 /** UI commands backed by the same Core operations as their CLI entrypoints. */
 export const engineCommands:SlashCommand[]=[
@@ -26,4 +26,13 @@ export function mergeCommands(commands:SlashCommand[],engine:Engine,model?:Model
   if(!ENGINE_DEFINITIONS[engine].capabilities.plan){merged.delete('plan');merged.delete('normal')}
   if(engine==='codex')for(const c of [{name:'ps',description:'查看此员工的原生后台终端',argumentHint:''},{name:'stop',description:'停止此员工的原生后台终端',argumentHint:''},{name:'skills',description:'列出当前工作目录可用的 Skills',argumentHint:''},{name:'mcp',description:'查看 MCP 服务状态',argumentHint:''},{name:'account',description:'查看引擎账号信息',argumentHint:''},{name:'usage',description:'查看官方额度和会话用量',argumentHint:''},{name:'new',description:'新建上下文，保留当前员工与工作目录',argumentHint:'',aliases:['clear']},{name:'compact',description:'使用 Codex 官方协议压缩当前上下文',argumentHint:''},{name:'review',description:'使用 Codex 官方审查流程检查改动',argumentHint:'[review instructions]'}])merged.set(c.name,c)
   return [...merged.values()]
+}
+
+export function enginePermissionModes(engine:Engine){
+ if(engine==='codex'||engine==='deepseek')return [
+  {value:'default',label:'Read only',hint:'Inspect files; no file changes'},
+  {value:'acceptEdits',label:'Workspace write',hint:'Allow edits within this workspace'},
+  {value:'bypassPermissions',label:'Full access',hint:'Run without sandbox restrictions'}
+ ] as typeof PERMISSION_MODES
+ return PERMISSION_MODES.filter(mode=>engine==='claude'||mode.value!=='auto'&&(mode.value!=='plan'||ENGINE_DEFINITIONS[engine].capabilities.plan))
 }

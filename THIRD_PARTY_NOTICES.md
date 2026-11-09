@@ -155,3 +155,14 @@ MIT-licensed directory-name romanization library by creeperyang. License: `licen
 ### Grok Bot native avatar renderer
 
 The private local build reuses the geometry, SVG shading and animation dependency closure from the user's installed Grok Bot renderer (`index.eager-common-DN47KHVY.js`). Its source and extraction metadata are recorded in `src/renderer/src/assets/bots/grok-native.provenance.json`. This does not approve public redistribution; the existing release review remains applicable.
+
+
+### DeepSeek engine icon
+
+The DeepSeek identification mark is sourced from Simple Icons under CC0-1.0.
+The exact vector checksum and source URL are recorded in
+`src/renderer/src/assets/engines/sources.json`; the license is retained in
+`src/renderer/src/assets/engines/licenses/DeepSeek-SimpleIcons-CC0.txt`.
+Names and trademarks belong to their respective owners. DeepSeek Harness runtimes
+are reused or installed separately from the official npm registry; they are not
+embedded in the Aexus application binary.

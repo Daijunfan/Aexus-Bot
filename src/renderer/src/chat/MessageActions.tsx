@@ -22,7 +22,7 @@ export function MessageActions({text,onReply,onEdit,onPrivate,conversation,id,im
   const forward=()=>{if(conversation&&id)messenger?.setForward({messages:[{conversation,id}],text,images});setMenu(null)}
   if(!text.trim()&&!conversation)return null
   return <>
-    <div ref={root} hidden/>
+    <div ref={root} className="message-actions"><button className="message-options-trigger" aria-label={uiText('Message options')} title={uiText('Message options')} aria-haspopup="menu" aria-expanded={!!menu} onClick={event=>{event.stopPropagation();const bounds=event.currentTarget.getBoundingClientRect();setMenu({x:bounds.right,y:bounds.bottom})}}><Icon name="ellipsis"/></button></div>
     {(preferences.reaction||preferences.saved||preferences.pinned)&&<div className="message-annotations">{preferences.reaction&&<button className="message-reaction" aria-label={uiText("Remove reaction {0}",[preferences.reaction])} onClick={()=>change({reaction:''})}>{preferences.reaction}<span>1</span></button>}{preferences.saved&&<span title={uiText("Saved message")}><Icon name="bookmark"/></span>}{preferences.pinned&&<button onClick={()=>messenger?.setLibrary({conversation,filter:'pinned'})}><Icon name="pinned"/>  {uiText("Pinned")}</button>}</div>}
     {menu&&<MessageMenu anchor={menu} label={uiText("Message options")} onClose={()=>setMenu(null)}>
       <div className="message-reaction-picker" aria-label={uiText("React to message")}>{MESSAGE_REACTIONS.map(reaction=><button key={reaction} role="menuitemradio" aria-checked={preferences.reaction===reaction} aria-label={uiText("React {0}",[reaction])} onClick={event=>change({reaction:preferences.reaction===reaction?'':reaction},event.currentTarget.getBoundingClientRect())}>{reaction}</button>)}</div>

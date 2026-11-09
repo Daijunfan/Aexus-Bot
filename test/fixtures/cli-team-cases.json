@@ -1,0 +1,101 @@
+[
+  {
+    "args": [
+      "worker",
+      "engines"
+    ],
+    "expected": {
+      "cmd": "worker.engines",
+      "args": {}
+    }
+  },
+  {
+    "args": [
+      "worker",
+      "draft",
+      "worker-id",
+      "--text",
+      "Retained draft",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "worker.draft",
+      "args": {
+        "id": "worker-id",
+        "text": "Retained draft",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "room",
+      "place",
+      "Studio",
+      "--slot",
+      "2"
+    ],
+    "expected": {
+      "cmd": "room.place",
+      "args": {
+        "name": "Studio",
+        "slot": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "room",
+      "bounds",
+      "Studio",
+      "--columns",
+      "4",
+      "--rows",
+      "3"
+    ],
+    "expected": {
+      "cmd": "room.bounds",
+      "args": {
+        "name": "Studio",
+        "columns": 4,
+        "rows": 3
+      }
+    }
+  },
+  {
+    "args": [
+      "card",
+      "place",
+      "employee-id",
+      "--seat",
+      "4"
+    ],
+    "expected": {
+      "cmd": "card.place",
+      "args": {
+        "id": "employee-id",
+        "seat": 4
+      }
+    }
+  },
+  {
+    "args": [
+      "room",
+      "place",
+      "Studio",
+      "--column",
+      "-4",
+      "--row",
+      "3"
+    ],
+    "expected": {
+      "cmd": "room.place",
+      "args": {
+        "name": "Studio",
+        "column": -4,
+        "row": 3
+      }
+    }
+  }
+]

@@ -1,5 +1,19 @@
 # Aexus Bot 权限说明
 
+## 持续任务和用户决策
+
+`mission.*` 复用当前的本人/下级排期权，逐个核验多选执行人；Secretary 可以给其他 Secretary 设置任务。读取共享任务不增加对参与者私有文件或原生会话的权限。任务修改保留最初创建来源，提醒保留当前委派的真实身份与凭据，排队恢复时重新校验；监督秘书只收到固定的任务督办上下文，不获得原创建者之外的用户身份。仅显式成功停止提醒，失败、隐藏和归档都继续督办。删除持续任务要求它已经成功。
+
+`question.*` 沿用私聊读取或当前群成员权限，提问只能署名真实的员工本人；不能用它给其他人伪造私聊。Secretary 可以管理应用，但不能通过 `question.answer` 冒充用户作答。Other 文本、超时 fallback、不可自动决定的 null 期限均由 Core 保存并检查。等待中的原轮次不能继续 Core 写操作；新到达的独立任务不受这一问题阻塞。回复只恢复原提问人，并检查其凭据、当前身份、群访问和固定 Governor 任务视图。
+
+`plan.preferences` 仅用户/Secretary 可写，控制显示和已结束任务的保留策略。自动清理保留实际配置者的身份，并在执行前核验其当前应用管理权和凭据；不得清除未成功的持续任务，也不终止仍有后续计划的工作。`plan.archive` 按当前任务管理权检查目标，归档只影响显示。详见 [任务与选择题契约](docs/MISSIONS_AND_QUESTIONS.md)。
+
+群文件管理沿用既有“当前群成员共享内容权利相同”的规则：`conversation.files` 只读文件元数据；`conversation.file-trash`、`conversation.file-restore` 校验当前成员资格、已发布路径、文件版本及回收记录。用户/Secretary 可不入群管理，其他 Company 职级不授予群内容权限。删除可恢复且影响所有引用同一文件的群消息；原正文、作者、任务和阅读回执保留。版本冲突整批拒绝，恢复不覆盖同名新文件，撤权后不能读取或恢复旧回收记录。原生外部 Bot 文件没有本地删除能力，接口明确拒绝，不借本地工作区假装删除原生数据。
+
+`chat.retry` 仅供用户/Secretary 显式补送原接收人中尚未进入原生轮次的失败投递。保留原消息作者、正文、附件和其他成员回执；重试委派记录实际发起人，执行时再次校验其当前职位、凭据、群成员范围和工作控制权限。已有 taskId、送达/阅读证据或匹配原生上下文的任务不重放。群成员身份不授予普通员工重试其他成员工作的权限。定时任务占用期间允许排队输入，执行和配置修改仍受原预约保护，恢复原生设置后才继续队列。
+
+大结果续读 `api.result` 仅能读取同一身份、凭据和客户端已经收到的原生工具响应快照；每次仍认证当前凭据，不允许跨员工、跨凭据或跨客户端借用引用。结果不增加资源权限，不会重新执行原操作；15 分钟、容量淘汰或 Core 重启后失效。此快照与新闻收藏、持久缓存和共享工作区文件无关。参数预检、紧凑目录及公开 schema 不改变角色或原生写入批准规则。
+
 管理权限属于员工的 `managementRole`，与 Team 名称、工作目录、目录标记和视图无关。CLI 与 UI 进入相同的 Core 授权入口。完整命令见 [API.md](API.md)。`management.topology.teams` 从同一授权入口返回逐 Team 的 allowedActions、deleteBlockedReason、governorIds 和 isOwnTeam，避免把少数受保护 Team 误判为全部不可删除。
 
 ## 四种职位
@@ -91,7 +105,9 @@ Trusted 保留系统账号的实际文件权限；API 授权不等于对同用�
 
 ## 布局和已读状态
 
-`office.layout` 返回实际几何、正交连线与 editable；`room.bounds`、`room.place`、`card.place`、`management.relayout` 共用作用范围检查。视图只过滤显示，不改变权限、目录或任务。手动拖动一个 Team 不移动其他 Team；角色和创建来源变化通过现有布局服务处理。
+`office.layout` / `room.layout` 返回矩形网格、编号座位、画板位置和只读坐标。`card.place {id,seat,expectedSeating?}` 换座时检查双方员工权限；`room.place {name,slot}` 交换 Team 时检查双方 Team 权限。Secretary/用户可全局调整，Manager/Governor 保留原作用范围。`room.bounds {name,columns?,rows?}` 只修改完整座位行列，不改变员工相对行列或裁掉有人座位。自由像素坐标、非矩形外框及原生权限旁路均拒绝；`management.relayout`、`canvas.set` 已停用。`settings.set {boardMaxColumns:1..6}` 沿用设置权限，布局变更不授予目录、任务或管理权限。
+
+
 
 `session.acknowledge` 只允许用户确认 Company/原生会话中确切的 replyId；Messages 私聊条目的已读由用户或 Secretary 通过 `direct.acknowledge` 按确切 messageId 确认，两者互不清除。任何 Agent 的读取或订阅都不会清除用户未读状态；隐藏窗口也不代用户确认。初始化不产生未读消息。Web 端使用认证用户会话及页面可见性检查；桌面端额外验证原生窗口状态。
 
@@ -135,7 +151,9 @@ Plan 的十种数据库视图（Table / Board / Timeline / Calendar / Planner / 
 
 ## 用户的 Messages 整理状态
 
-`messenger.state/conversation/message/draft/search` 仅用户可用；Employee、Manager 和 Governor 均不能读取或修改用户草稿、收藏、表情标记或会话整理。数据独立保存在 `messenger.json`。置顶、归档、个人未读提醒、隐藏和搜索不改变成员身份、管理权限、任务执行、原生上下文或真实已读回执。群聊权限仍由既有成员和调用者身份检查；`chat.history --around` 不扩大读取范围。
+`messenger.state/conversation/message/draft/search` 仅用户与 Secretary 可用；Employee、Manager 和 Governor 均不能读取或修改用户草稿、收藏、表情标记或会话整理。数据独立保存在 `messenger.json`。置顶、归档、个人未读提醒、隐藏和搜索不改变成员身份、管理权限、任务执行、原生上下文或真实已读回执。群聊权限仍由既有成员和调用者身份检查；`chat.history --around` 不扩大读取范围。
+`messenger.draft --scope work` 仅用于已有员工的工作草稿，与 Message 草稿隔离；Board 和完整工作会话共用，不扩展读取、派发或工作目录权限。界面切换和正常退出前会保存草稿；附件传输中及尚未保存的排期、尚未应用的员工默认配置会保留原页面并给出明确操作。
+
 
 Message attachment uploads, file forwarding and explicit Core-host save are user/Secretary
 operations; employees use the authenticated APIs below. Group membership grants
@@ -267,7 +285,9 @@ continue through the existing authenticated transfer/channel operations.
 
 ## 原生 Worker
 
-`worker.*` 向四种员工职位开放，按 Worker 的直属创建者校验，不继承跨员工管理权。用户可统一管理；员工仅能列出、创建和控制自己直属的 Worker。Worker 无 Company principal、令牌和初始化上下文，不能调用 Core。普通 `terminal.*` 不暴露或控制 Worker 终端，必须通过 `worker.*` 重新检查所有权。工作目录与执行主机受直属员工现有边界限制；不支持的严格隔离或执行目标明确拒绝，不能回退或提升权限。
+Team 的 Characters / Board 只是同一员工与会话的两种展示。Board 输入使用 `session.*` 原生工作会话（sourceView=company），不自动调用私聊或群聊发布 API。打开 Board 不启动全部引擎。用户与 Secretary 可在 `worker.create` 不指定 employee、指定已有本地 cwd，创建独立 Worker；这些 Worker 仅由用户或 Secretary 管理。Secretary 同时省略 employee 和 cwd 时保留创建自身直属 Worker 的兼容用法。员工省略 employee 仍归自己直属管理，不能控制独立 Worker。引擎原生配置、工作文件、认证与历史不变。
+
+`worker.*` 向四种员工职位开放，按 Worker 的直属创建者校验，不继承跨员工管理权。用户可统一管理；员工仅能列出、创建和控制自己直属的 Worker。Worker 无 Company principal、令牌和初始化上下文，不能调用 Core。普通 `terminal.*` 不暴露或控制 Worker 原生会话，必须通过 `worker.*` 重新检查所有权。 `worker.draft` 沿用相同所有权，不派发任务；条件写入避免旧响应清空更新的草稿。创建重试键属于真实调用者，不跨身份复用。Worker GUI 使用结构化会话；旧终端输入/尺寸接口明确拒绝，不能绕过所有权检查。工作目录与执行主机受直属员工现有边界限制；不支持的严格隔离或执行目标明确拒绝，不能回退或提升权限。
 
 ## 订阅同步回执
 
@@ -324,10 +344,31 @@ MiniNotion 只暴露获授权页面，数据库包含记录且记录可单独覆
 
 ## 外部 Worker 与监控程序
 
+Grok 用量检查仅查询原生账户可用额度，不写入账单、套餐或按量付费设置。已获会话权限的员工可通过 `bot.list` 和发送回执读取该会话的运行问题及重置时间；不返回账户付款资料、用量明细或原生错误中的个人账户链接。
+
 Dot/Grok 不是 Company 员工，不获取 Core token、管理角色或本项目的系统上下文。bot.access 按会话授权员工显式调用同一 direct/chat/conversation API；Secretary 自动可用。bot.create/group-create/sync/access 由用户/Secretary 管理，外部 Bot 自身不可调用。本地和云端员工的资源权限相同，文件默认下载到本人的 Company 执行主机。程序监控使用所属员工的主机与工作区，没有 Core 身份；普通员工仅管理自己的监控，Secretary 全局管理。事件来源权限同时检查计划创建者和执行员工，撤销后待处理任务不再执行。详见 docs/BOT_WORKERS.md、docs/EVENT_TASKS.md。
 
 
-`bot.appearance` 的外观修改仅向用户和 Secretary 开放，使用独立版本号；授权员工不能修改。Dot 的本地动画选择不改变外部 Worker 身份、提示词、权限或文件授权。Grok 外观由原生 shape/color 同步，应用内不能将其换成员工形象。
+用户明确选择 Dot 固定使用 OpenAI 原生蓝色电脑 Codey 动画。bot.appearance 返回只读原生形象信息（editable:false），其他角色覆盖请求明确拒绝；不改外部 Worker 提示词、身份、权限、文件授权或原生账号资料。Dot 展示不依赖员工角色库的启用状态。Grok 保持原生 shape/color 与动画。
+
 
 
 `bot.update/delete/restore` 仅向用户和 Secretary 开放。移除只删除 Aexus 接入与本地授权，不删除原生 Bot；普通同步不会重新接入。`bot.list --include-removed` 也仅限应用管理员。恢复时核对原生身份，恢复历史和外观但不恢复员工授权。员工条目删除复用 `card.remove` 的职位和文件删除边界，在 Agents 和 Message 中移除同一身份。
+
+
+## DeepSeek Harness 原生权限
+
+`deepseek` 使用 Core 本地的官方 Harness ACP 引擎。权限、角色和插件授权仍由同一 Core dispatcher 检查，不因引擎、Team 名称或 Board 展示而改变。只读、工作区写入、完全访问分别映射原生权限预设；空闲时切换权限会保留原生会话身份，并通过原生权限服务同步实际状态，不能只改界面值或依赖重启。初始化、私有上下文阅读和应用 API 写入仍执行现有检查。
+
+公司员工的原生会话与存储分开保存，禁用原生子 Agent、独立 Goal 续跑与 workflow 委派，使用 Core 的授权委派与 Plan。原生认证从既有 `DSH_HOME` 读取，不向客户端返回密钥，不把它变成 Company 用户身份。独立 Worker 没有 Company principal、初始化或 Company 工具，原生模型、文件与审批在用户选择的工作目录和原生配置下执行。当前不支持云端原生执行、严格隔离、图片输入、原生计划模式、克隆或追加；失败不会切换主机或提高权限。
+
+## Board 分类
+
+`board.categories/category-save/category-delete/category-order` 仅允许用户与 Secretary。分类是个人应用展示分组，支持跨团队多选员工与原生 Worker；它不授予员工控制、文件、消息、主机或插件权限，也不修改 Governor 任务中的 Team view。普通 Employee、Manager、Governor 不能读取或修改分类记录；非应用管理员的 Store 投影不包含此字段。删除分类仅删除分组，员工、Worker、原生会话、工作区和 Message 分类保持原样。
+
+Team 位置使用 `room.place {name,column,row,expectedPlacement?}` 的整数工位网格，可为负数。移动/调整行列导致邻近 Team 自动避让时，Core 在一次写入前核验所有被移动团队的布局权限。Workers 子视图不依赖 Board 分类或当前员工 Team view；所属员工、原生主机、目录和 Worker 运行权限继续由既有 worker.* 授权决定。旧 Board 分类中的 workerIds 仅保留归档引用，不显示或授权 Worker。
+
+
+### Native Worker conversation authority
+
+`worker.snapshot/send/dequeue/respond/configure` use the same authenticated direct-ownership policy as Worker lifecycle operations. User/Secretary may administer all; other employees control only directly owned Workers. Workers receive no employee identity or Company token. Model/effort changes remain native session operations; only user/Secretary may change Worker permissions, which require an explicit reconnect before new work. Every dispatch revalidates the physical directory and fixed execution host. Stop/Remove target only the owned native connection and process tree and wait for termination; they never remove work files or native history.

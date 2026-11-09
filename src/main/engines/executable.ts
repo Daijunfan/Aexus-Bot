@@ -17,11 +17,11 @@ export function engineExecutable(engine:EngineId,preferPaired=engine==='claude')
   const override=process.env[engine.toUpperCase()+'_BIN']
   if(override)return override
   if(config.path)return config.path
-  if(usesNativeConfiguration(engine)){const native=resolveBinary(engine);if(path.isAbsolute(native)&&fs.existsSync(native))return native}
+  if(usesNativeConfiguration(engine)){const native=resolveBinary(engine==='deepseek'?'dsh':engine);if(path.isAbsolute(native)&&fs.existsSync(native))return native}
   if(config.managedPath&&fs.existsSync(config.managedPath))return config.managedPath
   const sdkRoot=config.sdkPath&&fs.existsSync(config.sdkPath)?path.dirname(fs.realpathSync(config.sdkPath)):undefined
   if(engine==='claude'&&preferPaired){const bundled=bundledClaudeBinary(sdkRoot);if(bundled)return bundled}
-  const external=resolveBinary(engine)
+  const external=resolveBinary(engine==='deepseek'?'dsh':engine)
   if(path.isAbsolute(external)&&fs.existsSync(external))return external
   return engine==='claude'?bundledClaudeBinary(sdkRoot)??external:external
 }

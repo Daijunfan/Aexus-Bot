@@ -54,7 +54,7 @@ export const SpritePet=memo(function SpritePet({kind,pose,working,color,subtle=f
     timer=setTimeout(next,120)
     return()=>clearTimeout(timer)
   },[sleeping,row,frames,subtle,hovered,animated])
-  const rows=['hoots','woodi','marmalade','voltcoin','inky','byte','wondercube'].includes(kind)?11:9
+  const rows=['codex','hoots','woodi','marmalade','voltcoin','inky','byte','wondercube'].includes(kind)?11:9
   const preview=compact&&(sleeping||pose==='pickup'||pose==='land')
   const tint=avatarTint(kind,color)
   // Crop the atlas into one small HTML paint box; move its composited wrapper.

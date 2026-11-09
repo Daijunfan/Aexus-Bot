@@ -7,15 +7,15 @@ import {EMPLOYEE_SIZE} from '../../../shared/canvas'
 import {rolePolicy} from '../../../shared/roles'
 import {employeeInitializing,employeeReady} from '../../../shared/types'
 import { usePetBehavior } from './usePetBehavior'
-import type { StoredSession } from '../../../shared/types'
+import type { ActivityPreview,StoredSession } from '../../../shared/types'
 import type { RoomDesign } from '../../../shared/office'
 import { Mascot } from './Mascot'
 import { Desk, Laptop, Mug } from './Furniture'
 import { EngineMark } from '../components/EngineMark'
 import finderIcon from '../assets/os/local-computer.svg'
 
-export const Employee=memo(function Employee({ employee, cloudWorkspace=false,working, communicating=false, disconnected=false, dragging = false, desk, onOpen, onStart }: {
-  employee: StoredSession;cloudWorkspace?:boolean; working: boolean;communicating?:boolean; disconnected?:boolean; dragging?: boolean; onStart?: (event:React.PointerEvent,id:string)=>void; desk: RoomDesign['desk']; onOpen: (card: StoredSession) => void
+export const Employee=memo(function Employee({ employee, cloudWorkspace=false,working, communicating=false, disconnected=false, dragging = false, desk, activity, onOpen, onStart }: {
+  employee: StoredSession;activity?:ActivityPreview;cloudWorkspace?:boolean; working: boolean;communicating?:boolean; disconnected?:boolean; dragging?: boolean; onStart?: (event:React.PointerEvent,id:string)=>void; desk: RoomDesign['desk']; onOpen: (card: StoredSession) => void
 }) {
   useI18n()
 
@@ -23,8 +23,8 @@ export const Employee=memo(function Employee({ employee, cloudWorkspace=false,wo
   const initializing=employeeInitializing(employee),blocked=!employeeReady(employee)
   const label=uiText(initializing?'Initializing':blocked?'Initialization failed':working?'Working':communicating?'Collaborating':disconnected?'Connection or execution failed':'Resting')
   const native=employee.kind==='cloud-native-worker',unread=!!employee.lastReply&&!employee.lastReply.readAt,engineLabel=engineDefinition(employee.engine).label
-  return <button disabled={blocked} aria-busy={initializing} title={blocked?label:undefined} className={`employee with-official-pet ${native?'cloud-native-pet':''} ${working ? 'is-working' : communicating?'is-communicating':disconnected?'is-disconnected':'is-sleeping'}`} style={{width:EMPLOYEE_SIZE.width,height:EMPLOYEE_SIZE.height}} data-frame="rectangle" data-management-role={employee.managementRole??'employee'} data-card-id={employee.id} data-unread={unread?'true':undefined} data-kind={native?'cloud-native-worker':'worker'} data-state={initializing?'initializing':blocked?'initialization-failed':working?'working':communicating?'communicating':disconnected?'disconnected':'sleeping'}
-    data-engine={employee.engine} data-group={employee.group} data-workspace-error={employee.workspaceError?'true':undefined} onPointerDown={blocked?undefined:e=>onStart?.(e,employee.id)} onPointerEnter={behavior.onPointerEnter} onPointerLeave={behavior.onPointerLeave} onClick={e => {if(!blocked&&(!onStart || e.detail===0))onOpen(employee)}}
+  return <button disabled={blocked} aria-busy={initializing} title={blocked?label:`${employee.title} · ${label} · ${engineLabel}${activity?.text?"\n\n"+activity.text:""}`} className={`employee with-official-pet ${native?'cloud-native-pet':''} ${working ? 'is-working' : communicating?'is-communicating':disconnected?'is-disconnected':'is-sleeping'}`} style={{width:EMPLOYEE_SIZE.width,height:EMPLOYEE_SIZE.height}} data-frame="rectangle" data-management-role={employee.managementRole??'employee'} data-card-id={employee.id} data-unread={unread?'true':undefined} data-kind={native?'cloud-native-worker':'worker'} data-state={initializing?'initializing':blocked?'initialization-failed':working?'working':communicating?'communicating':disconnected?'disconnected':'sleeping'}
+    aria-description={activity?.text} data-engine={employee.engine} data-group={employee.group} data-workspace-error={employee.workspaceError?'true':undefined} onPointerDown={blocked?undefined:e=>onStart?.(e,employee.id)} onPointerEnter={behavior.onPointerEnter} onPointerLeave={behavior.onPointerLeave} onClick={e => {if(!blocked&&(!onStart || e.detail===0))onOpen(employee)}}
     aria-label={blocked?`${employee.title} · ${label}`:uiText('Open conversation with {0} · {1}',[employee.title,label])}>
     <div className="workstation-chair" aria-hidden="true" />
     <Mascot kind={employee.avatar ?? (employee.engine === 'codex' ? 'robot' : 'cat')} accessory={employee.accessory ?? 'headphones'} color={employee.color} working={working||communicating} pose={communicating&&!working?'wave':behavior.pose} />

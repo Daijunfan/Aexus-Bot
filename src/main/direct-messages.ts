@@ -37,7 +37,7 @@ const sameAuthor=(a:PrincipalRef,b:PrincipalRef)=>a.kind===b.kind&&(a.kind==='op
 const binding=(employee:string)=>{const c=executionEmployee(readStore(),card(employee));return JSON.stringify([c.cwd,c.remote??null])}
 const body=(entry:Entry):Item=>entry.author.kind==='operator'||entry.delivery
  ?{role:'user',id:entry.id,directSequence:entry.sequence,createdAt:entry.createdAt,author:entry.author,text:entry.text,images:entry.attachments.filter(a=>a.kind==='image').map(a=>a.path),files:entry.attachments.filter(a=>a.kind==='file'),reply:entry.reply,outbound:entry.outbound,delivery:entry.delivery?{state:entry.delivery.boot!==boot&&['preparing','queued'].includes(entry.delivery.state)?'interrupted':entry.delivery.state,error:entry.delivery.error}:undefined}
- :{role:'assistant',id:entry.id,author:entry.author,directSequence:entry.sequence,createdAt:entry.createdAt,blocks:entry.text?[{kind:'text',text:entry.text}]:[],images:entry.attachments.filter(a=>a.kind==='image').map(a=>a.path),files:entry.attachments.filter(a=>a.kind==='file'),reply:entry.reply}
+ :{role:'assistant',id:entry.id,questionId:entry.questionId,author:entry.author,directSequence:entry.sequence,createdAt:entry.createdAt,blocks:entry.text?[{kind:'text',text:entry.text}]:[],images:entry.attachments.filter(a=>a.kind==='image').map(a=>a.path),files:entry.attachments.filter(a=>a.kind==='file'),reply:entry.reply}
 
 /** Public items are an independent ledger, never a projection of native Agent history. */
 export function directItems(employee:string){readable(employee);return state(employee).entries.map(body)}
@@ -105,6 +105,7 @@ export async function postDirectMessage(args:Record<string,any>){
  const principal=requestContext().principal;if(principal.kind!=='agent')throw Error('direct.post publishes the authenticated employee’s own private reply; use direct.send for user input')
  const entry=await append(principal.employeeId,args,principal,false);return {sent:true,id:entry.id,sequence:entry.sequence,conversation:'employee:'+principal.employeeId,createdAt:entry.createdAt,attachments:entry.attachments}
 }
+export function linkDirectQuestion(employee:string,messageId:string,questionId:string){const value=state(employee),entry=value.entries.find(entry=>entry.id===messageId);if(!entry)throw Error('Question publication is unavailable');entry.questionId=questionId;save(employee,value)}
 export async function prepareDirectInput(employee:string,args:Record<string,any>){if(!isAppAdministrator())throw Error('Only the user or Secretary may send private user input');return append(employee,args,requestContext().principal,true)}
 export function updateDirectInput(employee:string,id:string,patch:Partial<DirectEntry>){const value=state(employee),index=value.entries.findIndex(e=>e.id===id&&e.delivery);if(index<0)return;value.entries[index]={...value.entries[index],...patch};save(employee,value)}
 export function directDelivery(employee:string,id:string,status:NonNullable<DirectEntry['delivery']>['state'],error?:string){updateDirectInput(employee,id,{delivery:{state:status,boot,...(error?{error}:{})}})}

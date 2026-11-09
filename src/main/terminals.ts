@@ -12,8 +12,8 @@ import {childEnv} from './exec'
 import {python,tunnelDirectory,tunnelConfig} from './tunnel'
 import {nativeWorkerEnv} from './native-worker-env'
 
-export type TerminalProgram={program:string[];worker:string;root:string}
-type Terminal={id:string;employee:string;worker?:string;cwd:string;host?:string;running:boolean;exitCode?:number;output:TerminalOutput;process:ChildProcessWithoutNullStreams;done:Promise<void>;changed:Set<()=>void>}
+export type TerminalProgram={runtime?:'node';program:string[];worker:string;root:string}
+type Terminal={id:string;employee:string;worker?:string;cwd:string;host?:string;running:boolean;exitCode?:number;output:TerminalOutput;process:ChildProcessWithoutNullStreams;done:Promise<void>;changed:Set<()=>void>;inputs:Map<string,{resolve:()=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>}
 const terminals=new Map<string,Terminal>()
 let emit:(channel:string,payload:any)=>void=()=>{}
 export function setTerminalEmitter(next:typeof emit){emit=next}
@@ -26,14 +26,14 @@ export function openTerminal(employee:Pick<StoredSession,'id'|'cwd'|'remote'>,co
   const id=randomUUID(),directory=path.join(APP_HOME,'terminals'),file=path.join(directory,id+'.json')
   const config={cwd:employee.remote?APP_HOME:employee.cwd,remote:employee.remote?tunnelConfig(employee.remote):undefined,cols,rows,...(launch?{program:launch.program,root:launch.root}: {})}
   fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(file,JSON.stringify(config),{mode:0o600})
-  const child=process.platform==='win32'?windowsTerminal(employee.remote?APP_HOME:employee.cwd,employee.remote??undefined,cols,rows,launch?.program):spawn(python(),['-B',path.join(tunnelDirectory(),'terminal.py'),file],{env:launch?nativeWorkerEnv():childEnv(),stdio:['pipe','pipe','pipe']})
-  const terminal:Terminal={id,employee:employee.id,worker:launch?.worker,cwd:employee.remote?.directory??employee.cwd,host:employee.remote?.host,running:true,output:new TerminalOutput(),process:child,done:new Promise(resolve=>child.once('close',()=>resolve())),changed:new Set()}
+  const child=process.platform==='win32'?windowsTerminal(employee.remote?APP_HOME:employee.cwd,employee.remote??undefined,cols,rows,launch?.program,launch?.runtime==='node'):spawn(python(),['-B',path.join(tunnelDirectory(),'terminal.py'),file],{env:launch?{...nativeWorkerEnv(),...(launch.runtime==='node'?{ELECTRON_RUN_AS_NODE:'1'}:{})}:childEnv(),stdio:['pipe','pipe','pipe']})
+  const terminal:Terminal={id,employee:employee.id,worker:launch?.worker,cwd:employee.remote?.directory??employee.cwd,host:employee.remote?.host,running:true,output:new TerminalOutput(),process:child,done:new Promise(resolve=>child.once('close',()=>resolve())),changed:new Set(),inputs:new Map()}
   terminals.set(id,terminal);const decoder=new StringDecoder('utf8')
   const append=(data:string)=>{terminal.output.append(data);if(data)for(const notify of terminal.changed)notify();emit('terminal:data',{id})}
-  createInterface({input:child.stdout}).on('line',line=>{try{const event=JSON.parse(line);if(event.data)append(decoder.write(Buffer.from(event.data,'base64')));if(event.exitCode!==undefined)terminal.exitCode=event.exitCode}catch{}})
+  createInterface({input:child.stdout}).on('line',line=>{try{const event=JSON.parse(line);if(event.data)append(decoder.write(Buffer.from(event.data,'base64')));if(event.inputId){const pending=terminal.inputs.get(event.inputId);if(pending){clearTimeout(pending.timer);terminal.inputs.delete(event.inputId);event.error?pending.reject(Error(event.error)):pending.resolve()}}if(event.exitCode!==undefined)terminal.exitCode=event.exitCode}catch{}})
   child.stderr.on('data',data=>append(data.toString()));child.stdin.on('error',()=>{})
   child.on('error',error=>append('\r\n'+error.message+'\r\n'))
-  child.on('close',code=>{append(decoder.end());terminal.running=false;terminal.exitCode??=code??1;for(const notify of terminal.changed)notify();fs.rmSync(file,{force:true});emit('terminal:changed',metadata(terminal))})
+  child.on('close',code=>{append(decoder.end());terminal.running=false;terminal.exitCode??=code??1;for(const input of terminal.inputs.values()){clearTimeout(input.timer);input.reject(Object.assign(Error('Native terminal closed before input completed.'),{code:'NATIVE_TERMINAL_CLOSED'}))}terminal.inputs.clear();for(const notify of terminal.changed)notify();fs.rmSync(file,{force:true});emit('terminal:changed',metadata(terminal))})
   return metadata(terminal)
 }
 function terminalOutput(t:Terminal,cursor:number){return {...metadata(t),...t.output.read(cursor)}}
@@ -51,8 +51,9 @@ export async function waitTerminalOutput(id:string,cursor=0,waitMs=0,signal?:Abo
   })
   return terminalOutput(t,cursor)
 }
-export function inputTerminal(id:string,data:string){const t=get(id);if(!t.running)throw new Error('终端已经退出，请新建终端');return new Promise<boolean>((resolve,reject)=>t.process.stdin.write(JSON.stringify({op:'input',data})+'\n',error=>error?reject(error):resolve(true)))}
+export function inputTerminal(id:string,data:string){const t=get(id);if(!t.running)throw Object.assign(new Error('终端已经退出，请新建终端'),{code:'NATIVE_TERMINAL_CLOSED'});return new Promise<boolean>((resolve,reject)=>{const inputId=randomUUID(),fail=(error:Error)=>{const pending=t.inputs.get(inputId);if(pending){clearTimeout(pending.timer);t.inputs.delete(inputId);pending.reject(error)}},timer=setTimeout(()=>fail(Error('Native terminal input could not be confirmed. Check the terminal before sending again.')),20000);t.inputs.set(inputId,{resolve:()=>resolve(true),reject,timer});t.process.stdin.write(JSON.stringify({op:'input',inputId,data})+'\n',error=>{if(error)fail(error)})})}
 export function resizeTerminal(id:string,cols:number,rows:number){const t=get(id);size(cols,rows);if(t.running)t.process.stdin.write(JSON.stringify({op:'resize',cols,rows})+'\n');return true}
-export async function closeTerminal(id:string){const t=get(id);if(t.running){t.process.kill('SIGTERM');const timer=setTimeout(()=>t.process.kill('SIGKILL'),2000);await t.done;clearTimeout(timer)}terminals.delete(id);emit('terminal:changed',{id,employee:t.employee,closed:true});return true}
+export async function stopTerminal(id:string){const t=get(id);if(t.running){t.process.kill('SIGTERM');const timer=setTimeout(()=>t.process.kill('SIGKILL'),2000);await t.done;clearTimeout(timer)}return metadata(t)}
+export async function closeTerminal(id:string){const t=get(id);await stopTerminal(id);terminals.delete(id);emit('terminal:changed',{id,employee:t.employee,closed:true});return true}
 export async function closeEmployeeTerminals(employee:string){for(const t of listTerminals(employee))await closeTerminal(t.id)}
 export async function closeTerminals(){await Promise.all([...terminals.keys()].map(closeTerminal))}

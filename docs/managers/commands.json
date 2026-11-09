@@ -1,5 +1,1044 @@
 [
   {
+    "name": "mission.create",
+    "args": "--spec JSON|@file [--client-request-id KEY]",
+    "summary": "Create a durable mission until explicitly marked successful. supervised reminds assignees and a Secretary; independent reminds assignees only. Uses current self/subordinate scheduling authority. Native turn completion never completes a mission.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spec": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "prompt": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64000
+            },
+            "employeeIds": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "type": {
+              "enum": [
+                "supervised",
+                "independent"
+              ]
+            },
+            "secretaryId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "reminderSeconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 31536000,
+              "default": 1800
+            },
+            "viewId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "plan": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "priority": {
+                  "enum": [
+                    "low",
+                    "normal",
+                    "high",
+                    "urgent"
+                  ],
+                  "default": "normal"
+                },
+                "tags": {
+                  "type": "array",
+                  "maxItems": 20,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  }
+                },
+                "notes": {
+                  "type": "string",
+                  "maxLength": 16000
+                },
+                "durationMinutes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 43200,
+                  "description": "Optional planned duration for timeline display; independent of timeout and actual run duration"
+                }
+              }
+            }
+          },
+          "required": [
+            "name",
+            "prompt",
+            "employeeIds",
+            "type",
+            "reminderSeconds"
+          ]
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "spec"
+      ]
+    },
+    "gui": "Mission / persistent work",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "mission.update",
+    "args": "--id ID --patch JSON|@file --expected-revision N",
+    "summary": "Update an authorized mission and its reminder interval or assignment; rechecks every assignee. Updating does not mark success.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "patch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "prompt": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64000
+            },
+            "employeeIds": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "type": {
+              "enum": [
+                "supervised",
+                "independent"
+              ]
+            },
+            "secretaryId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "reminderSeconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 31536000,
+              "default": 1800
+            },
+            "viewId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "plan": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "priority": {
+                  "enum": [
+                    "low",
+                    "normal",
+                    "high",
+                    "urgent"
+                  ],
+                  "default": "normal"
+                },
+                "tags": {
+                  "type": "array",
+                  "maxItems": 20,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  }
+                },
+                "notes": {
+                  "type": "string",
+                  "maxLength": 16000
+                },
+                "durationMinutes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 43200,
+                  "description": "Optional planned duration for timeline display; independent of timeout and actual run duration"
+                }
+              }
+            }
+          }
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "patch",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Mission / persistent work",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "mission.get",
+    "args": "--id ID",
+    "summary": "Read an authorized mission, explicit outcome and reminder delivery evidence.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "gui": "Mission / persistent work",
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "mission.list",
+    "args": "[--employee ID --status open|failed|succeeded --archived active|archived|all]",
+    "summary": "List missions in the current scheduling scope. Archived unresolved missions still send reminders.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Only the actual creator can recover its request key"
+        },
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "open",
+            "failed",
+            "succeeded"
+          ]
+        },
+        "archived": {
+          "enum": [
+            "active",
+            "archived",
+            "all"
+          ]
+        }
+      }
+    },
+    "gui": "Mission / persistent work",
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "mission.complete",
+    "args": "--id ID --result TEXT --expected-revision N",
+    "summary": "Explicitly confirm the goal was achieved, record evidence and stop future reminders. Only success stops a mission.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64000
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "result",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Mission / persistent work",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "mission.fail",
+    "args": "--id ID --result TEXT --expected-revision N",
+    "summary": "Mark a mission as needing attention, record the reason and keep reminding until success.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64000
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "result",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Mission / persistent work",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "mission.reopen",
+    "args": "--id ID --expected-revision N",
+    "summary": "Explicitly reopen a previously successful mission and resume reminders.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Mission / persistent work",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "mission.remind",
+    "args": "--id ID",
+    "summary": "Request a reminder now without falsely completing the mission; pending reminders are coalesced.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "gui": "Mission / persistent work",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "mission.archive",
+    "args": "--id ID --archived true|false --expected-revision N",
+    "summary": "Archive or restore a mission in Mission views. Archiving does not stop unresolved reminders or clear Secretary counts.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "archived": {
+          "type": "boolean"
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "archived",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Mission / persistent work",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "mission.delete",
+    "args": "--id ID --expected-revision N",
+    "summary": "Delete an explicitly successful mission. An unresolved mission cannot be deleted to bypass completion.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Mission / persistent work",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "mission.summary",
+    "args": "",
+    "summary": "Read authorized unfinished/failed counts by assigned employee and supervising Secretary; archived unresolved missions are included.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "gui": "Mission / persistent work",
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "question.ask",
+    "args": "--conversation employee:ID|group:ID --question TEXT --options JSON --timeout-seconds N|null [--fallback JSON] --client-request-id KEY",
+    "summary": "Employee: publish an application-owned choice question in your private chat or a joined group. Other is always available. Finite waits require your declared fallback; null waits for the real user indefinitely. Saved questions survive new tasks, messages and restarts. Call question.wait to wait up to 25 seconds, then yield the blocked task; do not invent a user answer.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "missionId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Explicitly bind a manually created mission so subsequent reminders respect this user decision"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16000
+        },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "id",
+              "label"
+            ]
+          }
+        },
+        "timeoutSeconds": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 31536000
+        },
+        "fallback": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "optionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 16000
+            }
+          },
+          "required": [
+            "optionId"
+          ]
+        },
+        "viewId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Explicit fixed task view for a Governor asking outside a running task"
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "conversation",
+        "question",
+        "options",
+        "timeoutSeconds",
+        "clientRequestId"
+      ]
+    },
+    "gui": "Messages / choice questions",
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "question.get",
+    "args": "--id ID",
+    "summary": "Read an authorized saved choice question and its actual decision.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "gui": "Messages / choice questions",
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "question.list",
+    "args": "[--conversation REF --status pending|answered|decided|cancelled --offset N --limit N]",
+    "summary": "Read saved application questions in authorized conversations. Pending questions remain until the user chooses, the declared timeout decision occurs, or the author cancels.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "missionId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Recover currently authorized questions and decisions for this durable mission"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "answered",
+            "decided",
+            "cancelled"
+          ]
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        }
+      }
+    },
+    "gui": "Messages / choice questions",
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "question.wait",
+    "args": "--id ID [--seconds N]",
+    "summary": "Wait on this saved question for up to 25 seconds without blocking Core or its inbox. A pending response means yield this task; later answers resume the author through the normal queue. The decision deadline is configured on question.ask, not this network wait.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25,
+          "default": 25
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "gui": "Messages / choice questions",
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "question.answer",
+    "args": "--id ID --option-id ID|other [--text TEXT] --expected-revision N",
+    "summary": "Real user only: choose a published option or Other with a free-text answer. Concurrent/late choices cannot overwrite an existing decision.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "optionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 16000
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "optionId",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Messages / choice questions",
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "question.cancel",
+    "args": "--id ID --expected-revision N",
+    "summary": "Author or real user: withdraw an obsolete question without fabricating an answer.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Messages / choice questions",
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "plan.preferences",
+    "args": "[--patch JSON --expected-revision N]",
+    "summary": "User/Secretary: read or update Mission-wide display filters, hidden task IDs and automatic retention. Display filtering does not pause work. Failed unresolved missions may be archived but never automatically deleted.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "patch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "filter": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "all",
+                    "mission",
+                    "schedule"
+                  ]
+                },
+                "recurring": {
+                  "enum": [
+                    "all",
+                    "once",
+                    "repeating"
+                  ]
+                },
+                "archived": {
+                  "enum": [
+                    "active",
+                    "archived",
+                    "all"
+                  ]
+                },
+                "excludeIds": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "search": {
+                  "type": "string",
+                  "maxLength": 240
+                },
+                "employee": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Employee ID or self"
+                },
+                "team": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "channel": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Publishing channel associated with action.channelId"
+                },
+                "states": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "scheduled",
+                      "running",
+                      "paused",
+                      "completed",
+                      "attention"
+                    ]
+                  }
+                },
+                "priorities": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "low",
+                      "normal",
+                      "high",
+                      "urgent"
+                    ]
+                  }
+                },
+                "tags": {
+                  "type": "array",
+                  "maxItems": 20,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "hiddenIds": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "retention": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "succeeded": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "action": {
+                      "enum": [
+                        "keep",
+                        "archive",
+                        "delete"
+                      ]
+                    },
+                    "afterSeconds": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 31536000
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "afterSeconds"
+                  ]
+                },
+                "failed": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "action": {
+                      "enum": [
+                        "keep",
+                        "archive",
+                        "delete"
+                      ]
+                    },
+                    "afterSeconds": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 31536000
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "afterSeconds"
+                  ]
+                }
+              },
+              "required": [
+                "succeeded",
+                "failed"
+              ]
+            }
+          }
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "gui": "Mission / global filter and retention",
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "plan.archive",
+    "args": "--id ID --archived true|false --expected-revision N",
+    "summary": "Archive or restore an authorized saved schedule or mission. Archiving is a display action and never stops reminders or scheduled work.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "archived": {
+          "type": "boolean"
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "archived",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Mission / global filter and retention",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "board.categories",
+    "args": "",
+    "summary": "User or Secretary: list saved Board categories without starting sessions or acknowledging messages",
+    "gui": "Board categories",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "readOnly": true,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "board.category-save",
+    "args": "ID --name NAME --employees JSON --expected-revision N",
+    "summary": "Create or replace a Board category with an explicit multi-selection. expectedRevision=0 creates; unchanged retries are idempotent.",
+    "gui": "Create/edit Board category",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^bc_[a-zA-Z0-9_-]{1,100}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "employeeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 5000
+        },
+        "workerIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 5000,
+          "description": "Archived legacy membership only. Workers are isolated in Team / Workers."
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "employeeIds",
+        "expectedRevision"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "board.category-delete",
+    "args": "ID --expected-revision N",
+    "summary": "Delete a Board category; retain employees, Workers, tasks and histories",
+    "gui": "Delete Board category",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^bc_[a-zA-Z0-9_-]{1,100}$"
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "expectedRevision"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "board.category-order",
+    "args": "--order JSON --expected-order JSON",
+    "summary": "Reorder category tabs with optimistic concurrency; never reorder employees or Team geometry",
+    "gui": "Reorder Board categories",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^bc_[a-zA-Z0-9_-]{1,100}$"
+          }
+        },
+        "expectedOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^bc_[a-zA-Z0-9_-]{1,100}$"
+          }
+        }
+      },
+      "required": [
+        "order",
+        "expectedOrder"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
     "name": "plan.schema",
     "args": "",
     "summary": "Discover all ten layouts, fields, policies, authorized targets and mutation APIs",
@@ -26,6 +1065,35 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
+            "kind": {
+              "enum": [
+                "all",
+                "mission",
+                "schedule"
+              ]
+            },
+            "recurring": {
+              "enum": [
+                "all",
+                "once",
+                "repeating"
+              ]
+            },
+            "archived": {
+              "enum": [
+                "active",
+                "archived",
+                "all"
+              ]
+            },
+            "excludeIds": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
             "search": {
               "type": "string",
               "maxLength": 240
@@ -134,6 +1202,35 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
+            "kind": {
+              "enum": [
+                "all",
+                "mission",
+                "schedule"
+              ]
+            },
+            "recurring": {
+              "enum": [
+                "all",
+                "once",
+                "repeating"
+              ]
+            },
+            "archived": {
+              "enum": [
+                "active",
+                "archived",
+                "all"
+              ]
+            },
+            "excludeIds": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
             "search": {
               "type": "string",
               "maxLength": 240
@@ -227,6 +1324,35 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
+            "kind": {
+              "enum": [
+                "all",
+                "mission",
+                "schedule"
+              ]
+            },
+            "recurring": {
+              "enum": [
+                "all",
+                "once",
+                "repeating"
+              ]
+            },
+            "archived": {
+              "enum": [
+                "active",
+                "archived",
+                "all"
+              ]
+            },
+            "excludeIds": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
             "search": {
               "type": "string",
               "maxLength": 240
@@ -322,6 +1448,35 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
+            "kind": {
+              "enum": [
+                "all",
+                "mission",
+                "schedule"
+              ]
+            },
+            "recurring": {
+              "enum": [
+                "all",
+                "once",
+                "repeating"
+              ]
+            },
+            "archived": {
+              "enum": [
+                "active",
+                "archived",
+                "all"
+              ]
+            },
+            "excludeIds": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
             "search": {
               "type": "string",
               "maxLength": 240
@@ -409,7 +1564,7 @@
   {
     "name": "plan.feed",
     "args": "[--filter JSON --outcomes JSON --from ISO --to ISO --before CURSOR --limit N]",
-    "summary": "Read actual retained execution activity with stable cursor pagination, including removed schedules when authorized",
+    "summary": "Read actual retained execution and mission reminder activities with stable cursor pagination; reminder success is not goal success; removed schedules remain visible when authorized",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -418,6 +1573,35 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
+            "kind": {
+              "enum": [
+                "all",
+                "mission",
+                "schedule"
+              ]
+            },
+            "recurring": {
+              "enum": [
+                "all",
+                "once",
+                "repeating"
+              ]
+            },
+            "archived": {
+              "enum": [
+                "active",
+                "archived",
+                "all"
+              ]
+            },
+            "excludeIds": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
             "search": {
               "type": "string",
               "maxLength": 240
@@ -575,6 +1759,35 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "kind": {
+                  "enum": [
+                    "all",
+                    "mission",
+                    "schedule"
+                  ]
+                },
+                "recurring": {
+                  "enum": [
+                    "all",
+                    "once",
+                    "repeating"
+                  ]
+                },
+                "archived": {
+                  "enum": [
+                    "active",
+                    "archived",
+                    "all"
+                  ]
+                },
+                "excludeIds": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
                 "search": {
                   "type": "string",
                   "maxLength": 240
@@ -747,6 +1960,35 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "kind": {
+                  "enum": [
+                    "all",
+                    "mission",
+                    "schedule"
+                  ]
+                },
+                "recurring": {
+                  "enum": [
+                    "all",
+                    "once",
+                    "repeating"
+                  ]
+                },
+                "archived": {
+                  "enum": [
+                    "active",
+                    "archived",
+                    "all"
+                  ]
+                },
+                "excludeIds": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
                 "search": {
                   "type": "string",
                   "maxLength": 240
@@ -904,10 +2146,24 @@
     "target": "request"
   },
   {
+    "name": "worker.engines",
+    "args": "",
+    "summary": "List native CLI availability on the Core host without starting adapters, authentication or model requests; remote hosts are checked at Worker start.",
+    "gui": "Add Worker engine availability",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
     "name": "worker.create",
-    "args": "[--employee ID] --engine codex|claude|cline|pi|opencode|kilo [--title NAME --cwd PATH]",
-    "summary": "Create a native Worker owned by yourself (user supplies employee); no inference, role prompt or Company tools",
-    "gui": "Employee profile / Workers",
+    "args": "[--employee ID] --engine codex|claude|cline|pi|opencode|kilo|deepseek [--title NAME --cwd PATH --client-request-id ID]",
+    "summary": "Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Company tools.",
+    "gui": "Team / Add Worker",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -923,7 +2179,8 @@
             "cline",
             "pi",
             "opencode",
-            "kilo"
+            "kilo",
+            "deepseek"
           ]
         },
         "title": {
@@ -933,6 +2190,11 @@
         "cwd": {
           "type": "string",
           "minLength": 1
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
         }
       },
       "required": [
@@ -965,7 +2227,7 @@
   {
     "name": "worker.start",
     "args": "ID [--cols N --rows N]",
-    "summary": "Open the native CLI with its own configuration and no injected task; does not resume an old conversation automatically",
+    "summary": "Connect the native structured engine without a model turn; resume only this Worker’s saved native session and retain native configuration",
     "gui": "Open native Worker",
     "inputSchema": {
       "type": "object",
@@ -997,7 +2259,7 @@
   {
     "name": "worker.read",
     "args": "ID [--cursor N --wait-ms N]",
-    "summary": "Read native terminal output; optional wait up to 15000ms",
+    "summary": "Read rendered conversation snapshots with a revision cursor and reset flag; optional wait up to 15000ms",
     "gui": "Native terminal",
     "inputSchema": {
       "type": "object",
@@ -1027,8 +2289,8 @@
   },
   {
     "name": "worker.input",
-    "args": "ID --data TEXT|--file PATH [--enter]",
-    "summary": "Send literal native CLI input or a task; no Company prompt wrapping",
+    "args": "ID --data TEXT|--file PATH [--enter --terminal ID]",
+    "summary": "Compatibility text-task input. Raw terminal IDs and terminal escape sequences are rejected; use worker.send for idempotent graphical conversation input.",
     "gui": "Native terminal input",
     "inputSchema": {
       "type": "object",
@@ -1040,6 +2302,10 @@
         },
         "data": {
           "type": "string"
+        },
+        "terminal": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [
@@ -1052,9 +2318,202 @@
     "target": "request"
   },
   {
+    "name": "worker.snapshot",
+    "args": "ID",
+    "summary": "Read the structured native Worker conversation, tools, approvals and queued tasks; never starts a process.",
+    "gui": "Worker conversation",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": true,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.send",
+    "args": "ID --text TEXT [--client-message-id KEY]",
+    "summary": "Send an unwrapped native task through the engine protocol; busy Workers queue it. Identical clientMessageId retries never repeat work. Starts the configured native connection if needed.",
+    "gui": "Worker composer",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "clientMessageId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.dequeue",
+    "args": "ID --message-id ID",
+    "summary": "Remove one waiting Worker task without interrupting the active task.",
+    "gui": "Worker queue",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "messageId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "messageId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.respond",
+    "args": "ID --request-id ID --decision allow|deny [--answers JSON --form JSON]",
+    "summary": "Answer a pending native tool approval or question for an authorized Worker.",
+    "gui": "Worker approvals",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision": {
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        },
+        "answers": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "form": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "id",
+        "requestId",
+        "decision"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.configure",
+    "args": "ID [--model MODEL --effort LEVEL --permission-mode default|acceptEdits|bypassPermissions]",
+    "summary": "Change an idle Worker native model, reasoning effort or permission setting; keeps engine, workspace, host and native conversation identity. Connected model/effort changes use native controls; changed permissions require an explicit stop/start before new work.",
+    "gui": "Worker settings",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string"
+        },
+        "effort": {
+          "type": "string"
+        },
+        "permissionMode": {
+          "enum": [
+            "default",
+            "acceptEdits",
+            "bypassPermissions"
+          ]
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
+    "name": "worker.draft",
+    "args": "ID --text TEXT [--expected-revision N --new-attempt]",
+    "summary": "Retain an owned Worker composer draft without sending or starting a process. A stale expectedRevision returns applied=false and the current draft.",
+    "gui": "Worker composer",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 100000
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "newAttempt": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ]
+    },
+    "readOnly": false,
+    "permission": "worker",
+    "target": "request"
+  },
+  {
     "name": "worker.resize",
     "args": "ID --cols N --rows N",
-    "summary": "Resize the native terminal",
+    "summary": "Legacy terminal resizing; structured Workers explicitly reject terminal resizing",
     "gui": "Native terminal size",
     "inputSchema": {
       "type": "object",
@@ -1087,14 +2546,18 @@
   },
   {
     "name": "worker.interrupt",
-    "args": "ID",
-    "summary": "Send Ctrl-C to the native CLI; native approval and task semantics apply",
+    "args": "ID [--expected-message-id ID]",
+    "summary": "Interrupt the current native task and cancel queued tasks; keep the connection and history when supported",
     "gui": "Interrupt Worker",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedMessageId": {
           "type": "string",
           "minLength": 1
         }
@@ -1110,7 +2573,7 @@
   {
     "name": "worker.stop",
     "args": "ID",
-    "summary": "Stop the native CLI process; retain Worker record, work files and native history",
+    "summary": "Stop the owned native process tree; retain Worker record, work files and native history",
     "gui": "Stop Worker",
     "inputSchema": {
       "type": "object",
@@ -1132,7 +2595,7 @@
   {
     "name": "worker.remove",
     "args": "ID",
-    "summary": "Stop and remove your Worker record; preserve work files, engine configuration, authentication and native history",
+    "summary": "Stop the owned native process and tool descendants, wait for exit, then remove only your Worker record; preserve work files, engine configuration, authentication and native history",
     "gui": "Remove Worker",
     "inputSchema": {
       "type": "object",
@@ -1398,7 +2861,7 @@
   {
     "name": "bot.appearance",
     "args": "ID [--avatar ID --expected-revision N]",
-    "summary": "User/Secretary: read or change Dot’s built-in animated character. Grok uses its original native shape, color and animation. Does not modify the external Worker prompt or identity.",
+    "summary": "User/Secretary: read Dot’s fixed native OpenAI Codey animation. Other Dot character overrides are unsupported. Grok uses its original native shape, color and animation. Does not modify the external Worker prompt or identity.",
     "gui": "Bot appearance",
     "inputSchema": {
       "type": "object",
@@ -1428,7 +2891,7 @@
   {
     "name": "bot.list",
     "args": "[--include-removed]",
-    "summary": "List authorized Dot/Grok Worker conversations. User/Secretary may include removed local connections for explicit restoration. Native bots have no application credentials.",
+    "summary": "List authorized Dot/Grok Worker conversations and durable execution/usage issues with reset times. User/Secretary may include removed local connections for explicit restoration. Native bots have no application credentials.",
     "gui": "Message bot workers",
     "inputSchema": {
       "type": "object",
@@ -5140,9 +6603,9 @@
   },
   {
     "name": "messenger.draft",
-    "args": "CONVERSATION --data JSON",
-    "summary": "User or Secretary: persist a draft and its send identity, or conditionally clear the matching draft; never sends or opens an engine",
-    "gui": "Messages composer",
+    "args": "CONVERSATION --data JSON [--scope messages|work]",
+    "summary": "User or Secretary: persist a draft and its send identity, or conditionally clear the matching draft; scope work shares Board and full work composers separately from Message; never sends or opens an engine",
+    "gui": "Message and work composers",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -5150,6 +6613,13 @@
         "conversation": {
           "type": "string",
           "pattern": "^(employee|group|channel):[a-zA-Z0-9_-]+$"
+        },
+        "scope": {
+          "enum": [
+            "messages",
+            "work"
+          ],
+          "description": "Defaults to messages. Work is employee-only and is returned under work:employee:ID in messenger.state.drafts."
         },
         "text": {
           "type": "string",
@@ -5918,6 +7388,153 @@
       },
       "required": [
         "id"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "conversation.files",
+    "args": "CONVERSATION [--state active|trash --query TEXT --author all|you|employee --sort newest|name|size --offset N --limit N]",
+    "summary": "List unique published group files with current size/version, original message references and recoverable trash; no file bytes or reading receipts. Native Bot files are read-only.",
+    "gui": "Group shared files",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation": {
+          "type": "string",
+          "pattern": "^group:[a-zA-Z0-9_-]+$"
+        },
+        "state": {
+          "enum": [
+            "active",
+            "trash"
+          ]
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "author": {
+          "enum": [
+            "all",
+            "you",
+            "employee"
+          ]
+        },
+        "sort": {
+          "enum": [
+            "newest",
+            "name",
+            "size"
+          ]
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "conversation"
+      ]
+    },
+    "readOnly": true,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "conversation.file-trash",
+    "args": "CONVERSATION --files JSON",
+    "summary": "Current group members have equal content rights: move 1–100 published files to recoverable trash with expected versions; all preflight checks pass before any move. Same-version retries return existing trash receipts.",
+    "gui": "Delete shared files",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation": {
+          "type": "string",
+          "pattern": "^group:[a-zA-Z0-9_-]+$"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "path",
+              "version"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "conversation",
+        "files"
+      ]
+    },
+    "readOnly": false,
+    "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "conversation.file-restore",
+    "args": "CONVERSATION --files JSON",
+    "summary": "Restore published group files by path and trash ID, rechecking membership and refusing to overwrite a new file at the original path. Restore receipts make unchanged retries safe.",
+    "gui": "Restore shared files",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation": {
+          "type": "string",
+          "pattern": "^group:[a-zA-Z0-9_-]+$"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "trashId": {
+                "type": "string",
+                "pattern": "^[a-f0-9-]{36}$"
+              }
+            },
+            "required": [
+              "path",
+              "trashId"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "conversation",
+        "files"
       ]
     },
     "readOnly": false,
@@ -7101,8 +8718,8 @@
   },
   {
     "name": "view.select",
-    "args": "company|messages|plan [--team-view ID]",
-    "summary": "Select a presentation mode; Messages resumes the last conversation for this client",
+    "args": "company|messages|plan [--team-view ID] [--team-tab characters|board|workers]",
+    "summary": "Select a presentation mode; Team has Characters, Board and Workers subviews; Messages resumes the last conversation for this client",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -7119,6 +8736,13 @@
         "teamViewId": {
           "type": "string",
           "minLength": 1
+        },
+        "teamTab": {
+          "enum": [
+            "characters",
+            "board",
+            "workers"
+          ]
         }
       },
       "required": [
@@ -7146,8 +8770,8 @@
   },
   {
     "name": "chat.create",
-    "args": "--name NAME [--team TEAM] [--members JSON] [--owner-id ID]",
-    "summary": "Create a group with an Agent Owner; Agent creators own their group, user selects ownerId (defaults to first selected member)",
+    "args": "--name NAME [--team TEAM] [--members JSON] [--owner-id ID] [--client-request-id ID]",
+    "summary": "Create a group with an Agent Owner; Agent creators own their group, user selects ownerId (defaults to first selected member). Stable clientRequestId retries the same caller-owned creation",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -7161,6 +8785,11 @@
         "ownerId": {
           "type": "string",
           "minLength": 1
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
         },
         "team": {
           "type": "string",
@@ -7344,6 +8973,43 @@
     },
     "readOnly": true,
     "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "chat.retry",
+    "args": "ID --message MESSAGE_ID [--members JSON]",
+    "summary": "User/Secretary: retry only failed undelivered original recipients; no republishing, no completed/started task replay. Original content and sender remain; retry actor is reauthorized at dispatch",
+    "gui": "Message delivery recovery",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "messageId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "employeeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 200,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "messageId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
     "target": "request"
   },
   {
@@ -7649,7 +9315,7 @@
   },
   {
     "name": "engine.capabilities",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek",
     "summary": "Read adapter capabilities, workspace modes and employee kinds before hiring; no credentials or inference",
     "gui": "创建员工能力检查",
     "readOnly": true,
@@ -7658,7 +9324,7 @@
   },
   {
     "name": "engine.providers",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek",
     "summary": "Read every native provider/router and saved profile with active model, URLs, credential fingerprints and source files; never returns keys",
     "gui": "Native engine provider catalog",
     "inputSchema": {
@@ -7672,7 +9338,8 @@
             "cline",
             "pi",
             "opencode",
-            "kilo"
+            "kilo",
+            "deepseek"
           ]
         }
       },
@@ -7875,8 +9542,8 @@
   },
   {
     "name": "api.list",
-    "args": "[--prefix DOMAIN --search TEXT --all]",
-    "summary": "Discover callable APIs by domain or keyword; all includes retired and permission-restricted metadata, never authority",
+    "args": "[--prefix DOMAIN --search TEXT --all --compact --offset N --limit N]",
+    "summary": "Discover APIs by domain or keyword. compact returns paged summaries and apiRevision; describe reads one schema. all grants no execution authority",
     "gui": "管理与协同",
     "inputSchema": {
       "type": "object",
@@ -7892,6 +9559,18 @@
         "search": {
           "type": "string",
           "maxLength": 200
+        },
+        "compact": {
+          "type": "boolean"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
         }
       }
     },
@@ -7937,6 +9616,42 @@
           "description": "index, core/api, core/permissions, core/plan, core/scheduler, core/architecture, or plugin/ID/api|schema"
         }
       }
+    },
+    "readOnly": true,
+    "permission": "identity",
+    "target": "request"
+  },
+  {
+    "name": "api.result",
+    "args": "ID [--path JSON_POINTER --offset N --limit N]",
+    "summary": "Read a large native-tool response already received by this caller; owner-bound, expires after 15 minutes or restart. Never repeats the source operation",
+    "gui": "原生工具结果分页",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "JSON Pointer in the original response, e.g. /data/items/0; omit for the complete JSON"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12000
+        }
+      },
+      "required": [
+        "id"
+      ]
     },
     "readOnly": true,
     "permission": "identity",
@@ -8429,7 +10144,8 @@
                     "cline",
                     "pi",
                     "opencode",
-                    "kilo"
+                    "kilo",
+                    "deepseek"
                   ]
                 },
                 "prompt": {
@@ -8453,6 +10169,7 @@
                 },
                 "effort": {
                   "enum": [
+                    "none",
                     "low",
                     "medium",
                     "high",
@@ -8830,7 +10547,8 @@
                     "cline",
                     "pi",
                     "opencode",
-                    "kilo"
+                    "kilo",
+                    "deepseek"
                   ]
                 },
                 "prompt": {
@@ -8854,6 +10572,7 @@
                 },
                 "effort": {
                   "enum": [
+                    "none",
                     "low",
                     "medium",
                     "high",
@@ -9320,7 +11039,8 @@
                     "cline",
                     "pi",
                     "opencode",
-                    "kilo"
+                    "kilo",
+                    "deepseek"
                   ]
                 },
                 "prompt": {
@@ -9344,6 +11064,7 @@
                 },
                 "effort": {
                   "enum": [
+                    "none",
                     "low",
                     "medium",
                     "high",
@@ -9691,7 +11412,8 @@
                     "cline",
                     "pi",
                     "opencode",
-                    "kilo"
+                    "kilo",
+                    "deepseek"
                   ]
                 },
                 "prompt": {
@@ -9715,6 +11437,7 @@
                 },
                 "effort": {
                   "enum": [
+                    "none",
                     "low",
                     "medium",
                     "high",
@@ -10173,16 +11896,46 @@
   },
   {
     "name": "engine.models",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo [--kind worker|cloud-native-worker] [--team NAME]",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek [--kind worker|cloud-native-worker] [--team NAME]",
     "summary": "List available models before employee creation, without inference; Cloud Native reads the selected host",
     "gui": "创建员工和默认模型设置",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "enum": [
+            "codex",
+            "claude",
+            "cline",
+            "pi",
+            "opencode",
+            "kilo",
+            "deepseek"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "worker",
+            "cloud-native-worker"
+          ]
+        },
+        "team": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "engine"
+      ]
+    },
     "readOnly": true,
     "permission": "operator",
     "target": "request"
   },
   {
     "name": "settings.set",
-    "args": "[--view company|messages|plan | --view-appearance JSON|@file] [--message-wallpaper JSON|@file] [--language en|zh-CN] [--theme violet|blue|mint|teal|cyan|rose|coral|amber|indigo|graphite|custom|white|light|space|black|midnight|sage] [--theme-color #RRGGBB] [--default-permission default|acceptEdits|bypassPermissions] [--explorer-width N] [--asset-drawer-width N] [--terminal-height N] [--page-zoom N] [--zoom-sensitivity N] [--pan-sensitivity N] [--sidebar-width N] [--snap-employees on|off] [--team-overview on|off] [--default-codex-model ID] [--default-claude-model ID] [--default-cline-model ID] [--default-pi-model ID]",
+    "args": "[--view company|messages|plan | --view-appearance JSON|@file] [--message-wallpaper JSON|@file] [--language en|zh-CN] [--theme violet|blue|mint|teal|cyan|rose|coral|amber|indigo|graphite|custom|white|light|space|black|midnight|sage] [--theme-color #RRGGBB] [--default-permission default|acceptEdits|bypassPermissions] [--explorer-width N] [--explorer-collapsed on|off] [--explorer-tree-collapsed on|off] [--asset-drawer-width N] [--terminal-height N] [--page-zoom N] [--zoom-sensitivity N] [--pan-sensitivity N] [--sidebar-width N] [--board-max-columns N] [--snap-employees on|off] [--team-overview on|off] [--default-codex-model ID] [--default-claude-model ID] [--default-cline-model ID] [--default-pi-model ID]",
     "summary": "Patch independent view appearances and shared settings; legacy theme flags target Messages only",
     "gui": "背景、灵敏度和团队索引",
     "inputSchema": {
@@ -10419,6 +12172,11 @@
           "minimum": 56,
           "maximum": 96
         },
+        "boardMaxColumns": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
         "snapEmployees": {
           "type": "boolean"
         },
@@ -10434,6 +12192,12 @@
           "type": "number",
           "minimum": 140,
           "maximum": 520
+        },
+        "explorerCollapsed": {
+          "type": "boolean"
+        },
+        "explorerTreeCollapsed": {
+          "type": "boolean"
         },
         "assetDrawerWidth": {
           "type": "number",
@@ -10474,7 +12238,7 @@
   },
   {
     "name": "view.open",
-    "args": "home|messages|plan|team|employee|workspace|conversation|initialization|plugin|settings [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID]",
+    "args": "home|messages|plan|team|employee|workspace|conversation|initialization|plugin|settings [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab characters|board|workers]",
     "summary": "Open a form, workspace, news channel or employee conversation",
     "gui": "打开资料或会话",
     "readOnly": false,
@@ -10558,6 +12322,7 @@
     "args": "<id> <text> | --employee ID --text TEXT [--source-view company|messages|plan] [--view VIEW_ID] [--client-message-id ID] [--images JSON] [--files JSON] [--reply-to MESSAGE_ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only]",
     "inputSchema": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "id": {
           "type": "string"
@@ -10905,18 +12670,70 @@
   },
   {
     "name": "session.info",
-    "args": "<id>",
-    "summary": "Show a live session’s engines, models, commands",
+    "args": "<id> | --employee ID",
+    "summary": "Read employee/session information; session.status returns stable employee IDs and current sessionId",
     "gui": "The toolbar dropdowns",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "id"
+          ]
+        },
+        {
+          "required": [
+            "employee"
+          ]
+        }
+      ]
+    },
     "readOnly": true,
     "permission": "employee.read",
     "target": "session-or-employee"
   },
   {
     "name": "session.activity",
-    "args": "<id>",
-    "summary": "Current speech, published thinking or tool preview; null when idle",
+    "args": "<id> | --employee ID",
+    "summary": "Read current activity or an unread reply by stable employee or live session ID; null when idle, without opening an engine",
     "gui": "员工活动气泡",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "id"
+          ]
+        },
+        {
+          "required": [
+            "employee"
+          ]
+        }
+      ]
+    },
     "readOnly": true,
     "permission": "employee.read",
     "target": "session-or-employee"
@@ -10988,8 +12805,32 @@
   {
     "name": "config.permission",
     "args": "<id> <mode>",
-    "summary": "Change permission mode",
+    "summary": "Change permission mode for an opened native session; use sessionId from session.status",
     "gui": "🔒 dropdown",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "enum": [
+            "default",
+            "acceptEdits",
+            "plan",
+            "auto",
+            "dontAsk",
+            "bypassPermissions"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "mode"
+      ]
+    },
     "readOnly": false,
     "permission": "operator",
     "target": "session-or-employee"
@@ -11033,8 +12874,31 @@
   {
     "name": "engine.inspect",
     "args": "<id> [capabilities|skills|mcp|account|usage|config]",
-    "summary": "Inspect native engine capabilities and configuration",
+    "summary": "Inspect an opened native session; use id=sessionId from session.status, not employeeId",
     "gui": "引擎工具面板",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "section": {
+          "enum": [
+            "capabilities",
+            "skills",
+            "mcp",
+            "account",
+            "usage",
+            "config"
+          ]
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
     "readOnly": true,
     "permission": "operator",
     "target": "request"
@@ -11124,6 +12988,7 @@
     "args": "<id> <text> | --employee ID --text TEXT [--source-view company|messages|plan] [--view VIEW_ID] [--client-message-id ID] [--images JSON] [--files JSON] [--reply-to MESSAGE_ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only]",
     "inputSchema": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "id": {
           "type": "string"
@@ -11344,8 +13209,8 @@
   },
   {
     "name": "group.add",
-    "args": "<name> [--mode build|cloud] [--host-id ID] [--directory-mode default|bind] [--remote-dir PATH] [--os linux|macos|windows] [--distribution ID]",
-    "summary": "Create a local or cloud project; plugins are independent and use per-content employee grants. Cloud uses host-id; os/distribution assert actual host.",
+    "args": "<name> [--mode build|cloud] [--host-id ID] [--directory-mode default|bind] [--remote-dir PATH] [--os linux|macos|windows] [--distribution ID] [--design JSON --client-request-id ID]",
+    "summary": "Create a local or cloud project with fixed rectangular seats, optional atomic decoration and caller-bound retry identity; plugins are independent and use per-content employee grants. Cloud uses host-id; os/distribution assert actual host.",
     "gui": "“+ Department”",
     "readOnly": false,
     "permission": "operator",
@@ -11371,9 +13236,48 @@
   },
   {
     "name": "room.place",
-    "args": "<name> --col N --row N [--w N --h N]",
-    "summary": "Position a department’s room on the floor",
-    "gui": "Dragging a room by its sign",
+    "args": "<name> --column N --row N [--expected-placement JSON] | --slot N (legacy)",
+    "summary": "Move a Team on the employee-seat grid. Whole signed columns/rows; colliding Teams yield atomically. Legacy slots remain compatible.",
+    "gui": "按工位网格移动 Team",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "column": {
+          "type": "integer"
+        },
+        "row": {
+          "type": "integer"
+        },
+        "expectedPlacement": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "column": {
+              "type": "integer"
+            },
+            "row": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "column",
+            "row"
+          ]
+        },
+        "slot": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
     "readOnly": false,
     "permission": "layout.write",
     "target": "request"
@@ -11425,7 +13329,7 @@
   },
   {
     "name": "card.create",
-    "args": "--title NAME [--group TEAM] [--character NAME --avatar-style anime|chibi | --avatar ID] [--profession TEXT] [--management-role employee|manager|governor|secretary] [--kind worker|cloud-native-worker] [--work-environment team|local] [--engine E] [--model ID] [--thinking on|off] [--effort LEVEL]",
+    "args": "--title NAME [--group TEAM] [--character NAME --avatar-style anime|chibi | --avatar ID] [--profession TEXT] [--management-role employee|manager|governor|secretary] [--kind worker|cloud-native-worker] [--work-environment team|local] [--engine E] [--model ID] [--thinking on|off] [--effort LEVEL] [--client-request-id ID]",
     "summary": "Create an employee: title=name, character/avatar=appearance, managementRole=rank, profession=duties; discover appearances with avatar.list and verify via session.status",
     "gui": "添加员工",
     "inputSchema": {
@@ -11490,7 +13394,8 @@
             "cline",
             "pi",
             "opencode",
-            "kilo"
+            "kilo",
+            "deepseek"
           ]
         },
         "model": {
@@ -11501,6 +13406,11 @@
         },
         "permissionMode": {
           "type": "string"
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
         },
         "cwd": {
           "type": "string"
@@ -11646,9 +13556,44 @@
   },
   {
     "name": "room.bounds",
-    "args": "<name> --x N --y N --width N --height N [--shape S] [--arrangement A]",
-    "summary": "Move and resize a canvas room",
-    "gui": "拖动、缩放 Team",
+    "args": "<name> [--columns N] [--rows N]",
+    "summary": "Resize a rectangular Team by whole seat columns and rows. Occupied edge seats cannot be cut off.",
+    "gui": "拖动右边、下边或右下角调整座位网格",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "columns": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "columns"
+          ]
+        },
+        {
+          "required": [
+            "rows"
+          ]
+        }
+      ]
+    },
     "readOnly": false,
     "permission": "layout.write",
     "target": "request"
@@ -11664,9 +13609,44 @@
   },
   {
     "name": "card.place",
-    "args": "<id> --x N --y N [--snap on|off] [--zoom N]",
-    "summary": "Place an employee freely or snap to nearby seats",
-    "gui": "拖动员工",
+    "args": "<id> --seat N [--expected-seating JSON]",
+    "summary": "Move to a numbered Team seat; occupied seats swap atomically. Read room.layout for available seats.",
+    "gui": "选择座位或拖到规范座位",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seat": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "One-based seat from room.layout; occupied seats swap."
+        },
+        "expectedSeating": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "columns": {
+              "type": "integer"
+            },
+            "rows": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "columns",
+            "rows"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "seat"
+      ]
+    },
     "readOnly": false,
     "permission": "layout.write",
     "target": "session-or-employee"
@@ -11683,8 +13663,8 @@
   {
     "name": "canvas.set",
     "args": "--x N --y N --zoom N [--view VIEW_ID]",
-    "summary": "Pan and zoom the canvas",
-    "gui": "平移、缩放画布",
+    "summary": "Retired: Characters has fixed scale and finite scrolling.",
+    "gui": "固定比例角色视图",
     "readOnly": false,
     "permission": "operator",
     "target": "request"

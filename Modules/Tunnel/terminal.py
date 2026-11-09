@@ -3,6 +3,7 @@ import sys
 # Runtime imports must not change a signed application bundle.
 sys.dont_write_bytecode = True
 import base64
+from collections import deque
 import errno
 import fcntl
 import json
@@ -78,44 +79,86 @@ def terminate(*_):
 signal.signal(signal.SIGTERM, terminate)
 resize(config.get('cols', 100), config.get('rows', 24))
 selector = selectors.DefaultSelector()
+os.set_blocking(master, False)
 selector.register(master, selectors.EVENT_READ)
 selector.register(0, selectors.EVENT_READ)
 buffer = b''
 reaped = False
+writes = deque()
+queued_bytes = 0
+stdin_registered = True
+
+def interests():
+    global stdin_registered
+    selector.modify(master, selectors.EVENT_READ | (selectors.EVENT_WRITE if writes else 0))
+    accepting = queued_bytes + sum(len(data) for _, data in pending_input) < 1024 * 1024
+    if accepting and not stdin_registered:
+        selector.register(0, selectors.EVENT_READ)
+    elif not accepting and stdin_registered:
+        selector.unregister(0)
+    stdin_registered = accepting
+
+def enqueue(data, input_id=None):
+    global queued_bytes
+    if data:
+        writes.append([memoryview(data), input_id])
+        queued_bytes += len(data)
+    elif input_id:
+        send({'inputId': input_id})
+    interests()
+
 try:
     while True:
-        for key, _ in selector.select():
+        for key, mask in selector.select():
             if key.fd == master:
-                try:
-                    data = os.read(master, 65536)
-                except OSError as error:
-                    if error.errno == errno.EIO:
-                        data = b''
-                    else:
-                        raise
-                if not data:
-                    _, status = os.waitpid(pid, 0)
-                    reaped = True
-                    if startup_buffer:
-                        send({'data': base64.b64encode(startup_buffer).decode()})
-                    exit_code = os.waitstatus_to_exitcode(status)
-                    # Windows SSH may report success when console startup failed.
-                    send({'exitCode': exit_code or (1 if ready_marker else 0)})
-                    raise SystemExit(0)
-                if ready_marker:
-                    startup_buffer += data
-                    if startup and re.search(rb'PS [\s\S]*>', startup_buffer):
-                        os.write(master, startup)
-                        startup = None
-                    if ready_marker not in startup_buffer:
+                if mask & selectors.EVENT_READ:
+                    try:
+                        data = os.read(master, 65536)
+                    except BlockingIOError:
+                        data = None
+                    except OSError as error:
+                        if error.errno == errno.EIO:
+                            data = b''
+                        else:
+                            raise
+                    if data == b'':
+                        _, status = os.waitpid(pid, 0)
+                        reaped = True
+                        if startup_buffer:
+                            send({'data': base64.b64encode(startup_buffer).decode()})
+                        exit_code = os.waitstatus_to_exitcode(status)
+                        send({'exitCode': exit_code or (1 if ready_marker else 0)})
+                        raise SystemExit(0)
+                    if data is not None:
+                        if ready_marker:
+                            startup_buffer += data
+                            if startup and re.search(rb'PS [\s\S]*>', startup_buffer):
+                                enqueue(startup)
+                                startup = None
+                            if ready_marker not in startup_buffer:
+                                continue
+                            data = startup_buffer.split(ready_marker, 1)[1]
+                            startup_buffer = b''
+                            ready_marker = None
+                            for input_id, pending in pending_input:
+                                enqueue(pending, input_id)
+                            pending_input.clear()
+                            interests()
+                        send({'data': base64.b64encode(data).decode()})
+                if mask & selectors.EVENT_WRITE and writes:
+                    pending, input_id = writes[0]
+                    try:
+                        count = os.write(master, pending[:65536])
+                    except BlockingIOError:
                         continue
-                    data = startup_buffer.split(ready_marker, 1)[1]
-                    startup_buffer = b''
-                    ready_marker = None
-                    for pending in pending_input:
-                        os.write(master, pending)
-                    pending_input.clear()
-                send({'data': base64.b64encode(data).decode()})
+                    queued_bytes -= count
+                    if count == len(pending):
+                        writes.popleft()
+                        if input_id:
+                            send({'inputId': input_id})
+                    else:
+                        writes[0][0] = pending[count:]
+                    interests()
             else:
                 data = os.read(0, 65536)
                 if not data:
@@ -127,9 +170,10 @@ try:
                     if request['op'] == 'input':
                         data = request['data'].encode('utf-8')
                         if ready_marker:
-                            pending_input.append(data)
+                            pending_input.append((request.get('inputId'), data))
+                            interests()
                         else:
-                            os.write(master, data)
+                            enqueue(data, request.get('inputId'))
                     elif request['op'] == 'resize':
                         resize(request['cols'], request['rows'])
                     elif request['op'] == 'close':

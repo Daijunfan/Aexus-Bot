@@ -21,6 +21,6 @@ export function useDialogFocus(selector: string, open: boolean, returnFocus?:()=
       else if (!event.shiftKey && (index === items.length - 1 || index === -1)) { event.preventDefault(); items[0]?.focus() }
     }
     dialog?.addEventListener('keydown', key)
-    return () => { dialog?.removeEventListener('keydown', key); const target=restore.current?.()??opener; if (target?.isConnected) target.focus({ preventScroll: true }) }
+    return () => { dialog?.removeEventListener('keydown', key); const target=restore.current?.()??opener; const active=[...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')].filter(el=>!el.hidden&&el.getBoundingClientRect().height>0).at(-1); if (target?.isConnected&&(!active||active===dialog||active.contains(target))) target.focus({ preventScroll: true }) }
   }, [selector, open])
 }

@@ -1,5 +1,6 @@
+import {EngineMark} from './EngineMark'
 import {translate as uiText,useI18n,interfaceLocale,interfaceLanguage} from '../i18n'
-import {useEffect,useState} from 'react'
+import {useEffect,useRef,useState} from 'react'
 import {api} from '../api'
 import type {EngineProviderCatalog} from '../../../shared/engine-providers'
 import type {EngineHealth,EngineId} from '../../../shared/engines'
@@ -17,8 +18,10 @@ function EngineCard({descriptor}:{descriptor:Descriptor}){
   const [health,setHealth]=useState<EngineHealth>(),[checking,setChecking]=useState(false),[error,setError]=useState('')
   const [editing,setEditing]=useState(false),[executable,setExecutable]=useState(descriptor.configuration.path??'')
   const [plan,setPlan]=useState<any>(),[job,setJob]=useState<any>(),[login,setLogin]=useState<any>(),[saving,setSaving]=useState(false)
+  const connectionRevision=useRef(0)
+  const connectionChanged=()=>{connectionRevision.current++;setTestResult(undefined)}
   const [testPlan,setTestPlan]=useState(false),[testing,setTesting]=useState(false),[testModel,setTestModel]=useState(''),[testResult,setTestResult]=useState<{text:string;model:string;elapsedMs:number}>()
-  const probe=async()=>{setTesting(true);setTestPlan(false);setError('');setTestResult(undefined);try{setTestResult(await api.call('engine.probe',{engine:descriptor.engine,confirm:true,model:testModel||undefined}))}catch(cause){setError((cause as Error).message)}finally{setTesting(false)}}
+  const probe=async()=>{const revision=connectionRevision.current;setTesting(true);setTestPlan(false);setError('');setTestResult(undefined);try{const result=await api.call('engine.probe',{engine:descriptor.engine,confirm:true,model:testModel||undefined});if(revision===connectionRevision.current)setTestResult(result);else setError(uiText('Native configuration changed. Run the test again.'))}catch(cause){setError((cause as Error).message)}finally{setTesting(false)}}
   const check=async()=>{setChecking(true);setError('');try{setHealth(await api.call<EngineHealth>('engine.check',{engine:descriptor.engine,force:true}))}catch(cause){setError((cause as Error).message)}finally{setChecking(false)}}
   useEffect(()=>{void check()},[descriptor.engine])
   useEffect(()=>{
@@ -39,9 +42,9 @@ function EngineCard({descriptor}:{descriptor:Descriptor}){
     try{await api.call('engine.configure',{engine:descriptor.engine,patch:{path:executable,inheritNative:true}});setEditing(false);await check()}catch(cause){setError((cause as Error).message)}finally{setSaving(false)}
   }
   return <article data-engine-health={descriptor.engine}>
-    <header><strong>{descriptor.label}</strong><span>{checking?uiText("Checking…"):testResult?uiText("Test call passed"):health?.ready?uiText("Configured · Call not yet verified"):health?.installed?health.protocol==='incompatible'?uiText("Incompatible version or protocol"):health.authentication==='not-signed-in'?uiText("Not authenticated"):uiText("Authentication needs checking"):uiText("Not installed")}</span></header>
-    <EngineProviders engine={descriptor.engine}/><small>{uiText("Execution host:")}{descriptor.target}</small>{health?.path&&<code>{health.path}</code>}{health?.version&&<small>{health.version}</small>}
-    {health&&<small>{uiText("Protocol:")}{health.protocol}  {uiText("· Authentication:")}{health.authentication}  {uiText("· Checked at")} {new Date(health.checkedAt).toLocaleString()}</small>}
+    <header><EngineMark engine={descriptor.engine} size={24}/><strong>{descriptor.label}</strong><span>{checking?uiText("Checking…"):testResult?uiText("Test call passed"):health?.ready?uiText("Configured · Call not yet verified"):health?.installed?health.protocol==='incompatible'?uiText("Incompatible version or protocol"):health.authentication==='not-signed-in'?uiText("Not authenticated"):uiText("Authentication needs checking"):uiText("Not installed")}</span></header>
+    <EngineProviders engine={descriptor.engine} onChanged={connectionChanged}/><small>{uiText("Execution host:")} {descriptor.target}</small>{health?.path&&<code>{health.path}</code>}{health?.version&&<small>{health.version}</small>}
+    {health&&<small>{uiText("Protocol:")} {health.protocol}  {uiText("· Authentication:")}{health.authentication}  {uiText("· Checked at")} {new Date(health.checkedAt).toLocaleString(interfaceLocale())}</small>}
     {(error||health?.error)&&<small className="warn" role="alert">{error||health?.error}</small>}
     <div className="actions"><button type="button" className="btn" disabled={checking} onClick={()=>void check()}>{uiText("Check again")}</button><button type="button" className="btn" onClick={()=>setEditing(!editing)}>{uiText("Engine settings")}</button><button type="button" className="btn" disabled={job?.state==='running'} onClick={()=>void api.call('engine.install-plan',{engine:descriptor.engine}).then(setPlan).catch(cause=>setError(cause.message))}>{uiText("Download / install")}</button>{descriptor.engine==='codex'&&<button type="button" className="btn" disabled={!health?.installed||login?.state==='running'} onClick={()=>void api.call('engine.login',{engine:'codex'}).then(setLogin).catch(cause=>setError(cause.message))}>{uiText("Official device-code sign-in")}</button>}</div>
     <div className="actions"><button type="button" className="btn" disabled={testing||!health?.installed} onClick={()=>setTestPlan(true)}>{testing?uiText("Testing…"):uiText("Test call")}</button></div>
@@ -54,15 +57,16 @@ function EngineCard({descriptor}:{descriptor:Descriptor}){
   </article>
 }
 
-function EngineProviders({engine}:{engine:EngineId}){
+function EngineProviders({engine,onChanged}:{engine:EngineId;onChanged?:()=>void}){
+ const previousConnection=useRef(''),changed=useRef(onChanged);changed.current=onChanged
  const [catalog,setCatalog]=useState<EngineProviderCatalog>(),[error,setError]=useState(''),[saving,setSaving]=useState(false)
- useEffect(()=>{let active=true,pending=false;const load=async()=>{if(pending)return;pending=true;try{const result=await api.call<EngineProviderCatalog>('engine.providers',{engine});if(active){setCatalog(result);setError('')}}catch(cause){if(active)setError((cause as Error).message)}finally{pending=false}};void load();window.addEventListener('focus',load);const timer=setInterval(()=>{if(document.visibilityState==='visible')void load()},5000);return()=>{active=false;clearInterval(timer);window.removeEventListener('focus',load)}},[engine])
+ useEffect(()=>{let active=true,pending=false;const load=async()=>{if(pending)return;pending=true;try{const result=await api.call<EngineProviderCatalog>('engine.providers',{engine});if(active){const signature=JSON.stringify({activeModel:result.activeModel,endpoint:result.endpoint,profiles:result.profiles});if(previousConnection.current&&previousConnection.current!==signature)changed.current?.();previousConnection.current=signature;setCatalog(result);setError('')}}catch(cause){if(active)setError((cause as Error).message)}finally{pending=false}};void load();window.addEventListener('focus',load);const timer=setInterval(()=>{if(document.visibilityState==='visible')void load()},5000);return()=>{active=false;clearInterval(timer);window.removeEventListener('focus',load)}},[engine])
  if(error)return <p className="engine-provider-error" role="alert">{error}</p>
  if(!catalog)return <small>{uiText('Loading services…')}</small>
  const active=catalog.profiles.find(profile=>profile.active),live=catalog.profiles.filter(profile=>profile.source!=='saved'),saved=catalog.profiles.filter(profile=>profile.source==='saved')
  const rows=(profiles:typeof live)=>profiles.map(profile=><div className="engine-provider-row" data-provider-id={profile.id} data-active={profile.active||undefined} key={profile.id}><span><strong>{profile.name}</strong>{profile.active&&<b>{uiText('Current')}</b>}<code title={profile.baseUrl}>{profile.baseUrl??uiText('Native default')}</code>{profile.models.length>1?<details><summary>{uiText('{0} models',[profile.models.length])}</summary><small>{profile.models.join(' · ')}</small></details>:profile.models[0]&&<small>{profile.models[0]}</small>}</span><span className="engine-provider-credential" title={profile.credential.fingerprint}>{uiText(profile.credential.kind==='login'?'Native sign-in':profile.credential.configured?'Key configured':'Key not configured')}{profile.credential.fingerprint&&<small>{profile.credential.fingerprint}</small>}</span></div>)
  return <section className="engine-provider-catalog" aria-label={uiText('{0} services',[engine])}>
-  <header><strong>{uiText(catalog.source==='native'?'Shared native configuration':'Application override')}</strong><span>{uiText('{0} services',[live.length])}</span></header>
+  <header><strong>{uiText(catalog.source==='native'?'Shared native configuration':'Application override')}</strong><span>{uiText(live.length===1?'{0} service':'{0} services',[live.length])}</span></header>
   <p>{active?.name??uiText('Native default')}{catalog.activeModel&&<small> · {catalog.activeModel}</small>}</p>
   {rows(live)}{saved.length>0&&<details className="engine-saved-providers"><summary>{uiText('Saved profiles ({0})',[saved.length])}</summary>{rows(saved)}</details>}
   <details className="engine-provider-files"><summary>{uiText('Configuration sources')}</summary>{catalog.files.map(file=><code key={file}>{file}</code>)}<small>CLI · {uiText(catalog.clients.cli)}<br/>VS Code · {uiText(catalog.clients.vscode)}</small></details>

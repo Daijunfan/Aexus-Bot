@@ -68,7 +68,8 @@ export const ENGINES: { value: Engine; label: string; hint: string }[] = [
   { value: 'cline', label: 'Cline', hint: 'Cline ACP · DeepSeek Flash' },
   { value: 'pi', label: 'Pi', hint: 'Pi RPC · DeepSeek Flash' },
   { value: 'opencode', label: 'OpenCode', hint: 'OpenCode ACP · Native configuration' },
-  { value: 'kilo', label: 'Kilo Code', hint: 'Kilo Code ACP · Native configuration' }
+  { value: 'kilo', label: 'Kilo Code', hint: 'Kilo Code ACP · Native configuration' },
+  { value: 'deepseek', label: 'DeepSeek Harness', hint: 'DeepSeek Harness ACP · Native configuration' }
 ]
 
 /** Undefined on legacy employees: do not run paid onboarding when upgrading. */
@@ -144,11 +145,14 @@ export type StoredSession = {
   thinking?: boolean
   /** A workstation in the illustrated office; independent of its display name. */
   seat?: string
+  /** One-based numbered seat in the Team's fixed grid. */
+  seatNumber?: number
   avatar?: AvatarKind
   accessory?: Accessory
   /** Legacy storage name for the profession/duties description, never an avatar or authority. */
   role?: string
   color?: string
+  /** Legacy free coordinates, converted to numbered seats when loading. */
   position?: Point
   /** Computed by the API; invalid legacy workspaces cannot launch an engine. */
   workspaceError?: string
@@ -156,6 +160,9 @@ export type StoredSession = {
 
 /** Where a department's room sits on the floor, and how big it is. */
 export type RoomLayout = {
+  slot?:number
+  placement?:import('./canvas').TeamPlacement
+  seating?:import('./canvas').TeamSeating
   /** Grid column and row, in units of one room slot. */
   col: number
   row: number
@@ -180,12 +187,16 @@ export type Store = {
 
   sessions: StoredSession[]
   groups: string[]
+  boardCategories?:import('./board-categories').BoardCategory[]
   teamViews?:TeamView[]
   activeTeamViewId?:string
   /** Layout per department name; a missing entry means "not placed yet". */
   rooms?: Record<string, RoomLayout>
   teamRoots?: Record<string, string>
   teamSettings?: Record<string, TeamSettings>
+  /** Internal creation retries; never projected into client state or used as authority. */
+  teamCreations?:Record<string,{caller:PrincipalRef;key:string;fingerprint:string}>
+  employeeCreations?:Record<string,{caller:PrincipalRef;key:string;fingerprint:string}>
   preferences?: import('./preferences').Preferences
   viewport?: Viewport
 }
@@ -212,7 +223,7 @@ export type MessageReply={id:string;role:'user'|'assistant';author?:PrincipalRef
 export type OutboundReceipt={taskId:string;deliveredAt?:number;readAt?:number}
 export type Item =
   | { role: 'user'; id: string; directSequence?:number; createdAt?:number; author?:PrincipalRef; sourceView?:import('./message-source').MessageSourceView; context?:import('./message-source').NativeInputContext; outbound?:OutboundReceipt;delivery?:{state:string;error?:string}; text: string; images?:string[];files?:MessageAttachment[];reply?:MessageReply }
-  | { role: 'assistant'; id: string; directSequence?:number; author?:PrincipalRef; createdAt?:number; blocks: Block[];images?:string[];files?:MessageAttachment[];reply?:MessageReply }
+  | { role: 'assistant'; id: string; questionId?:string; directSequence?:number; author?:PrincipalRef; createdAt?:number; blocks: Block[];images?:string[];files?:MessageAttachment[];reply?:MessageReply }
   | { role: 'notice'; id: string; createdAt?:number; text: string; tone: 'info' | 'error' }
 
 export type ActivityPreview={unread?:boolean;replyId?:string;kind:'speech'|'thinking'|'tool';text:string;detail?:string;tool?:string;running?:boolean}
@@ -252,7 +263,7 @@ export type Session = {
   thinkingManaged?: boolean
   planMode?: boolean
   usage?: Record<string,unknown>
-  pendingMessages?: {id:string;text:string;images?:string[];files?:string[];viewId?:string;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
+  pendingMessages?: {id:string;text:string;images?:string[];files?:string[];viewId?:string;sourceView?:import('./message-source').MessageSourceView;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
   remoteAdmin?: boolean
   fastMode?: boolean
   fastModeState?: string
@@ -284,7 +295,7 @@ export type SessionMeta = {
   thinkingManaged?: boolean
   planMode?: boolean
   usage?: Record<string,unknown>
-  pendingMessages?: {id:string;text:string;images?:string[];files?:string[];viewId?:string;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
+  pendingMessages?: {id:string;text:string;images?:string[];files?:string[];viewId?:string;sourceView?:import('./message-source').MessageSourceView;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
   remoteAdmin?: boolean
   fastMode?: boolean
   fastModeState?: string

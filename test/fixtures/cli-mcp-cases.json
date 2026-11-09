@@ -1,0 +1,557 @@
+[
+  {
+    "args": [
+      "api",
+      "result",
+      "response-id"
+    ],
+    "expected": {
+      "cmd": "api.result",
+      "args": {
+        "id": "response-id"
+      }
+    }
+  },
+  {
+    "args": [
+      "api",
+      "result",
+      "response-id",
+      "--path",
+      "/data/items/0",
+      "--offset",
+      "12",
+      "--limit",
+      "40"
+    ],
+    "expected": {
+      "cmd": "api.result",
+      "args": {
+        "id": "response-id",
+        "path": "/data/items/0",
+        "offset": 12,
+        "limit": 40
+      }
+    }
+  },
+  {
+    "args": [
+      "session",
+      "activity",
+      "--employee",
+      "employee"
+    ],
+    "expected": {
+      "cmd": "session.activity",
+      "args": {
+        "employee": "employee"
+      }
+    }
+  },
+  {
+    "args": [
+      "api",
+      "list",
+      "--prefix",
+      "schedule.",
+      "--compact",
+      "--offset",
+      "20",
+      "--limit",
+      "10"
+    ],
+    "expected": {
+      "cmd": "api.list",
+      "args": {
+        "prefix": "schedule.",
+        "compact": true,
+        "offset": 20,
+        "limit": 10
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "retry",
+      "group-id",
+      "--message",
+      "message-id"
+    ],
+    "expected": {
+      "cmd": "chat.retry",
+      "args": {
+        "id": "group-id",
+        "messageId": "message-id"
+      }
+    }
+  },
+  {
+    "args": [
+      "chat",
+      "retry",
+      "group-id",
+      "--message",
+      "message-id",
+      "--members",
+      "[\"member\"]"
+    ],
+    "expected": {
+      "cmd": "chat.retry",
+      "args": {
+        "id": "group-id",
+        "messageId": "message-id",
+        "employeeIds": [
+          "member"
+        ]
+      }
+    }
+  },
+  {
+    "args": [
+      "conversation",
+      "files",
+      "group:scope",
+      "--query",
+      "report",
+      "--state",
+      "trash",
+      "--sort",
+      "name",
+      "--offset",
+      "1",
+      "--limit",
+      "10"
+    ],
+    "expected": {
+      "cmd": "conversation.files",
+      "args": {
+        "conversation": "group:scope",
+        "query": "report",
+        "state": "trash",
+        "sort": "name",
+        "offset": 1,
+        "limit": 10
+      }
+    }
+  },
+  {
+    "args": [
+      "conversation",
+      "file-trash",
+      "group:scope",
+      "--files",
+      "[{\"path\":\"@workspace/report.pdf\",\"version\":\"v1\"}]"
+    ],
+    "expected": {
+      "cmd": "conversation.file-trash",
+      "args": {
+        "conversation": "group:scope",
+        "files": [
+          {
+            "path": "@workspace/report.pdf",
+            "version": "v1"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "args": [
+      "conversation",
+      "file-restore",
+      "group:scope",
+      "--files",
+      "[{\"path\":\"@workspace/report.pdf\",\"trashId\":\"8eac60fd-1817-4f03-a323-0e2519a20c01\"}]"
+    ],
+    "expected": {
+      "cmd": "conversation.file-restore",
+      "args": {
+        "conversation": "group:scope",
+        "files": [
+          {
+            "path": "@workspace/report.pdf",
+            "trashId": "8eac60fd-1817-4f03-a323-0e2519a20c01"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "args": [
+      "mission",
+      "create",
+      "--spec",
+      "{\"name\":\"Release goal\",\"prompt\":\"Verify the delivered result\",\"employeeIds\":[\"employee-1\"],\"type\":\"supervised\",\"secretaryId\":\"secretary-1\",\"reminderSeconds\":1800}",
+      "--client-request-id",
+      "goal-request"
+    ],
+    "expected": {
+      "cmd": "mission.create",
+      "args": {
+        "spec": {
+          "name": "Release goal",
+          "prompt": "Verify the delivered result",
+          "employeeIds": [
+            "employee-1"
+          ],
+          "type": "supervised",
+          "secretaryId": "secretary-1",
+          "reminderSeconds": 1800
+        },
+        "clientRequestId": "goal-request"
+      }
+    }
+  },
+  {
+    "args": [
+      "mission",
+      "update",
+      "--id",
+      "mission-1",
+      "--patch",
+      "{\"reminderSeconds\":600}",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "mission.update",
+      "args": {
+        "id": "mission-1",
+        "patch": {
+          "reminderSeconds": 600
+        },
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "mission",
+      "get",
+      "--id",
+      "mission-1"
+    ],
+    "expected": {
+      "cmd": "mission.get",
+      "args": {
+        "id": "mission-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "mission",
+      "list",
+      "--status",
+      "open",
+      "--archived",
+      "all",
+      "--client-request-id",
+      "goal-request"
+    ],
+    "expected": {
+      "cmd": "mission.list",
+      "args": {
+        "status": "open",
+        "archived": "all",
+        "clientRequestId": "goal-request"
+      }
+    }
+  },
+  {
+    "args": [
+      "mission",
+      "complete",
+      "--id",
+      "mission-1",
+      "--result",
+      "Acceptance verified",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "mission.complete",
+      "args": {
+        "id": "mission-1",
+        "result": "Acceptance verified",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "mission",
+      "fail",
+      "--id",
+      "mission-1",
+      "--result",
+      "Dependency unavailable",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "mission.fail",
+      "args": {
+        "id": "mission-1",
+        "result": "Dependency unavailable",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "mission",
+      "reopen",
+      "--id",
+      "mission-1",
+      "--expected-revision",
+      "3"
+    ],
+    "expected": {
+      "cmd": "mission.reopen",
+      "args": {
+        "id": "mission-1",
+        "expectedRevision": 3
+      }
+    }
+  },
+  {
+    "args": [
+      "mission",
+      "remind",
+      "--id",
+      "mission-1"
+    ],
+    "expected": {
+      "cmd": "mission.remind",
+      "args": {
+        "id": "mission-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "mission",
+      "archive",
+      "--id",
+      "mission-1",
+      "--archived",
+      "true",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "mission.archive",
+      "args": {
+        "id": "mission-1",
+        "archived": true,
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "mission",
+      "delete",
+      "--id",
+      "mission-1",
+      "--expected-revision",
+      "3"
+    ],
+    "expected": {
+      "cmd": "mission.delete",
+      "args": {
+        "id": "mission-1",
+        "expectedRevision": 3
+      }
+    }
+  },
+  {
+    "args": [
+      "mission",
+      "summary"
+    ],
+    "expected": {
+      "cmd": "mission.summary",
+      "args": {}
+    }
+  },
+  {
+    "args": [
+      "question",
+      "ask",
+      "--conversation",
+      "employee:employee-1",
+      "--question",
+      "Choose the delivery",
+      "--options",
+      "[{\"id\":\"brief\",\"label\":\"Concise report\"},{\"id\":\"full\",\"label\":\"Full report\"}]",
+      "--timeout-seconds",
+      "null",
+      "--client-request-id",
+      "question-request"
+    ],
+    "expected": {
+      "cmd": "question.ask",
+      "args": {
+        "conversation": "employee:employee-1",
+        "question": "Choose the delivery",
+        "options": [
+          {
+            "id": "brief",
+            "label": "Concise report"
+          },
+          {
+            "id": "full",
+            "label": "Full report"
+          }
+        ],
+        "timeoutSeconds": null,
+        "clientRequestId": "question-request"
+      }
+    }
+  },
+  {
+    "args": [
+      "question",
+      "get",
+      "--id",
+      "question-1"
+    ],
+    "expected": {
+      "cmd": "question.get",
+      "args": {
+        "id": "question-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "question",
+      "list",
+      "--conversation",
+      "group:group-1",
+      "--status",
+      "pending",
+      "--offset",
+      "0",
+      "--limit",
+      "50",
+      "--mission-id",
+      "mission-1"
+    ],
+    "expected": {
+      "cmd": "question.list",
+      "args": {
+        "conversation": "group:group-1",
+        "status": "pending",
+        "offset": 0,
+        "limit": 50,
+        "missionId": "mission-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "question",
+      "wait",
+      "--id",
+      "question-1",
+      "--seconds",
+      "25"
+    ],
+    "expected": {
+      "cmd": "question.wait",
+      "args": {
+        "id": "question-1",
+        "seconds": 25
+      }
+    }
+  },
+  {
+    "args": [
+      "question",
+      "answer",
+      "--id",
+      "question-1",
+      "--option-id",
+      "other",
+      "--text",
+      "A combined report",
+      "--expected-revision",
+      "1"
+    ],
+    "expected": {
+      "cmd": "question.answer",
+      "args": {
+        "id": "question-1",
+        "optionId": "other",
+        "text": "A combined report",
+        "expectedRevision": 1
+      }
+    }
+  },
+  {
+    "args": [
+      "question",
+      "cancel",
+      "--id",
+      "question-1",
+      "--expected-revision",
+      "1"
+    ],
+    "expected": {
+      "cmd": "question.cancel",
+      "args": {
+        "id": "question-1",
+        "expectedRevision": 1
+      }
+    }
+  },
+  {
+    "args": [
+      "plan",
+      "preferences",
+      "--patch",
+      "{\"filter\":{\"kind\":\"mission\",\"archived\":\"all\"},\"hiddenIds\":[\"job-1\"]}",
+      "--expected-revision",
+      "1"
+    ],
+    "expected": {
+      "cmd": "plan.preferences",
+      "args": {
+        "patch": {
+          "filter": {
+            "kind": "mission",
+            "archived": "all"
+          },
+          "hiddenIds": [
+            "job-1"
+          ]
+        },
+        "expectedRevision": 1
+      }
+    }
+  },
+  {
+    "args": [
+      "plan",
+      "archive",
+      "--id",
+      "job-1",
+      "--archived",
+      "true",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "plan.archive",
+      "args": {
+        "id": "job-1",
+        "archived": true,
+        "expectedRevision": 2
+      }
+    }
+  }
+]

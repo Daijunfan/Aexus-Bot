@@ -9,7 +9,7 @@ try{
  const manager=await create('Fresh Manager','A','manager'),governor=await create('Fresh Governor','A','governor'),employee=await create('Ordinary','A'),outside=await create('Outside','B')
  const m=await token(manager.id),g=await token(governor.id),e=await token(employee.id)
  assert.equal((await request(e,'avatar.get',{})).ok,false)
- const catalog=await rpc(m,'avatar.list');assert.equal(catalog.length,21);assert.ok((await rpc(e,'avatar.list')).length===21)
+ const catalog=await rpc(m,'avatar.list');assert.equal(catalog.length,22);assert.ok((await rpc(e,'avatar.list')).length===22)
  assert.equal((await rpc(m,'avatar.list',{query:'英雄王',style:'chibi'}))[0].id,'fate-gilgamesh-chibi')
  assert.equal((await rpc(g,'avatar.list',{query:'吉尔伽美什 可爱版'})).length,1)
  assert.equal((await rpc(m,'avatar.list',{all:true})).length,76)

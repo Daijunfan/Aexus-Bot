@@ -1,6 +1,8 @@
 import type { RoomLayout, StoredSession, Store } from './types'
 
 export type Point = { x: number; y: number }
+export type TeamPlacement={column:number;row:number}
+export type TeamSeating={columns:number;rows:number}
 export type Viewport = Point & { zoom: number }
 export const ROOM_SHAPES = ['rounded', 'ellipse', 'hexagon', 'custom'] as const
 export const ARRANGEMENTS = ['grid', 'circle', 'free'] as const
@@ -9,14 +11,15 @@ export type RoomBounds = Point & {
   arrangement: typeof ARRANGEMENTS[number]; points?: Point[]
   pinned?: boolean
 }
-export const ROOM_HEADER_HEIGHT = 170
+export const ROOM_HEADER_HEIGHT = 128
 export const EMPLOYEE_TOP = ROOM_HEADER_HEIGHT + 12
-export const MIN_ROOM_HEIGHT = 520
+export const MIN_ROOM_HEIGHT = 711
 /** Complete rectangular actor footprint, including avatar, badge and native cloud. */
 export const EMPLOYEE_SIZE = { width: 190, height: 250 }
 export const DEFAULT_VIEW: Viewport = { x: 70, y: 125, zoom: 0.8 }
 export const DEFAULT_POLYGON: Point[] = [{x:0.08,y:0},{x:0.92,y:0},{x:1,y:0.25},{x:0.93,y:1},{x:0.08,y:0.96},{x:0,y:0.28}]
-export type PlannedRoom = { name: string; bounds: RoomBounds; employees: { card: StoredSession; position: Point }[] }
+export type TeamSeat = {number:number;row:number;column:number;position:Point;employeeId?:string}
+export type PlannedRoom = { name: string; bounds: RoomBounds; slot?:number;placement?:TeamPlacement;seating?:TeamSeating;seats?:TeamSeat[]; employees: { card: StoredSession; position: Point }[] }
 export type ResizeEdge = 'n'|'ne'|'e'|'se'|'s'|'sw'|'w'|'nw'
 export function resizeEdge(x:number,y:number):ResizeEdge {
   const horizontal=x<.25?'w':x>.75?'e':'',vertical=y<.25?'n':y>.75?'s':''
@@ -144,60 +147,60 @@ export function snapEmployee(room:PlannedRoom,id:string,point:Point,zoom=1,previ
   return {position:point,guide:{}}
 }
 
-/** New automatic seats may expand a room; manual positions never resize its frame. */
-export function planRoom(name: string, cards: StoredSession[], requested: RoomBounds): PlannedRoom {
-  const manual=cards.filter(c=>c.position)
-  let bounds={...requested, width:Math.max(360,requested.width),height:Math.max(MIN_ROOM_HEIGHT,requested.height)}
-  if(manual.length===cards.length)return {name,bounds,employees:cards.map(card=>({card,position:constrainEmployee(bounds,card.position!)}))}
-  const count=cards.length
-  const columns=Math.max(2,Math.ceil(Math.sqrt(count)))
-  if (!manual.length && count>4) bounds.width=Math.max(bounds.width,columns*225+100)
-  bounds.height=Math.max(bounds.height,Math.ceil(count/Math.max(1,Math.floor((bounds.width-263)/225)+1))*285+EMPLOYEE_TOP+48)
-  if(count===1&&!manual.length) {
-    const position={x:(bounds.width-EMPLOYEE_SIZE.width)/2,y:ROOM_HEADER_HEIGHT+(bounds.height-ROOM_HEADER_HEIGHT-EMPLOYEE_SIZE.height)/2}
-    if(fits(bounds,position))return {name,bounds,employees:[{card:cards[0],position}]}
-  }
-  for (let attempt=0; attempt<80; attempt++) {
-    const positions=new Map<string,Point>(manual.map(c=>[c.id,constrainEmployee(bounds,c.position!)]))
-    const free=cards.filter(c=>!c.position)
-    if (bounds.arrangement==='circle' && free.length) {
-      const radius=Math.max(220,free.length*(Math.hypot(EMPLOYEE_SIZE.width,EMPLOYEE_SIZE.height)+30)/(2*Math.PI))
-      bounds.width=Math.max(bounds.width,radius*2+EMPLOYEE_SIZE.width+220)
-      bounds.height=Math.max(bounds.height,radius*2+EMPLOYEE_SIZE.height+220)
-      free.forEach((c,i)=>{ const angle=(i/free.length)*Math.PI*2-Math.PI/2; positions.set(c.id,{x:bounds.width/2+Math.cos(angle)*radius-EMPLOYEE_SIZE.width/2,y:bounds.height/2+Math.sin(angle)*radius-EMPLOYEE_SIZE.height/2}) })
-      if ([...positions.values()].every(p=>fits(bounds,p))) return {name,bounds,employees:cards.map(card=>({card,position:positions.get(card.id)!}))}
-    } else {
-      let at=0
-      for (let y=EMPLOYEE_TOP; y+EMPLOYEE_SIZE.height<bounds.height-30 && at<free.length; y+=285) {
-        for (let x=48; x+EMPLOYEE_SIZE.width<bounds.width-25 && at<free.length; x+=225) {
-          const p={x,y}
-          if (!fits(bounds,p) || [...positions.values()].some(other=>overlaps(p,other))) continue
-          positions.set(free[at++].id,p)
-        }
-      }
-      if (at===free.length) return {name,bounds,employees:cards.map(card=>({card,position:positions.get(card.id)!}))}
-    }
-    bounds={...bounds,width:bounds.width+120,height:bounds.height+150}
-  }
-  throw new Error('房间外框太窄，无法容纳员工；请展开外框控制点')
+export const TEAM_SEAT_COLUMNS=3
+export const TEAM_ROOM_WIDTH=760
+export const TEAM_SEAT_STEP={x:225,y:285}
+export const teamSeatCapacity=(count:number)=>Math.max(6,Math.ceil(count/TEAM_SEAT_COLUMNS)*TEAM_SEAT_COLUMNS)
+export const teamSeatPosition=(number:number,columns=TEAM_SEAT_COLUMNS):Point=>({x:60+((number-1)%columns)*TEAM_SEAT_STEP.x,y:EMPLOYEE_TOP+Math.floor((number-1)/columns)*TEAM_SEAT_STEP.y})
+/** Retain valid seats. Legacy free positions become a stable row/column ordering. */
+export function assignedTeamSeats(cards:StoredSession[],capacity=teamSeatCapacity(cards.length)):Map<string,number>{
+  const result=new Map<string,number>(),used=new Set<number>()
+  for(const card of cards)if(Number.isInteger(card.seatNumber)&&card.seatNumber!>0&&card.seatNumber!<=capacity&&!used.has(card.seatNumber!)){result.set(card.id,card.seatNumber!);used.add(card.seatNumber!)}
+  const remaining=cards.filter(card=>!result.has(card.id)).sort((a,b)=>a.position&&b.position?a.position.y-b.position.y||a.position.x-b.position.x:a.position?-1:b.position?1:0)
+  let seat=1
+  for(const card of remaining){while(used.has(seat))seat++;result.set(card.id,seat);used.add(seat)}
+  return result
 }
-export function planOffice(store: Store): PlannedRoom[] {
+/** Rigid rectangles and numbered seats; neither old geometry nor a drag changes dimensions. */
+export function planRoom(name:string,cards:StoredSession[],requested:RoomBounds,grid?:TeamSeating):PlannedRoom{
+  const columns=grid?.columns??3,rows=Math.max(grid?.rows??2,Math.ceil(cards.length/columns)),capacity=columns*rows,assigned=assignedTeamSeats(cards,capacity),seating={columns,rows}
+  const bounds:RoomBounds={...requested,width:310+(columns-1)*TEAM_SEAT_STEP.x,height:EMPLOYEE_TOP+(rows-1)*TEAM_SEAT_STEP.y+EMPLOYEE_SIZE.height+36,shape:'rounded',arrangement:'grid',points:undefined}
+  const seats:TeamSeat[]=Array.from({length:capacity},(_,index)=>({number:index+1,row:Math.floor(index/columns)+1,column:index%columns+1,position:teamSeatPosition(index+1,columns),employeeId:cards.find(card=>assigned.get(card.id)===index+1)?.id}))
+  return {name,bounds,seating,seats,employees:cards.map(card=>({card,position:teamSeatPosition(assigned.get(card.id)!,columns)}))}
+}
+export function minimumTeamSeating(room:PlannedRoom):TeamSeating{
+  const occupied=room.seats?.filter(seat=>seat.employeeId)??[]
+  return {columns:Math.max(1,...occupied.map(seat=>seat.column)),rows:Math.max(1,...occupied.map(seat=>seat.row))}
+}
+export function resizeTeamSeating(room:PlannedRoom,seating:TeamSeating):PlannedRoom{
+  const columns=room.seating?.columns??3
+  const cards=room.employees.map(({card})=>({...card,seatNumber:Math.floor((card.seatNumber!-1)/columns)*seating.columns+(card.seatNumber!-1)%columns+1}))
+  return {...planRoom(room.name,cards,room.bounds,seating),slot:room.slot,placement:room.placement}
+}
+export const teamBoardCapacity=(rooms:PlannedRoom[])=>Math.max(6,Math.ceil(Math.max(rooms.length,...rooms.map(room=>room.slot??0))/3)*3)
+/** Board targets keep their own origins; resizing a different room cannot move them. */
+export function teamBoardTargets(rooms:PlannedRoom[]){
+  return Array.from({length:teamBoardCapacity(rooms)},(_,index)=>{
+    const slot=index+1,room=rooms.find(room=>room.slot===slot)
+    return {slot,occupied:!!room,bounds:room?.bounds??{x:(index%3)*900,y:Math.floor(index/3)*855,width:760,height:711}}
+  })
+}
+export function layoutTeamRooms(rooms:PlannedRoom[],columns=3):PlannedRoom[]{
+  return rooms.map((room,index)=>{const slot=room.slot??index+1;return room.bounds.pinned?room:{...room,slot,bounds:{...room.bounds,x:((slot-1)%columns)*900,y:Math.floor((slot-1)/columns)*855,pinned:true}}})
+}
+export function planOffice(store:Store):PlannedRoom[]{
   const names=[...store.groups]
-  if (store.sessions.some(c=>!names.includes(c.group))) names.push('')
-  const rooms=names.map((name,index)=>planRoom(name,store.sessions.filter(c=>c.group===name || (!name&&!store.groups.includes(c.group))),initialBounds(index,store.rooms?.[name])))
-  const placed=rooms.filter(r=>r.bounds.pinned)
-  let x=0,y=0,rowBottom=0,column=0
-  for(const room of rooms.filter(r=>!r.bounds.pinned)) {
-    const b={...room.bounds,x,y}
-    for(;;) {
-      const hit=placed.find(r=>b.x<r.bounds.x+r.bounds.width+100 && b.x+b.width+100>r.bounds.x && b.y<r.bounds.y+r.bounds.height+130 && b.y+b.height+130>r.bounds.y)
-      if(!hit)break
-      b.x=hit.bounds.x+hit.bounds.width+120
-    }
-    room.bounds=b;placed.push(room);x=b.x+b.width+120;rowBottom=Math.max(rowBottom,b.y+b.height)
-    if(++column===3){column=0;x=0;y=rowBottom+170}
-  }
-  return rooms
+  if(store.sessions.some(card=>!names.includes(card.group)))names.push('')
+  const used=new Set<number>(),assigned=new Map<string,number>()
+  for(const name of names){const slot=store.rooms?.[name]?.slot;if(Number.isInteger(slot)&&slot!>0&&!used.has(slot!)){assigned.set(name,slot!);used.add(slot!)}}
+  let slot=1;for(const name of names)if(!assigned.has(name)){while(used.has(slot))slot++;assigned.set(name,slot);used.add(slot)}
+  return layoutTeamRooms(names.map((name,index)=>{
+    const saved=store.rooms?.[name],bounds=initialBounds(index,saved),slot=assigned.get(name)!
+    const trusted=!!saved?.seating&&bounds.shape==='rounded'&&bounds.arrangement==='grid'&&Number.isFinite(bounds.x)&&Number.isFinite(bounds.y)
+    const placement=saved?.placement??(trusted?{column:Math.round(bounds.x/TEAM_SEAT_STEP.x),row:Math.round(bounds.y/TEAM_SEAT_STEP.y)}:{column:((slot-1)%3)*4,row:Math.floor((slot-1)/3)*3})
+    return {...planRoom(name,store.sessions.filter(card=>card.group===name||(!name&&!store.groups.includes(card.group))),{...bounds,x:placement.column*TEAM_SEAT_STEP.x,y:placement.row*TEAM_SEAT_STEP.y,pinned:true},saved?.seating),placement,slot}
+
+  }))
 }
 export function fitViewport(rooms: PlannedRoom[], width: number, height: number): Viewport {
   if (!rooms.length) return DEFAULT_VIEW

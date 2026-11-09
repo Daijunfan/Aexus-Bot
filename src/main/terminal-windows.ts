@@ -8,11 +8,11 @@ import {tunnelConfig} from './tunnel'
 import {nativeWorkerEnv} from './native-worker-env'
 const requireModule=createRequire(__filename)
 /** A ConPTY driver exposes the same JSON-line contract as the POSIX broker. */
-export function windowsTerminal(cwd:string,remote:RemoteTarget|undefined,cols:number,rows:number,program?:string[]):ChildProcessWithoutNullStreams{
+export function windowsTerminal(cwd:string,remote:RemoteTarget|undefined,cols:number,rows:number,program?:string[],nodeRuntime=false):ChildProcessWithoutNullStreams{
   let pty:typeof import('node-pty')
   try{pty=requireModule('node-pty')}catch{throw Error('Windows 交互终端需要 node-pty / ConPTY。请安装本机平台发行包或运行 npm rebuild node-pty；不会回退成无交互命令。')}
   if(program&&remote)throw Error('Windows Core 的远程原生 Worker 暂不支持；不会回退到本机')
-  const env={...(program?nativeWorkerEnv():childEnv()),TERM:'xterm-256color'} as Record<string,string>
+  const env={...(program?nativeWorkerEnv():childEnv()),TERM:'xterm-256color',...(nodeRuntime?{ELECTRON_RUN_AS_NODE:'1'}:{})} as Record<string,string>
   for(const key of Object.keys(env))if(env[key]===undefined)delete env[key]
   let command=resolveBinary('powershell'),args=['-NoLogo','-NoProfile']
   if(program){command=program[0];args=program.slice(1)}
@@ -36,7 +36,7 @@ export function windowsTerminal(cwd:string,remote:RemoteTarget|undefined,cols:nu
   broker.stdin.on('data',(data:Buffer)=>{
     buffer+=data.toString('utf8')
     for(;;){const end=buffer.indexOf('\n');if(end<0)break;const line=buffer.slice(0,end);buffer=buffer.slice(end+1)
-      try{const request=JSON.parse(line);if(request.op==='input')native.write(request.data);else if(request.op==='resize')native.resize(request.cols,request.rows)}catch(error){broker.emit('error',error)}
+      try{const request=JSON.parse(line);if(request.op==='input'){try{native.write(request.data);if(request.inputId)broker.stdout.write(JSON.stringify({inputId:request.inputId})+'\n')}catch(error){if(request.inputId)broker.stdout.write(JSON.stringify({inputId:request.inputId,error:(error as Error).message})+'\n');else throw error}}else if(request.op==='resize')native.resize(request.cols,request.rows)}catch(error){broker.emit('error',error)}
     }
   })
   broker.kill=()=>{native.kill();return true}

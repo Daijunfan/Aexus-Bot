@@ -12,7 +12,7 @@ export type MessageAvatarState='idle'|'working'|'responding'|'attention'
 const crops=new Map(portraits.map(portrait=>[portrait.id,portrait]))
 const visibleAvatars=new Map<Element,(visible:boolean)=>void>()
 let observer:IntersectionObserver|undefined
-function watchAvatar(element:Element,update:(visible:boolean)=>void){
+export function watchMessageAvatar(element:Element,update:(visible:boolean)=>void){
   observer??=new IntersectionObserver(entries=>{for(const entry of entries)visibleAvatars.get(entry.target)?.(entry.isIntersecting)})
   visibleAvatars.set(element,update);observer.observe(element)
   return()=>{observer?.unobserve(element);visibleAvatars.delete(element);if(!visibleAvatars.size){observer?.disconnect();observer=undefined}}
@@ -30,7 +30,7 @@ export const MessageListAvatar=memo(function MessageListAvatar({avatar=DEFAULT_A
   const display=useDisplayedAvatar(avatar,color),kind=display.avatar,active=state==='working'||state==='responding',portrait=crops.get(kind)
   const frame=portrait?avatarFraming(portrait.crop,portrait.frame):undefined
   const framing=frame?{'--avatar-width':frame.width,'--avatar-height':frame.height,'--avatar-left':frame.left,'--avatar-top':frame.top} as CSSProperties:undefined
-  useEffect(()=>{const element=root.current;if(!element)return;return watchAvatar(element,setVisible)},[])
+  useEffect(()=>{const element=root.current;if(!element)return;return watchMessageAvatar(element,setVisible)},[])
   useEffect(()=>{const row=root.current?.closest('button');if(!row)return;const enter=()=>setEngaged(true),leave=()=>setEngaged(row.matches(':hover,:focus-visible'));row.addEventListener('pointerenter',enter);row.addEventListener('pointerleave',leave);row.addEventListener('focus',enter);row.addEventListener('blur',leave);return()=>{row.removeEventListener('pointerenter',enter);row.removeEventListener('pointerleave',leave);row.removeEventListener('focus',enter);row.removeEventListener('blur',leave)}},[])
   useEffect(()=>{
     if(!allowed||!visible||state==='attention'||!active&&!engaged){setPlaying(false);return}

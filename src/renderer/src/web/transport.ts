@@ -7,9 +7,10 @@ type Event={channel:string;payload:any}
 type Connection={authenticated:boolean;connected:boolean;checking:boolean;server?:{os:string;hostname:string};error?:string}
 let csrf='',connection:Connection={authenticated:false,connected:false,checking:true},socket:WebSocket|undefined,retry:ReturnType<typeof setTimeout>|undefined
 let webApi:AgentsApi|undefined
+let connectedBefore=false
 const events=new Set<(event:Event)=>void>(),ui=new Set<(request:any)=>void>(),stateListeners=new Set<(state:Connection)=>void>()
 const lifecycle=(window as any).agentsDesktopLifecycle as {ready:()=>void;onRequest:(fn:(value:any)=>void)=>()=>void;answer:(value:any)=>void;onVisibility:(fn:(value:any)=>void)=>()=>void}|undefined
-const clientId=sessionStorage.getItem('agents-company-client')??crypto.randomUUID()
+let clientId=sessionStorage.getItem('agents-company-client')??crypto.randomUUID()
 sessionStorage.setItem('agents-company-client',clientId)
 function update(patch:Partial<Connection>){const authChanged=patch.authenticated!==undefined&&patch.authenticated!==connection.authenticated;connection={...connection,...patch};if(authChanged)for(const listener of events)listener({channel:'client:authentication',payload:{authenticated:connection.authenticated}});if(patch.authenticated===false&&webApi)synchronizePluginWindows([],webApi);for(const listener of stateListeners)listener(connection)}
 export function onWebState(listener:(state:Connection)=>void){stateListeners.add(listener);listener(connection);return()=>{stateListeners.delete(listener)}}
@@ -23,15 +24,16 @@ function connect(){
   if(!connection.authenticated||socket?.readyState===WebSocket.OPEN||socket?.readyState===WebSocket.CONNECTING)return
   const url=new URL('/api/events',location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';url.searchParams.set('client',clientId)
   const current=new WebSocket(url);socket=current
-  current.onopen=()=>update({connected:true,error:undefined})
   current.onmessage=event=>{
     const value=JSON.parse(event.data)
-    if(value.type==='event'){if(value.channel==='plugin:windows'&&webApi)synchronizePluginWindows(value.payload,webApi);for(const listener of events)listener(value)}
+    if(value.type==='ready'){const reconnect=connectedBefore;connectedBefore=true;update({connected:true,error:undefined});if(reconnect)for(const listener of events)listener({channel:'client:connected',payload:{}})}
+    else if(value.type==='event'){if(value.channel==='plugin:windows'&&webApi)synchronizePluginWindows(value.payload,webApi);for(const listener of events)listener(value)}
     else if(value.type==='ui:request')for(const listener of ui)listener(value)
   }
   current.onclose=event=>{
     if(socket!==current)return;socket=undefined;update({connected:false})
     if(event.code===4001){csrf='';update({authenticated:false});return}
+    if(event.code===4000){clientId=crypto.randomUUID();sessionStorage.setItem('agents-company-client',clientId);connect();return}
     if(connection.authenticated){clearTimeout(retry);retry=setTimeout(async()=>{
       try{const data=await request('/api/bootstrap');csrf=data.csrf;update({authenticated:true,server:data.server})}catch{}
       // Bootstrap turns expired/restarted server sessions into a login prompt. No task is replayed.
@@ -53,6 +55,7 @@ export function createWebApi():AgentsApi{
   const api:AgentsApi={mode:'web',get platform(){return connection.server?.os as 'macos'|'linux'|'windows'|undefined},filePath:()=>'',rendererReady:()=>lifecycle?.ready(),
     async call(cmd,args){
       if(!connection.authenticated)throw Error(uiText('Sign in to the Core service first'))
+      if(!connection.connected&&(cmd.startsWith('view.')&&!['view.get','view.list'].includes(cmd)||['plugin.open','plugin.dismiss'].includes(cmd)))throw Error(uiText('Reconnect to Core before changing views. Your current input is retained.'))
       if(cmd==='workspace.choose')return await chooseServerFolder(api,String(args?.path??'')) as any
       if(cmd==='plugin.dismiss')await closePlugin(String(args?.id),false)
       let result:any

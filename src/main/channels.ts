@@ -415,7 +415,10 @@ export async function channelOperation(command:string,args:Record<string,any>={}
  }
  await beforeChannelRequest(command,args)
  const result=channelRequest(command,args)
- if(command==='channel.storage'&&!args.patch)return {...result,memory:channelContentStatus(),capacity:await channelStorageRpc('capacity-status')}
+ if(command==='channel.storage'&&!args.patch){
+  try{return {...result,memory:channelContentStatus(),capacity:await channelStorageRpc('capacity-status'),available:true}}
+  catch(error){return {...result,memory:channelContentStatus(),capacity:null,available:false,error:(error as Error).message}}
+ }
  if(['channel.source-add','channel.source-update','channel.source-remove'].includes(command)){invalidateChannelSummaries();void refreshChannelSummaries().catch(()=>{})}
  return result
 }

@@ -1,3 +1,4 @@
+import {protocolLines,protocolJson} from './protocol-lines'
 import {acquireCodexStartup} from './engines/startup'
 import {engineExecutable} from './engines/executable'
 import {engineEnvironment} from './engines/configuration'
@@ -6,7 +7,6 @@ import {openCodexExecutor,codexControlCwd} from './codex-executor'
 import {nativeExecutionConfig} from './codex-native'
 import type {RemoteTarget} from '../shared/remote'
 import spawn from 'cross-spawn'
-import {createInterface} from 'node:readline'
 import fs from 'node:fs'
 import path from 'node:path'
 import {homedir} from 'node:os'
@@ -30,15 +30,15 @@ export async function withCodexSessionApi<T>(action:(call:Call)=>Promise<T>,opti
   const fail=(error:Error)=>{for(const request of pending.values()){clearTimeout(request.timer);request.reject(error)}pending.clear()}
   const ended=new Promise<void>(resolve=>child.once('close',()=>{fail(new Error(stderr.trim()||'Codex 会话服务已退出'));resolve()}))
   child.on('error',fail);child.stdin!.on('error',fail);child.stderr!.on('data',data=>stderr=(stderr+data).slice(-4000))
-  const lines=createInterface({input:child.stdout!})
+  const lines=protocolLines(child.stdout!)
   lines.on('line',line=>{let reply:any;try{reply=JSON.parse(line)}catch{return}const request=pending.get(reply.id);if(!request)return;pending.delete(reply.id);clearTimeout(request.timer);if(reply.error)request.reject(new Error(reply.error.message));else request.resolve(reply.result)})
   const call:Call=(method,params)=>new Promise((resolve,reject)=>{
     const id=++sequence,timer=setTimeout(()=>{pending.delete(id);reject(new Error(`Codex ${method} 超时`))},15000)
-    pending.set(id,{resolve,reject,timer});child.stdin!.write(JSON.stringify({id,method,params})+'\n')
+    pending.set(id,{resolve,reject,timer});child.stdin!.write(protocolJson({id,method,params})+'\n')
   })
   try{
     await call('initialize',{clientInfo:{name:'agents_company_sessions',version:'1'},capabilities:{experimentalApi:true}})
-    child.stdin!.write(JSON.stringify({method:'initialized'})+'\n')
+    child.stdin!.write(protocolJson({method:'initialized'})+'\n')
     releaseStartup()
     return await action(call)
   }finally{lines.close();child.stdin!.end();child.kill('SIGTERM');const kill=setTimeout(()=>child.kill('SIGKILL'),1500);await ended;clearTimeout(kill);await executor?.close()}

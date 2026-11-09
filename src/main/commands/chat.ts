@@ -1,5 +1,5 @@
 import {botGroup,sendBotMessage} from '../bot-workers'
-import { listChatGroups,getChatGroup,createChatGroup,updateChatGroup,muteChatMember,deleteChatGroup,chatHistory,chatContext,sendChatMessage,editChatMessage,postChatMessage,acknowledgeChat,groupAttachment } from '../chat-groups'
+import { listChatGroups,getChatGroup,createChatGroup,updateChatGroup,muteChatMember,deleteChatGroup,chatHistory,chatContext,sendChatMessage,retryChatMessage,editChatMessage,postChatMessage,acknowledgeChat,groupAttachment } from '../chat-groups'
 import { getView,setView } from '../presentation'
 export async function chatRequest(command:string,a:Record<string,any>){
  if(['chat.send','chat.post'].includes(command)&&botGroup(a.id))return (await sendBotMessage(a)).message
@@ -14,6 +14,7 @@ export async function chatRequest(command:string,a:Record<string,any>){
     case 'chat.context': return chatContext(a)
     case 'chat.file': return groupAttachment(a)
     case 'chat.send': return sendChatMessage(a)
+    case 'chat.retry': return retryChatMessage(a)
     case 'chat.edit': return editChatMessage(a)
     case 'chat.mute': return muteChatMember(a)
     case 'chat.post': return postChatMessage(a)

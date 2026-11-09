@@ -20,6 +20,37 @@ Secretary 任免与 Agent 身份签发仍由用户掌握；Secretary 不冒充�
 
 ## 任务处理入口
 
+群文件先查 `conversation.files {conversation:"group:ID"}`，读取当前 path/version、messageId、referenceCount、canTrash/canRestore。同一路径在多条消息中分享会合并为一个当前文件，不把历史消息条数当文件数。用户要求删除时调用 `conversation.file-trash {conversation,files:[{path,version}]}`；恢复先查 `state:"trash"`，再传 `conversation.file-restore {conversation,files:[{path,trashId}]}`。这些都是共享内容操作，影响其他群成员看到的文件；文件进入回收站，原消息仍保留。旧版本删除请求不会删除已恢复/更新的文件；同名冲突不能覆盖。原生外部 Bot 文件 readOnly，不能用本地操作替代原生删除。
+
+群消息正文/PDF 已保存与成员是否收到、是否完成任务分别记录。“未送达”不是文件丢失。定时任务占用时排队等待，结束并恢复设置后继续；不要为投递普通消息取消正在执行的排期。用户明确要求补送时调用 `chat.retry {id,messageId,employeeIds?}`，只补送未开始的失败接收人，保留原消息、附件、作者及其他成员回执。检查 retriedEmployeeIds/skippedEmployeeIds；已执行或有原生上下文证据的任务不能自动重放。用户和 Secretary 均使用本人真实身份，权限在实际派发时复核。
+
+Message 的 Private 分类包含员工私聊，以及 `bot.kind=private` 的 Dot/Grok 会话；它们仍属于同一原生会话，也可在 Outsource 查看。`bot.kind=group` 的原生外部群不混入 Private。先查 `messenger.directory {folder:"type:private"}` 与 `bot.list`，不要复制会话、另建同名分类或修改原生身份来实现分类。
+
+### 发现、参数与失败恢复
+
+以当前安装包返回的 `apiRevision` 和 schema 为准，不能沿用历史对话中猜测的命令或字段。先读身份和索引；正式任务按域发现，再读单条 schema。工具调用失败后先依据错误的 `code`、`issues` 和 `recovery` 纠正，不能连续重发相同错误请求。
+
+```json
+{"command":"api.list","args":{"prefix":"schedule.","compact":true,"limit":40}}
+{"command":"api.describe","args":{"command":"schedule.create"}}
+{"command":"schedule.create","args":{"spec":{"name":"检查结果","enabled":false,"afterSeconds":3600,"action":{"type":"agent","employeeId":"EMPLOYEE_ID","prompt":"检查并回报结果"}},"clientRequestId":"UNIQUE_REQUEST_ID"}}
+```
+
+`spec` 包含名称、action、规则等排期内容；`clientRequestId` 在 `spec` 外。不要把 GUI 表单参数或 CLI 旗标直接放到 Core 参数里。`rule` 与 `afterSeconds` 二选一。`session.send` 和 `direct.send` 使用 `text`，排期 action 使用 `prompt`。`api.describe` 的字段是 `command`，文档工具的字段是 `operation`、`document`，不是 `name`、`path`、`query` 或嵌套 `args`。
+
+员工固定 ID 来自 `session.status` / `session.list`，团队来自 `group.list`；没有 `employee.list`、`card.list`、`company.employees` 或 `team.list`。`session.activity {employee:ID}` 可查未打开的员工，不启动引擎；`session.info` 也支持 `employee`。需要原生连接的操作（如 `engine.inspect`）使用 `session.status` 中的临时 `sessionId`。
+
+原生工具的 `api.list` 默认返回分页摘要；沿 `nextOffset` 继续发现，需要详细参数时读单命令 schema。CLI/Core 保留完整目录的兼容返回，可显式选择 `compact:true`。身份、目录、schema 与工具错误均包含 `apiRevision`，升级或 schema 错误后重新读取。
+
+大结果以 `api-result-page` 成功返回，表示**原操作已经执行完成**，不是失败。按 `nextCall` 调 `api.result` 读取后续页，拼接各页 `content` 得到完整 JSON；也可指定 JSON Pointer（如 `/data/items/0` 或 `/data/messages`）只读所需部分，分页时保留 `path`。结果只属于原调用身份和凭据，15 分钟后、容量淘汰或 Core 重启后失效。失效时可重做只读查询；写操作须先查保存记录/投递回执，不可因读取结果失败而重复写入。原生图片仍以图片块返回，带图结果的续读只包含正文和元数据，不把图片字节重复编码成文字。
+
+- revision 冲突：重读记录及 revision，合并用户意图后提交；不要强行覆盖。
+- 排期有活动 run：先查 history。修改前必须明确取消该 run；这可能中断当前工作，不能自动绕过。
+- 员工忙碌：读 status/queue；明确要排队的私聊工作使用 `direct.send mode=enqueue`。同一请求 ID 仅用于完全相同的重试，更改内容或模式要用新 ID；先查 `direct.send-status` 避免重复派发。
+- 排期没有未来时间：查 until、window、maxOccurrences 和 rule，preview 用户明确要求的新规则后再更新/恢复。
+- 工作区拒绝：用 `workspace.catalog` 找本人执行工作区，通过 `conversation.download/download-status` 把附件取到那里后再发布；不能放宽路径权限。
+- 频道存储离线/超时：查 `channel.subscription-status`、`channel.settings`、`channel.storage`；离线时 storage 仍返回配置与诊断，capacity 为 null。它不是 MCP 参数或阅读权限错误；不要反复重试或在本机缓存新闻绕过存储策略。
+
 员工通过两个原生工具完成发现与操作：
 
 - `agents_company_documentation`：真实身份、共享索引、Core 单命令 schema、插件单方法 schema。
@@ -112,3 +143,9 @@ Secretary 任免及 Agent 身份凭据签发由用户掌握。其他 GUI 业务 
 `test/coverage-test.mjs` 独立检查 UI→CLI→Core 分发覆盖，通用 api.call 仅按真实转发语义识别。`secretary-plan-api-test`、`secretary-plan-ui-test`、`api-tool-boundary-test` 和两组 `secretary-api-*-test` 验证运行行为、三项缺失目标记录的复现、实际原生工具调用、审批及并发修订边界。
 
 静态可达性不等于每个外部服务已执行。所有开发测试使用临时状态；原生 Codex/Claude 测试连接本机确定性 HTTP 响应，Cline/Pi 使用注册协议夹具，不调用收费模型。安装结果和实际运行项目单独记录在 progress/Agents-company2.md 与 artifacts/secretary-plan-api/。
+
+## 持续督办和应用选择题
+
+用户发给 Secretary 的新私聊请求自动登记为 Mission；先读取附带 ID，再使用 mission.update 调整目标/执行人/类型/提醒时间。只有 mission.complete 记录验收成功才停止。mission.fail 是待跟进状态，不能当作终止。其他 Secretary 也可作为执行人。
+
+需要用户决定时使用 question.ask，不能用 Coding Agent 原生提问/审批界面替代。有限等待带明确 fallback，关键问题用 null。读 question.wait/get 的真实结果；pending 就让出该任务，新消息不会覆盖保存的问题。Other 始终可用；Secretary 不可替用户调用 question.answer。参数通过 api.docs core/missions 或 docs/MISSIONS_AND_QUESTIONS.md 阅读。

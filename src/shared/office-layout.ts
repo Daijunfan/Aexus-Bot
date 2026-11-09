@@ -1,6 +1,7 @@
 import type {Store,RoomLayout} from './types'
-import {planOffice,type PlannedRoom,type RoomBounds} from './canvas'
-import {reflowChangedManagement} from './management-layout'
+import {planOffice,TEAM_SEAT_STEP,type TeamPlacement,type PlannedRoom,type RoomBounds} from './canvas'
+import {rerouteEmployeeConnections} from './connector'
+
 
 export const TEAM_GAP=60
 export function roomsOverlap(a:RoomBounds,b:RoomBounds,gap=TEAM_GAP){
@@ -14,8 +15,8 @@ export function separateRooms(rooms:PlannedRoom[],priority:Iterable<string>=[]):
     let bounds={...room.bounds}
     if(placed.some(other=>roomsOverlap(bounds,other.bounds))){
       const candidates=placed.flatMap(({bounds:b})=>[
-        {...bounds,x:b.x+b.width+TEAM_GAP},{...bounds,x:b.x-bounds.width-TEAM_GAP},
-        {...bounds,y:b.y+b.height+TEAM_GAP},{...bounds,y:b.y-bounds.height-TEAM_GAP}
+        {...bounds,x:Math.ceil((b.x+b.width+TEAM_GAP)/TEAM_SEAT_STEP.x)*TEAM_SEAT_STEP.x},{...bounds,x:Math.floor((b.x-bounds.width-TEAM_GAP)/TEAM_SEAT_STEP.x)*TEAM_SEAT_STEP.x},
+        {...bounds,y:Math.ceil((b.y+b.height+TEAM_GAP)/TEAM_SEAT_STEP.y)*TEAM_SEAT_STEP.y},{...bounds,y:Math.floor((b.y-bounds.height-TEAM_GAP)/TEAM_SEAT_STEP.y)*TEAM_SEAT_STEP.y}
       ])
       const distance=(b:RoomBounds)=>(b.x-room.bounds.x)**2+(b.y-room.bounds.y)**2
       candidates.sort((a,b)=>distance(a)-distance(b)||a.y-b.y||a.x-b.x)
@@ -23,32 +24,23 @@ export function separateRooms(rooms:PlannedRoom[],priority:Iterable<string>=[]):
       if(!available)throw new Error('Unable to separate Team bounds')
       bounds=available
     }
-    const next={...room,bounds};placed.push(next);result.set(room.name,next)
+    const next={...room,bounds,placement:{column:Math.round(bounds.x/TEAM_SEAT_STEP.x),row:Math.round(bounds.y/TEAM_SEAT_STEP.y)}};placed.push(next);result.set(room.name,next)
   }
   return rooms.map(room=>result.get(room.name)!)
 }
-const geometry=(room?:RoomLayout)=>room?{col:room.col,row:room.row,w:room.w,h:room.h,bounds:room.bounds}:null
-const signature=(store:Store)=>JSON.stringify([
-  store.groups,store.groups.map(name=>[name,geometry(store.rooms?.[name])]),
-  store.sessions.map(card=>[card.id,card.group,!!card.deleting,card.position]),
-  store.access?.relations.filter(r=>r.state==='active').map(r=>[r.id,r.managerId,r.employeeId])
-])
-const visual=(b:RoomBounds)=>JSON.stringify([b.x,b.y,b.width,b.height,b.shape,b.points])
-/** Only geometry/roster commits pack rooms. Tokens and read receipts do not reflow. */
-export function reconcileOfficeLayout(store:Store,previous?:Store,force=false){
-  if(!force&&previous&&signature(store)===signature(previous))return
-  const oldRooms=previous?planOffice(previous):[],oldByName=new Map(oldRooms.map(room=>[room.name,room]))
-  const priority=new Set<string>()
+/** Geometry is derived from roster and numbered seats, never edited by pointer coordinates. */
+export function reconcileOfficeLayout(store:Store,_previous?:Store,_force=false,priority:Iterable<string>=[]){
   store.rooms??={}
-  // Preserve previous visible positions before growth can shift an automatic row.
-  for(const name of store.groups){
-    const old=oldByName.get(name)
-    if(old&&JSON.stringify(geometry(store.rooms[name]))===JSON.stringify(geometry(previous?.rooms?.[name])))
-      store.rooms[name]={...(store.rooms[name]??{col:0,row:0,w:1,h:1}),bounds:{...old.bounds,pinned:true}}
+  const changed=new Set<string>()
+  for(const room of separateRooms(planOffice(store),priority)){
+    const before=store.rooms[room.name]?.bounds,geometryChanged=!before||['x','y','width','height','shape','arrangement'].some(key=>(before as any)[key]!== (room.bounds as any)[key])
+    for(const entry of room.seats??[])if(entry.employeeId){const card=store.sessions.find(card=>card.id===entry.employeeId)!;if(geometryChanged||card.position||card.seatNumber!==entry.number)changed.add(card.id);card.seatNumber=entry.number;delete card.position}
+    store.rooms[room.name]={col:0,row:0,w:1,h:1,slot:room.slot,placement:room.placement,seating:room.seating,design:store.rooms[room.name]?.design,bounds:{...room.bounds}}
   }
-  for(const name of reflowChangedManagement(store,previous))priority.add(name)
-  const planned=planOffice(store)
-  for(const room of planned){const old=oldByName.get(room.name);if(!old||visual(old.bounds)!==visual(room.bounds))priority.add(room.name)}
-  for(const room of separateRooms(planned,priority))
-    store.rooms[room.name]={...(store.rooms[room.name]??{col:0,row:0,w:1,h:1}),bounds:{...room.bounds,pinned:true}}
+  store.connectorAnchors=rerouteEmployeeConnections(store.connectorAnchors,changed)
+}
+
+/** Shared by live pointer previews and authoritative Core writes. */
+export function moveTeamRooms(rooms:PlannedRoom[],name:string,placement:TeamPlacement){
+ return separateRooms(rooms.map(room=>room.name===name?{...room,placement,bounds:{...room.bounds,x:placement.column*TEAM_SEAT_STEP.x,y:placement.row*TEAM_SEAT_STEP.y}}:room),[name])
 }

@@ -3,6 +3,23 @@ import path from 'node:path'
 import {createHash,randomUUID} from 'node:crypto'
 import {directoryName,needsDirectoryName} from '../shared/directory-names'
 import {directoryPath,migrationLink} from './directory-aliases'
+import {fileVersion} from './read-cache'
+import {atomicJson} from './atomic-file'
+import type {PrincipalRef} from '../shared/management'
+
+export type WorkspaceTrash={id:string;path:string;deletedAt:number;bytes?:number;directory?:boolean;version?:string;by?:PrincipalRef;restoredAt?:number}
+/** Only actual recoverable blobs are listed; old manifests remain compatible. */
+export function workspaceTrash(root:string,relative?:string):WorkspaceTrash[]{
+  const directory=workspacePath(root,'.agents-company/trash')
+  if(!fs.existsSync(directory))return []
+  return fs.readdirSync(directory).filter(name=>/^[a-f0-9-]{36}\.json$/.test(name)).flatMap(name=>{
+    const manifest=path.join(directory,name),id=name.slice(0,-5),blob=path.join(directory,id)
+    if(!fs.lstatSync(manifest).isFile()||fs.lstatSync(manifest).isSymbolicLink()||!fs.existsSync(blob))return []
+    const value=JSON.parse(fs.readFileSync(manifest,'utf8')),original=typeof value.path==='string'?path.relative(root,workspacePath(root,value.path)).split(path.sep).join('/'):undefined
+    if(original===undefined||relative!==undefined&&original!==relative)return []
+    return [{...value,id,path:original,directory:value.directory??fs.lstatSync(blob).isDirectory(),bytes:value.bytes??fs.lstatSync(blob).size,deletedAt:value.deletedAt??fs.statSync(manifest).mtimeMs}]
+  }).sort((a,b)=>b.deletedAt-a.deletedAt)
+}
 
 /** Normalize only newly-created folder components; file names and existing paths retain identity. */
 export function directoryDestination(root:string,value:string,folder=false){
@@ -24,14 +41,14 @@ export function workspacePath(root:string,value='.',write=false) {
 }
 const hash=(value:Buffer)=>createHash('sha256').update(value).digest('hex')
 const imageMime=(bytes:Buffer)=>bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?'image/png':bytes.subarray(0,3).equals(Buffer.from([255,216,255]))?'image/jpeg':/^GIF8[79]a$/.test(bytes.subarray(0,6).toString())?'image/gif':bytes.subarray(0,4).toString()==='RIFF'&&bytes.subarray(8,12).toString()==='WEBP'?'image/webp':undefined
-export function workspaceFiles(root:string,operation:string,args:Record<string,any>) {
+export function workspaceFiles(root:string,operation:string,args:Record<string,any>,trashOptions?:{by?:PrincipalRef;keepReceipt?:boolean;expectedVersion?:string}) {
   args={...args,path:directoryPath(root,args.path||'.'),...(args.to!==undefined?{to:directoryPath(root,String(args.to))}:{})}
   if(operation==='mkdir')args={...args,path:directoryDestination(root,args.path||'.',true)}
   if(operation==='write')args={...args,path:directoryDestination(root,args.path||'.')}
   if(operation==='move')args={...args,to:directoryDestination(root,String(args.to),fs.lstatSync(workspacePath(root,args.path)).isDirectory())}
   const file=workspacePath(root,args.path||'.',['write','mkdir','move','trash'].includes(operation))
   if(operation==='copy-info'){
-    if(!fs.existsSync(file))return {exists:false}
+    if(!fs.existsSync(file)){const removed=workspaceTrash(root,path.relative(root,file).split(path.sep).join('/'))[0];return {exists:false,...(removed?{trashed:true,trashId:removed.id,deletedAt:removed.deletedAt}:{})}}
     const stat=fs.lstatSync(file);return {exists:true,directory:stat.isDirectory(),regular:stat.isFile(),symlink:stat.isSymbolicLink(),bytes:stat.size,modifiedAt:stat.mtimeMs,mode:stat.mode&0o777}
   }
   if(operation==='copy-read'){
@@ -89,15 +106,19 @@ export function workspaceFiles(root:string,operation:string,args:Record<string,a
   }
   if(operation==='trash') {
     const directory=workspacePath(root,'.agents-company/trash'),id=randomUUID()
-    fs.mkdirSync(directory,{recursive:true});fs.renameSync(file,path.join(directory,id))
-    fs.writeFileSync(path.join(directory,id+'.json'),JSON.stringify({path:args.path}));return {id,path:args.path}
+    const stat=fs.lstatSync(file),manifest=path.join(directory,id+'.json'),value={path:path.relative(root,file).split(path.sep).join('/'),deletedAt:Date.now(),bytes:stat.size,directory:stat.isDirectory(),version:fileVersion(file),...(trashOptions?.by?{by:trashOptions.by}:{})}
+    if(trashOptions?.expectedVersion!==undefined&&value.version!==trashOptions.expectedVersion)throw Error('File changed; refresh before deleting')
+    fs.mkdirSync(directory,{recursive:true,mode:0o700});atomicJson(manifest,value,true)
+    try{if(trashOptions?.expectedVersion!==undefined&&fileVersion(file)!==trashOptions.expectedVersion)throw Error('File changed; refresh before deleting');fs.renameSync(file,path.join(directory,id))}catch(error){fs.unlinkSync(manifest);throw error}
+    return {id,path:args.path}
   }
   if(operation==='restore') {
     if(!/^[a-f0-9-]+$/.test(args.id))throw new Error('无效回收记录')
     const directory=workspacePath(root,'.agents-company/trash'),info=JSON.parse(fs.readFileSync(path.join(directory,args.id+'.json'),'utf8'))
     const next=workspacePath(root,info.path,true)
     if(fs.existsSync(next))throw new Error('原路径已有文件')
-    fs.renameSync(path.join(directory,args.id),next);fs.unlinkSync(path.join(directory,args.id+'.json'));return {path:info.path}
+    if(trashOptions?.keepReceipt)atomicJson(path.join(directory,args.id+'.json'),{...info,restoredAt:Date.now()},true)
+    fs.renameSync(path.join(directory,args.id),next);if(!trashOptions?.keepReceipt)fs.unlinkSync(path.join(directory,args.id+'.json'));return {path:info.path}
   }
   throw new Error('Unknown file operation')
 }

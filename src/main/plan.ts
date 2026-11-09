@@ -1,3 +1,6 @@
+import {missionRows,missionCapabilities} from './missions'
+import {missionPlanRow} from '../shared/missions'
+import {planArchives} from './plan-preferences'
 import {randomUUID} from 'node:crypto'
 import {join} from 'node:path'
 import {APP_HOME} from '../shared/protocol'
@@ -19,7 +22,9 @@ function fields(value:Record<string,any>,allowed:string[]){
   for(const key of Object.keys(value))if(!allowed.includes(key)&&value[key]!==undefined)throw Error('Unknown Plan field: '+key)
 }
 function filter(value:PlanFilter={}):PlanFilter{
-  fields(value,['search','employee','team','channel','states','priorities','tags'])
+  fields(value,['search','employee','team','channel','states','priorities','tags','kind','recurring','archived','excludeIds'])
+  for(const [key,values]of [['kind',['all','mission','schedule']],['recurring',['all','once','repeating']],['archived',['active','archived','all']]] as const)if(value[key]!==undefined&&!(values as readonly string[]).includes(value[key]!))throw Error('Invalid '+key)
+  if(value.excludeIds!==undefined&&(!Array.isArray(value.excludeIds)||value.excludeIds.some(id=>typeof id!=='string'||!id)))throw Error('Invalid excluded task IDs')
   for(const key of ['search','employee','team','channel'] as const)if(value[key]!==undefined&&(typeof value[key]!=='string'||value[key]!.length>240))throw Error('Invalid '+key)
   for(const [key,allowed] of [['states',PLAN_STATES],['priorities',PLAN_PRIORITIES]] as const)if(value[key]!==undefined&&(!Array.isArray(value[key])||value[key]!.some(v=>!(allowed as readonly string[]).includes(v))))throw Error('Invalid '+key)
   if(value.tags!==undefined&&(!Array.isArray(value.tags)||value.tags.length>20||value.tags.some(tag=>typeof tag!=='string'||!tag.trim()||tag.length>40)))throw Error('Invalid tags')
@@ -52,15 +57,17 @@ function viewSpec(value:PlanViewSpec):PlanViewSpec{
   return {name:value.name.trim(),layout:value.layout,groupBy:value.groupBy??'status',filter:filter(value.filter),sort:value.sort??'nextAt',direction:value.direction??'asc',...(value.options===undefined?{}:{options:options(value.options)})}
 }
 function matches(row:PlanRow,query:PlanFilter){
-  return (!query.channel||row.action.channelId===query.channel||row.source==='channel:'+query.channel)&&(!query.employee||row.action.employeeId===query.employee)&&(!query.team||row.employee?.team===query.team)&&(!query.states?.length||query.states.includes(row.status))&&(!query.priorities?.length||query.priorities.includes(row.plan?.priority??'normal'))&&(!query.tags?.length||query.tags.every(tag=>row.plan?.tags.includes(tag)))&&(!query.search||[row.id,row.name,row.action.employeeId,row.action.prompt,row.employee?.title,row.employee?.team,row.employee?.role,row.plan?.notes,...(row.plan?.tags??[])].join(' ').toLowerCase().includes(query.search.toLowerCase()))
+  return (!query.excludeIds?.includes(row.id))&&(query.archived==='all'||(query.archived==='archived'?!!row.archivedAt:!row.archivedAt))&&(!query.kind||query.kind==='all'||(query.kind==='mission')===!!row.mission)&&(!query.recurring||query.recurring==='all'||(query.recurring==='once')===(row.rule.kind==='once'))&&(!query.channel||row.action.channelId===query.channel||row.source==='channel:'+query.channel)&&(!query.employee||(row.mission?row.mission.employeeIds.includes(query.employee):row.action.employeeId===query.employee))&&(!query.team||(row.mission?readStore().sessions.some(person=>row.mission!.employeeIds.includes(person.id)&&person.group===query.team):row.employee?.team===query.team))&&(!query.states?.length||query.states.includes(row.status))&&(!query.priorities?.length||query.priorities.includes(row.plan?.priority??'normal'))&&(!query.tags?.length||query.tags.every(tag=>row.plan?.tags.includes(tag)))&&(!query.search||[row.id,row.name,row.action.employeeId,row.action.prompt,row.employee?.title,row.employee?.team,row.employee?.role,row.plan?.notes,...(row.plan?.tags??[])].join(' ').toLowerCase().includes(query.search.toLowerCase()))
 }
 /** Read models consume only scheduler-authorized records, never raw persistent files. */
 async function snapshot(){
   const jobs=await scheduleRequest('list',{}) as ScheduledJob[],runs=await scheduleRequest('history',{limit:1000}) as ScheduleRun[]
+  jobs.push(...missionRows().map(mission=>missionPlanRow(mission,readStore().sessions.find(card=>card.id===mission.employeeIds[0])?.engine??mission.employeeEngines?.[mission.employeeIds[0]]??'codex')))
+  const archives=planArchives()
   const people=new Map<string,PlanEmployee>(readStore().sessions.filter(card=>!card.deleting).map(card=>[card.id,{id:card.id,title:card.title,team:card.group,avatar:card.avatar??(card.engine==='codex'?'robot':'cat'),color:card.color,engine:card.engine,role:card.managementRole??'employee'}]))
   const latest=new Map<string,ScheduleRun>()
   for(const run of runs)if(!latest.has(run.jobId)||run.status==='running')latest.set(run.jobId,run)
-  const rows:PlanRow[]=jobs.map(job=>({...job,status:planState(job,latest.get(job.id)),lastRun:latest.get(job.id),employee:people.get(job.action.employeeId)??null,target:{id:job.action.employeeId,exists:people.has(job.action.employeeId),role:people.get(job.action.employeeId)?.role??null,title:people.get(job.action.employeeId)?.title??null,team:people.get(job.action.employeeId)?.team??null,engine:job.action.engine},timing:{timezone:'timezone' in job.rule?job.rule.timezone:null,kind:job.rule.kind,nextAt:job.nextAt,until:job.until??null,window:job.window??null},...scheduleCapabilities(job)}))
+  const rows:PlanRow[]=jobs.map(job=>({...job,archivedAt:job.mission?.archivedAt??archives[job.id],status:planState(job,latest.get(job.id)),lastRun:latest.get(job.id),employee:people.get(job.action.employeeId)??null,target:{id:job.action.employeeId,exists:people.has(job.action.employeeId),role:people.get(job.action.employeeId)?.role??null,title:people.get(job.action.employeeId)?.title??null,team:people.get(job.action.employeeId)?.team??null,engine:job.action.engine},timing:{timezone:'timezone' in job.rule?job.rule.timezone:null,kind:job.rule.kind,nextAt:job.nextAt,until:job.until??null,window:job.window??null},...(job.mission?missionCapabilities(job.mission):scheduleCapabilities(job))}))
   return {jobs,rows,runs,people,byId:new Map(rows.map(row=>[row.id,row]))}
 }
 function dateRange(args:Record<string,any>,required=false){
@@ -79,10 +86,19 @@ function runEntries(data:Awaited<ReturnType<typeof snapshot>>,query:PlanFilter,a
     const row=data.byId.get(run.jobId)
     // Deleted schedules have no current priority/tags/state; never invent those properties.
     if(row)return matches({...row,name:run.jobName,action:run.action,employee:data.people.get(run.action.employeeId)??null},query)
-    if(query.states?.length||query.priorities?.length||query.tags?.length)return false
+    if(query.states?.length||query.priorities?.length||query.tags?.length||query.kind==='mission'||query.excludeIds?.includes(run.jobId)||query.archived==='archived'||query.recurring&&query.recurring!=='all')return false
     const employee=data.people.get(run.action.employeeId)
     return (!query.channel||run.action.channelId===query.channel)&&(!query.employee||query.employee===run.action.employeeId)&&(!query.team||query.team===employee?.team)&&(!query.search||[run.jobName,run.action.prompt,employee?.title,employee?.team,run.message].join(' ').toLowerCase().includes(query.search.toLowerCase()))
   }).map(run=>({...run,employee:data.people.get(run.action.employeeId)??null,jobAvailable:data.byId.has(run.jobId),plan:data.byId.get(run.jobId)?.plan}))
+}
+function missionFeed(data:Awaited<ReturnType<typeof snapshot>>,query:PlanFilter,args:Record<string,any>):PlanFeedEntry[]{
+ const range=dateRange(args),entries:PlanFeedEntry[]=[]
+ for(const row of data.rows)if(row.mission&&matches(row,query))for(const reminder of row.mission.reminders){
+  const at=Date.parse(reminder.at),status=!reminder.finishedAt?'running':Object.keys(reminder.errors).length?'failed':'succeeded'
+  if(range&&(at<range.from||at>=range.to)||args.outcomes?.length&&!args.outcomes.includes(status))continue
+  entries.push({activity:'mission-reminder',id:reminder.id,jobId:row.id,jobName:row.name,action:row.action,trigger:reminder.trigger==='interval'?'scheduled':'manual',scheduledAt:reminder.at,startedAt:reminder.at,finishedAt:reminder.finishedAt,status,employee:row.employee,jobAvailable:true,plan:row.plan,message:Object.values(reminder.errors).join('; ')||'A reminder does not confirm mission success.'})
+ }
+ return entries
 }
 async function temporalView(args:Record<string,any>,timeline:boolean){
   fields(args,['from','to','timezone','filter','limit'])
@@ -103,12 +119,12 @@ async function temporalView(args:Record<string,any>,timeline:boolean){
     if(!row.enabled||!row.nextAt)continue
     const estimate=row.plan?.durationMinutes,duration=timeline?(estimate??0)*60000:0
     // Include a future estimate starting before the viewport if it crosses its left edge.
-    const after=Math.max(from-duration-1,now-1),times=forecastSchedule(row,after,100,now)
+    const after=Math.max(from-duration-1,now-1),times=row.mission?(row.nextAt&&Date.parse(row.nextAt)>=from&&Date.parse(row.nextAt)<to?[row.nextAt]:[]):forecastSchedule(row,after,100,now)
     if(times.length===100&&Date.parse(times.at(-1)!)<to){const more=forecastSchedule(row,Date.parse(times.at(-1)!),1,now);if(more.length&&Date.parse(more[0])<to)truncated=true}
     for(const at of times){
       const start=Date.parse(at)
       if(start>=to||(duration?start+duration<=from:start<from))continue
-      events.push({id:row.id+':'+at,jobId:row.id,name:row.name,employeeId:row.action.employeeId,employee:row.employee,at,date:date(at),startAt:at,endAt:estimate?new Date(start+estimate*60000).toISOString():null,status:'scheduled',kind:'forecast',durationKind:estimate?'estimate':'point',estimatedMinutes:estimate,jobAvailable:true,jobRevision:row.revision??0,canReschedule:row.rule.kind==='once'&&row.status!=='running'})
+      events.push({id:row.id+':'+at,jobId:row.id,name:row.name,employeeId:row.action.employeeId,employee:row.employee,at,date:date(at),startAt:at,endAt:estimate?new Date(start+estimate*60000).toISOString():null,status:'scheduled',kind:'forecast',durationKind:estimate?'estimate':'point',estimatedMinutes:estimate,jobAvailable:true,jobRevision:row.revision??0,canReschedule:!row.mission&&row.rule.kind==='once'&&row.status!=='running'})
     }
   }
   events.sort((a,b)=>Date.parse(a.at)-Date.parse(b.at)||a.id.localeCompare(b.id))
@@ -162,7 +178,7 @@ export async function planRequest(method:string,args:Record<string,any>){
   if(method==='feed'){
     fields(args,['filter','outcomes','from','to','before','limit']);const limit=args.limit??30
     if(!Number.isInteger(limit)||limit<1||limit>100)throw Error('Feed limit must be 1–100')
-    const data=await snapshot(),entries=runEntries(data,filter(args.filter),args).sort((a,b)=>b.startedAt.localeCompare(a.startedAt)||b.id.localeCompare(a.id))
+    const data=await snapshot(),query=filter(args.filter),entries=[...runEntries(data,query,args),...missionFeed(data,query,args)].sort((a,b)=>b.startedAt.localeCompare(a.startedAt)||b.id.localeCompare(a.id))
     let before:{at:string;id:string}|undefined
     if(args.before!==undefined){if(typeof args.before!=='string'||args.before.length>512)throw Error('Invalid feed cursor');try{before=JSON.parse(Buffer.from(args.before,'base64url').toString());if(!before||typeof before.id!=='string'||typeof before.at!=='string')throw Error();instant(before.at)}catch{throw Error('Invalid feed cursor')}}
     const filtered=before?entries.filter(run=>run.startedAt<before!.at||run.startedAt===before!.at&&run.id<before!.id):entries,page=filtered.slice(0,limit),hasMore=filtered.length>limit,last=page.at(-1)

@@ -4,9 +4,9 @@ try{
  await f.cli('group','add','A');await f.cli('group','add','B');const g=await f.create('Governor','A','governor'),employee=await f.create('Worker','B'),token=await f.token(g.id);
  const a=await f.cli('team-view','create','--name','研发','--teams','["A"]'),b=await f.cli('team-view','create','--name','知识库','--teams','["B"]');
  await f.cli('team-view','select',b.id);const before=(await f.cli('office','layout')).rooms;
- await f.call(token,'canvas','set','--view',a.id,'--x','110','--y','80','--zoom','.6');assert.equal((await f.call(token,'team-view','list')).activeId,b.id);assert.deepEqual(await f.call(token,'canvas','view','--view',a.id),{x:110,y:80,zoom:.6});assert.notEqual((await f.cli('canvas','view')).x,110);
+ const fixed=await f.call(token,'canvas','view','--view',a.id);assert.ok(fixed.zoom>0);await assert.rejects(()=>f.call(token,'canvas','set','--view',a.id,'--x','110','--y','80','--zoom','.6'),/fixed scale/);assert.equal((await f.call(token,'team-view','list')).activeId,b.id);assert.deepEqual(await f.call(token,'canvas','view','--view',a.id),fixed);
  assert.deepEqual((await f.call(token,'office','layout','--view',a.id)).rooms.map(r=>r.name),['A']);assert.deepEqual((await f.cli('office','layout')).rooms,before);
- await assert.rejects(()=>f.cli('office','layout','--view','deleted'),/视图不存在/);await assert.rejects(()=>f.cli('canvas','set','--view','deleted','--x','1','--y','2','--zoom','1'),/视图不存在/);
+ await assert.rejects(()=>f.cli('office','layout','--view','deleted'),/视图不存在/);await assert.rejects(()=>f.cli('canvas','set','--view','deleted','--x','1','--y','2','--zoom','1'),/fixed scale/);
  const hold=path.join(f.control,g.id+'.hold-user');fs.writeFileSync(hold,'');await f.cli('team-view','select',a.id);await f.cli('session','send','--employee',g.id,'--text','整理这页');await f.cli('team-view','select',b.id);
  await f.until(()=>fs.existsSync(path.join(f.control,g.id+'-user.json')),'model input');assert.ok(input(g.id).includes(a.id));assert.equal((await info(g.id)).currentTask.viewId,a.id);
  const transcript=(await f.cli('session','transcript','--employee',g.id)).text;assert.ok(transcript.includes('整理这页'));assert.ok(!transcript.includes('[Agents Company task view]'),'host metadata is not user-visible chat');
@@ -20,6 +20,6 @@ try{
  await assert.rejects(()=>f.cli('schedule','create','--name','missing','--employee',g.id,'--prompt','布局','--every-seconds','3600','--paused'),/必须指定/);
  const job=await f.cli('schedule','create','--name','Pinned','--employee',g.id,'--prompt','定时整理研发','--view',a.id,'--every-seconds','3600','--paused');assert.equal(job.action.viewId,a.id);await f.cli('team-view','select','all');
  const run=await f.cli('schedule','run',job.id);await f.until(async()=>(await f.cli('schedule','history',job.id)).find(r=>r.id===run.id)?.status==='succeeded','schedule');assert.ok(input(g.id).includes(a.id));assert.equal((await info(g.id)).currentTask.viewId,a.id);
- await f.stop();await f.start();assert.equal((await f.cli('schedule','get',job.id)).action.viewId,a.id);assert.deepEqual(await f.cli('canvas','view','--view',a.id),{x:110,y:80,zoom:.6});
- console.log('PASS Governor view discovery, explicit layout/camera targeting without tab changes, shared coordinates, send/queue/model context, deleted-view rejection with next-message recovery, scheduler pin/restart, ordinary Employee pristine input. No model calls.');
+ await f.stop();await f.start();assert.equal((await f.cli('schedule','get',job.id)).action.viewId,a.id);assert.deepEqual(await f.cli('canvas','view','--view',a.id),fixed);
+ console.log('PASS Governor view discovery, fixed-scale camera contract and layout targeting without tab changes, shared coordinates, send/queue/model context, deleted-view rejection with next-message recovery, scheduler pin/restart, ordinary Employee pristine input. No model calls.');
 }finally{await f.close()}

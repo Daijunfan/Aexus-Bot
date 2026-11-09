@@ -13,11 +13,11 @@ assert.equal(effectiveChatMute({mutes:{all:200,a:300}},'a',100),300)
 assert.equal(effectiveChatMute({mutes:{all:200,a:300}},'a',300),undefined)
 assert.equal(effectiveChatMute({mutes:{all:null,a:300}},'a',100),null)
 assert.equal(effectiveChatMute({mutes:{all:200,a:null}},'a',100),null)
-const root=path.resolve(import.meta.dirname,'..'),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-group-delivery-'))),entry=path.join(temp,'daemon.cjs')
+const root=path.resolve(import.meta.dirname,'..'),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-group-delivery-'))),entry=process.env.AGENTS_COMPANY_TEST_CORE_ENTRY??path.join(temp,'daemon.cjs')
 fs.symlinkSync(path.join(root,'node_modules'),path.join(temp,'node_modules'),'dir')
 let f
 try{
- await build({entryPoints:[path.join(root,'src/main/daemon.ts')],outfile:entry,bundle:true,platform:'node',format:'cjs',target:'node22',packages:'external',define:{__AGENTS_PROJECT_ROOT__:JSON.stringify(root)},logLevel:'silent'})
+ if(!process.env.AGENTS_COMPANY_TEST_CORE_ENTRY)await build({entryPoints:[path.join(root,'src/main/daemon.ts')],outfile:entry,bundle:true,platform:'node',format:'cjs',target:'node22',packages:'external',define:{__AGENTS_PROJECT_ROOT__:JSON.stringify(root)},logLevel:'silent'})
  f=await fixtureCore({},entry)
  const rpc=async(cmd,args={},token=null)=>{const result=await f.request(token,cmd,args);assert.ok(result.ok,result.error);return result.data}
  const deny=async(cmd,args,token=null,pattern)=>{const result=await f.request(token,cmd,args);assert.equal(result.ok,false,cmd+' must reject');if(pattern)assert.match(result.error,pattern)}

@@ -1,0 +1,96 @@
+/* Schedule sheets and the inline form share the same surfaces and field hierarchy. */
+.plan-editor{
+ --editor-canvas:var(--bg-alt);
+ --editor-surface:color-mix(in srgb,var(--bg-elev) 80%,var(--bg-alt));
+ --editor-field:color-mix(in srgb,var(--bg) 75%,var(--bg-alt));
+ --editor-ink:var(--fg);
+ --editor-label:var(--fg-dim);
+ --editor-line:var(--border);
+ --editor-danger:color-mix(in srgb,var(--red) 55%,var(--fg));
+ --plan-control-border:var(--editor-line);
+ container-type:inline-size;width:min(800px,100%);background:var(--editor-canvas);color:var(--editor-ink);
+ border-color:var(--editor-line);box-shadow:-12px 0 48px #10182826;
+}
+/* Light themes use neutral, lower-glare surfaces; accents identify actions, not every field. */
+:root:not(:is([data-theme=space],[data-theme=black],[data-theme=midnight],[data-theme=sage])) .plan-editor{
+ --editor-canvas:#e9edf3;--editor-surface:#f8fafc;--editor-field:#edf1f6;
+ --editor-ink:#343e4d;--editor-label:#566276;--editor-line:#c5cedb;--editor-danger:#b34547;
+}
+.plan-editor-backdrop{background:#10182842}
+.plan-editor>header{padding:16px 24px;gap:12px;background:var(--editor-surface);border-color:var(--editor-line)}
+.plan-editor h2{font-size:18px;font-weight:650;letter-spacing:-.3px;line-height:1.4;color:var(--editor-ink)}
+.plan-editor-mark{width:32px;height:32px;border-radius:9px;background:color-mix(in srgb,var(--accent) 11%,var(--editor-surface))}
+.plan-editor-mark>.codicon{font-size:20px}
+.plan-editor>header>button{width:32px;min-height:32px;border:0;border-radius:8px;background:transparent;box-shadow:none;color:var(--editor-label)}
+.plan-editor .plan-editor-save-state{margin-top:3px;color:var(--editor-label);font-size:11px}
+.plan-editor button:where(:not(.primary,.danger,.app-select-trigger,[aria-pressed=true])):hover:enabled{background:var(--editor-field);border-color:var(--editor-line);color:var(--editor-ink)}
+:is(.plan-editor-overlay,.plan-inline-form) .plan-editor .plan-editor-scroll{display:flex;flex-direction:column;gap:14px;padding:20px 24px;scroll-padding:20px}
+.plan-editor .plan-editor-section{min-width:0;display:flex;flex-direction:column;gap:16px;padding:20px;border:0;border-radius:12px;background:var(--editor-surface)}
+.plan-editor .plan-editor-section-heading{gap:9px;font-size:13px;color:var(--editor-ink);margin:0 0 2px}
+.plan-editor .plan-editor-section-heading>span{width:auto;height:auto;min-width:20px;border-radius:0;background:none;color:var(--editor-label);font-size:10px;letter-spacing:.5px;font-weight:500}
+.plan-editor label,.plan-editor label[data-required]{gap:7px;color:var(--editor-label);font-size:12px;font-weight:550;line-height:1.5}
+.plan-editor input:not([type=checkbox]):not([type=range]),.plan-editor textarea,.plan-editor .app-select-trigger{
+ min-height:40px;padding:9px 12px;border:1px solid var(--editor-line);border-radius:8px;background:var(--editor-field);
+ color:var(--editor-ink);font-size:13px;font-weight:400;line-height:1.5;box-shadow:none;
+}
+.plan-editor textarea,.plan-editor textarea[name=plan-prompt]{background:var(--editor-field);border-color:var(--editor-line);line-height:1.7;resize:vertical}
+.plan-editor textarea[name=plan-prompt]{min-height:156px}
+.plan-editor textarea[name=plan-notes]{min-height:96px}
+.plan-editor :is(input,textarea)::placeholder{color:var(--editor-label);opacity:.8}
+.plan-editor .app-select-trigger>.codicon{background:none;color:var(--editor-label)}
+.plan-editor .app-select-trigger>span{white-space:normal;overflow-wrap:anywhere;text-overflow:clip;text-align:left}
+.plan-editor input:not([type=checkbox]):not([type=range]):hover,.plan-editor textarea:hover,.plan-editor .app-select-trigger:hover:enabled{border-color:color-mix(in srgb,var(--editor-label) 65%,var(--editor-line));background:var(--editor-field);color:var(--editor-ink)}
+.plan-editor input:not([type=checkbox]):not([type=range]):focus,.plan-editor textarea:focus,.plan-editor .app-select-trigger:is(:focus-visible,[aria-expanded=true]){border-color:var(--accent);background:var(--editor-surface);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
+.plan-editor small{color:var(--editor-label);font-size:11px;line-height:1.6}
+.plan-editor .plan-assignee{gap:9px}.plan-editor .plan-assignee .employee-portrait{width:36px;height:36px}
+.plan-editor .plan-field-row{gap:12px}
+.plan-editor .plan-preview{border-top:1px solid var(--editor-line);padding-top:14px}
+.plan-editor .plan-preview>button{min-height:34px;padding:6px 10px;border:0;border-radius:7px;background:color-mix(in srgb,var(--accent) 9%,var(--editor-surface));box-shadow:none;color:var(--accent);font-size:12px}
+.plan-editor .plan-preview ol{grid-template-columns:1fr;gap:6px;padding-top:10px}
+.plan-editor .plan-preview li{padding:8px 10px;border:0;background:var(--editor-field);font-size:11px;color:var(--editor-ink)}
+.plan-editor .plan-preview li small{font-size:10px}
+.plan-editor .plan-advanced,.plan-editor .plan-run-history{min-width:0;padding:0 20px;border:0;border-radius:12px;background:var(--editor-surface);color:var(--editor-ink)}
+.plan-editor .plan-advanced>summary{padding:16px 0;color:var(--editor-ink);font-size:12px;line-height:1.5}
+.plan-editor .plan-advanced[open]{padding-bottom:20px}
+.plan-editor .plan-advanced[open]>summary{margin-bottom:16px;border-color:var(--editor-line)}
+.plan-editor .plan-enabled{padding:15px 20px;border:0;border-radius:12px;background:var(--editor-surface);color:var(--editor-ink)}
+.plan-editor .plan-safety-note{font-size:11px;color:var(--editor-label);line-height:1.6}
+.plan-editor .plan-run-history{padding:18px 20px}
+.plan-editor .plan-run-history h3{font-size:12px;color:var(--editor-ink)}
+.plan-editor .plan-run-history p{color:var(--editor-label);font-size:12px}
+.plan-editor>footer{padding:14px 24px;gap:8px;background:var(--editor-surface);border-color:var(--editor-line)}
+.plan-editor>footer>button{min-height:36px;border:1px solid transparent;border-radius:8px;padding:8px 11px;box-shadow:none;background:transparent;color:var(--editor-label);font-size:12px;font-weight:550}
+.plan-editor>footer>.plan-run-now{background:transparent;border-color:transparent;color:var(--editor-ink)}
+.plan-editor>footer>.plan-delete{background:transparent;border-color:transparent;color:var(--editor-danger)}
+.plan-editor>footer>button:not(.primary,.danger):hover:enabled{background:var(--editor-field);border-color:var(--editor-line);color:var(--editor-ink)}
+.plan-editor>footer>.danger:hover:enabled{background:color-mix(in srgb,var(--editor-danger) 9%,var(--editor-surface));border-color:transparent;color:var(--editor-danger)}
+.plan-editor>footer>.primary{padding-inline:16px;border-color:var(--accent);background:var(--accent);color:var(--button-ink,#fff);box-shadow:0 2px 3px #10182812}
+.plan-editor .plan-confirm{margin:0 24px 16px;padding:18px;border:1px solid var(--editor-line);background:var(--editor-surface);color:var(--editor-ink);box-shadow:0 4px 16px #1018280a}
+.plan-editor .plan-confirm p{color:var(--editor-label)}
+.plan-editor .plan-confirm .danger{color:var(--editor-danger);border-color:color-mix(in srgb,var(--editor-danger) 40%,var(--editor-line));background:color-mix(in srgb,var(--editor-danger) 8%,var(--editor-surface))}
+.plan-editor .plan-confirm .danger:hover:enabled{color:var(--editor-danger)}
+.plan-inline-form .plan-editor{box-shadow:none;border-color:var(--editor-line)}
+@container(min-width:680px){
+ :is(.plan-editor-overlay,.plan-inline-form) .plan-editor .plan-editor-scroll{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-content:start}
+ .plan-editor .plan-editor-section[data-plan-section=task]{grid-column:1/-1;grid-row:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+ .plan-editor .plan-editor-section[data-plan-section=task]>:is(h3,p,label:has(textarea)){grid-column:1/-1}
+ .plan-editor .plan-editor-section[data-plan-section=timing]{grid-column:1;grid-row:auto;align-self:stretch}
+ .plan-editor .plan-editor-section[data-plan-section=planning]{grid-column:2;grid-row:auto;align-self:stretch}
+ .plan-editor .plan-editor-scroll>:is(.plan-advanced,.plan-enabled,.plan-safety-note,.plan-run-history){grid-column:1/-1;grid-row:auto}
+}
+@container(max-width:679px){
+ .plan-editor .plan-editor-scroll>:is(.plan-editor-section,.plan-advanced,.plan-enabled,.plan-safety-note,.plan-run-history){grid-column:auto;grid-row:auto}
+ .plan-editor .plan-editor-section[data-plan-section=task]{display:flex}
+}
+@media(max-width:650px){
+ .plan-editor>header{padding:14px 16px}.plan-editor h2{font-size:17px}
+ :is(.plan-editor-overlay,.plan-inline-form) .plan-editor .plan-editor-scroll{gap:12px;padding:14px}
+ .plan-editor .plan-editor-section{padding:16px;gap:15px}
+ .plan-editor .plan-advanced,.plan-editor .plan-run-history{padding-inline:16px}
+ .plan-editor>footer{padding:12px 14px;gap:6px}.plan-editor>footer>button{font-size:12px}
+ .plan-editor .plan-confirm{margin-inline:14px}
+}
+@container(max-width:420px){
+ .plan-editor .plan-field-row{flex-direction:column;gap:15px}
+ .plan-editor .plan-field-row>label{flex:auto}
+}

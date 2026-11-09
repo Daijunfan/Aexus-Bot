@@ -1,6 +1,14 @@
 # Changelog
 
-> 项目当前名称为 **Avalon**，分享地址：[Daijunfan/Avalon](https://github.com/Daijunfan/Avalon)。下文 Anexus 为当时的发布名称；安装包、命令和历史路径按实际记录保留。
+> 项目当前名称为 **Aexus Bot**，分享地址：[Daijunfan/Aexus-Bot](https://github.com/Daijunfan/Aexus-Bot)。下文 Avalon / Anexus 为历史发布名称；安装包、命令和历史路径按实际记录保留。
+
+## main — 2026-11-09 development update
+
+- Rebuild Team as Characters, Board and Workers with seat-grid geometry, collision displacement, categories, parallel workbenches and native Worker lifecycle management.
+- Add DeepSeek Harness ACP, persistent Missions, conversation questions, global Mission filters and retention controls through the same Core/CLI authority model.
+- Refine themed Message surfaces, group portraits, file management, drafts, queues and cross-view workbench behavior.
+- Preserve native Grok execution failures and quota reset times separately from delivery receipts; wake its runtime before dispatch, retain blocked drafts and avoid replay on reconnect.
+- Keep existing identities, credentials, workspaces and native histories. This entry records source development, not a new binary release.
 
 ## 0.58.1 — Avalon application naming and live view captures
 

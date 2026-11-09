@@ -15,7 +15,7 @@ import {quoteShape,validateQuote,type MessageQuote} from '../shared/message-quot
 import {join} from 'node:path'
 import {randomUUID} from 'node:crypto'
 import {APP_HOME} from '../shared/protocol'
-import {EMPTY_MESSENGER,MESSAGE_REACTIONS,conversationKey,messageKey,hasDraftContent,type MessengerState,type MessengerMessage,type ConversationPreferences,type MessagePreferences} from '../shared/messenger'
+import {EMPTY_MESSENGER,MESSAGE_REACTIONS,conversationKey,workDraftKey,messageKey,hasDraftContent,type MessengerState,type MessengerMessage,type ConversationPreferences,type MessagePreferences} from '../shared/messenger'
 import {messageTime} from '../shared/messages'
 import {mergeOrder,sameOrder,orderScope,validOrder} from '../shared/messenger-order'
 import {messageSourceView} from '../shared/message-source'
@@ -44,6 +44,10 @@ function normalizeChannelReferences(state:MessengerState){
 let channelDrafts:MessengerState['drafts']={},draftsInitialized=false
 function read(){
  const state=normalizeChannelReferences(readDisk())
+ if(state.draftScopes!==1){
+  for(const [key,draft] of Object.entries(state.drafts))if(key.startsWith('employee:')&&draft.sourceView==='company'&&!state.drafts['work:'+key]){state.drafts['work:'+key]=draft;delete state.drafts[key]}
+  state.draftScopes=1;state.revision++;atomicJson(file,state,true)
+ }
  if(!draftsInitialized){
   draftsInitialized=true;channelDrafts=Object.fromEntries(Object.entries(state.drafts).filter(([key])=>key.startsWith('channel:')))
   if(Object.keys(channelDrafts).length)atomicJson(file,{...state,drafts:Object.fromEntries(Object.entries(state.drafts).filter(([key])=>!key.startsWith('channel:')))})
@@ -216,8 +220,11 @@ export async function messengerRequest(command:string,args:Record<string,any>={}
    return write(state,ref.key)
   }
   case 'messenger.draft':{
-   for(const key of Object.keys(args))if(args[key]!==undefined&&!['conversation','text','images','files','mentions','replyTo','replyQuote','replyConversation','replyTextOnly','clientMessageId','viewId','sourceView','expectedClientMessageId'].includes(key))throw Error('Unknown draft field: '+key)
+   for(const key of Object.keys(args))if(args[key]!==undefined&&!['conversation','scope','text','images','files','mentions','replyTo','replyQuote','replyConversation','replyTextOnly','clientMessageId','viewId','sourceView','expectedClientMessageId'].includes(key))throw Error('Unknown draft field: '+key)
    const ref=resolve(args.conversation),sourceView=messageSourceView(args.sourceView)
+   if(args.scope!==undefined&&!['messages','work'].includes(args.scope))throw Error('Choose messages or work draft scope')
+   if(args.scope==='work'&&ref.kind!=='employee')throw Error('Work drafts belong to employee conversations')
+   const key=args.scope==='work'?workDraftKey(ref.id):ref.key
    if(sourceView!==undefined&&ref.kind!=='employee')throw Error('sourceView applies to private message drafts')
    if(typeof args.text!=='string'||args.text.length>100000)throw Error('Draft text must be at most 100000 characters')
    const files=attachmentPaths(args.files);if(files.length+(args.images?.length??0)>16)throw Error('Choose at most 16 attachments')
@@ -231,9 +238,9 @@ export async function messengerRequest(command:string,args:Record<string,any>={}
    for(const key of ['clientMessageId','viewId','expectedClientMessageId'])if(args[key]!==undefined&&(typeof args[key]!=='string'||!args[key]||args[key]!==args[key].trim()||args[key].length>160))throw Error('Invalid draft '+key)
    if(ref.kind==='channel'&&args.viewId!==undefined)throw Error('Channel drafts do not use a task view')
    const draft={text:args.text,images:args.images,files,mentions:args.mentions,replyTo:args.replyTo,replyQuote:args.replyQuote,replyConversation:args.replyConversation,replyTextOnly:args.replyTextOnly,clientMessageId:args.clientMessageId,viewId:args.viewId,...(sourceView?{sourceView}:{}),updatedAt:Date.now()}
-   if(args.expectedClientMessageId!==undefined&&state.drafts[ref.key]?.clientMessageId!==args.expectedClientMessageId)return state
-   if(!hasDraftContent(draft))delete state.drafts[ref.key]
-   else state.drafts[ref.key]=draft
+   if(args.expectedClientMessageId!==undefined&&state.drafts[key]?.clientMessageId!==args.expectedClientMessageId)return state
+   if(!hasDraftContent(draft))delete state.drafts[key]
+   else state.drafts[key]=draft
    return write(state,ref.key)
   }
   case 'messenger.search':return searchMessages(args,state)

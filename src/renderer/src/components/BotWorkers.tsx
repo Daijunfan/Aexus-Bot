@@ -1,16 +1,16 @@
-import {AvatarPicker} from './AvatarPicker'
 import {Fragment,useCallback,useEffect,useMemo,useRef,useState,type FormEvent} from 'react'
 import {createPortal} from 'react-dom'
 import type {ChatGroup} from '../../../shared/chat-groups'
 import {DEFAULT_DOT_AVATAR,type BotBinding,type BotProvider} from '../../../shared/bot-workers'
-import type {AvatarKind} from '../../../shared/office'
-import {MessageListAvatar,type MessageAvatarState} from './MessageListAvatar'
+import {type MessageAvatarState} from './MessageListAvatar'
 import {GrokAvatar} from './GrokAvatar'
+import {DotAvatar} from './DotAvatar'
 import {MessageMenu} from './MessageMenu'
 import {translate as uiText,useI18n} from '../i18n'
 import {useDialogFocus} from '../office/useDialogFocus'
 import {api} from '../api'
 import {Icon} from './Icon'
+import {BotIssueNotice,botIssueLabel} from './BotIssueNotice'
 import '../styles/bot-workers.css'
 
 type BotConversation=ChatGroup&{bot:BotBinding;removed?:boolean}
@@ -25,12 +25,12 @@ export function botConversationSubtitle(bot:BotBinding){
  return `${label} · Group`
 }
 export function BotAvatar({provider,bot,size,state='idle'}:{provider:BotProvider;bot?:BotBinding;size?:number;state?:MessageAvatarState}){
- return <span className="bot-avatar" data-provider={provider} style={size?{width:size,height:size}:undefined} aria-hidden="true">{provider==='grok'?<GrokAvatar shape={bot?.grokShape} color={bot?.grokColor} seed={bot?.remoteId} state={state==='working'?'thinking':state==='responding'?'streaming':'idle'}/>:<MessageListAvatar avatar={bot?.avatar??DEFAULT_DOT_AVATAR} state={state} continuous/>}</span>
+ return <span className="bot-avatar" data-provider={provider} style={size?{width:size,height:size}:undefined} aria-hidden="true">{provider==='grok'?<GrokAvatar shape={bot?.grokShape} color={bot?.grokColor} seed={bot?.remoteId} state={state==='working'?'thinking':state==='responding'?'streaming':'idle'}/>:<DotAvatar state={state}/>}</span>
 }
 export function BotAppearanceDialog({id,onClose}:{id:string;onClose:()=>void}){
- const [current,setCurrent]=useState<{avatar:AvatarKind;revision:number}>(),[error,setError]=useState('')
- useEffect(()=>{let active=true;void api.call<{avatar:AvatarKind;revision:number}>('bot.appearance',{id}).then(value=>{if(active)setCurrent(value)}).catch(e=>active&&setError(e.message));return()=>{active=false}},[id])
- return <AvatarPicker value={current?.avatar??DEFAULT_DOT_AVATAR} loading={!current} loadError={error} onClose={onClose} onApply={async avatar=>{await api.call('bot.appearance',{id,avatar,expectedRevision:current!.revision})}}/>
+ useI18n();useDialogFocus('.dot-native-preview',true)
+ return createPortal(<div className="group-editor-overlay" onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();onClose()}}}><div className="group-editor-backdrop" onClick={onClose}/><section className="group-editor dot-native-preview" role="dialog" aria-modal="true" aria-label={uiText('Dot native appearance')}><header><h2>{uiText('Dot native appearance')}</h2><button aria-label={uiText('Close')} onClick={onClose}><Icon name="close"/></button></header><div className="dot-native-preview-stage"><DotAvatar state="idle"/></div><strong>Codey · OpenAI</strong><p>{uiText('Dot uses the original blue computer animation from OpenAI. Its native colors and character remain fixed.')}</p></section></div>,document.body)
+
 }
 
 export function BotConnectionDialog({bot,mode,onClose,onSaved}:{bot:ChatGroup;mode:'edit'|'remove';onClose:()=>void;onSaved:()=>void}){
@@ -107,7 +107,7 @@ export function BotWorkers({onClose,onRefresh,onOpen}:{onClose:()=>void;onRefres
       <button className="bot-worker-main" onClick={()=>{onOpen(bot.id);onClose()}}>
        <BotAvatar provider={bot.bot.provider} bot={bot.bot}/>
        <span className="bot-worker-copy"><strong>{bot.name}</strong><small>{uiText(botConversationSubtitle(bot.bot))}</small></span>
-       <em className="bot-status" data-state={status??'idle'}>{statusLabel(status)}</em>
+       <em className="bot-status" data-state={bot.bot.issue?'error':status??'idle'}>{bot.bot.issue?botIssueLabel(bot.bot.issue):statusLabel(status)}</em>
       </button>
       <div className="bot-worker-actions">
        <button aria-label={uiText('Authorized people')} title={uiText('Authorized people')} onClick={()=>setAccessId(bot.id)}><Icon name="person"/></button>
@@ -118,6 +118,7 @@ export function BotWorkers({onClose,onRefresh,onOpen}:{onClose:()=>void;onRefres
        <span><b>{uiText('Provider')}</b>{uiText(botProviderLabel(bot.bot.provider))}</span>
        <span><b>{uiText('Type')}</b>{kindLabel(bot.bot)}</span>
        <span><b>{uiText('Connection')}</b>{statusLabel(status)}</span>
+       {bot.bot.issue&&<BotIssueNotice issue={bot.bot.issue}/>}
        {bot.bot.connection==='error'&&<p>{uiText('Connection error. Use Connect to retry.')}</p>}
       </div>}
      </div>})}
@@ -139,7 +140,7 @@ export function BotWorkers({onClose,onRefresh,onOpen}:{onClose:()=>void;onRefres
   </section>
   {accessId&&<BotAccessDialog id={accessId} name={bots?.find(bot=>bot.id===accessId)?.name} onClose={()=>setAccessId(null)} onRefresh={onRefresh}/>}
   {appearanceId&&<BotAppearanceDialog id={appearanceId} onClose={()=>{setAppearanceId(null);void refreshList();onRefresh?.()}}/>}
-  {rowMenu&&<MessageMenu anchor={rowMenu} label={uiText('Bot actions')} onClose={()=>setRowMenu(null)}>{(bots??[]).filter(bot=>bot.id===rowMenu.id).map(bot=><Fragment key={bot.id}><button role="menuitem" onClick={()=>{setRowMenu(null);setConnection({bot,mode:'edit'})}}><Icon name="edit"/>{uiText('Edit bot')}</button>{bot.bot.provider==='dots'&&<button role="menuitem" onClick={()=>{setRowMenu(null);setAppearanceId(bot.id)}}>{uiText('Character')}</button>}<button role="menuitem" onClick={()=>{setRowMenu(null);setConnection({bot,mode:'remove'})}}><Icon name="trash"/>{uiText('Remove bot')}</button></Fragment>)}</MessageMenu>}
+  {rowMenu&&<MessageMenu anchor={rowMenu} label={uiText('Bot actions')} onClose={()=>setRowMenu(null)}>{(bots??[]).filter(bot=>bot.id===rowMenu.id).map(bot=><Fragment key={bot.id}><button role="menuitem" onClick={()=>{setRowMenu(null);setConnection({bot,mode:'edit'})}}><Icon name="edit"/>{uiText('Edit bot')}</button>{bot.bot.provider==='dots'&&<button role="menuitem" onClick={()=>{setRowMenu(null);setAppearanceId(bot.id)}}>{uiText('Native appearance')}</button>}<button role="menuitem" onClick={()=>{setRowMenu(null);setConnection({bot,mode:'remove'})}}><Icon name="trash"/>{uiText('Remove bot')}</button></Fragment>)}</MessageMenu>}
   {connection&&<BotConnectionDialog {...connection} onClose={()=>setConnection(null)} onSaved={()=>{if(connection.mode==='remove')void api.call<{chatId?:string}>('view.get').then(view=>{if(view.chatId===connection.bot.id)return api.call('view.open',{kind:'messages'})});setConnection(null);void refreshList();onRefresh?.()}}/>}
  </div>
 }

@@ -7,9 +7,17 @@
   },
   {
     "id": "codex",
-    "url": "https://learn.chatgpt.com/images/codex/app/pets/codex-spritesheet.webp",
-    "bytes": 770010,
-    "sha256": "431a9680d6480c394a143db33bc3d47a9d90b55da04b7761d28ac7f2a000b203"
+    "url": "/Applications/ChatGPT.app/Contents/Resources/app.asar/webview/assets/codex-spritesheet-v6.922b99db4b.webp",
+    "bytes": 1309110,
+    "sha256": "ac2990f24d55372411cebdc66a726e1fcbf5e80ec95378e2d25a6241abbedf88",
+    "catalogSource": "https://learn.chatgpt.com/images/codex/app/pets/codex-spritesheet.webp",
+    "atlas": {
+      "columns": 8,
+      "rows": 11,
+      "cellWidth": 192,
+      "cellHeight": 208
+    },
+    "use": "Original OpenAI Codey animation for Dot and optional employee character. Private local integration; redistribution review remains pending."
   },
   {
     "id": "dewey",

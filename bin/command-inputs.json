@@ -1,4 +1,515 @@
 {
+  "mission.create": {
+    "fields": [
+      [
+        "spec",
+        "spec",
+        "json",
+        false,
+        false
+      ],
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "mission.update": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "patch",
+        "patch",
+        "json",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "mission.get": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "mission.list": {
+    "fields": [
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ],
+      [
+        "status",
+        "status",
+        "text",
+        false,
+        false
+      ],
+      [
+        "archived",
+        "archived",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "mission.complete": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "result",
+        "result",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "mission.fail": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "result",
+        "result",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "mission.reopen": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "mission.remind": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "mission.archive": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "archived",
+        "archived",
+        "boolean",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "mission.delete": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "mission.summary": {
+    "fields": []
+  },
+  "question.ask": {
+    "fields": [
+      [
+        "conversation",
+        "conversation",
+        "text",
+        false,
+        false
+      ],
+      [
+        "missionId",
+        "mission-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "question",
+        "question",
+        "text",
+        false,
+        false
+      ],
+      [
+        "options",
+        "options",
+        "json",
+        false,
+        false
+      ],
+      [
+        "timeoutSeconds",
+        "timeout-seconds",
+        "number",
+        false,
+        false
+      ],
+      [
+        "fallback",
+        "fallback",
+        "json",
+        false,
+        false
+      ],
+      [
+        "viewId",
+        "view-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "question.get": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "question.list": {
+    "fields": [
+      [
+        "conversation",
+        "conversation",
+        "text",
+        false,
+        false
+      ],
+      [
+        "missionId",
+        "mission-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "status",
+        "status",
+        "text",
+        false,
+        false
+      ],
+      [
+        "offset",
+        "offset",
+        "number",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "question.wait": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "seconds",
+        "seconds",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "question.answer": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "optionId",
+        "option-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "text",
+        "text",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "question.cancel": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "plan.preferences": {
+    "fields": [
+      [
+        "patch",
+        "patch",
+        "json",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "plan.archive": {
+    "fields": [
+      [
+        "id",
+        "id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "archived",
+        "archived",
+        "boolean",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "board.categories": {
+    "fields": [],
+    "rawPositionals": true
+  },
+  "board.category-save": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "name",
+        "name",
+        "text",
+        false,
+        false
+      ],
+      [
+        "employeeIds",
+        "employees",
+        "json",
+        false,
+        false
+      ],
+      [
+        "workerIds",
+        "workers",
+        "json",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "board.category-delete": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "board.category-order": {
+    "fields": [
+      [
+        "order",
+        "order",
+        "json",
+        false,
+        false
+      ],
+      [
+        "expectedOrder",
+        "expected-order",
+        "json",
+        false,
+        false
+      ]
+    ]
+  },
   "plan.schema": {
     "fields": []
   },
@@ -268,6 +779,9 @@
       ]
     ]
   },
+  "worker.engines": {
+    "fields": []
+  },
   "worker.start": {
     "fields": [
       [
@@ -318,6 +832,164 @@
       ]
     ]
   },
+  "worker.snapshot": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ],
+    "rawPositionals": true
+  },
+  "worker.send": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "text",
+        "text",
+        "text",
+        false,
+        false
+      ],
+      [
+        "clientMessageId",
+        "client-message-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.dequeue": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "messageId",
+        "message-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.respond": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "requestId",
+        "request-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "decision",
+        "decision",
+        "text",
+        false,
+        false
+      ],
+      [
+        "answers",
+        "answers",
+        "json",
+        false,
+        false
+      ],
+      [
+        "form",
+        "form",
+        "json",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.configure": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "model",
+        "model",
+        "text",
+        false,
+        false
+      ],
+      [
+        "effort",
+        "effort",
+        "text",
+        false,
+        false
+      ],
+      [
+        "permissionMode",
+        "permission-mode",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "worker.draft": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "text",
+        "text",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ],
+      [
+        "newAttempt",
+        "new-attempt",
+        "boolean",
+        false,
+        false
+      ]
+    ]
+  },
   "worker.resize": {
     "fields": [
       [
@@ -351,9 +1023,15 @@
         "text",
         false,
         false
+      ],
+      [
+        "expectedMessageId",
+        "expected-message-id",
+        "text",
+        false,
+        false
       ]
-    ],
-    "rawPositionals": true
+    ]
   },
   "worker.stop": {
     "fields": [
@@ -2952,6 +3630,95 @@
       ]
     ]
   },
+  "conversation.files": {
+    "fields": [
+      [
+        "conversation",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "state",
+        "state",
+        "text",
+        false,
+        false
+      ],
+      [
+        "query",
+        "query",
+        "text",
+        false,
+        false
+      ],
+      [
+        "author",
+        "author",
+        "text",
+        false,
+        false
+      ],
+      [
+        "sort",
+        "sort",
+        "text",
+        false,
+        false
+      ],
+      [
+        "offset",
+        "offset",
+        "number",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "conversation.file-trash": {
+    "fields": [
+      [
+        "conversation",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "files",
+        "files",
+        "json",
+        true,
+        false
+      ]
+    ]
+  },
+  "conversation.file-restore": {
+    "fields": [
+      [
+        "conversation",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "files",
+        "files",
+        "json",
+        true,
+        false
+      ]
+    ]
+  },
   "conversation.member": {
     "fields": [
       [
@@ -3696,6 +4463,13 @@
         false
       ],
       [
+        "clientRequestId",
+        "client-request-id",
+        "text",
+        false,
+        false
+      ],
+      [
         "team",
         "team",
         "text",
@@ -3762,6 +4536,31 @@
         "limit",
         "limit",
         "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "chat.retry": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "messageId",
+        "message",
+        "text",
+        false,
+        false
+      ],
+      [
+        "employeeIds",
+        "members",
+        "json",
         false,
         false
       ]
@@ -3921,6 +4720,38 @@
       ]
     ],
     "rawPositionals": true
+  },
+  "api.result": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "path",
+        "path",
+        "text",
+        false,
+        false
+      ],
+      [
+        "offset",
+        "offset",
+        "number",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ]
+    ]
   },
   "avatar.get": {
     "fields": [
@@ -4313,6 +5144,13 @@
         "text",
         false,
         false
+      ],
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
       ]
     ],
     "rawPositionals": true
@@ -4519,6 +5357,45 @@
     ],
     "rawPositionals": true
   },
+  "room.place": {
+    "fields": [
+      [
+        "name",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "column",
+        "column",
+        "number",
+        false,
+        false
+      ],
+      [
+        "row",
+        "row",
+        "number",
+        false,
+        false
+      ],
+      [
+        "expectedPlacement",
+        "expected-placement",
+        "json",
+        false,
+        false
+      ],
+      [
+        "slot",
+        "slot",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
   "group.rename": {
     "fields": [
       [
@@ -4550,6 +5427,31 @@
     ],
     "rawPositionals": true
   },
+  "room.bounds": {
+    "fields": [
+      [
+        "name",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "columns",
+        "columns",
+        "number",
+        false,
+        false
+      ],
+      [
+        "rows",
+        "rows",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
   "room.layout": {
     "fields": [
       [
@@ -4561,6 +5463,31 @@
       ]
     ],
     "rawPositionals": true
+  },
+  "card.place": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "seat",
+        "seat",
+        "number",
+        false,
+        false
+      ],
+      [
+        "expectedSeating",
+        "expected-seating",
+        "json",
+        false,
+        false
+      ]
+    ]
   },
   "plugin.list": {
     "fields": [],

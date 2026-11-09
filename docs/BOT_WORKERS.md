@@ -10,6 +10,8 @@ Dot、Grok Bot 和 Grok 原生群组都作为 Worker 会话出现在 Message 中
 
 ## 同一套消息与文件接口
 
+Grok 的消息送达与任务执行分开记录：`direct.send-status.status=accepted` 仅表示远端接收；原生执行失败保存在 `executionFailure`，并保留原来的发送 ID，重试查询不会重复投递。`bot.list[].bot.issue` 返回当前用量或执行问题的 `code/message/retryAt/at`，会话显示原因和本地时区的重置时间；失败信息保留至重启后。用量检查为只读，不改变套餐或开通按量付费。额度耗尽时新发送在远端投递前被拒绝，输入草稿保留；额度恢复后可显式重新发送。正常发送先唤醒原生运行环境，原生 `turnFailed` 通过服务端 turn ID 关联原消息，实时通道断线后只重连，不重放已接收任务。
+
 先用 `bot.list` 取得 ID 和 `conversation`，不要按名称或猜测 ID：
 
 - 私聊：`direct.send {employee:Worker会话ID,text,images?,files?,clientMessageId}`，`direct.history`，`direct.send-status`。普通员工可调用获授权的外部 Worker；向原生员工发送用户私聊输入仍仅限用户与 Secretary。
@@ -36,3 +38,7 @@ Grok Bot 拥有原生 X 工具。需要检索或研究 X 内容时，可把任�
 Dot 可以先确认收到，几分钟后再发多条结果，间隔没有固定上限。第一条消息或一段安静时间都不是结束信号。持续等待时不要设置 `maxOccurrences:1`，不要在确认消息后删除计划；完成整个委派后先发布结果，再暂停后续唤醒。员工在当前轮次删除自己的计划时，未来触发立即移除，返回 continuingRunIds，当前轮次可完成收尾；主动取消才停止当前工作。事件以公开消息 ID/版本去重，员工忙碌、冷却或暂时不在允许时间窗时持久排队，最多每次合并 100 个待处理事件，其余继续等待。重启保留待处理事件；已经启动而中断的 Agent 轮次保留中断记录，不盲目重做。
 
 消息历史只展示平台公开的发言与附件；本软件不会获取外部模型的隐藏推理。待回复动画表示已投递并尚未收到后续公开发言，不代表平台确认整个任务完成。
+
+## Dot native appearance
+
+Dot uses the original OpenAI Codey blue computer atlas, independent of the employee catalog. Waiting, replying, idle and attention states use the original animation frames; invisible views and reduced-motion settings stop playback. bot.appearance reports native:true and editable:false. Other local character overrides fail explicitly; saved legacy appearance records remain archived and native bot identity, prompts, history, connectivity and permissions are unchanged.

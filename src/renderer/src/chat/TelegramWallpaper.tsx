@@ -21,11 +21,12 @@ function paint(canvas:HTMLCanvasElement,colors:readonly string[],rotation:number
 
 export const TelegramWallpaper=memo(function TelegramWallpaper({settings={},dark=false,className=''}:{settings?:Partial<MessageWallpaperSettings>;dark?:boolean;className?:string}){
  const preset=TELEGRAM_WALLPAPERS.find(value=>value.id===settings.palette)??TELEGRAM_WALLPAPERS[dark?1:0]
- const colors:readonly string[]=settings.palette==='custom'&&settings.colors?.length?settings.colors:preset.colors,gradient=colors.length>1,masked='masked' in preset&&preset.masked&&settings.palette!=='custom',canvas=useRef<HTMLCanvasElement>(null)
+ const themed=settings.palette==='theme'
+ const colors:readonly string[]=settings.palette==='custom'&&settings.colors?.length?settings.colors:preset.colors,gradient=!themed&&colors.length>1,masked=!themed&&'masked' in preset&&preset.masked&&settings.palette!=='custom',canvas=useRef<HTMLCanvasElement>(null)
  const key=colors.join(','),rotation=settings.rotation??0,pattern=settings.pattern!=='none',opacity=settings.pattern==='telegram'||settings.palette&&settings.palette!=='theme'?(settings.opacity??37.5)/100:.375
  const rgb=[1,3,5].map(offset=>parseInt(colors[0].slice(offset,offset+2),16)),dim=.2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2]<90
  useLayoutEffect(()=>{if(gradient&&canvas.current)paint(canvas.current,colors,rotation)},[key,rotation,gradient])
- return <div className={'telegram-wallpaper '+className} aria-hidden="true" data-wallpaper-pattern={pattern?'telegram':'none'} data-wallpaper-density={settings.density??115} data-wallpaper-opacity={settings.opacity??37.5} data-wallpaper-palette={settings.palette??'theme'} data-wallpaper-colors={key} data-masked={masked||undefined} data-pattern={pattern||undefined} style={{background:masked?'#000000':colors[0],'--tg-pattern-opacity':opacity,'--tg-pattern-scale':430*115/(settings.density??115)+'px auto','--tg-pattern-ink':dim?'#ffffff':'#000000','--tg-pattern-blend':dim?'normal':'soft-light'} as CSSProperties}>
+ return <div className={'telegram-wallpaper '+className} aria-hidden="true" data-wallpaper-pattern={pattern?'telegram':'none'} data-wallpaper-density={settings.density??115} data-wallpaper-opacity={settings.opacity??37.5} data-wallpaper-palette={settings.palette??'theme'} data-wallpaper-colors={key} data-masked={masked||undefined} data-pattern={pattern||undefined} style={{background:themed?'linear-gradient(135deg,var(--theme-wash),var(--theme-wash-alt))':masked?'#000000':colors[0],'--tg-pattern-opacity':opacity,'--tg-pattern-scale':430*115/(settings.density??115)+'px auto','--tg-pattern-ink':themed?'var(--accent)':dim?'#ffffff':'#000000','--tg-pattern-blend':themed?'soft-light':dim?'normal':'soft-light'} as CSSProperties}>
   {gradient&&<canvas ref={canvas} width={64} height={64} aria-hidden="true"/>}
  </div>
 })
