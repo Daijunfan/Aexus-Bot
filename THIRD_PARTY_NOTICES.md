@@ -155,3 +155,7 @@ MIT-licensed directory-name romanization library by creeperyang. License: `licen
 ### Grok Bot native avatar renderer
 
 The private local build reuses the geometry, SVG shading and animation dependency closure from the user's installed Grok Bot renderer (`index.eager-common-DN47KHVY.js`). Its source and extraction metadata are recorded in `src/renderer/src/assets/bots/grok-native.provenance.json`. This does not approve public redistribution; the existing release review remains applicable.
+
+## DeepSeek engine mark
+
+The DeepSeek whale silhouette comes from the official DeepSeek Harness frontend favicon (dsh 0.2.1-rc.5), recolored blue (#4D6BFE) to identify the separately installed engine. Source and hash are recorded in `src/renderer/src/assets/engines/sources.json`. DeepSeek branding belongs to its owner; use does not imply endorsement or grant trademark rights. This record does not change any pending redistribution review.

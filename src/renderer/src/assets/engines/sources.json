@@ -25,5 +25,13 @@
     "repository": "https://github.com/Kilo-Org/kilocode",
     "license": "MIT",
     "sha256": "65f8a36a2c905afc8ac063fc1ceadd1cea396314310667b64d2e4a94d38ec87b"
+  },
+  {
+    "id": "deepseek",
+    "source": "@deepseek-ai/dsh-web-frontend/dist/favicon.svg (dsh 0.2.1-rc.5)",
+    "repository": "https://github.com/deepseek-ai/deepseek-harness",
+    "modification": "Whale silhouette unchanged; fill changed to DeepSeek blue #4D6BFE at user request.",
+    "license": "DeepSeek brand asset; trademark rights retained by its owner.",
+    "sha256": "d3f69c53ee05ac74dac3efd19fbf9b6c6d90709f26356989586cdf490ea74182"
   }
 ]
