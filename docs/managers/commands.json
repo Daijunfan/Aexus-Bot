@@ -11502,7 +11502,7 @@
   {
     "name": "view.navigation",
     "args": "team|mission|plan [--expanded true|false]",
-    "summary": "Set or toggle the current client primary or nested navigation disclosure. Reveals selectors without leaving an editor; expanded rows collapse on primary navigation.",
+    "summary": "Set or toggle Team navigation. Legacy mission/plan sections are no-ops because Mission layouts are always visible.",
     "gui": "Primary navigation chevrons",
     "inputSchema": {
       "type": "object",
@@ -11517,7 +11517,7 @@
         },
         "expanded": {
           "type": "boolean",
-          "description": "Set explicitly; omit to toggle atomically using the current client state."
+          "description": "Team only: set explicitly or omit to toggle. Mission always displays its layouts."
         }
       },
       "required": [
@@ -11530,8 +11530,8 @@
   },
   {
     "name": "view.select",
-    "args": "company|messages|plan [--team-view ID] [--team-tab characters|board|workers] [--mission-tab plan|engineering|research] [--toggle-navigation]",
-    "summary": "Select a presentation mode; Team has Characters, Board and Workers subviews; Messages resumes the last conversation for this client",
+    "args": "company|messages|plan [--team-view ID] [--team-tab characters|board|workers] [--mission-tab plan] [--toggle-navigation]",
+    "summary": "Select a presentation mode; Team has Characters, Board and Workers; Mission shows database layouts directly; Messages resumes the last conversation",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -11558,14 +11558,13 @@
         },
         "missionTab": {
           "enum": [
-            "plan",
-            "engineering",
-            "research"
-          ]
+            "plan"
+          ],
+          "description": "Deprecated compatibility alias; Mission has no child destinations."
         },
         "toggleNavigation": {
           "type": "boolean",
-          "description": "Primary button intent: toggle the active root selector, otherwise resume the remembered child. Cannot be combined with explicit child selection."
+          "description": "Team primary intent: toggle the active Team selector or resume its remembered child. Mission selection is idempotent and always shows its layouts. Cannot be combined with explicit child selection."
         }
       },
       "required": [
@@ -15142,7 +15141,7 @@
   },
   {
     "name": "view.open",
-    "args": "home|messages|plan|team|employee|workspace|conversation|initialization|plugin|settings [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab characters|board|workers] [--mission-tab plan|engineering|research]",
+    "args": "home|messages|plan|team|employee|workspace|conversation|initialization|plugin|settings [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab characters|board|workers] [--mission-tab plan]",
     "summary": "Open a form, workspace, news channel or employee conversation",
     "gui": "打开资料或会话",
     "readOnly": false,

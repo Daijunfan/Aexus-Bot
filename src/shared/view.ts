@@ -5,8 +5,10 @@ export type ViewState = {
   kind: 'home' | 'team' | 'employee' | 'workspace' | 'conversation' | 'initialization' | 'settings' | 'plugin' | 'clone' | 'messages' | 'plan'
   revision: number
   teamTab?: 'characters' | 'board' | 'workers'
-  missionTab?: 'plan' | 'engineering' | 'research'
+  /** Legacy alias: Mission now opens its database directly. */
+  missionTab?: 'plan'
   teamNavigationOpen?: boolean
+  /** Legacy compatibility fields; Mission layouts are always visible. */
   missionNavigationOpen?: boolean
   planNavigationOpen?: boolean
   name?: string

@@ -1,3 +1,5 @@
+Mission directly displays this database and its ten layouts. There is no parent Plan, Engineering or Research selector and no Mission disclosure. Existing `plan.*` APIs and saved view IDs retain their names and identities.
+
 # Plan database layouts: parity, API design and interactive review
 
 The Plan toolbar keeps search, a compact View control, global filters, retention and task counts. View controls expose per-view filters, sorting, direction, density and table property visibility without placing every setting on the browsing surface. Save the current configuration as a view, or update an existing saved view, to reuse it. Per-view and global filters use the same controls for task kind, repetition, archive, employee, Team, multiple states, priorities and exact tags. Global filters support multiple states and priorities, exact tags and familiar-task hiding; they intersect saved-view conditions instead of overwriting them.

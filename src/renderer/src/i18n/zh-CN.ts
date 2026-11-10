@@ -1,5 +1,7 @@
 /** Product interface copy only. User names, messages, files and model output are never translated. */
 export const zhCN:Record<string,string> = {
+  "Mission view": "任务视图",
+  "Mission views": "任务视图切换",
   "Default visibility": "默认可见范围",
   "Default shows active items unless the other filter scope specifies archive visibility.": "默认显示未归档项目；另一组视图或全局过滤指定归档范围时，会跟随该范围。",
   "Failed task changes": "未完成的任务更改",

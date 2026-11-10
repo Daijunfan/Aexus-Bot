@@ -498,19 +498,20 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
 
     case 'view.list': return {views:APP_VIEWS,current:getView(),company:teamViewList(),shared:{employees:'session.list',conversations:'session.transcript',inbox:'session.inbox',readReceipts:'session.acknowledge',groups:'chat.list',bindings:'management.topology',schedules:'schedule.list',plans:'plan.query',planViews:'plan.views'}}
     case 'view.navigation': {
-      validateApiArguments(req.cmd,a);const view=getView(),section=s(a.section),field=section==='team'?'teamNavigationOpen':section==='mission'?'missionNavigationOpen':'planNavigationOpen',expanded=a.expanded??!view[field],company=!['messages','plan'].includes(view.kind)&&view.returnTo?.kind!=='messages'&&view.returnTo?.kind!=='plan';if(section==='team'?!company:view.kind!=='plan'||section==='plan'&&((view.missionTab??'plan')!=='plan'||expanded&&!view.missionNavigationOpen))throw Error('Open the matching primary view before expanding its navigation');return setView({...view,[field]:expanded})
+      validateApiArguments(req.cmd,a);const view=getView(),section=s(a.section),company=!['messages','plan'].includes(view.kind)&&view.returnTo?.kind!=='messages'&&view.returnTo?.kind!=='plan';if(section==='team'?!company:view.kind!=='plan')throw Error('Open the matching primary view before expanding its navigation');if(section!=='team')return view;return setView({...view,teamNavigationOpen:a.expanded??!view.teamNavigationOpen})
     }
     case 'view.select': {
       validateApiArguments(req.cmd,a)
       const mode=appView(a.id);if(!mode)throw Error('Unknown application view')
       if(a.toggleNavigation&&(a.teamTab!==undefined||a.teamViewId!==undefined||a.missionTab!==undefined))throw Error('Primary activation cannot set a child view')
-      const current=getView(),root=mode.id==='company'?current.kind==='home'&&!current.pluginId:mode.id==='plan'&&current.kind==='plan'
-      if(a.toggleNavigation&&root)return setView({...current,[mode.id==='company'?'teamNavigationOpen':'missionNavigationOpen']:!(mode.id==='company'?current.teamNavigationOpen:current.missionNavigationOpen)})
+      const current=getView(),root=mode.id==='company'&&current.kind==='home'&&!current.pluginId
+      if(a.toggleNavigation&&root)return setView({...current,teamNavigationOpen:!current.teamNavigationOpen})
       if(a.teamTab!==undefined&&(mode.id!=='company'||!['characters','board','workers'].includes(a.teamTab)))throw Error('Choose Characters, Board or Workers within Team')
       if(mode.id!=='company'&&a.teamViewId!==undefined)throw Error('Only Company selects a Team subview')
       if(mode.id==='company'&&a.teamViewId!==undefined&&!teamViewList().views.some(item=>item.id===a.teamViewId))throw Error('Unknown Company subview')
-      if(a.missionTab!==undefined&&(mode.id!=='plan'||!['plan','engineering','research'].includes(a.missionTab)))throw Error('Choose Plan, Engineering or Research within Mission')
-      const nextMissionTab=a.missionTab??getView().missionTab??'plan';await beforeViewChange(mode.id==='company'?'home':mode.id,mode.id==='plan'?nextMissionTab:undefined)
+      if(a.missionTab!==undefined&&(mode.id!=='plan'||a.missionTab!=='plan'))throw Error('Mission opens its layouts directly; child destinations were removed')
+      if(mode.id==='plan'&&current.kind==='plan')return current
+      const nextMissionTab='plan';await beforeViewChange(mode.id==='company'?'home':mode.id,mode.id==='plan'?nextMissionTab:undefined)
       if(mode.id==='company')selectTeamView(a.teamViewId??(a.teamTab||a.toggleNavigation?teamViewList().activeId:'all'))
       if(mode.id==='messages'){
         const saved={...getMessagesView(),shared:getView().shared}
@@ -529,7 +530,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       const kind=a.kind as ViewState['kind'],store=readStore()
       if(!['home','team','employee','workspace','conversation','initialization','settings','plugin','clone','messages','plan'].includes(kind))throw new Error('Unknown view kind')
       if(a.teamTab!==undefined&&(kind!=='home'||!['characters','board','workers'].includes(a.teamTab)))throw Error('Choose Characters, Board or Workers within Team')
-      if(a.missionTab!==undefined&&(kind!=='plan'||!['plan','engineering','research'].includes(a.missionTab)))throw Error('Choose Plan, Engineering or Research within Mission')
+      if(a.missionTab!==undefined&&(kind!=='plan'||a.missionTab!=='plan'))throw Error('Mission opens its layouts directly; child destinations were removed')
       if(a.planViewId!==undefined&&a.missionTab!==undefined&&a.missionTab!=='plan')throw Error('Database views belong to Mission / Plan')
       if(a.planViewId!==undefined&&(kind!=='plan'||!((await planRequest('views',{})) as Array<{id:string}>).some((view:any)=>view.id===a.planViewId)))throw Error('Unknown Plan view')
       if([a.employee,a.chatId,a.channelId].filter(value=>value!==undefined).length>1)throw Error('Choose one conversation')
