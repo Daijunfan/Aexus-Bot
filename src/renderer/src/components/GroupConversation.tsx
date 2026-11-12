@@ -52,6 +52,7 @@ import {BotIssueNotice} from './BotIssueNotice'
 import {ConversationSearch} from '../chat/ConversationSearch'
 import {MessageActions,MessageDate} from '../chat/MessageActions'
 export type GroupDraft={text:string;images?:string[];files?:string[];mentions:string[]|'all';clientMessageId:string;viewId?:string;replyTo?:string;replyQuote?:MessageQuote;replyConversation?:string;replyTextOnly?:boolean}
+type GroupSend={draft:GroupDraft;accepted:boolean}
 type GroupConversationProps={group:ChatGroupView;store:Store;sessions:Session[];drafts:Record<string,GroupDraft>;onBack:()=>void;onPrivate:(id:string)=>void}
 export function GroupConversation(props:GroupConversationProps){return <GroupConversationScope key={props.group.id} {...props}/>}
 function GroupConversationScope(props:GroupConversationProps){
@@ -101,7 +102,7 @@ function GroupConversationBody({group,store,sessions,drafts,onBack,onPrivate,top
  const localReplySource=history.find(message=>message.id===replyTo)
  const localQuoteChanged=useMemo(()=>{if(replyOrigin.conversation||!replyQuote||!localReplySource)return false;try{validateQuote(localReplySource.text,replyQuote);return false}catch{return true}},[replyOrigin.conversation,replyQuote,localReplySource?.text])
  const names=useMemo(()=>Object.fromEntries(store.sessions.map(card=>[card.id,card.title])),[store.sessions])
- const viewport=useRef<MessageViewportHandle|null>(null),transcript=useRef<HTMLDivElement>(null),composer=useRef<HTMLTextAreaElement>(null),follow=useRef(true),scrollTarget=useRef<number|null>(null),sendingRef=useRef(false),loadedInitial=useRef(false)
+ const viewport=useRef<MessageViewportHandle|null>(null),transcript=useRef<HTMLDivElement>(null),composer=useRef<HTMLTextAreaElement>(null),follow=useRef(true),scrollTarget=useRef<number|null>(null),sendingRef=useRef(false),pendingSend=useRef<GroupSend|null>(null),loadedInitial=useRef(false)
  const picker=useMentionPicker(composer,text,mentionLabels(mentions,group.members)),mentionMenu=picker.open,mentionIndex=picker.index,setMentionIndex=picker.setIndex
  useEffect(()=>{if(!messenger.ready||drafts[draftSlot])return;const saved=messenger.getDraft(draftKey);if(saved){setImages(saved.images??[]);setFiles(saved.files??[]);setText(saved.text);setMentions(saved.mentions??[]);setReplyTo(saved.replyTo);setReplyQuote(saved.replyQuote);setReplyOrigin({conversation:saved.replyConversation,textOnly:saved.replyTextOnly});drafts[draftSlot]={...saved,mentions:saved.mentions??[],clientMessageId:saved.clientMessageId??crypto.randomUUID()}}},[messenger.ready,group.id])
  useEffect(()=>{const intent=messenger.replyIntent;if(intent?.conversation!==conversation||topicId!=='all')return
@@ -135,7 +136,7 @@ function GroupConversationBody({group,store,sessions,drafts,onBack,onPrivate,top
  useEffect(()=>()=>{editLookup.current=null},[])
  const startEdit=(message:ChatMessage)=>{editLookup.current=null;picker.close();setMessageToEdit(message)}
  const closeEdit=()=>{restoreComposer.current=true;setMessageToEdit(null)}
- useLayoutEffect(()=>{if(!messageToEdit&&restoreComposer.current){restoreComposer.current=false;composer.current?.focus()}},[messageToEdit])
+ useLayoutEffect(()=>{if(!messageToEdit&&!sending&&restoreComposer.current){restoreComposer.current=false;composer.current?.focus()}},[messageToEdit,sending])
  const editLatest=async()=>{
   if(!editReady.current||editLookup.current)return
   const own=[...history].reverse().find(message=>message.author.kind==='operator'&&!messenger.state.messages[messageKey(conversation,message.id)]?.hidden)
@@ -201,6 +202,25 @@ function GroupConversationBody({group,store,sessions,drafts,onBack,onPrivate,top
   })});return()=>cancelAnimationFrame(frame)
  },[history])
  const loadOlder=async()=>{if(!before||older)return;setOlder(true);const el=transcript.current,top=el?.scrollTop??0,height=el?.scrollHeight??0;follow.current=false;try{const order=++readOrder.current,page=await api.call<ChatHistory>('chat.history',{id:group.id,...topicQuery,before,limit:100});if(el&&viewport.current?.managed){const box=el.getBoundingClientRect(),scale=box.height/parseFloat(getComputedStyle(el).height)||1,row=Array.from(el.querySelectorAll<HTMLElement>('[data-chat-item]')).find(row=>row.getBoundingClientRect().bottom>box.top);if(row)prependAnchor.current={id:row.dataset.chatItem!,top:(row.getBoundingClientRect().top-box.top)/scale}}mergeHistory(page.messages,order);setBefore(page.nextBefore);setLoadError('');if(!viewport.current?.managed)requestAnimationFrame(()=>{if(el)el.scrollTop=top+el.scrollHeight-height})}catch(cause){setLoadError((cause as Error).message)}finally{setOlder(false)}}
+ const acceptSend=(attempt:GroupSend)=>{
+  if(attempt.accepted)return
+  attempt.accepted=true
+  // clearDraft projects the conditional clear immediately; storage must not hold the composer open.
+  const clearing=messenger.clearDraft(draftKey,attempt.draft.clientMessageId)
+  const syncDraft=()=>{
+   if(drafts[draftSlot]&&drafts[draftSlot].clientMessageId!==attempt.draft.clientMessageId)return
+   const remaining=messenger.getDraft(draftKey)
+   if(remaining)drafts[draftSlot]={...remaining,mentions:remaining.mentions??[],clientMessageId:remaining.clientMessageId??crypto.randomUUID()};else delete drafts[draftSlot]
+   setText(remaining?.text??'');setImages(remaining?.images??[]);setFiles(remaining?.files??[]);setMentions(remaining?.mentions??[]);setReplyTo(remaining?.replyTo);setReplyQuote(remaining?.replyQuote);setReplyOrigin({conversation:remaining?.replyConversation,textOnly:remaining?.replyTextOnly});setReturnToMessage(undefined);follow.current=true
+  }
+  syncDraft()
+  void clearing.then(ok=>{if(pendingSend.current!==attempt)return;if(ok)syncDraft();else setError('Message was sent, but its draft could not be cleared.')})
+  if(pendingSend.current===attempt){sendingRef.current=false;restoreComposer.current=true;setSending(false);setError('')}
+ }
+ useEffect(()=>{
+  const attempt=pendingSend.current
+  if(botMode&&attempt&&!attempt.accepted&&history.some(message=>message.author.kind==='operator'&&message.clientMessageId===attempt.draft.clientMessageId&&message.bot?.delivery==='accepted'))acceptSend(attempt)
+ },[history,botMode])
  const send=async()=>{
   if(topicUnavailable||!text.trim()&&!images.length&&!files.length||uploads.pending||sendingRef.current||crossReference.loading)return
   if(localQuoteChanged){setError(uiText('Selected text changed. Choose a new quote.'));return}
@@ -208,18 +228,15 @@ function GroupConversationBody({group,store,sessions,drafts,onBack,onPrivate,top
   if(!botMode&&picker.active){setError('Choose a member from the mention menu before sending.');return}
   sendingRef.current=true;setSending(true);setError('');follow.current=true;viewport.current?.scrollToEnd()
   const draft=draftFor({text,images,files,mentions,replyTo,replyQuote,replyConversation:replyOrigin.conversation,replyTextOnly:replyOrigin.textOnly});draft.viewId??=store.activeTeamViewId??'all';drafts[draftSlot]=draft
+  const attempt:GroupSend={draft,accepted:false};pendingSend.current=attempt
   let cancelMotion:(()=>void)|undefined
   try{
    await messenger.prepareSend(draftKey,draft)
    cancelMotion=prepareMessageSend(draft.text)
-   await api.call('chat.send',{id:group.id,...topicQuery,...draft,text:draft.text.trim()});cancelMotion=undefined
-   if(!await messenger.clearDraft(draftKey,draft.clientMessageId)){setError('Message was sent, but its draft could not be cleared.');return}
-   if(drafts[draftSlot]?.clientMessageId===draft.clientMessageId){
-    const remaining=messenger.getDraft(draftKey)
-    if(remaining)drafts[draftSlot]={...remaining,mentions:remaining.mentions??[],clientMessageId:remaining.clientMessageId??crypto.randomUUID()};else delete drafts[draftSlot]
-    setText(remaining?.text??'');setImages(remaining?.images??[]);setFiles(remaining?.files??[]);setMentions(remaining?.mentions??[]);setReplyTo(remaining?.replyTo);setReplyQuote(remaining?.replyQuote);setReplyOrigin({conversation:remaining?.replyConversation,textOnly:remaining?.replyTextOnly});setReturnToMessage(undefined);follow.current=true
-   }
-  }catch(cause){cancelMotion?.();setError((cause as Error).message)}finally{sendingRef.current=false;setSending(false);composer.current?.focus()}
+   const message=await api.call<ChatMessage>('chat.send',{id:group.id,...topicQuery,...draft,text:draft.text.trim()})
+   if(botMode&&!attempt.accepted&&message.bot?.delivery!=='accepted')throw Error(uiText('Delivery unconfirmed. Check history before resending.'))
+   cancelMotion=undefined;acceptSend(attempt)
+  }catch(cause){if(!attempt.accepted){cancelMotion?.();setError((cause as Error).message)}}finally{if(pendingSend.current===attempt&&sendingRef.current){sendingRef.current=false;restoreComposer.current=true;setSending(false)}}
  }
  useEffect(()=>{if(botMode)return;let active=true;const refresh=createRefreshQueue(async()=>{const value=await api.call<GroupTopic[]>('chat.topic-list',{id:group.id,includeArchived:true});if(active)setTopics(value)});void refresh().catch(cause=>setError(cause.message));const off=api.onEvent(event=>{if(event.channel==='chat:changed'&&event.payload.id===group.id)void refresh().catch(cause=>setError(cause.message))});return()=>{active=false;off()}},[group.id,botMode])
  const term=picker.query
