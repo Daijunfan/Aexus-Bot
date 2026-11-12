@@ -1,3 +1,4 @@
+import {remapMessageImages} from '../shared/message-inline-images'
 import {requireGroupExport} from './group-history'
 import {isAppAdministrator} from './application-authority'
 import {loadChannelPost,loadChannelMessage} from './channel-content'
@@ -64,9 +65,9 @@ export async function forwardMessages(args:Record<string,any>,call:(command:stri
   selected.push(found)
  }
  const attachments=args.textOnly?[]:selected.flatMap(message=>[...message.images.map(path=>({path,kind:'image' as const})),...(message.files??[])].map(file=>({...file,from:{...(message.conversation.startsWith('employee:')?{employee:message.conversation.slice(9)}:message.conversation.startsWith('channel:')?{channel:message.conversation.slice(8)}:{group:message.conversation.slice(6)}),path:file.path}})))
- if(attachments.length>16)throw Error('A forwarded message supports at most 16 attachments')
- const text=[args.comment?.trim(),...selected.map(message=>`Forwarded from ${message.author} · ${message.conversationTitle}\n${message.text||(message.files?.length?message.files.map(file=>file.name).join(', '):'Photo')}`)].filter(Boolean).join('\n\n——\n\n')
- if(kind==='group'&&text.length>16000)throw Error('The forwarded group message exceeds 16000 characters. Select fewer messages.')
+ let imageOffset=0
+ const text=[args.comment?.trim(),...selected.map(message=>{const body=remapMessageImages(message.text,args.textOnly?null:imageOffset);imageOffset+=message.images.length;return `Forwarded from ${message.author} · ${message.conversationTitle}\n${body||(message.files?.length?message.files.map(file=>file.name).join(', '):'Photo')}`})].filter(Boolean).join('\n\n——\n\n')
+ if(kind==='group'&&text.length>64000)throw Error('The forwarded group message exceeds 64000 characters. Select fewer messages.')
  const receipt:Receipt={author:requestContext().principal,fingerprint,status:'preparing',stage:'copying',to:args.to,count:selected.length,downstreamKey:'forward:'+createHash('sha256').update(args.clientMessageId).digest('hex'),createdAt:Date.now()};save(key,receipt)
  let accepted=false
  return active.run(key,async()=>{try{

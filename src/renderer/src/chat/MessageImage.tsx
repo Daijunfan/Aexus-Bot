@@ -4,10 +4,12 @@ import type {GalleryQuery} from '../../../shared/messenger'
 import {translate as uiText,useI18n} from '../i18n'
 import {createContext,useContext,useEffect,useRef,useState} from 'react'
 import {MessageImageViewer,readGalleryImage,galleryKey,type GalleryImage} from './MessageImageViewer'
+import {messageImageLabels} from '../../../shared/message-inline-images'
 import {Icon} from '../components/Icon'
 
 /** A view supplies its ordered public images; opening a gallery freezes that order. */
 export const MessageGalleryContext=createContext<{images:GalleryImage[];history?:GalleryQuery}|null>(null)
+export function messageGalleryItems(source:Omit<GalleryImage,'path'>,paths:string[],text:string){const labels=messageImageLabels(text,paths.length);return paths.map((path,index)=>({...source,path,caption:labels[index]}))}
 export function MessageImages({worker,employee,group,channel,paths,messageId,caption}:{worker?:string;employee?:string;group?:string;channel?:string;paths:string[];messageId?:string;caption?:string}){
  const [ratios,setRatios]=useMessageRowState<Record<string,number>>('images:ratios',{}),inherited=useContext(MessageGalleryContext),items=paths.map(path=>({worker,employee,group,channel,path,messageId,caption}))
  if(!paths.length)return null

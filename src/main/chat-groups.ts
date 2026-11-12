@@ -1,3 +1,4 @@
+import {validateMessageImages} from '../shared/message-inline-images'
 import {prepareGroupStorage} from './group-storage'
 import {validateApiArguments} from './api-contract'
 import {groupDetails} from '../shared/group-collaboration'
@@ -111,7 +112,6 @@ export async function groupAttachment(args:Record<string,any>){
 }
 async function groupAttachments(id:string,images:unknown,files:unknown):Promise<MessageAttachment[]>{
  const photos=attachmentPaths(images),documents=attachmentPaths(files)
- if(photos.length+documents.length>16)throw Error('Choose at most 16 attachments')
  if(!photos.length&&!documents.length)return []
  if(requestContext().principal.kind==='agent')return sharedAttachments('group:'+id,images,files)
  operator();const root=groupMediaRoot(id)
@@ -136,14 +136,16 @@ function messageKey(value:unknown){
  const id=value===undefined?requestContext().requestId:idString(value,'client message ID');if(id.length>160)throw Error('Client message ID too long');return id
 }
 function messageText(value:unknown,hasAttachments:boolean,max:number){
- if(typeof value!=='string'||value!==value.trim()||!value&&!hasAttachments)throw Error('Provide a message or attachment')
+ if(typeof value!=='string'||!value&&!hasAttachments)throw Error('Provide a message or attachment')
+ if(value!==value.trim())throw Error('Remove leading/trailing whitespace from text before publishing')
  if(Array.from(value).length>max)throw Error('Message exceeds '+max+' characters; keep group updates concise')
  return value
 }
 async function append(group:ChatGroup,args:Record<string,any>,targets:string[],kind:ChatMessage['kind'],broadcast=false,workTargets:string[]=[],acknowledgment=false,targetViews?:Map<string,string|undefined>,card?:{pollId?:string;checklistId?:string}){
  const principal=requestContext().principal,attachments=await groupAttachments(group.id,args.images,args.files)
  group=requireGroup(group.id)
- const text=messageText(typeof args.text==='string'?args.text:'',attachments.length>0,!isAppAdministrator(principal)?GROUP_PUBLISH_POLICY.maxCharacters:16000)
+ const text=messageText(typeof args.text==='string'?args.text:'',attachments.length>0,!isAppAdministrator(principal)?GROUP_PUBLISH_POLICY.maxCharacters:64000)
+ validateMessageImages(text,attachments.filter(file=>file.kind==='image').length)
  const clientMessageId=messageKey(args.clientMessageId)
  const all=messages(group.id),quote=args.replyQuote===undefined?undefined:quoteShape(args.replyQuote),fingerprint=createHash('sha256').update(JSON.stringify([text,broadcast?[]:[...targets].sort(),kind,args.replyTo??null,args.viewId??null,...(quote?[quote]:[]),...(args.replyConversation?[args.replyConversation,!!args.replyTextOnly]:[]),...(attachments.length?[attachments.map(file=>[file.path,file.bytes,file.kind])]:[]),...(args.topicId&&args.topicId!=='general'?[args.topicId]:[]),...(card?[card]:[])])).digest('hex')
  const previous=all.find(message=>message.clientMessageId===clientMessageId&&authorEquals(message.author,principal))
@@ -172,7 +174,7 @@ export function editChatMessage(args:Record<string,any>):ChatMessage{
  if(!message)throw Error('Unknown group message')
  if(message.deletedAt)throw Error('Restore the message before editing');if(message.pollId||message.checklistId||message.questionId)throw Error('Edit this card through its dedicated settings')
  if(message.author.kind!=='operator')throw Error('Only messages authored by the user can be edited')
- const text=messageText(args.text,!!message.attachments?.length,16000)
+ const text=messageText(args.text,!!message.attachments?.length,64000)
  if(text===message.text)return message
  if(args.expectedRevision!==(message.editRevision??0))throw Error('Message changed; reload before saving')
  message.text=text;message.editRevision=(message.editRevision??0)+1;message.editedAt=Date.now()

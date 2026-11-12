@@ -1,0 +1,196 @@
+[
+  {
+    "args": [
+      "workspace",
+      "pdf",
+      "periodicals/issue.pdf",
+      "--employee",
+      "reader-1",
+      "--operation",
+      "info"
+    ],
+    "expected": {
+      "cmd": "workspace.pdf",
+      "args": {
+        "path": "periodicals/issue.pdf",
+        "employee": "reader-1",
+        "operation": "info"
+      }
+    }
+  },
+  {
+    "args": [
+      "workspace",
+      "pdf",
+      "periodicals/issue.pdf",
+      "--employee",
+      "reader-1",
+      "--operation",
+      "text",
+      "--page",
+      "3",
+      "--limit",
+      "8"
+    ],
+    "expected": {
+      "cmd": "workspace.pdf",
+      "args": {
+        "path": "periodicals/issue.pdf",
+        "employee": "reader-1",
+        "operation": "text",
+        "page": 3,
+        "limit": 8
+      }
+    }
+  },
+  {
+    "args": [
+      "workspace",
+      "pdf",
+      "periodicals/issue.pdf",
+      "--employee",
+      "reader-1",
+      "--operation",
+      "page",
+      "--page",
+      "5",
+      "--width",
+      "1200"
+    ],
+    "expected": {
+      "cmd": "workspace.pdf",
+      "args": {
+        "path": "periodicals/issue.pdf",
+        "employee": "reader-1",
+        "operation": "page",
+        "page": 5,
+        "width": 1200
+      }
+    }
+  },
+  {
+    "args": [
+      "workspace",
+      "pdf",
+      "periodicals/issue.pdf",
+      "--employee",
+      "reader-1",
+      "--operation",
+      "render",
+      "--page",
+      "3",
+      "--width",
+      "1600",
+      "--to",
+      "page-3.png",
+      "--expected-version",
+      "fixture-source-v1"
+    ],
+    "expected": {
+      "cmd": "workspace.pdf",
+      "args": {
+        "path": "periodicals/issue.pdf",
+        "employee": "reader-1",
+        "operation": "render",
+        "page": 3,
+        "width": 1600,
+        "to": "page-3.png",
+        "expectedVersion": "fixture-source-v1"
+      }
+    }
+  },
+  {
+    "args": [
+      "direct",
+      "post",
+      "--text",
+      "Read the evidence.\n\n![Original page](attachment:1)\n\nExplain the next point.\n\n![Comparison](attachment:70)",
+      "--images",
+      "@/remote/pages.json",
+      "--client-message-id",
+      "rich-70"
+    ],
+    "input": {
+      "/remote/pages.json": "[\"page-1.png\", \"page-2.png\", \"page-3.png\", \"page-4.png\", \"page-5.png\", \"page-6.png\", \"page-7.png\", \"page-8.png\", \"page-9.png\", \"page-10.png\", \"page-11.png\", \"page-12.png\", \"page-13.png\", \"page-14.png\", \"page-15.png\", \"page-16.png\", \"page-17.png\", \"page-18.png\", \"page-19.png\", \"page-20.png\", \"page-21.png\", \"page-22.png\", \"page-23.png\", \"page-24.png\", \"page-25.png\", \"page-26.png\", \"page-27.png\", \"page-28.png\", \"page-29.png\", \"page-30.png\", \"page-31.png\", \"page-32.png\", \"page-33.png\", \"page-34.png\", \"page-35.png\", \"page-36.png\", \"page-37.png\", \"page-38.png\", \"page-39.png\", \"page-40.png\", \"page-41.png\", \"page-42.png\", \"page-43.png\", \"page-44.png\", \"page-45.png\", \"page-46.png\", \"page-47.png\", \"page-48.png\", \"page-49.png\", \"page-50.png\", \"page-51.png\", \"page-52.png\", \"page-53.png\", \"page-54.png\", \"page-55.png\", \"page-56.png\", \"page-57.png\", \"page-58.png\", \"page-59.png\", \"page-60.png\", \"page-61.png\", \"page-62.png\", \"page-63.png\", \"page-64.png\", \"page-65.png\", \"page-66.png\", \"page-67.png\", \"page-68.png\", \"page-69.png\", \"page-70.png\"]"
+    },
+    "expected": {
+      "cmd": "direct.post",
+      "args": {
+        "text": "Read the evidence.\n\n![Original page](attachment:1)\n\nExplain the next point.\n\n![Comparison](attachment:70)",
+        "images": [
+          "page-1.png",
+          "page-2.png",
+          "page-3.png",
+          "page-4.png",
+          "page-5.png",
+          "page-6.png",
+          "page-7.png",
+          "page-8.png",
+          "page-9.png",
+          "page-10.png",
+          "page-11.png",
+          "page-12.png",
+          "page-13.png",
+          "page-14.png",
+          "page-15.png",
+          "page-16.png",
+          "page-17.png",
+          "page-18.png",
+          "page-19.png",
+          "page-20.png",
+          "page-21.png",
+          "page-22.png",
+          "page-23.png",
+          "page-24.png",
+          "page-25.png",
+          "page-26.png",
+          "page-27.png",
+          "page-28.png",
+          "page-29.png",
+          "page-30.png",
+          "page-31.png",
+          "page-32.png",
+          "page-33.png",
+          "page-34.png",
+          "page-35.png",
+          "page-36.png",
+          "page-37.png",
+          "page-38.png",
+          "page-39.png",
+          "page-40.png",
+          "page-41.png",
+          "page-42.png",
+          "page-43.png",
+          "page-44.png",
+          "page-45.png",
+          "page-46.png",
+          "page-47.png",
+          "page-48.png",
+          "page-49.png",
+          "page-50.png",
+          "page-51.png",
+          "page-52.png",
+          "page-53.png",
+          "page-54.png",
+          "page-55.png",
+          "page-56.png",
+          "page-57.png",
+          "page-58.png",
+          "page-59.png",
+          "page-60.png",
+          "page-61.png",
+          "page-62.png",
+          "page-63.png",
+          "page-64.png",
+          "page-65.png",
+          "page-66.png",
+          "page-67.png",
+          "page-68.png",
+          "page-69.png",
+          "page-70.png"
+        ],
+        "clientMessageId": "rich-70"
+      }
+    }
+  }
+]

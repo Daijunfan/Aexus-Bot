@@ -5285,16 +5285,14 @@
           "items": {
             "type": "string",
             "minLength": 1
-          },
-          "maxItems": 16
+          }
         },
         "files": {
           "type": "array",
           "items": {
             "type": "string",
             "minLength": 1
-          },
-          "maxItems": 16
+          }
         },
         "mode": {
           "enum": [
@@ -5369,16 +5367,14 @@
           "items": {
             "type": "string",
             "minLength": 1
-          },
-          "maxItems": 16
+          }
         },
         "files": {
           "type": "array",
           "items": {
             "type": "string",
             "minLength": 1
-          },
-          "maxItems": 16
+          }
         },
         "replyTo": {
           "type": "string",
@@ -9445,15 +9441,13 @@
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "maxItems": 16
+          }
         },
         "files": {
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "maxItems": 16
+          }
         },
         "mentions": {
           "oneOf": [
@@ -10417,6 +10411,67 @@
     },
     "readOnly": false,
     "permission": "chat",
+    "target": "request"
+  },
+  {
+    "name": "workspace.pdf",
+    "args": "PATH --employee ID [--operation info|text|page|render --page N --limit N --width PX --to RELATIVE.png --expected-version VERSION --password PASSWORD]",
+    "summary": "Read a PDF in an authorized employee workspace; page returns real PNG pixels to native tools, render writes an original page image back to that same workspace without overwriting. Text is paged with nextPage; scanned pages need image reading. Uses the installed Margin Reader renderer, preserving the PDF and library state.",
+    "gui": "Read and share document pages",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operation": {
+          "enum": [
+            "info",
+            "text",
+            "page",
+            "render"
+          ]
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 480,
+          "maximum": 2400
+        },
+        "to": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "password": {
+          "type": "string",
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "employee",
+        "path"
+      ]
+    },
+    "readOnly": false,
+    "permission": "workspace",
     "target": "request"
   },
   {
@@ -13284,21 +13339,19 @@
         "text": {
           "type": "string",
           "minLength": 0,
-          "maxLength": 16000
+          "maxLength": 64000
         },
         "images": {
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "maxItems": 16
+          }
         },
         "files": {
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "maxItems": 16
+          }
         },
         "mentions": {
           "oneOf": [
@@ -13382,7 +13435,7 @@
         },
         "text": {
           "type": "string",
-          "maxLength": 16000,
+          "maxLength": 64000,
           "description": "Already-trimmed text; empty only when the message has attachments. Does not change dispatched work."
         },
         "expectedRevision": {
@@ -13422,22 +13475,20 @@
         "text": {
           "type": "string",
           "minLength": 0,
-          "maxLength": 16000,
-          "description": "Explicit public text or attachment-only publication. Agents allow max 2000 Unicode characters; empty/null/undefined text without attachments is rejected. Use images/files with uploaded @workspace paths. Operators allow max 16000 characters. Core records reading receipts. Muted employees cannot publish."
+          "maxLength": 64000,
+          "description": "Explicit public text or attachment-only publication. Agents allow max 64000 Unicode characters; empty/null/undefined text without attachments is rejected. Use images/files with uploaded @workspace paths. Operators allow max 64000 characters. Core records reading receipts. Muted employees cannot publish."
         },
         "images": {
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "maxItems": 16
+          }
         },
         "files": {
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "maxItems": 16
+          }
         },
         "kind": {
           "enum": [
@@ -16600,15 +16651,13 @@
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "maxItems": 16
+          }
         },
         "files": {
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "maxItems": 16
+          }
         },
         "viewId": {
           "type": "string"
@@ -17266,15 +17315,13 @@
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "maxItems": 16
+          }
         },
         "files": {
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "maxItems": 16
+          }
         },
         "viewId": {
           "type": "string"

@@ -191,7 +191,6 @@ export function conversationWorkspaceRequest(command:string,args:Record<string,a
 /** Publish stable shared-file references; bytes are fetched only when a recipient chooses. */
 export async function sharedAttachments(conversation:string,images:unknown,files:unknown):Promise<MessageAttachment[]>{
  const photos=attachmentPaths(images),documents=attachmentPaths(files)
- if(photos.length+documents.length>16)throw Error('Choose at most 16 attachments')
  if(!photos.length&&!documents.length)return []
  allowed(conversation)
  const read=async(value:string,kind:'image'|'file')=>{

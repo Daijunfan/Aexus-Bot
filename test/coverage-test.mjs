@@ -61,6 +61,8 @@ const {CONVERSATION_CONTROL_APIS}=await import('../src/shared/conversation-contr
 if(!server.includes('CONVERSATION_CONTROL_APIS.has(req.cmd)')||!server.includes('return conversationControlRequest(req.cmd,a)'))throw Error('Conversation controls are not dispatched by Core')
 const {CHANNEL_FETCH_APIS}=await import('../src/shared/channel-fetch.ts')
 if(!server.includes('CHANNEL_FETCH_APIS.has(command)')||!server.includes('return fetchChannelMessages(command,args)'))throw Error('Channel fetch APIs are not dispatched by Core')
+const {ENGINEERING_COMMANDS}=await import('../src/shared/engineering.ts')
+if(!server.includes("if(req.cmd.startsWith('engineering.'))return engineeringRequest(req.cmd.slice(12),a,"))throw Error('Engineering prefix dispatch is missing')
 const {MISSION_COMMANDS}=await import('../src/shared/missions.ts'),{QUESTION_COMMANDS}=await import('../src/shared/chat-questions.ts'),{PLAN_PREFERENCE_COMMANDS}=await import('../src/shared/plan-preferences.ts')
 if(!server.includes("return missionRequest(req.cmd.slice(8),a)")||!server.includes("return questionRequest(req.cmd.slice(9),a)")||!server.includes("return planPreferencesRequest(req.cmd.slice(5),a)"))throw Error('Mission, question or global preference dispatch is missing')
 const {GROUP_COLLABORATION_APIS}=await import('../src/shared/group-collaboration.ts'),{MESSAGE_STICKER_APIS}=await import('../src/shared/message-stickers.ts')
@@ -68,6 +70,7 @@ if(!server.includes('return groupCollaborationRequest(command,a,')||!server.incl
 const {WORKER_CONTROL_APIS}=await import('../src/shared/worker-controls.ts')
 if(!server.includes('WORKER_CONTROL_APIS.has(req.cmd)')||!server.includes('return workerControlRequest(req.cmd,a)'))throw Error('Worker controls are not dispatched by Core')
 const serverCommands = new Set([
+  ...ENGINEERING_COMMANDS.map(command=>command.name),
   ...WORKER_CONTROL_APIS,
   ...GROUP_COLLABORATION_APIS,...MESSAGE_STICKER_APIS,
   ...[...MISSION_COMMANDS,...QUESTION_COMMANDS,...PLAN_PREFERENCE_COMMANDS].map(command=>command.name),

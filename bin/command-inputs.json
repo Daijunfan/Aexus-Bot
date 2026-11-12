@@ -4973,6 +4973,73 @@
       ]
     ]
   },
+  "workspace.pdf": {
+    "fields": [
+      [
+        "employee",
+        "employee",
+        "text",
+        true,
+        false
+      ],
+      [
+        "path",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "operation",
+        "operation",
+        "text",
+        false,
+        false
+      ],
+      [
+        "page",
+        "page",
+        "number",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ],
+      [
+        "width",
+        "width",
+        "number",
+        false,
+        false
+      ],
+      [
+        "to",
+        "to",
+        "text",
+        false,
+        false
+      ],
+      [
+        "expectedVersion",
+        "expected-version",
+        "text",
+        false,
+        false
+      ],
+      [
+        "password",
+        "password",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
   "conversation.member": {
     "fields": [
       [

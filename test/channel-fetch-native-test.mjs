@@ -1,3 +1,4 @@
+import {magazinePdf} from './fixtures/magazine-pdf.mjs'
 // Actual engine adapters and authenticated Core; deterministic SDK/ACP/RPC/MCP peers only.
 import fs from 'node:fs'
 import path from 'node:path'
@@ -44,6 +45,10 @@ try{
    if(images.length){assert.equal(images[0].data,pixel);assert.equal(images[0].mimeType,'image/png');assert.ok(result.content.filter(b=>b.type==='text').every(b=>!b.text.includes(pixel)),'base64 must not be prose');assert.ok(result.content.some(b=>b.type==='text'&&b.text.includes(image.id)));if(engine==='pi')piContent=result.content}
   }
   const readNative=async input=>{fs.rmSync(output,{force:true});fs.writeFileSync(requestFile,JSON.stringify(input));await rpc('session.send',{id:sessionId,text:'Read the long-caption fixture.'});await f.until(()=>fs.existsSync(output),engine+' bounded image metadata');await f.until(async()=>!(await f.status(card.id)).busy,'idle');const value=JSON.parse(fs.readFileSync(output));assert.ok(!value.isError,JSON.stringify(value));return value}
+  fs.writeFileSync(path.join(card.cwd,'native-magazine.pdf'),magazinePdf())
+  const pdfResult=await readNative({command:'workspace.pdf',args:{employee:card.id,path:'native-magazine.pdf',operation:'page',page:3,width:800}}),pdfImage=pdfResult.content.filter(block=>block.type==='image'),pdfMetadata=JSON.parse(pdfResult.content[0].text).data
+  assert.equal(pdfImage.length,1);assert.equal(pdfImage[0].mimeType,'image/png');assert.equal(pdfMetadata.kind,'workspace-pdf-page');assert.equal(pdfMetadata.page,3);assert.match(pdfMetadata.text,/Reading a figure/);assert.equal(pdfMetadata.data,undefined);assert.ok(!pdfResult.content[0].text.includes(pdfImage[0].data));assert.equal(Buffer.from(pdfImage[0].data,'base64').subarray(1,4).toString(),'PNG')
+  checks.push(engine+': actual native tool transport returns a real PDF page image and its text under the current employee workspace scope, without write approval or base64 prose')
   const longResult=await readNative({command:'channel.fetch-images',args:{id:src.channelId,limit:1,keywordsAll:['caption-only']}})
   assert.equal(longResult.content.filter(block=>block.type==='image').length,1);assert.ok(longResult.content[0].text.length<=18000)
   const page=JSON.parse(longResult.content[0].text).data;assert.equal(page.kind,'api-result-page')

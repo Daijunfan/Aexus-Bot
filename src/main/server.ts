@@ -1,3 +1,4 @@
+import {workspacePdf} from './workspace-pdf'
 import {catalog as groupStorageCatalog} from './chat-group-store'
 import {readingFile,trackReadingWindow} from './file-snapshots'
 import {storageFolderName} from '../shared/storage-folder'
@@ -626,6 +627,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'terminal.input': return inputTerminal(s(a.id),s(a.data??''))
     case 'terminal.resize': return resizeTerminal(s(a.id),Number(a.cols),Number(a.rows))
     case 'terminal.close': return closeTerminal(s(a.id))
+    case 'workspace.pdf': return workspacePdf(a,fileEndpoint)
     case 'workspace.image':case 'workspace.list':case 'workspace.read':case 'workspace.write':case 'workspace.mkdir':case 'workspace.move':case 'workspace.trash':case 'workspace.restore': {
       if(a.employee&&String(a.path).startsWith(DIRECT_ATTACHMENT_PREFIX)){
         const operation=req.cmd==='workspace.image'?'read-image':req.cmd==='workspace.read'?'read':undefined

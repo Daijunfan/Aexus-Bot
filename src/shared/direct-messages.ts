@@ -3,7 +3,7 @@ import {QUOTE_SCHEMA} from './message-quotes.ts'
 import type {Item,MessageReply,OutboundReceipt} from './types'
 import type {PrincipalRef} from './management'
 import type {MessageAttachment} from './message-attachments'
-const string=nonemptySchema,paths={type:'array',items:string,maxItems:16}
+const string=nonemptySchema,paths={type:'array',items:string}
 export type DirectEntry={questionId?:string;id:string;sequence:number;createdAt:number;author:PrincipalRef;text:string;attachments:MessageAttachment[];reply?:MessageReply;clientMessageId:string;fingerprint:string;nativeTaskId?:string;outbound?:OutboundReceipt;delivery?:{state:'preparing'|'queued'|'accepted'|'failed'|'interrupted';boot:string;error?:string}}
 export type DirectReplyReference={messageId:string;sequence:number}
 export type DirectHistory={items:Item[];revision:number;latestIncoming?:DirectReplyReference;readSequence:number;nextBefore:number|null}

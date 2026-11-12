@@ -1,7 +1,8 @@
 import {remarkMessageInline} from '../../../shared/message-inline-format'
 import {translate as t} from '../i18n'
-import {memo,useMemo,useState,type ComponentProps} from 'react'
-import Markdown,{type ExtraProps} from 'react-markdown'
+import {memo,useMemo,useRef,useState,type ComponentProps,type ReactNode} from 'react'
+import Markdown,{defaultUrlTransform,type ExtraProps} from 'react-markdown'
+import {messageImageIndex} from '../../../shared/message-inline-images'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import remarkParse from 'remark-parse'
@@ -57,12 +58,14 @@ function MessageSpan({node,children}:ComponentProps<'span'>&ExtraProps){return n
 
 
 /** Shared display only: callers retain the original text for copy, save and forwarding. */
-export const RichMessageText=memo(function RichMessageText({text,className='',images=true,onOpenLink,quoteText=false,stateKey='body'}:{text:string;className?:string;images?:boolean;onOpenLink?:(url:string)=>void;quoteText?:boolean;stateKey?:string}){
+export const RichMessageText=memo(function RichMessageText({text,className='',images=true,onOpenLink,quoteText=false,stateKey='body',renderImage}:{text:string;className?:string;images?:boolean;onOpenLink?:(url:string)=>void;quoteText?:boolean;stateKey?:string;renderImage?:(url:string,alt:string)=>ReactNode}){
   const markdown=useMemo(()=>mathMarkdown(text),[text])
   const pre=useMemo(()=>function CodePre(props:ComponentProps<'pre'>&ExtraProps){return <MessagePre {...props} stateKey={stateKey}/>},[stateKey])
-  return <div className={'rich-message-text markdown '+className} data-quote-text={quoteText||undefined}><Markdown remarkPlugins={[remarkGfm,remarkMath,remarkMessageInline]} components={{
+  const imageState=useRef({renderImage,images});imageState.current={renderImage,images}
+  const imageComponent=useMemo(()=>function InlineImage({src,alt}:ComponentProps<'img'>){const current=imageState.current;return current.renderImage?.(String(src??''),alt??'')??(current.images?<img src={src} alt={alt}/>:null)},[])
+  return <div className={'rich-message-text markdown '+className} data-quote-text={quoteText||undefined}><Markdown remarkPlugins={[remarkGfm,remarkMath,remarkMessageInline]} urlTransform={(url,key)=>renderImage&&key==='src'&&messageImageIndex(url)!==undefined?url:defaultUrlTransform(url)} components={{
     a:({href,children})=>href&&/^https?:\/\//i.test(href)?<a href={href} onClick={event=>{event.preventDefault();if(onOpenLink)onOpenLink(href);else void api.call('external.open',{url:href})}}>{children}</a>:<span>{children}</span>,
-    ...(!images?{img:()=>null}:{}),
+    img:imageComponent,
     code:({node,className,children})=>{
       if(!className?.split(' ').includes('math-inline'))return <code className={className}>{children}</code>
       const start=node?.position?.start.offset,end=node?.position?.end.offset

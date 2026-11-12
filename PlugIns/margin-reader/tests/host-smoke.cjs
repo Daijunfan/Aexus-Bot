@@ -18,7 +18,8 @@ async function main() {
   daemon.stdout.on('data', data => { log += data; }); daemon.stderr.on('data', data => { log += data; });
   const results = [], pass = label => { results.push(label); console.log('PASS ' + label); };
   const cli = async (...args) => { const process = await run(require('node:process').execPath, ['bin/agents', ...args, '--json'], { cwd: host, env, timeout: 60000, maxBuffer: 8 * 1024 * 1024 }); const reply = JSON.parse(process.stdout); assert(reply.ok, reply.error); return reply.data; };
-  const call = (method, params = {}, team = 'Reader Test') => cli('plugin','call','margin-reader',method,'--team',team,'--params',JSON.stringify(params));
+  const libraries={'Reader Test':path.join(workspaces,'reader-test'),'Reader Other':path.join(workspaces,'reader-other')};for(const directory of Object.values(libraries))fs.mkdirSync(directory,{recursive:true});
+  const call = (method, params = {}, library = 'Reader Test') => cli('plugin','call','margin-reader',method,'--workspace',libraries[library],'--params',JSON.stringify(params));
   try {
     for (let i = 0; i < 200 && !fs.existsSync(endpoint); i++) {
       if (daemon.exitCode !== null) throw new Error('Isolated host stopped: ' + log);
@@ -27,16 +28,14 @@ async function main() {
     assert(fs.existsSync(endpoint), log);
     const installed = await cli('plugin','install',path.join(root, 'dist-plugin')); assert.equal(installed.plugin.id, 'margin-reader'); pass('standard host plugin.install accepts the independent package');
     const described = await cli('plugin','describe','margin-reader'); assert.equal(described.api.commands.length, require('../schema.json').commands.length); pass('host discovers every declared API command');
-    await cli('group','add','Reader Test','--mode','work','--plugin','margin-reader');
-    await cli('group','add','Reader Other','--mode','work','--plugin','margin-reader');
     await call('fs.mkdir', { path: 'Books' });
     await call('fs.write', { path: 'Books/host.md', content: '# Host Reader\n\nShared Core through host CLI.\n\n## Second chapter\n\nJump here.' });
-    const doc = await call('document.open', { path: 'Books/host.md' }); assert.equal(doc.toc.length, 2); pass('Work Team host CLI creates and reads documents without a window');
+    const doc = await call('document.open', { path: 'Books/host.md' }); assert.equal(doc.toc.length, 2); pass('An explicit plugin workspace creates and reads documents without a window');
     const edited = await call('toc.add', { id: doc.id, expectedRevision: doc.revision, title: 'Host chapter', locator: { section: 0 } }); assert.equal(edited.toc.length, 3); pass('host CLI executes editable outline operations');
-    assert.equal((await call('fs.list', {}, 'Reader Other')).entries.length, 0); pass('different Teams receive isolated document libraries');
+    assert.equal((await call('fs.list', {}, 'Reader Other')).entries.length, 0); pass('Different plugin workspaces retain isolated document libraries');
     await assert.rejects(call('fs.write', { path: '../escape.md', content: 'blocked' })); pass('host route preserves plugin workspace boundaries');
-    const view = await cli('plugin','view','margin-reader','--team','Reader Test'), base = new URL('.', view.url);
-    assert((await fetch(view.url).then(r => r.text())).includes('Margin Reader')); pass('host serves the plugin renderer without changing host source');
+    const view = await cli('plugin','view','margin-reader','--workspace',libraries['Reader Test']), base = new URL('.', view.url);
+    const frameName=new URL(view.url).searchParams.get('frame');assert(frameName,'Host view names its sandboxed renderer');assert((await fetch(new URL(frameName,base)).then(r=>r.text())).includes('Margin Reader'));pass('host serves the declared plugin renderer inside its protected wrapper');
     const response = await fetch(new URL('rpc', base), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 22, method: 'document.content', params: { id: doc.id } }) }).then(r => r.json());
     assert.match(response.result.text, /Shared Core/); pass('host renderer RPC reads the same CLI-managed document');
     const asset = await fetch(new URL(`data/original/${doc.id}`, base)).then(r => r.text()); assert.match(asset, /Host Reader/); pass('host scoped original-document asset route works');
@@ -64,7 +63,7 @@ async function main() {
     assert.deepEqual((await call('document.get', { id: notebook.id })).foldedPages, [1]);
     pass('host CLI creates grid notebooks, pressure handwriting layers, independent comparison positions and reversible page folds');
     const info = await call('system.info'); assert(info.workspace.startsWith(temp + path.sep));
-    const reference=await require('./host-plugin-bootstrap.cjs').reference({cli,workspace:info.workspace,scope:['--team','Reader Test'],home});
+    const [guide,schema]=await Promise.all([cli('api','docs','plugin/margin-reader/api'),cli('api','docs','plugin/margin-reader/schema')]);const reference={guide:guide.markdown,schema:JSON.parse(schema.markdown),layout:'host-runtime'};
     assert(reference.guide.includes('study.card.create'));assert.equal(reference.schema.commands.length,require('../schema.json').commands.length);pass('host provisions complete standard CLI documentation through its declared current bootstrap layout');
     await fsp.mkdir(path.join(root, 'artifacts'), { recursive: true });
     await fsp.writeFile(path.join(root, 'artifacts/host-test-results.json'), JSON.stringify({ passed: results.length, results, modelCalls: 0 }, null, 2));

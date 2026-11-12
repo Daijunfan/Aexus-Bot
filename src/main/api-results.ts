@@ -1,5 +1,6 @@
 import {randomUUID} from 'node:crypto'
 import type {RequestContext} from '../shared/management'
+import type {WorkspacePdfImage} from '../shared/workspace-pdf'
 import type {ChannelFetchPage} from '../shared/channel-fetch'
 import {apiError,API_REVISION} from './api-contract'
 
@@ -19,7 +20,8 @@ function page(id:string,result:{text:string;command:string},offset:number,limit:
  return value
 }
 export function boundedApiResult(context:RequestContext,command:string,value:unknown):unknown{
- const result=value as {data?:ChannelFetchPage},channel=result?.data
+ const result=value as {data?:ChannelFetchPage|WorkspacePdfImage},channel=result?.data
+ if(channel?.kind==='workspace-pdf-page'){const {data,...page}=channel;const metadata={...result,data:page};return {...result,nativeMetadata:boundTextResult(context,command,metadata)}}
  if(channel?.kind==='channel-messages'&&channel.mode==='images'){
   // Page the text metadata separately while nativeToolResult still emits every original image.
   const metadata={...result,data:{...channel,messages:channel.messages.map(message=>({...message,images:message.images?.map(({data,...image})=>image)}))}}

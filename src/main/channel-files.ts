@@ -33,8 +33,8 @@ export function cloudDocumentSource(post:Row,file:ChannelDocument):FileEndpoint{
  const storage=channelStorageSettings()
  if(file.serverPath&&storage){
   if(!/^documents\/[a-f0-9]{64}$/.test(file.serverPath))throw Error('Invalid prepared document path')
-  const remote=cloudHostTarget(storage.hostId,storage.directory)
-  return {root:remote.directory,path:file.serverPath,remote,name:file.name}
+  const remote=cloudHostTarget(storage.hostId,storage.directory),binding=JSON.stringify([storage,remote]),context=requestContext()
+  return {root:remote.directory,path:file.serverPath,remote,name:file.name,validate:()=>withCaller(context,()=>{const current=channelStorageSettings(),latest=projectChannelDocuments(liveChannelPost(post.id)).find(value=>value.id===file.id);if(!current||JSON.stringify([current,cloudHostTarget(current.hostId,current.directory)])!==binding||latest?.sha256!==file.sha256||latest?.serverPath!==file.serverPath)throw Error('Document storage or original changed during transfer')})}
  }
  if(!file.sha256)throw Error('The server has not prepared this document yet')
  const engine=channelEngine(post.channel_id)
@@ -56,6 +56,23 @@ export function channelFileStatus(postId:string,fileId:string):ChannelFileStatus
  if(status.id&&['queued','running'].includes(status.state)){const job=getTransfer(status.id);if(job.state==='queued'||job.state==='running')return {...status,state:job.state,bytes:job.bytes}}
  return {...status}
 }
+/** Prepare one explicitly requested original on its configured server; never create a channel-local copy. */
+export async function prepareChannelDocument(postId:string,fileId:string,check:()=>void|Promise<void>,progress?:(bytes:number,state:'queued'|'running')=>void){
+ await check();const original=liveChannelPost(postId),file=projectChannelDocuments(original).find(value=>value.id===fileId),storage=channelStorageSettings()
+ if(!file)throw Error('Unknown channel document')
+ if(file.serverPath)return file
+ if(!storage)throw Error('This document needs its configured cloud retrieval service')
+ const binding=JSON.stringify(cloudHostTarget(storage.hostId,storage.directory))
+ const validate=async()=>{await check();if(JSON.stringify(channelStorageSettings())!==JSON.stringify(storage)||JSON.stringify(cloudHostTarget(storage.hostId,storage.directory))!==binding)throw Error('Document storage changed during retrieval');const current=liveChannelPost(postId),document=projectChannelDocuments(current).find(value=>value.id===fileId);if(current.channel_id!==original.channel_id||!document||document.name!==file.name||document.bytes!==file.bytes)throw Error('Published document changed during retrieval')}
+ let job=await channelStorageRpc<any>('document-prepare',{postId,fileId})
+ while(['queued','running'].includes(job.state)){await validate();progress?.(Number(job.bytes??0),job.state);await new Promise(resolve=>setTimeout(resolve,300));job=await channelStorageRpc<any>('document-status',{id:job.id})}
+ await validate()
+ if(job.state!=='completed')throw Error(job.error??'The server could not retrieve the document')
+ if(!/^[a-f0-9]{64}$/.test(job.sha256)||job.serverPath!=='documents/'+job.sha256||Number(job.bytes)!==file.bytes)throw Error('Prepared document did not match its published size or storage identity')
+ const current=liveChannelPost(postId),files=JSON.parse(current.remote_files??'[]').map((value:any)=>value.id===fileId?{...value,sha256:job.sha256,serverPath:job.serverPath,deferred:false}:value)
+ run('UPDATE posts SET remote_files=? WHERE id=?',JSON.stringify(files),postId);changed('posts',{channelIds:[current.channel_id],postIds:[postId]})
+ return projectChannelDocuments(liveChannelPost(postId)).find(value=>value.id===fileId)!
+}
 export async function downloadChannelFile(postId:string,fileId:string):Promise<ChannelFileStatus>{
  if(!isAppAdministrator())throw Error('Only the user or Secretary may download cloud documents into a channel')
  const existing=channelFileStatus(postId,fileId)
@@ -65,11 +82,7 @@ export async function downloadChannelFile(postId:string,fileId:string):Promise<C
  if(channelStorageSettings()&&!document.serverPath){
   const context=requestContext(),status:ChannelFileStatus={postId,fileId,state:'queued',bytes:0,totalBytes:document.bytes,phase:'server'};imports.set(key(postId,fileId),status)
   void withCaller(context,async()=>{try{
-   let job=await channelStorageRpc<any>('document-prepare',{postId,fileId})
-   while(['queued','running'].includes(job.state)){await new Promise(resolve=>setTimeout(resolve,500));job=await channelStorageRpc<any>('document-status',{id:job.id});status.bytes=Number(job.bytes??0)}
-   if(job.state!=='completed')throw Error(job.error??'The server could not retrieve the document')
-   const current=liveChannelPost(postId),files=JSON.parse(current.remote_files??'[]').map((value:any)=>value.id===fileId?{...value,sha256:job.sha256,serverPath:job.serverPath,deferred:false}:value)
-   run('UPDATE posts SET remote_files=? WHERE id=?',JSON.stringify(files),postId);imports.delete(key(postId,fileId));await downloadChannelFile(postId,fileId)
+   await prepareChannelDocument(postId,fileId,()=>{if(!isAppAdministrator())throw Error('Cloud document download authorization was removed')},(bytes,state)=>{status.bytes=bytes;status.state=state});imports.delete(key(postId,fileId));await downloadChannelFile(postId,fileId)
   }catch(error){status.state='failed';status.error=(error as Error).message}})
   return {...status}
  }

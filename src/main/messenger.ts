@@ -1,3 +1,5 @@
+import {messageImageLabels} from '../shared/message-inline-images'
+import {directPublishedEntry} from './direct-messages'
 import {validateApiArguments} from './api-contract'
 import {requireGroupExport} from './group-history'
 import {groupContentAnnotations,validateGroupDraftScope} from './group-collaboration'
@@ -238,9 +240,9 @@ export async function messengerRequest(command:string,args:Record<string,any>={}
    const key=args.scope==='form'?'form:'+args.formId+':'+ref.key:args.scope==='work'?workDraftKey(ref.id):groupDraftKey(ref.key,args.scope==='topic'?args.topicId:undefined,args.scope==='thread'?args.threadId:undefined)
    if(sourceView!==undefined&&ref.kind!=='employee')throw Error('sourceView applies to private message drafts')
    if(typeof args.text!=='string'||args.text.length>100000)throw Error('Draft text must be at most 100000 characters')
-   const files=attachmentPaths(args.files);if(files.length+(args.images?.length??0)>16)throw Error('Choose at most 16 attachments')
+   const files=attachmentPaths(args.files)
    if(ref.kind==='channel'&&(args.replyQuote!==undefined||args.replyConversation!==undefined||args.replyTextOnly!==undefined))throw Error('Channel drafts support text, mentions and a reply within this channel')
-   if(args.images!==undefined&&(!Array.isArray(args.images)||args.images.length>16||args.images.some((value:unknown)=>typeof value!=='string')))throw Error('Invalid draft images')
+   if(args.images!==undefined&&(!Array.isArray(args.images)||args.images.some((value:unknown)=>typeof value!=='string')))throw Error('Invalid draft images')
    if(args.mentions!==undefined&&args.mentions!=='all'&&(!Array.isArray(args.mentions)||args.mentions.length>200||args.mentions.some((value:unknown)=>typeof value!=='string')))throw Error('Invalid draft mentions')
    if(args.replyTo!==undefined&&typeof args.replyTo!=='string')throw Error('Invalid draft reply')
    if(args.replyQuote!==undefined){if(!args.replyTo)throw Error('A selected quote requires a reply message');args.replyQuote=quoteShape(args.replyQuote)}
@@ -318,6 +320,6 @@ async function galleryPage(args:Record<string,any>,state:MessengerState):Promise
  const scope=args.conversation?resolve(args.conversation):undefined;if([args.topicId,args.authorId,args.from,args.to].some(value=>value!==undefined)&&scope?.kind!=='group')throw Error('Topic, exact author and date filters require a group conversation');if(args.topicId)validateGroupDraftScope(scope!.id,args.topicId);if(args.from!==undefined&&args.to!==undefined&&args.from>args.to)throw Error('Choose a valid date range')
  const refs=args.conversation?[resolve(args.conversation).key]:[...visibleEmployees().map(card=>conversationKey('employee',card.id)),...listChatGroups().map(group=>conversationKey('group',group.id)),...(channelRequest('channel.list',{}) as {id:string}[]).map((channel:{id:string})=>conversationKey('channel',channel.id))]
  const {result:page}=await indexedQuery('gallery',refs.map(value=>messageSource(resolve(value))),state,{conversation:args.conversation,anchor,through:boundary,order,direction,query:query.trim().toLocaleLowerCase(),author,limit,topicId:args.topicId,authorId:args.authorId,from:args.from,to:args.to})
- const titles=new Map(refs.map(key=>[key,resolve(key).title]))
- return {...page,images:page.images.map(({message,path})=>({...(message.conversation.startsWith('employee:')?{employee:message.conversation.slice(9)}:message.conversation.startsWith('channel:')?{channel:message.conversation.slice(8)}:{group:message.conversation.slice(6)}),messageId:message.id,path,caption:message.text,editRevision:message.editRevision,conversationTitle:titles.get(message.conversation)!}))}
+ const titles=new Map(refs.map(key=>[key,resolve(key).title])),labels=new Map<string,string[]>(),names=new Map<string,Map<string,string>>()
+ return {...page,images:page.images.map(({message,path})=>{const key=message.conversation+'\n'+message.id;if(!labels.has(key))labels.set(key,messageImageLabels(message.text,message.images.length));if(message.conversation.startsWith('employee:')&&!names.has(key)){try{names.set(key,new Map(directPublishedEntry(message.conversation.slice(9),message.id).attachments.map(file=>[file.path,file.name])))}catch{names.set(key,new Map())}}return ({...(message.conversation.startsWith('employee:')?{employee:message.conversation.slice(9)}:message.conversation.startsWith('channel:')?{channel:message.conversation.slice(8)}:{group:message.conversation.slice(6)}),messageId:message.id,path,name:names.get(key)?.get(path)??path.split(/[\\/]/).at(-1),caption:labels.get(key)![message.images.indexOf(path)]??'',editRevision:message.editRevision,conversationTitle:titles.get(message.conversation)!})})}
 }

@@ -41,7 +41,7 @@ export function lookupPrivateSendReceipt(employeeId:string,clientMessageId:strin
 }
 function fingerprint(employeeId:string,args:Record<string,any>,literal=false){
  const text=args.text??'',images=args.images===undefined?[]:args.images,files=attachmentPaths(args.files)
- if(typeof text!=='string'||!Array.isArray(images)||images.some(value=>typeof value!=='string')||images.length+files.length>16)throw Error('Invalid private message text or attachments')
+ if(typeof text!=='string'||!Array.isArray(images)||images.some(value=>typeof value!=='string'))throw Error('Invalid private message text or attachments')
  if(!literal&&text.trimStart().startsWith('/'))throw Error('clientMessageId applies to regular private messages, not slash commands')
  const source=args.replyConversation===`employee:${employeeId}`?undefined:args.replyConversation,quote=args.replyQuote===undefined?undefined:quoteShape(args.replyQuote)
  return createHash('sha256').update(JSON.stringify([text,images,files,args.viewId??null,args.replyTo??null,quote?[quote.text,quote.offset]:null,source??null,source?!!args.replyTextOnly:false])).digest('hex')

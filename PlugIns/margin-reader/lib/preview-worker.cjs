@@ -10,19 +10,31 @@ async function result(canvas, title, extra = {}) {
   const bytes = await canvas.encode('png');
   return { kind: 'image', mimeType: 'image/png', width: canvas.width, height: canvas.height, contentBase64: bytes.toString('base64'), title, ...extra };
 }
-async function pdfCover(bytes, filename, pageNumber=1) {
+async function pdfCover(bytes, filename, pageNumber=1, options={}) {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const base = path.dirname(require.resolve('pdfjs-dist/package.json'));
-  const task = pdfjs.getDocument({ data: new Uint8Array(bytes), verbosity: 0, isEvalSupported: false,
+  const task = pdfjs.getDocument({ data: new Uint8Array(bytes), password:options.password, verbosity: 0, isEvalSupported: false,
     cMapUrl: path.join(base,'cmaps') + path.sep, cMapPacked: true,
     standardFontDataUrl: path.join(base,'standard_fonts') + path.sep, wasmUrl: path.join(base,'wasm') + path.sep });
   try {
-    const pdf = await task.promise, page = await pdf.getPage(pageNumber), original = page.getViewport({ scale: 1 });
-    const viewport = page.getViewport({ scale: Math.min(360 / original.width, 480 / original.height) });
+    const pdf = await task.promise, meta = await pdf.getMetadata().catch(() => ({}));
+    const title=meta.info?.Title||path.basename(filename),operation=options.pdfOperation||'cover';
+    if(operation==='info')return {kind:'info',title,pageCount:pdf.numPages};
+    assert(Number.isInteger(pageNumber)&&pageNumber>=1&&pageNumber<=pdf.numPages,'INVALID_PAGE','Choose a PDF page between 1 and '+pdf.numPages+'.');
+    const text=async page=>{const content=await page.getTextContent();return content.items.filter(item=>'str' in item).map(item=>item.str+(item.hasEOL?'\n':' ')).join('').trim();};
+    if(operation==='text'){
+      const pages=[],last=Math.min(pdf.numPages,pageNumber+(options.limit||4)-1);
+      for(let number=pageNumber;number<=last;number++){const page=await pdf.getPage(number),body=await text(page);pages.push({page:number,text:body,textLayer:!!body});page.cleanup();}
+      return {kind:'text',title,pageCount:pdf.numPages,pages,nextPage:last<pdf.numPages?last+1:null};
+    }
+    const page = await pdf.getPage(pageNumber), original = page.getViewport({ scale: 1 });
+    const scale=operation==='cover'?Math.min(360/original.width,480/original.height):Math.min((options.width||1600)/original.width,Math.sqrt(4000000/(original.width*original.height)));
+    const viewport = page.getViewport({ scale });
     const canvas = createCanvas(Math.max(1,Math.ceil(viewport.width)), Math.max(1,Math.ceil(viewport.height)));
     await page.render({ canvasContext: canvas.getContext('2d'), viewport, background: '#ffffff' }).promise;
-    const meta = await pdf.getMetadata().catch(() => ({}));
-    return result(canvas, meta.info?.Title || path.basename(filename), { page: pageNumber, pageCount: pdf.numPages });
+    const output=await result(canvas,title,{page:pageNumber,pageCount:pdf.numPages,...(operation==='page'?{text:await text(page)}:{})});
+    if(operation!=='cover')assert(output.contentBase64.length<=12*1024*1024,'TOO_LARGE','This page image is too large; request a smaller width.');
+    return output;
   } finally { await task.destroy(); }
 }
 function lines(ctx, text, x, y, width, lineHeight, maximum) {
@@ -102,7 +114,7 @@ async function main(args) {
   assert(version(st) === args.expectedVersion,'CONFLICT','Preview source changed before rendering.');
   const bytes = args.pdfBytes?Buffer.from(args.pdfBytes):await readBounded(file,args.format === 'pdf' || BOOK_FORMATS.has(args.format) ? LIMITS.file : LIMITS.html);
   if(BOOK_FORMATS.has(args.format))return bookCover(bytes,args);
-  if (args.format === 'pdf') return pdfCover(bytes,args.filename,args.page);
+  if (args.format === 'pdf') return pdfCover(bytes,args.filename,args.page,args);
   if (IMAGE_MIME['.'+args.format]) {
     const img = await loadImage(bytes), scale = Math.min(360/img.width,480/img.height);
     const canvas = createCanvas(Math.max(1,Math.round(img.width*scale)),Math.max(1,Math.round(img.height*scale)));

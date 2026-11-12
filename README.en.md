@@ -12,9 +12,9 @@ You choose the sources, responsibilities, and standards for accepting a result. 
 
 [Get started](#getting-started) · [Deployment](docs/DEPLOYMENT.md) · [CLI / API](API.md) · [Permissions](PERMISSIONS.md)
 
-![Aexus Bot information board: browse sources together in Message](docs/images/intelligence-channels.png)
+![Foreign-press reading: a PDF moves into an employee workspace, original pages and explanations return in one rich message; feature illustration](docs/images/foreign-press-reading.png)
 
-<p align="center"><sub>Bring the sources you follow, team discussions, and ongoing work into one place.</sub></p>
+<p align="center"><sub>Bring the PDF, original pages, and explanations back into your conversation.</sub></p>
 
 ## Why a private AI intelligence team?
 
@@ -40,6 +40,16 @@ Start with a concrete request, for example:
 
 Specify sources, time ranges, assignees, delivery formats, and acceptance criteria. Members generate analysis according to the task; important judgments can receive an independent review and be checked against the original material.
 
+## Let your team help you read the foreign press
+
+Choose a magazine, report, or long document from a channel and ask a member to download it into their assigned workspace. Specify the questions, articles, or pages that matter to you, then ask the team to read, summarize, and check the evidence.
+
+> Read the parts of this issue relevant to my questions. Explain each point, place the original page image beside it, and finish with questions worth following. Send it as one illustrated message.
+
+Members can export a chosen PDF page as an image and alternate **text, image, text, image inside a single message**, or split the material into several messages by topic. Images retain previews, zoom, and download. Rich messages have no fixed image-count cap.
+
+The same workflow works in private conversations, groups, and threads, with consistent APIs for local and cloud workspaces. You choose the questions and assess the findings; the team handles reading and organization. [Read the workflow and API guide](docs/MAGAZINE_READING.md).
+
 ## Three views connect information and work
 
 ### Message · Gather information and discuss it
@@ -49,6 +59,8 @@ Message brings news channels, private conversations, and groups into one workspa
 - **Information channels:** browse Telegram, X, YouTube, and other sources with source, keyword, and time filters. Members read and search through authorized interfaces.
 - **Private and group conversations:** delegate directly or discuss topics with quotes, threads, polls, and collaborative checklists.
 - **Material and deliveries:** share files, preview images and documents, read PDFs in Margin Reader, and retain related messages and file records.
+
+![Message information board with source browsing and filtering](docs/images/intelligence-channels.png)
 
 External Workers such as Dot and Grok can also participate in conversations while keeping their native identities and histories.
 

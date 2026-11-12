@@ -73,12 +73,15 @@ export class StudyController {
     return set;
   }
   async toggleSurface(tab){
-    // Reading can be active while the persisted study view is still 'map'.
-    // Match the effective pressed state used by StudySplit.render.
-    const current=this.current?.view==='split'?'split':this.getDocument()?'documents':this.current?.view||'map';
-    if(current==='split')return this.surface(tab==='documents'?'map':'documents');
-    if(current===tab)return;
-    return this.surface('split');
+    const id=this.current?.id;
+    const apply=async()=>{
+      if(this.current?.id!==id)return;
+      // Compute the next toggle after the preceding transition has committed.
+      const current=this.current?.view==='split'?'split':this.getDocument()?'documents':this.current?.view||'map';
+      if(current==='split')return this.surface(tab==='documents'?'map':'documents');
+      if(current!==tab)return this.surface('split');
+    };
+    const next=(this.surfaceQueue||Promise.resolve()).then(apply,apply);this.surfaceQueue=next.catch(()=>{});return next;
   }
   async surface(view){
     if(!this.current)return;const id=this.current.id,ticket=this.activationEpoch=(this.activationEpoch||0)+1;this.busy=true;

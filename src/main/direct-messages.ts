@@ -1,3 +1,4 @@
+import {validateMessageImages} from '../shared/message-inline-images'
 import fs from 'node:fs'
 import path from 'node:path'
 import {randomUUID,createHash} from 'node:crypto'
@@ -64,7 +65,7 @@ export function directReply(employee:string,id:string,quote?:MessageQuote):Messa
 
 /** Only file metadata is published for remote files; Mac never silently downloads them. */
 async function attachments(employee:string,id:string,images:unknown,files:unknown){
- const photos=attachmentPaths(images),docs=attachmentPaths(files);if(photos.length+docs.length>16)throw Error('Choose at most 16 attachments')
+ const photos=attachmentPaths(images),docs=attachmentPaths(files)
  const sources:Record<string,AttachmentSource>={},result:MessageAttachment[]=[],c=executionEmployee(readStore(),card(employee)),root=employeeWorkspace(readStore(),c.group,c.cwd,c.id),stamp=binding(employee)
  for(const [value,kind]of [...photos.map(p=>[p,'image'] as const),...docs.map(p=>[p,'file'] as const)]){
   requestContext().signal?.throwIfAborted();readable(employee)
@@ -87,6 +88,7 @@ async function append(employee:string,args:Record<string,any>,author:PrincipalRe
  readable(employee);const text=args.text??'',images=attachmentPaths(args.images),files=attachmentPaths(args.files),key=args.clientMessageId
  if(typeof text!=='string'||text.length>(incoming?100000:64000)||!text.trim()&&!images.length&&!files.length)throw Error('Provide text, images or files')
  if(typeof key!=='string'||!key||key!==key.trim()||key.length>160)throw Error('Provide a stable clientMessageId')
+ validateMessageImages(text,images.length)
  const fingerprint=hash([text,images,files,args.replyTo??null,args.replyQuote??null,args.replyConversation??null,args.viewId??null]),find=()=>state(employee).entries.find(e=>sameAuthor(e.author,author)&&!!e.delivery===incoming&&e.clientMessageId===key),previous=find()
  if(previous){if(previous.fingerprint!==fingerprint)throw Error('Client message ID already used for different private content');return previous}
  const result=await pending.run(employee+'/'+hash([author,key,incoming]),async()=>{

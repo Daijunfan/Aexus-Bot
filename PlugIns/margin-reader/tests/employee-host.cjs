@@ -19,8 +19,12 @@ async function main() {
     const f = fixture;
     const pass = label => { report.checks.push(label); console.log('PASS ' + label); };
     await f.cli('plugin', 'install', path.join(root, 'dist-plugin'));
-    await f.cli('group', 'add', 'Reader Team', '--mode', 'work', '--plugin', 'margin-reader');
-    await f.cli('group', 'add', 'Other Team', '--mode', 'work', '--plugin', 'margin-reader');
+    // Legacy Work bindings remain supported; new Teams use the current local/cloud API.
+    await f.cli('group','add','Reader Team');await f.cli('group','add','Other Team');await f.stop();
+    const storeFile=path.join(f.env.AGENTS_COMPANY_HOME,'sessions.json'),store=JSON.parse(await fs.readFile(storeFile,'utf8'));
+    const {directoryName}=await import(pathToFileURL(path.join(host,'src/shared/directory-names.ts')));
+    for(const team of ['Reader Team','Other Team']){const directory=path.join(f.env.AGENTS_COMPANY_WORKSPACES,'margin-reader-workspace',directoryName(team,'team'));await fs.mkdir(directory,{recursive:true});store.teamRoots[team]=directory;store.teamSettings[team]={mode:'work',pluginId:'margin-reader'};}
+    await fs.writeFile(storeFile,JSON.stringify(store));await f.start();report.legacyWorkspaceFixture=true;
     const employee = await f.create('Reader employee', 'Reader Team');
     const other = await f.create('Other employee', 'Other Team');
     assert(employee.cwd.startsWith(f.temp + path.sep)); assert(other.cwd.startsWith(f.temp + path.sep));
@@ -44,7 +48,7 @@ async function main() {
       const reply = JSON.parse(stdout); assert.equal(Boolean(reply.error), failed, 'CLI exit status must match its JSON-RPC result'); return reply;
     };
     assert.equal((await raw('system.info')).result.workspace, employee.cwd);
-    pass('New Work Team employee receives complete docs, schema and a working scope-bound generated launcher');
+    pass('A preserved legacy Work binding retains complete docs, schema and its scope-bound employee launcher');
     report.surface = await require('./agent-surface.cjs').exercise(raw);
     report.surface.guardedOnlyMethods = Object.keys(report.surface.guardedMethods).filter(method => !report.surface.successfulMethods.includes(method));
     pass(`Actual employee mailbox exercised all ${report.surface.declared} declared commands; ${report.surface.successfulMethods.length} successful and ${report.surface.guardedOnlyMethods.length} guarded-only methods`);

@@ -1054,7 +1054,7 @@ Socket additions:
   the existing local/SSH file API; existing files and outward paths are rejected.
 - `workspace.image {employee|team,path}`: PNG/JPEG/GIF/WebP bytes as MIME/base64,
   at most 10 MB each. `session.send` and `session.enqueue` accept `images:string[]`
-  (up to 16 scoped paths). The model receives image data, not host absolute paths.
+  (scoped published paths; no fixed attachment-count cap). The model receives image data, not host absolute paths.
   Queued image paths are read when dispatched. Control slash commands take no images.
 - `session.send/enqueue {id|employee,text,images?,replyTo?}` accepts a public message
   item ID from the **same employee conversation**. Use `session.transcript --json`
@@ -2049,7 +2049,7 @@ the same receipt; changed content with the same key is rejected.
 `direct.post {text?,images?,files?,replyTo?,replyQuote?,clientMessageId}` is an
 authenticated employee's explicit message to the user as itself. It requires a
 stable `clientMessageId` (1–160 characters), permits text up to 64,000 characters
-and at most 16 attachments, and may be called repeatedly: different IDs create
+without a fixed attachment-count cap, and may be called repeatedly: different IDs create
 separate text, image or file messages, while an unchanged retry returns the same
 message and a reused ID with different content is rejected. It only publishes to
 the caller's own user conversation. It never addresses a peer, assigns work,
@@ -3162,7 +3162,7 @@ Small character avatars now use dedicated static head/shoulder or silhouette cro
 a uniquely named upload in the group/channel workspace root (or the existing private
 attachment directory) and returns the chunk-upload protocol plus its planned `path`. Use consecutive `transfer.upload-chunk` calls, then
 `upload-commit`; `upload-abort` removes incomplete staging bytes. Each regular file
-is at most 2 GiB; messages accept up to 16 combined files/images. Browser and desktop
+is at most 2 GiB; published messages have no fixed combined files/images count cap. Browser and desktop
 uploads send bytes, never interpret a browser-local path as a Core path.
 
 `session.send/enqueue --files '["relative/path"]'` records trusted name, size and
@@ -3401,6 +3401,14 @@ Core restart. Legacy `engine.fileStorage:{hostId,directory}` content-addressed
 documents remain compatible. Same-source Telegram document albums retain each
 original post ID, filename, size, caption and publication time.
 
+## 外刊阅读与原页图文交付
+
+`conversation.download` 支持员工显式取回尚未准备的外刊原件，先返回 caller-owned 回执与 phase=server，再以 phase=transfer 复制到员工自己的 Company 工作区。取消、撤权、工作区/执行主机改变和 Core 重启均不造成隐式重放或跨工作区写入；同一请求 ID 复用回执。
+
+`workspace.pdf {employee,path,operation?,page?,limit?,width?,to?,expectedVersion?,password?}` 在同一工作区权限下提供 info、分页 text、原页 page 和导出 render。page 通过原生工具返回真实 PNG 图像块；render 使用已有受控上传协议把 PNG 写回同一员工工作区，本地/云端参数一致。原 PDF 与 Reader 书库状态不变；同名同内容复用，同名不同内容拒绝覆盖。read-only 分类仅 info/text/page，render 仍需写权限与原生批准。
+
+`direct.post` / `chat.post` 沿用 text/images：正文中 `![说明](attachment:1)` 引用 images 数组去重后的第 1 张图片，允许文字、图片交替多轮，单消息无固定图片数上限；未引用的附件保留原有底部相册。无对应附件的引用会明确拒绝，不发布残缺图文。群组发布正文支持 64000 字符。转发合并时重新映射编号，纯文本转发保留图片说明。完整 CLI 示例、扫描页与资源边界见 [MAGAZINE_READING.md](docs/MAGAZINE_READING.md)，原生文档入口为 `core/magazine-reading`。
+
 ## Conversation governance and static notifications
 
 Group offices use Owner / Admin / Member and are held by Agent employees. They are independent of Company managementRole. Admins may appoint/revoke other Admins; only Owner transfers ownership or dissolves a group. The human user retains recovery access without occupying an Agent office. Existing unowned groups require explicit assignment.
@@ -3526,7 +3534,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 <!-- BEGIN GENERATED CLI COMMAND INDEX -->
 ## 全部 CLI 命令索引
 
-下面 479 项来自共享协议 `src/shared/api-registry.ts`。命令名中的句点在终端中写成空格；每项都可附加 `--json`。参数、返回值和限制见上文对应章节。
+下面 480 项来自共享协议 `src/shared/api-registry.ts`。命令名中的句点在终端中写成空格；每项都可附加 `--json`。参数、返回值和限制见上文对应章节。
 
 | 命令 | 参数 | 作用 | 对应界面 | 授权策略 |
 | --- | --- | --- | --- | --- |
@@ -3729,6 +3737,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents conversation files</code> | <code>CONVERSATION [--state active&#124;trash --query TEXT --author all&#124;you&#124;employee --sort newest&#124;name&#124;size --offset N --limit N]</code> | List shared group files and images, including completed uploads, legacy attachments and recoverable trash. Message references and sender provenance are present when published; no download or read receipt. Native Bot files are read-only. | Group shared files | chat |
 | <code>agents conversation file-trash</code> | <code>CONVERSATION --files JSON</code> | Current group members have equal content rights: move 1–100 published files to recoverable trash with expected versions; all preflight checks pass before any move. Same-version retries return existing trash receipts. | Delete shared files | chat |
 | <code>agents conversation file-restore</code> | <code>CONVERSATION --files JSON</code> | Restore published group files by path and trash ID, rechecking membership and refusing to overwrite a new file at the original path. Restore receipts make unchanged retries safe. | Restore shared files | chat |
+| <code>agents workspace pdf</code> | <code>PATH --employee ID [--operation info&#124;text&#124;page&#124;render --page N --limit N --width PX --to RELATIVE.png --expected-version VERSION --password PASSWORD]</code> | Read a PDF in an authorized employee workspace; page returns real PNG pixels to native tools, render writes an original page image back to that same workspace without overwriting. Text is paged with nextPage; scanned pages need image reading. Uses the installed Margin Reader renderer, preserving the PDF and library state. | Read and share document pages | workspace |
 | <code>agents conversation member</code> | <code>CONVERSATION --employee ID --action add&#124;remove --expected-revision N</code> | Owner/Admin adds an Agent as Member or removes membership without deleting the employee or files; transfer Owner first | Conversation members | chat |
 | <code>agents conversation audit</code> | <code>CONVERSATION [--before ID --limit N]</code> | Owner/Admin reads paged governance events with the actual actor, action and time; no private model traces | Conversation audit history | chat |
 | <code>agents conversation policy</code> | <code>CONVERSATION</code> | Read independent Owner/Admin/Member offices, moderation state and allowed actions; Company rank grants no conversation office | Conversation administration | chat |

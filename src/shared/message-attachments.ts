@@ -1,8 +1,7 @@
 export type MessageAttachment={path:string;name:string;bytes:number;mimeType:string;kind:'image'|'file'}
-export const MAX_MESSAGE_ATTACHMENTS=16
 export function attachmentPaths(value:unknown):string[]{
   if(value===undefined)return []
-  if(!Array.isArray(value)||value.length>MAX_MESSAGE_ATTACHMENTS||value.some(path=>typeof path!=='string'||!path))throw Error('Choose at most 16 attachment paths')
+  if(!Array.isArray(value)||value.some(path=>typeof path!=='string'||!path))throw Error('Choose nonempty attachment paths')
   return [...new Set(value)]
 }
 export function fileMime(name:string){

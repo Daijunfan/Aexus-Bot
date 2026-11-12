@@ -9,7 +9,7 @@ import {readChatMessages,groupMediaRoot} from './chat-groups'
 import {getChannelMessage} from './channel-discussion'
 import {channelFileEndpoint,getChannel} from './channels'
 import {one,run,liveChannelPost,projectChannelPost,projectChannelDocuments} from './channel-store'
-import {cloudDocumentSource} from './channel-files'
+import {cloudDocumentSource,prepareChannelDocument} from './channel-files'
 import {conversationFileEndpoint,sharedFileIO} from './conversation-workspaces'
 import {workspaceCatalog} from './workspace-catalog'
 import {authorize,requestContext,withCaller} from './authorization'
@@ -21,7 +21,7 @@ import {directPublishedEntry,directFileEndpoint,directHistory} from './direct-me
 import {fileVersion} from './read-cache'
 import {saveDownload} from './uploads'
 
-type Attachment={id:string;name:string;kind:'image'|'document';bytes:number;mimeType?:string;sha256?:string;version?:string;path?:string;mediaId?:string;fileId?:string;read?:{command:string;args:Record<string,unknown>}}
+type Attachment={deferred?:boolean;id:string;name:string;kind:'image'|'document';bytes:number;mimeType?:string;sha256?:string;version?:string;path?:string;mediaId?:string;fileId?:string;read?:{command:string;args:Record<string,unknown>}}
 const hash=(text:string)=>createHash('sha256').update(text).digest('hex')
 const actor=(principal:PrincipalRef)=>principal.kind==='operator'?'operator':principal.employeeId
 const relative=(value:unknown='.')=>{if(typeof value!=='string'||!value||value.includes('\0')||value.includes('\\')||path.isAbsolute(value)||value.split('/').some(p=>p==='..'||p==='.agents-company'||p.startsWith('.agents-transfer-')))throw Error('Use a relative path inside your own workspace');return path.posix.normalize(value)}
@@ -73,11 +73,14 @@ async function attachmentSource(conversation:string,entryId:string,file:Attachme
   await validate?.(operation,args)
  })}
 }
-type Download={id:string;transferId:string;owner:string;fingerprint:string;conversation:string;entryId:string;attachmentId:string;employeeId:string;workspace:string;workspacePath:string;targetRoot:string;name:string;sourceVersion?:string;state:TransferJob['state']|'interrupted';bytes:number;totalBytes:number;destination?:string;absolutePath?:string;error?:string;createdAt:number}
+type Download={id:string;transferId?:string;phase?:'server'|'transfer';owner:string;fingerprint:string;conversation:string;entryId:string;attachmentId:string;employeeId:string;workspace:string;workspacePath:string;targetRoot:string;name:string;sourceVersion?:string;state:TransferJob['state']|'interrupted';bytes:number;totalBytes:number;destination?:string;absolutePath?:string;error?:string;createdAt:number}
+let downloadsClosing=false
+const activeDownloads=new Map<string,Download>()
 const pendingDownloads=new Map<string,{fingerprint:string;promise:Promise<any>}>()
 const persist=(job:Download)=>run('UPDATE conversation_downloads SET data=? WHERE id=?',JSON.stringify(job),job.id)
 function refresh(job:Download){
  if(!['queued','running'].includes(job.state))return job
+ if(!job.transferId){if(activeDownloads.has(job.id))return activeDownloads.get(job.id)!;job.state='interrupted';job.error='Core restarted during document preparation; this copy was not replayed.';persist(job);return job}
  try{const live=getTransfer(job.transferId);job.state=live.state;job.bytes=live.bytes;job.error=live.error;if(live.destination){job.destination=live.destination;job.absolutePath=path.join(job.targetRoot,live.destination)}}
  catch{job.state='interrupted';job.error='Core restarted; inspect your workspace before requesting another copy. This request was not replayed.'}
  persist(job);return job
@@ -87,16 +90,17 @@ export function downloadStatus(args:Record<string,any>){
  const row=one('SELECT data FROM conversation_downloads WHERE id=?',String(args.id)),job:Download|undefined=row&&JSON.parse(row.data)
  if(!job||job.owner!==actor(requestContext().principal))throw Error('Unknown attachment download for this caller')
  if(args.cancel!==undefined&&typeof args.cancel!=='boolean')throw Error('cancel must be boolean')
- if(args.cancel&&['queued','running'].includes(job.state)){try{cancelTransfer(job.transferId)}catch{}}
+ if(args.cancel&&['queued','running'].includes(job.state)){const pending=activeDownloads.get(job.id);if(pending&&!pending.transferId){pending.state='cancelled';persist(pending);return publicDownload(pending)}if(job.transferId)try{cancelTransfer(job.transferId)}catch{}}
  return publicDownload(refresh(job))
 }
 export async function downloadAttachment(args:Record<string,any>,resolve:(ref:FileLocation,destination:boolean)=>FileEndpoint){
  const scope=publishedScope(args.conversation),principal=requestContext().principal,employee=args.employee??(principal.kind==='agent'?principal.employeeId:scope.kind==='employee'?scope.id:undefined),context=requestContext()
- const catalog=workspaceCatalog({employee}),workspaceId=args.workspace??'company:'+employee,workspace=catalog.workspaces.find(w=>w.id===workspaceId)
+ const workspaceId=args.workspace??'company:'+employee,workspace=workspaceCatalog({employee}).workspaces.find(w=>w.id===workspaceId)
  if(!workspace)throw Error('Choose one of your workspace.catalog IDs')
- if(scope.kind!=='employee'&&!isAppAdministrator(principal)&&!scope.members.includes(employee))throw Error('The selected employee must belong to the source conversation')
+ const validate=()=>{if(downloadsClosing)throw Error('Core is stopping; this copy will not be replayed');authorize('conversation.download');const currentScope=publishedScope(scope.conversation);if(currentScope.kind!=='employee'&&!isAppAdministrator()&&!currentScope.members.includes(employee))throw Error('The selected employee must belong to the source conversation');const current=workspaceCatalog({employee}).workspaces.find(w=>w.id===workspaceId);if(!current||current.path!==workspace.path)throw Error('Destination workspace changed or membership was removed')}
+ validate()
  if(typeof args.clientRequestId!=='string'||!args.clientRequestId.trim()||args.clientRequestId.length>160)throw Error('Provide a stable clientRequestId')
- const file=(await conversationEntry({conversation:scope.conversation,id:args.entryId})).attachments.find(file=>file.id===args.attachmentId)
+ let file=(await conversationEntry({conversation:scope.conversation,id:args.entryId})).attachments.find(file=>file.id===args.attachmentId)
  if(!file)throw Error('Choose an attachment ID returned by conversation.entry')
  const subdirectory=relative(args.path),name=filename(args.name??file.name),fingerprint=hash(JSON.stringify([scope.conversation,args.entryId,file.id,workspaceId,employee,subdirectory,name])),requestKey=JSON.stringify([actor(principal),args.clientRequestId])
  const previous=one('SELECT data FROM conversation_downloads WHERE request_key=?',requestKey)
@@ -104,29 +108,26 @@ export async function downloadAttachment(args:Record<string,any>,resolve:(ref:Fi
  const pending=pendingDownloads.get(requestKey)
  if(pending){if(pending.fingerprint!==fingerprint)throw Error('Download request ID already used with different arguments');return pending.promise}
  const promise=(async()=>{
- let target:FileEndpoint,to:FileLocation
- to={employee,path:subdirectory};target=resolve(to,true)
- const original=target.validate,root=target.root,remote=JSON.stringify(target.remote),digest=file.sha256?createHash('sha256'):undefined;let bytes=0
- target={...target,validate:async(operation,input)=>withCaller(context,async()=>{
-  authorize('conversation.download');publishedScope(scope.conversation)
-  const current=workspaceCatalog({employee}).workspaces.find(w=>w.id===workspaceId)
-  if(!current||current.path!==workspace.path)throw Error('Destination workspace changed or membership was removed')
-  if(workspace.view==='company'){const current=resolve(to,true);if(current.root!==root||JSON.stringify(current.remote)!==remote)throw Error('Destination execution host changed')}
-  await original?.(operation,input)
-  if(operation==='copy-write'){if(input.offset!==bytes)throw Error('Unexpected download offset');const chunk=Buffer.from(String(input.data),'base64');bytes+=chunk.length;digest?.update(chunk)}
-  if(operation==='copy-commit'&&(bytes!==file.bytes||digest&&digest.digest('hex')!==file.sha256))throw Error('Attachment size or SHA-256 did not match; no file was committed')
- })}
- const source=await attachmentSource(scope.conversation,args.entryId,file);source.name=name
- if(!target.remote){let suffix=1;const ext=path.extname(name),stem=name.slice(0,name.length-ext.length);while(fs.existsSync(path.join(target.root,target.path,source.name)))source.name=stem+' ('+suffix+++')'+ext}
- const transfer=startTransfer({conversation:scope.conversation,path:file.path??args.entryId+'/'+file.id},to,source,target)
- const job:Download={id:'cd_'+randomUUID(),transferId:transfer.id,owner:actor(principal),fingerprint,conversation:scope.conversation,entryId:args.entryId,attachmentId:file.id,employeeId:employee,workspace:workspaceId,workspacePath:workspace.path,targetRoot:target.root,name:source.name,sourceVersion:file.version,state:transfer.state,bytes:0,totalBytes:file.bytes,createdAt:Date.now()}
- run('INSERT INTO conversation_downloads VALUES(?,?,?)',job.id,requestKey,JSON.stringify(job))
- void (async()=>{while(['queued','running'].includes(job.state)){await new Promise(resolve=>setTimeout(resolve,100));refresh(job)}})().catch(error=>console.error('[Attachment copy receipt]',error.message))
- return publicDownload(job)
+  const to:FileLocation={employee,path:subdirectory},initial=resolve(to,true),root=initial.root,remote=JSON.stringify(initial.remote),job:Download={id:'cd_'+randomUUID(),phase:file!.fileId&&(!file!.sha256||file!.deferred)?'server':'transfer',owner:actor(principal),fingerprint,conversation:scope.conversation,entryId:args.entryId,attachmentId:file!.id,employeeId:employee,workspace:workspaceId,workspacePath:workspace.path,targetRoot:root,name,sourceVersion:file!.version,state:'queued',bytes:0,totalBytes:file!.bytes,createdAt:Date.now()}
+  activeDownloads.set(job.id,job);run('INSERT INTO conversation_downloads VALUES(?,?,?)',job.id,requestKey,JSON.stringify(job))
+  void withCaller(context,async()=>{try{
+   const check=()=>{if(!['queued','running'].includes(job.state))throw Error('Attachment download stopped');validate();const current=resolve(to,true);if(current.root!==root||JSON.stringify(current.remote)!==remote)throw Error('Destination execution host changed')}
+   if(job.phase==='server'){
+    await prepareChannelDocument(args.entryId,file!.fileId!,check,(bytes,state)=>{job.bytes=bytes;job.state=state;persist(job)})
+    check();file=(await conversationEntry({conversation:scope.conversation,id:args.entryId})).attachments.find(value=>value.id===job.attachmentId)
+    if(!file)throw Error('Published attachment was removed during retrieval')
+   }
+   check();job.phase='transfer';job.bytes=0
+   let bytes=0;const digest=file!.sha256?createHash('sha256'):undefined,originalValidate=initial.validate
+   const target:FileEndpoint={...initial,validate:async(operation,input)=>{check();await originalValidate?.(operation,input);if(operation==='copy-write'){if(input.offset!==bytes)throw Error('Unexpected download offset');const chunk=Buffer.from(String(input.data),'base64');bytes+=chunk.length;digest?.update(chunk)}if(operation==='copy-commit'&&(bytes!==file!.bytes||digest&&digest.digest('hex')!==file!.sha256))throw Error('Attachment size or SHA-256 did not match; no file was committed')}}
+   const source=await attachmentSource(scope.conversation,args.entryId,file!);source.name=name
+   if(!target.remote){let suffix=1;const ext=path.extname(name),stem=name.slice(0,name.length-ext.length);while(fs.existsSync(path.join(target.root,target.path,source.name)))source.name=stem+' ('+suffix+++')'+ext}
+   check();const transfer=startTransfer({conversation:scope.conversation,path:file!.path??args.entryId+'/'+file!.id},to,source,target);job.transferId=transfer.id;job.name=source.name;job.state=transfer.state;persist(job)
+   while(['queued','running'].includes(job.state)){await new Promise(resolve=>setTimeout(resolve,100));refresh(job)}
+  }catch(error){if(job.state!=='cancelled'&&job.state!=='interrupted'){job.state='failed';job.error=(error as Error).message;persist(job)}}finally{activeDownloads.delete(job.id)}})
+  return publicDownload(job)
  })()
- pendingDownloads.set(requestKey,{fingerprint,promise})
- void promise.finally(()=>pendingDownloads.delete(requestKey)).catch(()=>{})
- return promise
+ pendingDownloads.set(requestKey,{fingerprint,promise});void promise.finally(()=>pendingDownloads.delete(requestKey)).catch(()=>{});return promise
 }
 export async function downloadAttachmentLocal(args:Record<string,any>){
  if(!isAppAdministrator())throw Error('Only the user or Secretary may save files to a chosen Mac/Core-host path')
@@ -135,3 +136,5 @@ export async function downloadAttachmentLocal(args:Record<string,any>){
  if(typeof args.path!=='string'||!path.isAbsolute(args.path))throw Error('Choose an absolute local destination file path')
  return saveDownload(await attachmentSource(scope.conversation,args.entryId,file),args.path,args.overwrite===true)
 }
+
+export function closeConversationDownloads(){downloadsClosing=true;for(const job of activeDownloads.values()){if(job.transferId)refresh(job);if(['queued','running'].includes(job.state)){job.state='interrupted';job.error='Core stopped; inspect your workspace before requesting another copy. This request was not replayed.';persist(job)}}}

@@ -72,7 +72,7 @@ dispatches or queues the matching work in that employee's existing native sessio
 | --- | --- |
 | `employee` | Required exact employee ID. |
 | `text` | Optional text, up to 100,000 characters. |
-| `images`, `files` | Optional own workspace paths, combined at most 16 attachments. |
+| `images`, `files` | Optional own workspace paths, with no fixed combined attachment-count cap. |
 | `mode` | `enqueue` (default), `send` or `steer`. `send` dispatches immediately in the existing native session; `enqueue` queues it; `steer` appends to the active native turn and rejects attachments. |
 | `clientMessageId` | Optional stable retry key up to 160 characters. Core generates one when omitted; persist an explicit key to retry safely and query acceptance. |
 | `replyTo`, `replyQuote`, `replyConversation`, `replyTextOnly`, `viewId` | Existing reply/view references, validated by Core. |
@@ -377,3 +377,5 @@ These example rules are paused until explicitly enabled. Users edit prompts in *
 `node test/message-collaboration-core-test.mjs` exercises real authenticated Core/CLI calls with disposable native and SSH fixtures, including streamed PDF/image data, Secretary global file authority, group/peer versus channel-own write boundaries, independent roles/workspaces, exact-count work and Plan isolation.
 
 `node test/message-collaboration-ui-test.mjs` builds an isolated application and exercises the real browser and hidden Electron UI, with screenshot checks for roles, document destinations, per-member rules and batch history. Fixtures do not call paid providers or use production state. Actual installed application behavior must be checked separately from a source build.
+
+Magazine PDF reading, original-page PNG export and ordered text/images use the same identities and workspace boundary. See [MAGAZINE_READING.md](MAGAZINE_READING.md).

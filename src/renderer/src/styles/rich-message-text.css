@@ -43,3 +43,5 @@
 .rich-message-text .rich-math .katex-display{margin:0}
 .rich-message-text .rich-math .katex-display>.katex{text-align:left}
 .message-spoiler{border-radius:4px;transition:background .15s,color .15s}.message-spoiler[data-revealed=false]{background:color-mix(in srgb,var(--message-accent,var(--accent)) 23%,var(--bg-alt));color:transparent;cursor:pointer;user-select:none}.message-spoiler[data-revealed=false]>span{filter:blur(5px);pointer-events:none}.message-spoiler:focus-visible{outline:2px solid var(--message-accent,var(--accent));outline-offset:2px}.message-spoiler[data-revealed=true]{background:color-mix(in srgb,var(--message-accent,var(--accent)) 5%,transparent)}
+
+.message-inline-photo{display:block;margin:12px 0;max-width:100%}.message-inline-photo .message-photo{width:min(100%,680px);max-height:none;aspect-ratio:auto}.message-inline-photo .message-photo img{display:block;width:100%;height:auto;max-height:none;object-fit:contain}

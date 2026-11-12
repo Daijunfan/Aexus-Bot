@@ -290,8 +290,8 @@ function isGroupNotice(delegation:Delegation,chat:ChatTaskContext|undefined,empl
 }
 export function enqueueMessage(id:string,text:string,images:string[]=[],delegation?:Delegation,viewId?:string,chat?:ChatTaskContext,replyTo?:string,replyQuote?:MessageQuote,crossReply?:MessageReply,filePaths:string[]=[],privateSend?:PrivateSendAttempt,sourceView?:MessageSourceView){
   const s=require_(id);assertNotRemoving(s.cardId);assertEmployeeReady(s.cardId)
-  if(!Array.isArray(images)||images.some(p=>typeof p!=='string')||images.length>16)throw new Error('images 必须是最多 16 个工作目录内的图片路径')
-  filePaths=attachmentPaths(filePaths);if(images.length+filePaths.length>16)throw Error('Choose at most 16 attachments')
+  if(!Array.isArray(images)||images.some(p=>typeof p!=='string'))throw new Error('images 必须是工作目录内的图片路径数组')
+  filePaths=attachmentPaths(filePaths)
   if(!text.trim()&&!images.length&&!filePaths.length)throw new Error('Message cannot be empty')
   delegation??=delegationFor(s.cardId);validateDelegation(delegation,s.cardId)
   const notice=isGroupNotice(delegation,chat,s.cardId)
@@ -409,8 +409,8 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
   if(JSON.stringify(card.remote??null)!==JSON.stringify(s.remote??null))throw new Error('云主机配置已变更，请重新打开会话')
   const cwd=card.remote?card.cwd:employeeWorkspace(store,card.group,card.cwd,card.id)
   if(cwd!==s.cwd) throw new Error('工作空间已变更，请重新打开员工会话')
-  if(!Array.isArray(imagePaths)||imagePaths.some(p=>typeof p!=='string')||imagePaths.length>16)throw new Error('images 必须是最多 16 个工作目录内的图片路径')
-  filePaths=attachmentPaths(filePaths);if(imagePaths.length+filePaths.length>16)throw Error('Choose at most 16 attachments')
+  if(!Array.isArray(imagePaths)||imagePaths.some(p=>typeof p!=='string'))throw new Error('images 必须是工作目录内的图片路径数组')
+  filePaths=attachmentPaths(filePaths)
   if (!text.trim()&&!imagePaths.length&&!filePaths.length) throw new Error('Message cannot be empty')
   if (s.running||s.acknowledging) throw new Error('Session is busy; wait for completion or interrupt it first')
   if(!s.privateInitialization&&card.initialization?.nativeBindId)patchSession(card.id,{initialization:{...card.initialization,nativeBindId:undefined}})

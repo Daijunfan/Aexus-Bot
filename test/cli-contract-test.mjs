@@ -6,7 +6,7 @@ import {spawnSync} from 'node:child_process'
 import {CLI_COMMANDS} from '../src/shared/api-registry.ts'
 import {compileCliInputs} from '../src/shared/cli-contract.ts'
 const root=path.resolve(import.meta.dirname,'..'),read=name=>JSON.parse(fs.readFileSync(path.join(root,name),'utf8'))
-const compiled=compileCliInputs(CLI_COMMANDS),cases=[...read('test/fixtures/cli-engineering-cases.json'),...read('test/fixtures/cli-input-cases.json'),...read('test/fixtures/cli-team-cases.json'),...read('test/fixtures/cli-board-categories-cases.json'),...read('test/fixtures/cli-worker-conversation-cases.json'),...read('test/fixtures/cli-mcp-cases.json'),...read('test/fixtures/cli-group-collaboration-cases.json')]
+const compiled=compileCliInputs(CLI_COMMANDS),cases=[...read('test/fixtures/cli-engineering-cases.json'),...read('test/fixtures/cli-input-cases.json'),...read('test/fixtures/cli-team-cases.json'),...read('test/fixtures/cli-board-categories-cases.json'),...read('test/fixtures/cli-worker-conversation-cases.json'),...read('test/fixtures/cli-mcp-cases.json'),...read('test/fixtures/cli-group-collaboration-cases.json'),...read('test/fixtures/cli-magazine-cases.json')]
 assert.deepEqual(compiled,read('bin/command-inputs.json'),'generated CLI inputs must match canonical schemas')
 
 const largeOptions=Array.from({length:80},(_,i)=>({id:'choice-'+i,label:'需要完整保留的选项内容。'.repeat(60)})),largeQuestion={conversation:'employee:employee-1',question:'Choose the complete result',options:largeOptions,timeoutSeconds:null,clientRequestId:'large-question'}
