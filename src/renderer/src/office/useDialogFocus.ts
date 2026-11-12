@@ -1,7 +1,7 @@
 import { useEffect,useRef } from 'react'
 
 /** Keep keyboard focus inside the current overlay and return it to its opener. */
-export function useDialogFocus(selector: string, open: boolean, returnFocus?:()=>HTMLElement|null) {
+export function useDialogFocus(selector: string, open: boolean, returnFocus?:()=>HTMLElement|null,initialFocus?:string) {
   const restore=useRef(returnFocus);restore.current=returnFocus
   useEffect(() => {
     if (!open) return
@@ -11,7 +11,8 @@ export function useDialogFocus(selector: string, open: boolean, returnFocus?:()=
     const focusable = () => [...(dialog?.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, iframe, [tabindex="0"]') ?? [])]
       .filter((el) => !el.hasAttribute('disabled') && !el.closest('[aria-hidden="true"],[inert],[hidden]') && el.getBoundingClientRect().height > 0)
     // Locate only the initial focus target; avoid measuring every form control.
-    const first=[...(dialog?.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, iframe, [tabindex="0"]')??[])].find(el=>!el.hasAttribute('disabled')&&!el.closest('[aria-hidden="true"],[inert],[hidden]')&&el.getBoundingClientRect().height>0)
+    const preferred=initialFocus?dialog?.querySelector<HTMLElement>(initialFocus):null
+    const first=[...(preferred?[preferred]:[]),...(dialog?.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, iframe, [tabindex="0"]')??[])].find(el=>!el.hasAttribute('disabled')&&!el.closest('[aria-hidden="true"],[inert],[hidden]')&&el.getBoundingClientRect().height>0)
     if(topmost())first?.focus({ preventScroll: true })
     const key = (event: KeyboardEvent) => {
       if (event.key !== 'Tab'||!topmost()||(event.target as HTMLElement)?.closest('.xterm')) return

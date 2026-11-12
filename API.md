@@ -3,6 +3,16 @@
 
 ## 持续目标、督办和聊天选择题
 
+Mission 使用同一数据库的十种直接布局。内置 Table 默认展示名称、状态、员工、
+下次时间和优先级；Repeat、Last run、Tags 可在 View options 中显示。保存视图保留
+自己的属性设置，不修改任务数据。状态快捷筛选的计数来自完整授权查询，而不是当前页。
+
+界面的名称、优先级、标签编辑及看板拖动复用 `schedule.update/pause/resume`、
+`mission.update/complete`，仍校验原始 revision、实际身份和任务边界。发生并发修改时
+保留输入并要求读取最新版本。把目标拖到 Completed 只打开验收表单，不能直接成功；
+必须填写结果证据并通过 `mission.complete`。按列新建和起始模板只填写草稿，填写具体
+目标和负责人并点击创建后才写入 Core；简报模板明确要求向用户私聊交付。
+
 Mission 现在同时展示原有 `schedule.*` 排期和 `mission.*` 持续任务。持续任务支持 `supervised` / `independent`、多位执行员工、负责秘书及提醒间隔；只有带实际结果的 `mission.complete` 停止提醒，原生轮次结束不会自动成功。用户给秘书的新私聊正文在派发前自动登记，重试不重复登记。秘书私聊头部显示未完成黄点、失败红点；归档不清除未完成计数。
 
 `question.ask/get/list/wait/answer/cancel` 是私聊/群聊中的应用选择卡，独立于原生引擎审批。选项数量不固定，自动增加 `other` 自由文本；有限等待必须声明 fallback，`timeoutSeconds:null` 一直等待用户。只有真实用户能 answer。新消息、任务提醒、连接关闭和重启都不会覆盖 pending 记录。`question.wait` 每次最长 25 秒，pending 时让出当前任务，不用循环模型轮次等待。
@@ -92,6 +102,14 @@ input has its own source; never inherit the preceding input's reply destination.
 Native reasoning, tools and all exact application wrappers remain in Team.
 
 ## Live character catalog
+
+The catalog also includes 19 Attack on Titan chibi portraits, using stable
+`titan-CHARACTER-chibi` IDs. For example, `agents avatar list --query Eren --style chibi --json`
+discovers `titan-eren-chibi`; Chinese names and common English names work through
+the same `character` / `avatarStyle` selection contract. Existing saved identities
+and enabled/archive choices remain unchanged. The user may select Eren through
+`agents messenger profile --avatar titan-eren-chibi`; the personal profile upload
+and exact-hash image APIs are shared by private, group and channel messages.
 
 Use `avatar.list` for currently enabled characters, `avatar.list --status archived`
 for archived entries and `avatar.get ID` for availability, usage and revision.

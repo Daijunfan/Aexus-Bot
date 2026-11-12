@@ -35,7 +35,8 @@ export function useChannelReading(id:string,root:RefObject<HTMLDivElement|null>,
   const visible=(marker:HTMLElement)=>{
    if(document.visibilityState!=='visible'||!document.hasFocus()||marker.closest('[hidden]'))return false
    const box=marker.getBoundingClientRect(),viewport=area.getBoundingClientRect()
-   if(!box.width||!box.height||!viewport.height||box.top<viewport.top||box.bottom>viewport.bottom+1||box.top<0||box.bottom>innerHeight)return false
+   const covered=(parseFloat(area.parentElement?.style.getPropertyValue('--channel-header-height')??'')||0)*(viewport.height/area.offsetHeight||1)
+   if(!box.width||!box.height||!viewport.height||box.top<viewport.top+covered||box.bottom>viewport.bottom+1||box.top<0||box.bottom>innerHeight)return false
    const hit=document.elementFromPoint(Math.max(viewport.left+1,Math.min(viewport.right-1,box.left+box.width/2)),box.top+box.height/2)
    return !!hit&&area.contains(hit)
   }

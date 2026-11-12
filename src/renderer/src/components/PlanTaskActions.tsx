@@ -1,0 +1,22 @@
+import {useRef,useState} from 'react'
+import type {PlanRow} from '../../../shared/plan'
+import {PLAN_PRIORITIES} from '../../../shared/plan'
+import {api} from '../api'
+import {translate as t} from '../i18n'
+import {Icon} from './Icon'
+import {AppSelect} from './AppSelect'
+import {MissionPopover} from './MissionPopover'
+
+/** Edit the canonical task at its exact revision; no optimistic completion or inferred authority. */
+export function PlanPropertyCell({row,property,onSaved}:{row:PlanRow;property:'name'|'priority'|'tags';onSaved:()=>void}){
+ const [open,setOpen]=useState(false),[draft,setDraft]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),button=useRef<HTMLButtonElement>(null),base=useRef<Pick<PlanRow,'name'|'plan'|'revision'>>(row)
+ const value=property==='name'?row.name:property==='priority'?row.plan?.priority??'normal':row.plan?.tags.join(', ')??'',editable=!row.mission?.engineering&&(row.allowedActions?.includes(row.mission?'mission.update':'schedule.update')??false)
+ const show=()=>{base.current=row;setDraft(value);setError('');setOpen(true)}
+ const save=async()=>{if(busy||!draft.trim()&&property==='name')return;setBusy(true);setError('');try{const plan={...base.current.plan,priority:base.current.plan?.priority??'normal',tags:base.current.plan?.tags??[],notes:base.current.plan?.notes??''},patch=property==='name'?{name:draft.trim()}:{plan:{...plan,[property]:property==='tags'?[...new Set(draft.split(/[,，]/).map(tag=>tag.trim()).filter(Boolean))]:draft}};await api.call(row.mission?'mission.update':'schedule.update',{id:row.id,patch,expectedRevision:base.current.revision??0});setOpen(false);onSaved()}catch(cause){setError((cause as Error).message)}finally{setBusy(false)}}
+ const label=property==='name'?'Rename task':property==='priority'?'Edit priority':'Edit tags'
+ const content=property==='name'?<Icon name="edit"/>:property==='priority'?<><Icon name="flag"/>{t(value[0].toUpperCase()+value.slice(1))}</>:row.plan?.tags.length?<>{row.plan.tags.map(tag=><span key={tag}>{tag}</span>)}</>:<span className="mission-empty-property">{t('Add tags')}</span>
+ if(!editable)return property==='name'?null:<span className={'plan-property-cell is-readonly property-'+property+(property==='priority'?' priority-'+value:'')} title={t(row.mission?.engineering?'Managed in Engineering':'Read-only property')}>{content}</span>
+ return <><button ref={button} type="button" className={'plan-property-cell property-'+property+(property==='priority'?' priority-'+value:'')} aria-label={t(label)+': '+row.name} title={t(label)} onClick={show}>{content}</button>
+  {open&&<MissionPopover initialFocus={property==='priority'?'.app-select-trigger':'input'} anchor={button} label={t(label)} className="mission-property-editor" onClose={()=>{if(!busy)setOpen(false)}}><header><strong>{t(label)}</strong><button disabled={busy} aria-label={t('Close')} onClick={()=>setOpen(false)}><Icon name="close"/></button></header><label>{t(property==='name'?'Task name':property==='priority'?'Priority':'Tags')}{property==='priority'?<AppSelect aria-label={t('Task priority')} disabled={busy} value={draft} onChange={event=>setDraft(event.target.value)}>{PLAN_PRIORITIES.map(value=><option key={value} value={value}>{t(value[0].toUpperCase()+value.slice(1))}</option>)}</AppSelect>:<input autoFocus maxLength={property==='name'?160:2000} aria-label={t(property==='name'?'Task name':'Task tags')} disabled={busy} value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'&&!event.nativeEvent.isComposing){event.preventDefault();void save()}}}/>}</label>{error&&<p className="plan-error" role="alert">{t(error)}<button disabled={busy} onClick={async()=>{setBusy(true);try{const latest=await api.call<Pick<PlanRow,'name'|'plan'|'revision'>>(row.mission?'mission.get':'schedule.get',{id:row.id});base.current=latest;setDraft(property==='name'?latest.name:property==='priority'?latest.plan?.priority??'normal':latest.plan?.tags.join(', ')??'');setError('')}catch(cause){setError((cause as Error).message)}finally{setBusy(false)}}}>{t('Load latest')}</button></p>}<footer><button disabled={busy} onClick={()=>setOpen(false)}>{t('Cancel')}</button><button className="primary" disabled={busy||property==='name'&&!draft.trim()} onClick={()=>void save()}><Icon name={busy?'loading':'check'}/>{t('Save changes')}</button></footer></MissionPopover>}
+ </>
+}

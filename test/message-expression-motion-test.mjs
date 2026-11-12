@@ -25,9 +25,9 @@ try{
  await page.evaluate(()=>{window.writes=[];window.motion=[];window.holdFlight=true;window.agents={call:async()=>({}),onEvent:()=>()=>{}};const animate=Element.prototype.animate;Element.prototype.animate=function(frames,options){const animation=animate.call(this,frames,options);if(this.matches('.message-expression-flight,.message-reaction,.markdown')){window.motion.push({className:this.className,frames,options});if(this.matches('.message-expression-flight')&&window.holdFlight){animation.pause();animation.currentTime=0}}return animation}})
  await page.addStyleTag({content:fs.readFileSync(path.join(temp,'app.css'),'utf8')})
  await page.addScriptTag({content:fs.readFileSync(path.join(temp,'app.js'),'utf8')})
- const reaction=page.locator('.message-reaction'),flight=page.locator('.message-expression-flight'),menu=page.getByRole('menu',{name:'Message options',exact:true}),replay=page.getByRole('button',{name:'Replay emoji animation',exact:true})
+ const reaction=page.locator('.message-reaction'),flight=page.locator('.message-expression-flight'),menu=page.getByRole('menu',{name:'Message options',exact:true}),replay=page.getByRole('menuitem',{name:'Replay emoji animation',exact:true})
  const count=()=>page.evaluate(()=>window.motion.length)
- const open=async()=>{const more=page.getByRole('button',{name:'More message actions',exact:true});await more.focus();await more.press('Enter');await expect(menu).toBeVisible()}
+ const open=async()=>{const more=page.getByRole('button',{name:'Message options',exact:true});await more.focus();await more.press('Enter');await expect(menu).toBeVisible()}
  const choose=async emoji=>{await open();await menu.getByRole('menuitemradio',{name:'React '+emoji,exact:true}).click();await expect.poll(()=>page.evaluate(()=>typeof window.resolveMutation)).toBe('function')}
  const resolve=async ok=>{await page.evaluate(value=>window.resolveMutation(value),ok);await expect.poll(()=>page.evaluate(()=>window.resolveMutation)).toBeNull()}
  await expect(reaction).toContainText('❤️');assert.equal(await count(),0,'restored history does not celebrate')
@@ -40,10 +40,10 @@ try{
  }
  fs.mkdirSync(out,{recursive:true});await flight.evaluate(el=>el.getAnimations()[0].currentTime=110);await page.screenshot({path:path.join(out,'reaction-flight.png')})
  await page.emulateMedia({reducedMotion:'reduce'});await expect(flight).toHaveCount(0);const reducedCount=await count();await choose('✅');await resolve(true);await expect(reaction).toContainText('✅');assert.equal(await count(),reducedCount,'reduced motion suppresses newly accepted gestures')
- await replay.focus();await page.keyboard.press('Enter');assert.equal(await count(),reducedCount,'keyboard replay also respects reduced motion')
- await page.emulateMedia({reducedMotion:'no-preference'});await page.evaluate(()=>document.documentElement.style.zoom='1');const writes=await page.evaluate(()=>window.writes.length);await replay.focus();await page.keyboard.press('Enter');await expect.poll(count).toBeGreaterThan(reducedCount);assert.equal(await page.evaluate(()=>window.writes.length),writes,'emoji replay is a local gesture, never a write')
+ await open();await replay.focus();await page.keyboard.press('Enter');assert.equal(await count(),reducedCount,'keyboard replay also respects reduced motion')
+ await page.emulateMedia({reducedMotion:'no-preference'});await page.evaluate(()=>document.documentElement.style.zoom='1');const writes=await page.evaluate(()=>window.writes.length);await open();await replay.focus();await page.keyboard.press('Enter');await expect.poll(count).toBeGreaterThan(reducedCount);assert.equal(await page.evaluate(()=>window.writes.length),writes,'emoji replay is a local gesture, never a write')
  await expect.poll(()=>page.locator('.markdown').evaluate(el=>el.getAnimations().length)).toBe(0)
- await page.evaluate(()=>window.fixture.emoji(false));await expect(replay).toHaveCount(0);await page.evaluate(()=>window.fixture.emoji(true));await expect(replay).toHaveCount(1)
+ await open();await page.evaluate(()=>window.fixture.emoji(false));await expect(replay).toHaveCount(0);await page.keyboard.press('Escape');await page.evaluate(()=>window.fixture.emoji(true));await expect(page.locator('[data-chat-item=message]')).toHaveAttribute('data-emoji-count','1');await open();await expect(replay).toHaveCount(1);await page.keyboard.press('Escape')
  await choose('💡');await resolve(true);await expect(flight).toHaveCount(1);await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'))});await expect(flight).toHaveCount(0)
  const hiddenCount=await count();await choose('👍');await resolve(true);await expect(reaction).toContainText('👍');assert.equal(await count(),hiddenCount,'hidden windows do not animate accepted writes');await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'))})
  await choose('❤️');await resolve(true);await expect(flight).toHaveCount(1);await page.evaluate(()=>window.fixture.mount(false));await expect(flight).toHaveCount(0)

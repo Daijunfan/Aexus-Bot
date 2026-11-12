@@ -56,7 +56,8 @@ export function useVisibleReceipt(root:RefObject<HTMLDivElement|null>,receipt:Re
       const marker=transcript.querySelector<HTMLElement>(receipt.selector)
       if(!marker?.isConnected||marker.closest('[hidden]'))return false
       const r=marker.getBoundingClientRect(),t=transcript.getBoundingClientRect()
-      if(!r.width||!r.height||!t.width||!t.height||r.top<t.top||r.bottom>t.bottom+1||r.bottom>window.innerHeight||r.top<0)return false
+      const faded=(parseFloat(getComputedStyle(transcript).getPropertyValue('--message-read-inset'))||0)*(t.height/transcript.offsetHeight||1)
+      if(!r.width||!r.height||!t.width||!t.height||r.top<t.top+faded||r.bottom>t.bottom+1||r.bottom>window.innerHeight||r.top<0)return false
       const x=Math.max(t.left+1,Math.min(t.right-1,r.left+r.width/2)),y=r.top+r.height/2
       const hit=document.elementFromPoint(x,y)
       return !!hit&&transcript.contains(hit)

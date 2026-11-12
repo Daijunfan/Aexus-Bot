@@ -1,0 +1,20 @@
+/* The inbox stays generous; compact windows keep enough room for the conversation. */
+@media(min-width:1101px){.message-view{grid-template-columns:390px minmax(0,1fr)}}
+@media(min-width:761px) and (max-width:1100px){.message-view{grid-template-columns:350px minmax(0,1fr)}}
+.message-view .message-contacts .message-contact[data-sort-start]{cursor:pointer}
+[data-selection-motion]{position:relative;isolation:isolate}
+.message-selection-glider{display:block;position:absolute;top:0;left:0;box-sizing:border-box;pointer-events:none;z-index:0;border-radius:inherit;background:var(--bg-elev);transform-origin:0 0}
+.message-selection-glider[hidden]{display:none}
+[data-selection-motion]>.message-category-chip{position:relative;z-index:1}
+.message-category-tabs>.message-selection-glider{border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);border-radius:12px;background:color-mix(in srgb,var(--accent) 12%,var(--bg-elev))}
+.message-category-tabs[data-sorting]>.message-selection-glider{visibility:hidden}
+.message-category-tabs[data-selection-motion]>.message-category-chip[data-selected=true]{border-color:transparent;background:transparent}
+.channel-source-chip,.message-category-chip,.channel-all-sources,.message-category-all{transition:color .18s,background .18s,border-color .18s,transform .22s cubic-bezier(.22,1,.36,1)}
+.channel-source-chip:active,.message-category-chip:active,.channel-all-sources:active,.message-category-all:active{transform:scale(.97)}
+.message-stage button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.group-conversation>.message-thread-header .message-thread-actions>button{width:36px;height:36px;flex:none;padding:0;border:0;border-radius:11px;background:transparent}
+.group-conversation>.message-thread-header .message-thread-actions>button:hover,.group-conversation>.message-thread-header .message-thread-actions>button[aria-expanded=true]{background:color-mix(in srgb,var(--message-accent) 10%,transparent);color:var(--message-accent)}
+.group-conversation>.message-thread-header .message-thread-actions .codicon{font-size:19px}
+.message-stage .message-thread-header{border:0;background:color-mix(in srgb,var(--bg-elev) 90%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 3px 14px color-mix(in srgb,var(--accent) 5%,transparent)}
+.message-stage :is(.transcript,.group-transcript){--message-read-inset:22px;mask-image:linear-gradient(to bottom,transparent,#000 22px,#000 100%)}
+@media(prefers-reduced-motion:reduce){.channel-source-chip,.message-category-chip,.channel-all-sources,.message-category-all{transition:none;transform:none}}

@@ -53,7 +53,7 @@ export function ConversationSharedFiles({conversation,query,author,onAuthor,onMe
    setOpening(file.id);setError('');try{await api.call('conversation.file-open',{conversation,path:file.path,version:file.version})}catch(cause){setError((cause as Error).message)}finally{setOpening('')}
   }else if(file.mimeType.startsWith('image/')){
    const files=data.files.filter(value=>value.mimeType.startsWith('image/')&&['available','external'].includes(value.state));setImages({items:files.map(value=>({group:conversation.slice(6),path:value.path,messageId:value.messageId,caption:value.name})),index:files.findIndex(value=>value.id===file.id)})
-  }else setPreview(file)
+  }else{setCover(null);setPreviewLoading(!!file.previewId);setPreview(file)}
  }
  const chosen=data.files.filter(file=>selected.includes(file.id)),canSelect=(file:SharedFile)=>state==='trash'?file.canRestore:file.canTrash
  const toggle=(id:string)=>setSelected(previous=>previous.includes(id)?previous.filter(value=>value!==id):[...previous,id])

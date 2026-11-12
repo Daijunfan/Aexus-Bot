@@ -1,0 +1,14 @@
+.mascot.titan-pet{display:block;position:relative;aspect-ratio:1;transform-origin:50% 85%}
+.titan-pet>img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.titan-pet[data-animate=true]{animation:titan-breathe 3.6s ease-in-out infinite}
+.titan-pet[data-animate=true][data-character-state=working]{animation:titan-focus 1.8s ease-in-out infinite}
+.titan-pet[data-animate=true][data-character-state=greeting]{animation:titan-greet .85s cubic-bezier(.22,1,.36,1) infinite alternate}
+.titan-pet[data-character-state=resting]{filter:brightness(.97)}
+.message-avatar .mascot.titan-pet{left:0;top:0;width:100%;height:100%;transform:none}
+.message-avatar .mascot.titan-pet[data-animate=true]{animation:titan-breathe 3.6s ease-in-out infinite!important}
+.message-avatar .mascot.titan-pet[data-animate=true][data-character-state=working]{animation:titan-focus 1.8s ease-in-out infinite!important}
+.message-avatar .mascot.titan-pet[data-animate=true][data-character-state=greeting]{animation:titan-greet .85s cubic-bezier(.22,1,.36,1) infinite alternate!important}
+@keyframes titan-breathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1.5%) scale(1.012)}}
+@keyframes titan-focus{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-1%) rotate(1deg)}}
+@keyframes titan-greet{from{transform:translateY(0) rotate(-2deg)}to{transform:translateY(-2%) rotate(2deg)}}
+@media(prefers-reduced-motion:reduce){.titan-pet[data-animate=true],.message-avatar .mascot.titan-pet[data-animate=true]{animation:none!important}}

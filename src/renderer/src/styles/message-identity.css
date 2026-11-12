@@ -21,3 +21,22 @@
 .message-profile-characters>button[aria-pressed=true]{border-color:var(--accent)}
 .message-profile-characters .message-avatar{width:100%;height:100%;border-radius:8px}
 @media(max-width:520px){.message-profile-characters{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.private-message-row{--private-avatar-size:38px;display:flex;align-items:flex-end;gap:12px;min-width:0;width:100%;margin-bottom:13px}
+.private-message-row.is-outgoing{flex-direction:row-reverse}
+.private-message-row>.message-author-avatar{position:sticky;bottom:6px;width:var(--private-avatar-size);height:var(--private-avatar-size);border-radius:50%;flex:none;background:transparent;box-shadow:none}
+.message-conversation .private-message-row>.turn{flex:0 1 auto;width:fit-content;min-width:0;max-width:calc(100% - var(--private-avatar-size) - 12px);margin:0}
+.message-conversation .private-message-row>.turn.assistant{max-width:min(700px,calc(100% - var(--private-avatar-size) - 12px))}
+.message-conversation .private-message-row>.turn.user>.bubble{max-width:100%;margin:0}
+.message-conversation .private-message-row.is-incoming>.turn.user>.bubble{--bubble-fill:var(--message-paper);background:var(--bubble-fill)}
+.private-message-row:is([data-bubble-group=first],[data-bubble-group=middle]){margin-bottom:4px}
+.private-message-row .message-row-heading{font-size:11px;line-height:1.5}
+.message-profile-actions{flex-wrap:wrap}
+.message-profile-crop{display:flex;flex-direction:column;align-items:center;gap:13px;margin-top:20px}
+.message-profile-crop-area{position:relative;width:min(220px,100%);aspect-ratio:1;overflow:hidden;border-radius:50%;background:var(--bg-alt);cursor:grab;touch-action:none;user-select:none;box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 9%,var(--bg-elev))}
+.message-profile-crop-area:active{cursor:grabbing}
+.message-profile-crop-area>img{position:absolute;height:auto;max-width:none;transform:translate(-50%,-50%);pointer-events:none}
+.message-profile-crop>label{display:flex;align-items:center;gap:12px;width:min(280px,100%);color:var(--fg-dim)}
+.message-profile-crop input{flex:1;min-width:0;accent-color:var(--accent)}
+.message-profile-crop output{min-width:35px;font-size:11px;font-variant-numeric:tabular-nums}
+.message-profile-crop>small{font-size:10px;color:var(--fg-dim)}
+@media(max-width:600px){.private-message-row{--private-avatar-size:32px;gap:9px}.message-conversation .private-message-row>.turn{max-width:calc(100% - var(--private-avatar-size) - 9px)}}

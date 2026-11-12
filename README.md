@@ -12,6 +12,10 @@ Aexus Bot 是一款自托管的私人 AI 情报工作台。你可以把关注的
 
 [开始使用](#开始使用) · [部署指南](docs/DEPLOYMENT.md) · [CLI / API](API.md) · [权限说明](PERMISSIONS.md)
 
+![Aexus Bot 的资讯看板：在统一的 Message 视图中按来源浏览信息](docs/images/intelligence-channels.png)
+
+<p align="center"><sub>从关注的资讯来源开始，把阅读、讨论与持续跟进连在一起。</sub></p>
+
 ## 为什么是私人 AI 情报团队
 
 有价值的信息分散在不同平台、文档和讨论中。持续阅读、整理和跟进，需要投入大量时间。
@@ -48,13 +52,22 @@ Message 汇集资讯频道、私聊和群组，让阅读与讨论在一个地方
 
 Dot、Grok 等外部 Worker 也可以参与会话，保留各自的原生身份和历史。
 
+![群组中的多成员讨论，每位成员保留独立身份与回复](docs/images/group-discussion.png)
+
+<details>
+<summary>查看引用回复与讨论上下文</summary>
+
+![群组引用回复：围绕同一条消息继续追问与交流](docs/images/group-replies.png)
+
+</details>
+
 ### Team · 组织你的情报成员
 
 为不同成员安排关注方向和职责，例如资讯追踪、资料阅读、专题分析、独立复核与简报整理。秘书负责协调与任务跟进，你可以随时查看成员的实际工作。
 
 **Characters** 展示成员与团队状态；**Board** 让你同时跟进多个成员的完整工作台；**Workers** 管理独立的原生 Agent 执行会话。会话、文件、终端、工具调用、授权和队列共同构成成员工作台。
 
-成员可使用不同的原生引擎与模型，也可以在本机或已登记的远程工作环境中执行任务。现有工程编排能力见 [Engineering 文档](docs/ENGINEERING.md)。
+成员可使用不同的原生引擎与模型，在本机或已登记的远程工作环境中执行任务。
 
 ### Mission · 把关注变成持续跟进
 

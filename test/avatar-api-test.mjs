@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {SELECTABLE_AVATARS,AVATARS,currentAvatar} from '../src/shared/office.ts'
 import fs from 'node:fs'
 import path from 'node:path'
 import {fixtureCore} from './fixtures/headless-core.mjs'
@@ -9,10 +10,10 @@ try{
  const manager=await create('Fresh Manager','A','manager'),governor=await create('Fresh Governor','A','governor'),employee=await create('Ordinary','A'),outside=await create('Outside','B')
  const m=await token(manager.id),g=await token(governor.id),e=await token(employee.id)
  assert.equal((await request(e,'avatar.get',{})).ok,false)
- const catalog=await rpc(m,'avatar.list');assert.equal(catalog.length,22);assert.ok((await rpc(e,'avatar.list')).length===22)
+ const catalog=await rpc(m,'avatar.list');assert.equal(catalog.length,SELECTABLE_AVATARS.length);assert.ok((await rpc(e,'avatar.list')).length===SELECTABLE_AVATARS.length)
  assert.equal((await rpc(m,'avatar.list',{query:'英雄王',style:'chibi'}))[0].id,'fate-gilgamesh-chibi')
  assert.equal((await rpc(g,'avatar.list',{query:'吉尔伽美什 可爱版'})).length,1)
- assert.equal((await rpc(m,'avatar.list',{all:true})).length,76)
+ assert.equal((await rpc(m,'avatar.list',{all:true})).length,new Set(AVATARS.map(currentAvatar)).size)
  for(const auth of [m,g]){
   const docs=(await rpc(auth,'api.docs',{document:'core/api'})).markdown;assert.match(docs,/character.*avatarStyle/);assert.match(docs,/profession/);assert.match(docs,/card avatar/)
   const schema=await rpc(auth,'api.describe',{command:'card.create'});assert.ok(schema.inputSchema.properties.character&&schema.inputSchema.properties.profession&&schema.inputSchema.properties.managementRole)

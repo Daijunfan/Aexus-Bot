@@ -12,6 +12,10 @@ You choose the sources, responsibilities, and standards for accepting a result. 
 
 [Get started](#getting-started) · [Deployment](docs/DEPLOYMENT.md) · [CLI / API](API.md) · [Permissions](PERMISSIONS.md)
 
+![Aexus Bot information board: browse sources together in Message](docs/images/intelligence-channels.png)
+
+<p align="center"><sub>Bring the sources you follow, team discussions, and ongoing work into one place.</sub></p>
+
 ## Why a private AI intelligence team?
 
 Useful information is spread across platforms, documents, and discussions. Reading it consistently and turning it into useful work takes time.
@@ -48,13 +52,22 @@ Message brings news channels, private conversations, and groups into one workspa
 
 External Workers such as Dot and Grok can also participate in conversations while keeping their native identities and histories.
 
+![Group discussion with distinct member identities and replies](docs/images/group-discussion.png)
+
+<details>
+<summary>See quoted replies and conversation context</summary>
+
+![Quoted group replies keep follow-up questions connected to their context](docs/images/group-replies.png)
+
+</details>
+
 ### Team · Organize your intelligence members
 
 Assign responsibilities such as source monitoring, document reading, topic analysis, independent review, and briefing preparation. A Secretary coordinates and follows up on tasks, while you inspect the members' actual work.
 
 **Characters** presents people and team activity. **Board** lets you follow several complete employee workbenches at once. **Workers** manages independent native Agent sessions. Conversations, files, terminals, tool calls, approvals, and queues form the workbench.
 
-Members can use different native engines and models and execute locally or in registered remote environments. See [Engineering](docs/ENGINEERING.md) for the existing engineering orchestration capability.
+Members can use different native engines and models and execute locally or in registered remote environments.
 
 ### Mission · Turn attention into sustained follow-through
 

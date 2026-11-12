@@ -16,3 +16,4 @@
 .worker-conversation-empty>span{background:transparent;border:0;box-shadow:none}
 
 .group-avatar:is(.group-portrait-single,.group-portrait-grid){background:transparent!important;border:0!important;box-shadow:none!important}
+.message-list-heading>.message-profile-open:has(.employee-portrait){background:transparent!important;border:0!important;box-shadow:none!important}

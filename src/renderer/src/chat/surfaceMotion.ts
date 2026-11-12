@@ -1,8 +1,14 @@
-import {useLayoutEffect,useRef} from 'react'
+import {useLayoutEffect,useRef,useSyncExternalStore} from 'react'
 
 export type SurfaceMotion='menu'|'file-menu'|'panel'|'dialog'|'strip'
 export const messageEase='cubic-bezier(.22,1,.36,1)'
 export const motionAllowed=()=>!document.hidden&&!matchMedia('(prefers-reduced-motion: reduce)').matches
+
+const motionListeners=new Set<()=>void>();let removeMotionListeners:(()=>void)|undefined
+const subscribeMotion=(listener:()=>void)=>{motionListeners.add(listener);if(!removeMotionListeners){const media=matchMedia('(prefers-reduced-motion: reduce)'),update=()=>{for(const notify of motionListeners)notify()};media.addEventListener('change',update);document.addEventListener('visibilitychange',update);removeMotionListeners=()=>{media.removeEventListener('change',update);document.removeEventListener('visibilitychange',update)}}return()=>{motionListeners.delete(listener);if(!motionListeners.size){removeMotionListeners?.();removeMotionListeners=undefined}}}
+/** One shared window preference gate; sprite players only run in visible clips. */
+export function useMessageMotion(){return useSyncExternalStore(subscribeMotion,motionAllowed)}
+
 
 /** Finite animations always release listeners and finish when motion is disabled. */
 export function playMessageMotion(element:Element,frames:Keyframe[],duration:number,done?:()=>void){

@@ -79,6 +79,17 @@
         "src/renderer/src/assets/channel-icons/sources.json"
       ],
       "resolution": "Unmodified official assets added for the maintainer-requested local application. No public redistribution clearance is claimed."
+    },
+    {
+      "id": "titan-fan-art",
+      "status": "pending",
+      "scope": "19 generated Attack on Titan chibi character portraits and their derived previews",
+      "required": "Record an appropriate redistribution assessment or permission before publicly distributing these character assets. Generation does not establish rights in the underlying characters.",
+      "evidence": [
+        "src/renderer/src/assets/pets/titan/README.md",
+        "src/renderer/src/assets/pets/titan/sources.json"
+      ],
+      "resolution": "Created for the maintainer-requested local application. No redistribution approval is claimed."
     }
   ]
 }

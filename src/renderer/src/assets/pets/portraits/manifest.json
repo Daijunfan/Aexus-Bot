@@ -910,5 +910,309 @@
     "width": 256,
     "height": 256,
     "bytes": 68992
+  },
+  {
+    "id": "titan-eren-chibi",
+    "crop": {
+      "left": 75,
+      "top": 8,
+      "width": 360,
+      "height": 497
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 66666
+  },
+  {
+    "id": "titan-mikasa-chibi",
+    "crop": {
+      "left": 63,
+      "top": 4,
+      "width": 378,
+      "height": 505
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 65468
+  },
+  {
+    "id": "titan-armin-chibi",
+    "crop": {
+      "left": 69,
+      "top": 9,
+      "width": 368,
+      "height": 498
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 76772
+  },
+  {
+    "id": "titan-levi-chibi",
+    "crop": {
+      "left": 62,
+      "top": 14,
+      "width": 380,
+      "height": 490
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 62990
+  },
+  {
+    "id": "titan-erwin-chibi",
+    "crop": {
+      "left": 90,
+      "top": 15,
+      "width": 315,
+      "height": 496
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 77526
+  },
+  {
+    "id": "titan-hange-chibi",
+    "crop": {
+      "left": 61,
+      "top": 10,
+      "width": 387,
+      "height": 497
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 75128
+  },
+  {
+    "id": "titan-jean-chibi",
+    "crop": {
+      "left": 74,
+      "top": 4,
+      "width": 346,
+      "height": 501
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 68692
+  },
+  {
+    "id": "titan-sasha-chibi",
+    "crop": {
+      "left": 20,
+      "top": 4,
+      "width": 400,
+      "height": 503
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 74134
+  },
+  {
+    "id": "titan-connie-chibi",
+    "crop": {
+      "left": 105,
+      "top": 19,
+      "width": 302,
+      "height": 480
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 67178
+  },
+  {
+    "id": "titan-historia-chibi",
+    "crop": {
+      "left": 61,
+      "top": 11,
+      "width": 391,
+      "height": 495
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 76792
+  },
+  {
+    "id": "titan-reiner-chibi",
+    "crop": {
+      "left": 79,
+      "top": 8,
+      "width": 348,
+      "height": 498
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 73662
+  },
+  {
+    "id": "titan-annie-chibi",
+    "crop": {
+      "left": 83,
+      "top": 8,
+      "width": 356,
+      "height": 499
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 76702
+  },
+  {
+    "id": "titan-bertholdt-chibi",
+    "crop": {
+      "left": 89,
+      "top": 16,
+      "width": 321,
+      "height": 488
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 66142
+  },
+  {
+    "id": "titan-ymir-chibi",
+    "crop": {
+      "left": 56,
+      "top": 11,
+      "width": 405,
+      "height": 496
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 69524
+  },
+  {
+    "id": "titan-zeke-chibi",
+    "crop": {
+      "left": 73,
+      "top": 22,
+      "width": 359,
+      "height": 473
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 81124
+  },
+  {
+    "id": "titan-pieck-chibi",
+    "crop": {
+      "left": 48,
+      "top": 18,
+      "width": 411,
+      "height": 480
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 68174
+  },
+  {
+    "id": "titan-porco-chibi",
+    "crop": {
+      "left": 83,
+      "top": 16,
+      "width": 331,
+      "height": 485
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 73796
+  },
+  {
+    "id": "titan-gabi-chibi",
+    "crop": {
+      "left": 56,
+      "top": 8,
+      "width": 406,
+      "height": 494
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 66430
+  },
+  {
+    "id": "titan-falco-chibi",
+    "crop": {
+      "left": 80,
+      "top": 10,
+      "width": 349,
+      "height": 494
+    },
+    "frame": {
+      "width": 512,
+      "height": 512
+    },
+    "width": 256,
+    "height": 256,
+    "bytes": 71740
   }
 ]

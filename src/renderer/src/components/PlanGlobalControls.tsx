@@ -1,4 +1,5 @@
-import {useEffect,useState} from 'react'
+import {useEffect,useRef,useState} from 'react'
+import {MissionPopover} from './MissionPopover'
 import type {PlanPreferences,RetentionRule} from '../../../shared/plan-preferences'
 import {planFilterCount,type PlanFilter,type PlanQuery} from '../../../shared/plan'
 import type {Store} from '../../../shared/types'
@@ -10,6 +11,7 @@ import {Icon} from './Icon'
 
 export function PlanGlobalControls({store,value,onChange}:{store:Store;value:PlanPreferences;onChange:(next:PlanPreferences)=>void}){
  const [open,setOpen]=useState(false),[tab,setTab]=useState<'filter'|'retention'>('filter'),[draft,setDraft]=useState(value),[busy,setBusy]=useState(false),[error,setError]=useState(''),[tasks,setTasks]=useState<PlanQuery>(),[search,setSearch]=useState('')
+ const trigger=useRef<HTMLButtonElement>(null)
  const filters=planFilterCount(value.filter)+value.hiddenIds.length
  useEffect(()=>{if(!open){setDraft(value)}},[open,value])
  useEffect(()=>{if(!open||tab!=='filter')return;let active=true;void api.call<PlanQuery>('plan.query',{filter:{search,archived:'all'},limit:100}).then(result=>{if(active)setTasks(result)}).catch(cause=>{if(active)setError(cause.message)});return()=>{active=false}},[open,tab,search])
@@ -17,8 +19,8 @@ export function PlanGlobalControls({store,value,onChange}:{store:Store;value:Pla
  const retention=(kind:'succeeded'|'failed',patch:Partial<RetentionRule>)=>setDraft(previous=>({...previous,retention:{...previous.retention,[kind]:{...previous.retention[kind],...patch}}}))
  const save=async()=>{if(busy)return;setBusy(true);setError('');try{const next=await api.call<PlanPreferences>('plan.preferences',{patch:{filter:draft.filter,hiddenIds:draft.hiddenIds,retention:draft.retention},expectedRevision:draft.revision});onChange(next);setDraft(next);setOpen(false)}catch(cause){setError((cause as Error).message)}finally{setBusy(false)}}
  return <div className="plan-global-controls">
-  <div className="plan-global-toolbar"><button className={filters?'is-active':''} aria-expanded={open&&tab==='filter'} aria-label={uiText('Global Mission filters')} onClick={()=>{setTab('filter');setOpen(!open||tab!=='filter')}}><Icon name="filter"/>{uiText('Filter')}{filters>0&&<b>{filters}</b>}<small>{uiText('All views')}</small></button><button aria-expanded={open&&tab==='retention'} aria-label={uiText('Automatic Mission cleanup')} onClick={()=>{setTab('retention');setOpen(!open||tab!=='retention')}}><Icon name="archive"/>{uiText('Auto archive & cleanup')}</button>{filters>0&&!open&&<span className="plan-global-filter-note">{uiText('Display filters are active. Work and reminders continue.')}</span>}</div>
-  {open&&<section className="plan-global-panel" aria-label={uiText(tab==='filter'?'Global Mission filters':'Automatic Mission cleanup')} aria-busy={busy}>
+  <div className="plan-global-toolbar"><button className={filters?'is-active':''} aria-expanded={open&&tab==='filter'} aria-label={uiText('Global Mission filters')} onClick={event=>{trigger.current=event.currentTarget;setTab('filter');setOpen(!open||tab!=='filter')}}><Icon name="filter"/>{uiText('Filter')}{filters>0&&<b>{filters}</b>}<small>{uiText('All views')}</small></button><button aria-expanded={open&&tab==='retention'} aria-label={uiText('Automatic Mission cleanup')} title={uiText('Automatic Mission cleanup')} onClick={event=>{trigger.current=event.currentTarget;setTab('retention');setOpen(!open||tab!=='retention')}}><Icon name="archive"/><span className="mission-cleanup-label">{uiText('Auto archive & cleanup')}</span></button>{filters>0&&!open&&<span className="plan-global-filter-note">{uiText('Display filters are active. Work and reminders continue.')}</span>}</div>
+  {open&&<MissionPopover anchor={trigger} className="plan-global-panel" label={uiText(tab==='filter'?'Global Mission filters':'Automatic Mission cleanup')} onClose={()=>{if(!busy)setOpen(false)}}>
    <header><div><strong>{uiText(tab==='filter'?'Filter every Mission layout':'Keep completed work organized')}</strong><small>{uiText(tab==='filter'?'These display settings stay the same when you switch layouts.':'Runs automatically while Core is running. Active work is never interrupted.')}</small></div><button aria-label={uiText('Close Mission controls')} disabled={busy} onClick={()=>setOpen(false)}><Icon name="close"/></button></header>
    <div className="plan-global-panel-body">{tab==='filter'?<>
     <PlanFilterFields store={store} value={draft.filter} onChange={filter}/>
@@ -26,6 +28,6 @@ export function PlanGlobalControls({store,value,onChange}:{store:Store;value:Pla
    </>:<div className="plan-retention-rules">{(['succeeded','failed'] as const).map(kind=><div key={kind}><label>{uiText(kind==='succeeded'?'Successful tasks':'Failed tasks')}<AppSelect aria-label={uiText(kind==='succeeded'?'Successful task retention':'Failed task retention')} value={draft.retention[kind].action} onChange={event=>retention(kind,{action:event.target.value as RetentionRule['action']})}><option value="keep">{uiText('Keep')}</option><option value="archive">{uiText('Archive automatically')}</option><option value="delete">{uiText('Delete automatically')}</option></AppSelect></label><label>{uiText('After (hours)')}<input type="number" min="0" max="8760" step="1" value={draft.retention[kind].afterSeconds/3600} onChange={event=>retention(kind,{afterSeconds:Math.max(0,Math.round(Number(event.target.value)*3600))})} disabled={draft.retention[kind].action==='keep'}/></label></div>)}<p className="plan-retention-note"><Icon name="info"/>{uiText('Unresolved missions are never automatically deleted. Failed missions may be archived while their reminders and red Secretary counts continue. Recurring, paused and active schedules are retained until their final occurrence has ended.')}</p></div>}
    {error&&<p className="plan-error" role="alert">{error}<button disabled={busy} onClick={()=>void api.call<PlanPreferences>('plan.preferences').then(next=>{onChange(next);setDraft(next);setError('')}).catch(cause=>setError(cause.message))}>{uiText('Load latest')}</button></p>}
    </div><footer><button disabled={busy} onClick={()=>{setDraft(previous=>({...previous,filter:{},hiddenIds:[]}))}}>{uiText('Clear display filters')}</button><span/><button disabled={busy} onClick={()=>setOpen(false)}>{uiText('Cancel')}</button><button className="primary" disabled={busy} onClick={()=>void save()}>{uiText('Apply to all views')}</button></footer>
-  </section>}
+  </MissionPopover>}
  </div>
 }

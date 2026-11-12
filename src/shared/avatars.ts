@@ -1,4 +1,4 @@
-import {AVATARS,AVATAR_LABELS,SELECTABLE_AVATARS,DEFAULT_AVATAR,LEGACY_AVATARS,FATE_CHARACTERS,SPRITE_COLORS,currentAvatar,type AvatarKind} from './office'
+import {AVATARS,AVATAR_LABELS,SELECTABLE_AVATARS,DEFAULT_AVATAR,LEGACY_AVATARS,FATE_CHARACTERS,TITAN_CHARACTERS,SPRITE_COLORS,currentAvatar,type AvatarKind} from './office'
 
 export type AvatarCatalogState={revision:number;enabled:AvatarKind[]}
 export const enabledAvatarIds=(catalog?:AvatarCatalogState):readonly AvatarKind[]=>catalog?.enabled??SELECTABLE_AVATARS
@@ -29,9 +29,10 @@ function styleValue(value?:string):AvatarStyle|undefined{
 }
 export const AVATAR_CATALOG=[...new Set(AVATARS.map(currentAvatar))].map(id=>{
   const character=FATE_CHARACTERS.find(c=>id===`fate-${c.id}-anime`||id===`fate-${c.id}-chibi`)
-  const style:AvatarStyle=character?(id.endsWith('-chibi')?'chibi':'anime'):'default'
-  const aliases=character?.id==='gilgamesh'?['英雄王','金闪闪','Gilgamesh']:id==='marmalade'?['老虎','tiger']:[]
-  return {id,name:AVATAR_LABELS[id],characterId:character?.id??id,character:character?.name??AVATAR_LABELS[id],style,aliases,legacyIds:Object.entries(LEGACY_AVATARS).filter(([,target])=>target===id).map(([key])=>key),color:SPRITE_COLORS[id],selectable:SELECTABLE_AVATARS.some(value=>value===id)}
+  const titan=TITAN_CHARACTERS.find(character=>id===`titan-${character.id}-chibi`)
+  const style:AvatarStyle=titan?'chibi':character?(id.endsWith('-chibi')?'chibi':'anime'):'default'
+  const aliases=titan?[...titan.aliases,'进击的巨人','Attack on Titan']:character?.id==='gilgamesh'?['英雄王','金闪闪','Gilgamesh']:id==='marmalade'?['老虎','tiger']:[]
+  return {id,name:AVATAR_LABELS[id],characterId:character?.id??titan?.id??id,character:character?.name??titan?.name??AVATAR_LABELS[id],style,aliases,legacyIds:Object.entries(LEGACY_AVATARS).filter(([,target])=>target===id).map(([key])=>key),color:SPRITE_COLORS[id],selectable:SELECTABLE_AVATARS.some(value=>value===id)}
 })
 export type AvatarDescription=typeof AVATAR_CATALOG[number]
 export type AvatarCatalogEntry=AvatarDescription&{enabled:boolean;status:'active'|'archived';displayId:AvatarKind;assignedCount:number;usageCount:number;inUse:boolean;revision:number}

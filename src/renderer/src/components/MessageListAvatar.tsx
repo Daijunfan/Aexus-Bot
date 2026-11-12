@@ -1,9 +1,9 @@
-import {memo,useContext,useEffect,useRef,useState,useSyncExternalStore,type CSSProperties} from 'react'
+import {memo,useContext,useEffect,useRef,useState,type CSSProperties} from 'react'
 import {DEFAULT_AVATAR,isFateAvatar,type AvatarKind} from '../../../shared/office'
 import {PortraitImage} from './PortraitImage'
 import {Mascot} from '../office/Mascot'
 import {CanvasMotion} from '../office/motion'
-import {motionAllowed} from '../chat/surfaceMotion'
+import {useMessageMotion} from '../chat/surfaceMotion'
 import portraits from '../assets/pets/portraits/manifest.json'
 import {avatarFraming} from '../../../shared/avatar-framing'
 import {useDisplayedAvatar} from './AvatarCatalog'
@@ -18,10 +18,7 @@ export function watchMessageAvatar(element:Element,update:(visible:boolean)=>voi
   return()=>{observer?.unobserve(element);visibleAvatars.delete(element);if(!visibleAvatars.size){observer?.disconnect();observer=undefined}}
 }
 
-const motionListeners=new Set<()=>void>();let removeMotionListeners:(()=>void)|undefined
-const subscribeMotion=(listener:()=>void)=>{motionListeners.add(listener);if(!removeMotionListeners){const media=matchMedia('(prefers-reduced-motion: reduce)'),update=()=>{for(const notify of motionListeners)notify()};media.addEventListener('change',update);document.addEventListener('visibilitychange',update);removeMotionListeners=()=>{media.removeEventListener('change',update);document.removeEventListener('visibilitychange',update)}}return()=>{motionListeners.delete(listener);if(!motionListeners.size){removeMotionListeners?.();removeMotionListeners=undefined}}}
-/** One shared window preference gate; sprite players only run in visible clips. */
-export function useMessageAvatarMotion(){return useSyncExternalStore(subscribeMotion,motionAllowed)}
+export const useMessageAvatarMotion=useMessageMotion
 
 export const MessageListAvatar=memo(function MessageListAvatar({avatar=DEFAULT_AVATAR,color,state,className=''}:{avatar?:AvatarKind;color?:string;state:MessageAvatarState;continuous?:boolean;className?:string}){
   const allowed=useContext(CanvasMotion),root=useRef<HTMLSpanElement>(null),[visible,setVisible]=useState(false),[engaged,setEngaged]=useState(false),[playing,setPlaying]=useState(false)

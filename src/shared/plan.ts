@@ -65,4 +65,4 @@ export function planState(job:ScheduledJob,run?:ScheduleRun):PlanState{
   if(!job.nextAt)return 'completed'
   return 'scheduled'
 }
-export const BUILTIN_PLAN_VIEWS:PlanView[]=PLAN_LAYOUT_CATALOG.map(item=>({id:item.id,name:item.label,layout:item.id,groupBy:'status',filter:{},sort:'nextAt',direction:'asc',revision:1,builtin:true}))
+export const BUILTIN_PLAN_VIEWS:PlanView[]=PLAN_LAYOUT_CATALOG.map(item=>({id:item.id,name:item.label,layout:item.id,groupBy:'status',filter:{},sort:'nextAt',direction:'asc',revision:1,builtin:true,...(item.id==='table'?{options:{hiddenProperties:['rule','lastRun','tags'] as PlanTableProperty[]}}:{})}))

@@ -7,6 +7,7 @@ import {useMessenger} from './useMessenger'
 import {orderedKeys} from '../../../shared/messenger-order'
 import {isBuiltinMessageCategory} from '../../../shared/message-categories'
 import {useSortableList} from '../chat/useSortableList'
+import {useSelectionMotion} from '../chat/useSelectionMotion'
 export {ConversationFolderEditor,type FolderConversation} from './CategoryEditor'
 
 export function ConversationFolders({folders,selectedId,allSelected,onSelect,onAll,onCreate,onEdit}:{folders:ConversationFolder[];selectedId?:string;allSelected:boolean;onSelect:(id:string)=>void;onAll:()=>void;onCreate:()=>void;onEdit:(folder:ConversationFolder)=>void}){
@@ -14,6 +15,7 @@ export function ConversationFolders({folders,selectedId,allSelected,onSelect,onA
  const messenger=useMessenger()!,[menu,setMenu]=useState<{id:string;x:number;y:number}|null>(null),[error,setError]=useState(''),[deleting,setDeleting]=useState(false)
  const savedOrder=messenger.state.orders?.categories??[],byId=new Map(folders.map(folder=>[folder.id,folder]))
  const sorting=useSortableList({keys:orderedKeys([...byId.keys()],savedOrder),identity:'categories',axis:'x',disabled:!messenger.ready||!!menu||deleting,label:id=>{const folder=byId.get(id);return folder?(isBuiltinMessageCategory(id)?uiText(folder.name):folder.name):id},save:order=>messenger.reorder('categories',order,savedOrder)}),tabs=sorting.root
+ useSelectionMotion(tabs,'.message-category-chip[data-selected=true]',(selectedId??'')+':'+sorting.keys.join(','))
  useEffect(()=>{if(!selectedId||sorting.phase==='dragging')return;const frame=requestAnimationFrame(()=>document.getElementById('message-folder-'+selectedId)?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'}));return()=>cancelAnimationFrame(frame)},[selectedId,folders.length])
  const current=folders.find(folder=>folder.id===menu?.id)
  const open=(folder:ConversationFolder,button:HTMLElement)=>{const box=button.getBoundingClientRect();setError('');setMenu({id:folder.id,x:box.left,y:box.bottom+6})}

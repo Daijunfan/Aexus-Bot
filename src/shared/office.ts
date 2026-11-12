@@ -28,6 +28,32 @@ export const FATE_AVATARS:FateAvatar[]=FATE_CHARACTERS.flatMap(c=>[`fate-${c.id}
 export const isFateAvatar=(id?:string):id is FateAvatar=>FATE_AVATARS.some(value=>value===id)
 export const FATE_LABELS=Object.fromEntries(FATE_CHARACTERS.flatMap(c=>[[`fate-${c.id}-anime`,`${c.name} · 原作风格`],[`fate-${c.id}-chibi`,`${c.name} · 可爱版`]])) as Record<FateAvatar,string>
 export const FATE_COLORS=Object.fromEntries(FATE_CHARACTERS.flatMap(c=>[[`fate-${c.id}-anime`,c.color],[`fate-${c.id}-chibi`,c.color]])) as Record<FateAvatar,string>
+export const TITAN_CHARACTERS=[
+  {id:'eren',name:'艾伦·耶格尔',aliases:["艾伦", "Eren", "Eren Yeager"],color:'#507b66'},
+  {id:'mikasa',name:'三笠·阿克曼',aliases:["三笠", "Mikasa", "Mikasa Ackerman"],color:'#a44f59'},
+  {id:'armin',name:'阿尔敏·阿诺德',aliases:["阿尔敏", "Armin", "Armin Arlert"],color:'#c8a75c'},
+  {id:'levi',name:'利威尔·阿克曼',aliases:["利威尔", "兵长", "Levi", "Levi Ackerman"],color:'#65745d'},
+  {id:'erwin',name:'埃尔文·史密斯',aliases:["埃尔文", "团长", "Erwin", "Erwin Smith"],color:'#a79462'},
+  {id:'hange',name:'韩吉·佐耶',aliases:["韩吉", "韩基", "Hange", "Hange Zoe"],color:'#936c4f'},
+  {id:'jean',name:'让·基尔希斯坦',aliases:["让", "Jean", "Jean Kirstein"],color:'#8f7860'},
+  {id:'sasha',name:'莎夏·布劳斯',aliases:["莎夏", "萨莎", "Sasha", "Sasha Blouse"],color:'#a77852'},
+  {id:'connie',name:'柯尼·斯普林格',aliases:["柯尼", "康尼", "Connie", "Connie Springer"],color:'#9b927c'},
+  {id:'historia',name:'希斯特莉亚·雷斯',aliases:["希斯特莉亚", "赫里斯塔", "Historia", "Historia Reiss"],color:'#b9a06c'},
+  {id:'reiner',name:'莱纳·布朗',aliases:["莱纳", "Reiner", "Reiner Braun"],color:'#a89764'},
+  {id:'annie',name:'阿尼·利昂纳德',aliases:["阿尼", "亚妮", "Annie", "Annie Leonhart"],color:'#a29b78'},
+  {id:'bertholdt',name:'贝尔托特·胡佛',aliases:["贝尔托特", "贝特霍尔德", "Bertholdt", "Bertholdt Hoover"],color:'#6c7f67'},
+  {id:'ymir',name:'尤弥尔',aliases:["Ymir"],color:'#977c65'},
+  {id:'zeke',name:'吉克·耶格尔',aliases:["吉克", "Zeke", "Zeke Yeager"],color:'#b5a17e'},
+  {id:'pieck',name:'皮克·芬格尔',aliases:["皮克", "Pieck", "Pieck Finger"],color:'#6c6c7c'},
+  {id:'porco',name:'波尔柯·加利亚德',aliases:["波尔柯", "Porco", "Porco Galliard"],color:'#b49a6e'},
+  {id:'gabi',name:'贾碧·布朗',aliases:["贾碧", "贾比", "Gabi", "Gabi Braun"],color:'#94745e'},
+  {id:'falco',name:'法尔科·格莱斯',aliases:["法尔科", "Falco", "Falco Grice"],color:'#c3ae80'}
+] as const
+export type TitanAvatar=`titan-${typeof TITAN_CHARACTERS[number]['id']}-chibi`
+export const TITAN_AVATARS:TitanAvatar[]=TITAN_CHARACTERS.map(character=>`titan-${character.id}-chibi` as const)
+export const isTitanAvatar=(id?:string):id is TitanAvatar=>TITAN_AVATARS.some(value=>value===id)
+export const TITAN_LABELS=Object.fromEntries(TITAN_CHARACTERS.map(character=>[`titan-${character.id}-chibi`,character.name+' · 可爱版'])) as Record<TitanAvatar,string>
+export const TITAN_COLORS=Object.fromEntries(TITAN_CHARACTERS.map(character=>[`titan-${character.id}-chibi`,character.color])) as Record<TitanAvatar,string>
 export const OFFICIAL_AVATARS = ['codex','dewey','fireball','rocky','seedy','stacky','bsod','null-signal','hoots'] as const
 export type OfficialAvatar = typeof OFFICIAL_AVATARS[number]
 export const isOfficialAvatar=(value?:string):value is OfficialAvatar=>OFFICIAL_AVATARS.some(id=>id===value)
@@ -39,14 +65,14 @@ export type ClaudeAvatar = typeof CLAUDE_AVATARS[number]
 export type CommunityAvatar = typeof COMMUNITY_AVATARS[number]
 export type AtlasAvatar = OfficialAvatar|CommunityAvatar
 export const isAtlasAvatar=(value?:string):value is AtlasAvatar=>[...OFFICIAL_AVATARS,...COMMUNITY_AVATARS].some(id=>id===value)
-export const SELECTABLE_AVATARS:SpriteAvatar[] = ['codex',...FATE_CHARACTERS.map(character=>`fate-${character.id}-chibi` as FateAvatar)]
+export const SELECTABLE_AVATARS:SpriteAvatar[] = ['codex',...FATE_CHARACTERS.map(character=>`fate-${character.id}-chibi` as FateAvatar),...TITAN_AVATARS]
 export const DEFAULT_AVATAR = 'fate-saber-chibi' as const
 // Retired Claude avatar IDs remain valid for saved employees; omit them only from the picker.
-export type SpriteAvatar = AtlasAvatar|ClaudeAvatar|FateAvatar
-export const isSpriteAvatar=(value?:string):value is SpriteAvatar=>isAtlasAvatar(value)||CLAUDE_AVATARS.some(id=>id===value)||isFateAvatar(value)
+export type SpriteAvatar = AtlasAvatar|ClaudeAvatar|FateAvatar|TitanAvatar
+export const isSpriteAvatar=(value?:string):value is SpriteAvatar=>isAtlasAvatar(value)||CLAUDE_AVATARS.some(id=>id===value)||isFateAvatar(value)||isTitanAvatar(value)
 // Historical generic IDs resolve to their existing companion; named sprite IDs stay unchanged.
 export const LEGACY_AVATARS = {cat:'marmalade',fox:'voltcoin',rabbit:'woodi',panda:'inky',penguin:'woodi',robot:'byte',cloud:'wondercube'} as const
-export const AVATARS = [...OFFICIAL_AVATARS,...CLAUDE_AVATARS,...COMMUNITY_AVATARS,...FATE_AVATARS,'cat','fox','rabbit','panda','penguin','robot','cloud'] as const
+export const AVATARS = [...OFFICIAL_AVATARS,...CLAUDE_AVATARS,...COMMUNITY_AVATARS,...FATE_AVATARS,...TITAN_AVATARS,'cat','fox','rabbit','panda','penguin','robot','cloud'] as const
 export type AvatarKind = typeof AVATARS[number]
 export const currentAvatar=(kind:AvatarKind):SpriteAvatar=>LEGACY_AVATARS[kind as keyof typeof LEGACY_AVATARS]??kind as SpriteAvatar
 export const ACCESSORIES = ['headphones', 'glasses', 'none'] as const
@@ -77,7 +103,7 @@ export function roomDesign(index: number, saved?: Partial<RoomDesign>): RoomDesi
   return { ...DEFAULT_DESIGN, theme: ROOM_THEMES[index % ROOM_THEMES.length], ...saved }
 }
 export const AVATAR_LABELS: Record<AvatarKind, string> = {
-  ...FATE_LABELS,
+  ...FATE_LABELS,...TITAN_LABELS,
   hoots:'Hoots',clawd:'Clawd','claude-axolotl':'Axolotl','claude-blob':'Blob','claude-cactus':'Cactus','claude-capybara':'Capybara','claude-cat':'Cat','claude-chonk':'Chonk','claude-dragon':'Dragon','claude-duck':'Duck','claude-ghost':'Ghost','claude-goose':'Goose','claude-mushroom':'Mushroom','claude-octopus':'Octopus','claude-owl':'Owl','claude-penguin':'Penguin','claude-rabbit':'Rabbit','claude-robot':'Robot','claude-snail':'Snail','claude-turtle':'Turtle',
   woodi:'小水獭',marmalade:'橘猫',voltcoin:'金币兔',inky:'小章鱼',byte:'搭建机器人',wondercube:'魔方',
   cat: '小猫', fox: '狐狸', rabbit: '兔子', panda: '熊猫', penguin: '企鹅', robot: '机器人', cloud: '云朵终端', codex:'Codey',dewey:'Dewey',fireball:'Fireball',rocky:'Rocky',seedy:'Seedy',stacky:'Stacky',bsod:'BSOD','null-signal':'Null Signal'
@@ -87,7 +113,7 @@ export function employeeDirectoryName(title: string): string {
 }
 
 export const OFFICIAL_COLORS:Record<OfficialAvatar,string>={codex:'#638df1',dewey:'#29b6ea',fireball:'#f8a52b',rocky:'#b4a075',seedy:'#9ea652',stacky:'#796887',bsod:'#188ada','null-signal':'#bf382f',hoots:'#a27648'}
-export const SPRITE_COLORS:Record<SpriteAvatar,string>={...OFFICIAL_COLORS,...FATE_COLORS,woodi:'#b4753d',marmalade:'#ef9b24',voltcoin:'#f2c63c',inky:'#9274bb',byte:'#c29b6b',wondercube:'#92a3bb',clawd:'#d97757','claude-axolotl':'#d97757','claude-blob':'#d97757','claude-cactus':'#d97757','claude-capybara':'#d97757','claude-cat':'#d97757','claude-chonk':'#d97757','claude-dragon':'#d97757','claude-duck':'#d97757','claude-ghost':'#d97757','claude-goose':'#d97757','claude-mushroom':'#d97757','claude-octopus':'#d97757','claude-owl':'#d97757','claude-penguin':'#d97757','claude-rabbit':'#d97757','claude-robot':'#d97757','claude-snail':'#d97757','claude-turtle':'#d97757'}
+export const SPRITE_COLORS:Record<SpriteAvatar,string>={...OFFICIAL_COLORS,...FATE_COLORS,...TITAN_COLORS,woodi:'#b4753d',marmalade:'#ef9b24',voltcoin:'#f2c63c',inky:'#9274bb',byte:'#c29b6b',wondercube:'#92a3bb',clawd:'#d97757','claude-axolotl':'#d97757','claude-blob':'#d97757','claude-cactus':'#d97757','claude-capybara':'#d97757','claude-cat':'#d97757','claude-chonk':'#d97757','claude-dragon':'#d97757','claude-duck':'#d97757','claude-ghost':'#d97757','claude-goose':'#d97757','claude-mushroom':'#d97757','claude-octopus':'#d97757','claude-owl':'#d97757','claude-penguin':'#d97757','claude-rabbit':'#d97757','claude-robot':'#d97757','claude-snail':'#d97757','claude-turtle':'#d97757'}
 /** Rotate the original palette while retaining its shading and transparent edges. */
 export function avatarTint(kind:SpriteAvatar,color?:string):string {
   if(!color||color.toLowerCase()===SPRITE_COLORS[kind])return 'none'
