@@ -7,6 +7,7 @@ import {QUESTION_COMMANDS} from './chat-questions.ts'
 import {BOARD_CATEGORY_COMMANDS} from './board-categories.ts'
 import {MONITOR_COMMANDS} from './script-monitors.ts'
 import {BOT_COMMANDS} from './bot-workers.ts'
+import {BOT_MANAGEMENT_COMMANDS} from './bot-management.ts'
 import {MESSAGE_COLLABORATION_COMMANDS} from './message-collaboration.ts'
 import {CONVERSATION_CONTROL_COMMANDS} from './conversation-control-schema.ts'
 import {ASSET_COMMANDS} from './asset-schema.ts'
@@ -40,7 +41,7 @@ const DEFINITIONS: {
   ...BOARD_CATEGORY_COMMANDS,
   ...PLAN_COMMANDS,
   ...WORKER_COMMANDS,
-  ...DIRECT_COMMANDS,...BOT_COMMANDS,...MONITOR_COMMANDS,
+  ...DIRECT_COMMANDS,...BOT_COMMANDS,...BOT_MANAGEMENT_COMMANDS,...MONITOR_COMMANDS,
   ...CHANNEL_COMMANDS,
   ...MESSENGER_COMMANDS,
   ...ASSET_COMMANDS,

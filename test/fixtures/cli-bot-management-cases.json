@@ -1,0 +1,201 @@
+[
+  {
+    "args": [
+      "bot",
+      "catalog"
+    ],
+    "expected": {
+      "cmd": "bot.catalog",
+      "args": {}
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "profile",
+      "--provider",
+      "grok",
+      "--native-id",
+      "native-bot"
+    ],
+    "expected": {
+      "cmd": "bot.profile",
+      "args": {
+        "provider": "grok",
+        "nativeId": "native-bot"
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "connect",
+      "--provider",
+      "dots",
+      "--native-id",
+      "dot-profile"
+    ],
+    "expected": {
+      "cmd": "bot.connect",
+      "args": {
+        "provider": "dots",
+        "nativeId": "dot-profile"
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "configure",
+      "--provider",
+      "grok",
+      "--native-id",
+      "native-bot",
+      "--expected-version",
+      "v1",
+      "--patch",
+      "{\"name\":\"Native name\",\"description\":\"Native instructions\"}"
+    ],
+    "expected": {
+      "cmd": "bot.configure",
+      "args": {
+        "provider": "grok",
+        "nativeId": "native-bot",
+        "expectedVersion": "v1",
+        "patch": {
+          "name": "Native name",
+          "description": "Native instructions"
+        }
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "members",
+      "--provider",
+      "grok",
+      "--native-id",
+      "native-room"
+    ],
+    "expected": {
+      "cmd": "bot.members",
+      "args": {
+        "provider": "grok",
+        "nativeId": "native-room"
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "members",
+      "--provider",
+      "grok",
+      "--native-id",
+      "native-room",
+      "--members",
+      "[\"native-bot\",\"native-bot-2\"]",
+      "--expected-version",
+      "v1"
+    ],
+    "expected": {
+      "cmd": "bot.members",
+      "args": {
+        "provider": "grok",
+        "nativeId": "native-room",
+        "members": [
+          "native-bot",
+          "native-bot-2"
+        ],
+        "expectedVersion": "v1"
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "native-create",
+      "--provider",
+      "grok",
+      "--name",
+      "Research room",
+      "--kind",
+      "group",
+      "--description",
+      "Native goal",
+      "--members",
+      "[\"native-bot\"]",
+      "--client-request-id",
+      "2175f9c0-729a-487b-896b-1740397de416"
+    ],
+    "expected": {
+      "cmd": "bot.native-create",
+      "args": {
+        "provider": "grok",
+        "name": "Research room",
+        "kind": "group",
+        "description": "Native goal",
+        "members": [
+          "native-bot"
+        ],
+        "clientRequestId": "2175f9c0-729a-487b-896b-1740397de416"
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "control",
+      "--provider",
+      "grok",
+      "--native-id",
+      "native-bot",
+      "--action",
+      "new-conversation",
+      "--expected-version",
+      "v1",
+      "--client-request-id",
+      "2175f9c0-729a-487b-896b-1740397de416",
+      "--confirm-native-id",
+      "native-bot"
+    ],
+    "expected": {
+      "cmd": "bot.control",
+      "args": {
+        "provider": "grok",
+        "nativeId": "native-bot",
+        "action": "new-conversation",
+        "expectedVersion": "v1",
+        "clientRequestId": "2175f9c0-729a-487b-896b-1740397de416",
+        "confirmNativeId": "native-bot"
+      }
+    }
+  },
+  {
+    "args": [
+      "bot",
+      "native-delete",
+      "--provider",
+      "grok",
+      "--native-id",
+      "native-bot",
+      "--expected-version",
+      "v1",
+      "--confirm-native-id",
+      "native-bot",
+      "--client-request-id",
+      "2175f9c0-729a-487b-896b-1740397de416"
+    ],
+    "expected": {
+      "cmd": "bot.native-delete",
+      "args": {
+        "provider": "grok",
+        "nativeId": "native-bot",
+        "expectedVersion": "v1",
+        "confirmNativeId": "native-bot",
+        "clientRequestId": "2175f9c0-729a-487b-896b-1740397de416"
+      }
+    }
+  }
+]

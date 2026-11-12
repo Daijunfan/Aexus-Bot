@@ -7,7 +7,7 @@ conversation.upload-status
 direct.history direct.send-status
 conversation.policy conversation.audit conversation.notice-list conversation.notice-get conversation.notice-preview conversation.notice-history
 assets.browse assets.info assets.preview assets.tree assets.children assets.locate assets.search
-board.categories bot.list monitor.list monitor.read
+board.categories bot.list bot.catalog bot.profile monitor.list monitor.read
 worker.commands worker.inspect worker.background worker.history worker.list worker.read worker.snapshot
 status auth.whoami api.list api.describe api.docs api.result avatar.list avatar.get management.roles management.topology management.activity
 system.info system.directories settings.get engine.list engine.providers engine.check engine.capabilities engine.models engine.inspect engine.install-plan engine.install-status engine.login-status
@@ -30,6 +30,8 @@ export function apiReadOnly(command:string,args:Record<string,unknown>={}){
  if(command==='worker.export')return args.path===undefined
  if(command==='plan.preferences')return args.patch===undefined
  if(command==='bot.list')return true
+ if(command==='bot.catalog'||command==='bot.profile')return true
+ if(command==='bot.members')return args.members===undefined
  if(command==='bot.access')return args.employeeIds===undefined
  if(command==='bot.appearance')return args.avatar===undefined
  if(command==='assets.naming')return !args.apply

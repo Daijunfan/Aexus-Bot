@@ -63,7 +63,7 @@ export async function rpc(method, body, { auth, timeoutMs = 45_000, service = 'G
   }
   if (res.status < 200 || res.status >= 300) {
     const detail = res.data ? JSON.stringify(res.data).slice(0, 600) : res.text.slice(0, 600);
-    throw new Error(`Grok Bot ${method} 失败：HTTP ${res.status} ${detail}`);
+    throw Object.assign(new Error(`Grok Bot ${method} 失败：HTTP ${res.status} ${detail}`),{status:res.status});
   }
   return res.data || {};
 }

@@ -16,6 +16,7 @@ const server=http.createServer(async(req,res)=>{let data='';for await(const c of
  else if(q.method==='status')value={issue:issues.get(a.binding.remoteId)??null,checkedAt:Date.now()}
  else if(q.method==='messages')value=history.get(a.binding.remoteId)??[]
  else if(q.method==='create'){value={id:a.id,name:a.name,provider:'grok',kind:a.members?'group':'private',participantIds:a.members};bots.push(value);history.set(value.id,[])}
+ else if(q.method==='native-create'){value={id:a.requestId,nativeId:a.requestId,name:a.name,description:a.description,provider:a.provider,kind:a.kind,members:a.members};bots.push(value);history.set(value.id,[])}
  else if(q.method==='send'){value={id:a.requestId,accepted:true};history.get(a.binding.remoteId).push({id:a.requestId,requestId:a.requestId,cursor:a.requestId,revision:a.requestId,role:'user',text:a.text,createdAt:Date.now(),files:[]})}
  else if(q.method==='read'){value={data:documentBytes.subarray(a.offset,a.offset+a.length).toString('base64'),totalSize:documentBytes.length,mimeType:'text/plain'}}
  else throw Error('Unexpected UI provider method '+q.method)
@@ -29,39 +30,39 @@ try{
  const employee=await rpc('card.create',{title:'Aster',group:'Studio',engine:'codex',model:'gpt-6-luna'}),secretary=await rpc('card.create',{title:'Secretary',group:'Studio',engine:'codex',model:'gpt-6-luna',managementRole:'secretary'})
  await expect.poll(async()=>(await rpc('session.status')).every(s=>s.initialization?.status==='ready')).toBe(true)
  await page.locator('.company-navigation').getByRole('button',{name:'Message',exact:true}).click();await page.getByRole('button',{name:'Bots',exact:true}).first().click()
- const dialog=page.locator('.bot-workers-dialog');await expect(dialog).toBeVisible();await dialog.getByRole('button',{name:/Connect|Refresh/}).first().click();await expect(dialog).toContainText('Dot');await expect(dialog).toContainText('Grok Bot')
+ const dialog=page.locator('.bot-workers-dialog');await expect(dialog).toBeVisible();await dialog.getByRole('button',{name:'Refresh native directory',exact:true}).click();await expect(dialog).toContainText('Dot');await expect(dialog).toContainText('Grok Bot');await rpc('bot.sync')
  let list=await rpc('bot.list'),dot=list.find(b=>b.bot.provider==='dots'),grok=list.find(b=>b.bot.provider==='grok')
- await dialog.getByRole('button',{name:'New Grok bot',exact:true}).click();await dialog.locator('input').first().fill('Research Worker');await dialog.getByRole('button',{name:'Create bot',exact:true}).click();await expect(dialog).toHaveCount(0)
+ await dialog.getByRole('button',{name:'New',exact:true}).click();await dialog.getByLabel('Native name',{exact:true}).fill('Research Worker');await dialog.getByRole('button',{name:'Create',exact:true}).click();await expect(dialog.locator('.native-create-form')).toHaveCount(0);await dialog.getByRole('button',{name:'Open conversation',exact:true}).click();await expect(dialog).toHaveCount(0)
  list=await rpc('bot.list');const created=list.find(b=>b.name==='Research Worker');assert.ok(created);await expect(page.locator('.group-conversation')).toContainText('Research Worker')
- assert.equal(calls.filter(c=>c.method==='create').length,1)
- const toolbar=page.locator('.group-conversation .message-thread-actions');for(const [label,icon] of [['Shared workspace','folder-opened'],['Search conversation','search'],['Group shared content','library'],['Authorized people','organization']]){const button=toolbar.getByRole('button',{name:label,exact:true});await expect(button.locator('.codicon-'+icon+' svg')).toBeVisible();await expect(button).toHaveAttribute('title',/.+/)}
- await toolbar.getByRole('button',{name:'Group shared content',exact:true}).click();await expect(page.getByRole('dialog',{name:'Conversation content',exact:true})).toBeVisible();await page.getByRole('button',{name:'Close message library',exact:true}).click();pass('Folder, search, content library and employee access use distinct round-stroke icons with meaningful tooltips and the correct content action')
+ assert.equal(calls.filter(c=>c.method==='native-create').length,1)
+ const toolbar=page.locator('.group-conversation .message-thread-actions');for(const [label,icon] of [['Search conversation','search'],['Group shared content','file-text'],['Authorized people','organization']]){const button=toolbar.getByRole('button',{name:label,exact:true});await expect(button.locator('.codicon-'+icon+' svg')).toBeVisible();await expect(button).toHaveAttribute('title',/.+/)}
+ await toolbar.getByRole('button',{name:'Group shared content',exact:true}).click();await expect(page.locator('.message-library')).toBeVisible();await page.getByRole('button',{name:'Close message library',exact:true}).click();pass('Search, shared files and employee access use distinct round-stroke icons with meaningful tooltips and the correct content action')
 
  // The dedicated access sheet grants employees; Secretary is automatically authorized.
  await page.getByRole('button',{name:'Authorized people',exact:true}).click();const access=page.locator('.bot-access-dialog');await expect(access).toBeVisible();await expect(access).toContainText('Secretary');await expect(access.locator('input[type=checkbox]')).toHaveCount(1)
  await access.locator('input[type=checkbox]').check();await access.getByRole('button',{name:/Save/}).click();await expect(access).toContainText('Access saved');await access.getByRole('button',{name:'Close',exact:true}).click();await expect(access).toHaveCount(0);assert.deepEqual((await rpc('bot.access',{id:created.id})).employeeIds,[employee.id])
- await page.locator('.message-back').click();await page.getByRole('button',{name:'Bots',exact:true}).first().click();await dialog.getByRole('button',{name:'New Grok group',exact:true}).click();await dialog.locator('input:not([type=checkbox])').first().fill('Research Room');await dialog.locator('input[type=checkbox]').first().check()
- await expect(dialog.getByRole('heading',{name:'New Grok group',exact:true})).toBeVisible()
- const choices=await dialog.locator('.bot-check').evaluateAll(rows=>rows.map(row=>{const label=row.lastElementChild;return {checkbox:row.querySelector('input').getBoundingClientRect().width,avatar:row.querySelector('.bot-avatar').getBoundingClientRect().width,labelClipped:label.scrollWidth>label.clientWidth+1,overflow:row.scrollWidth>row.clientWidth}}))
- assert.ok(choices.length>0&&choices.every(row=>row.checkbox<=20&&row.avatar>=24&&!row.labelClipped&&!row.overflow),'Grok group choices keep a compact checkbox, visible native avatar and readable name: '+JSON.stringify(choices))
- await dialog.getByRole('button',{name:'Create Grok group',exact:true}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.group-conversation')).toContainText('Research Room')
+ await page.locator('.message-back').click();await page.getByRole('button',{name:'Bots',exact:true}).first().click();await dialog.getByRole('button',{name:'New',exact:true}).click();await dialog.getByLabel('Native type',{exact:true}).selectOption('group');await dialog.getByLabel('Native name',{exact:true}).fill('Research Room');await dialog.locator('input[type=checkbox]').first().check()
+ await expect(dialog.getByRole('heading',{name:'Create native bot or group',exact:true})).toBeVisible()
+ const choices=await dialog.locator('.native-member-picker label').evaluateAll(rows=>rows.map(row=>({checkbox:row.querySelector('input').getBoundingClientRect().width,avatar:row.querySelector('.native-member-avatar').getBoundingClientRect().width,overflow:row.scrollWidth>row.clientWidth})))
+ assert.ok(choices.length>0&&choices.every(row=>row.checkbox<=20&&row.avatar>=24&&!row.overflow),'Grok group choices keep a compact checkbox, visible native avatar and readable name: '+JSON.stringify(choices))
+ await dialog.getByRole('button',{name:'Create',exact:true}).click();await expect(dialog.locator('.native-create-form')).toHaveCount(0);await dialog.getByRole('button',{name:'Open conversation',exact:true}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.group-conversation')).toContainText('Research Room')
  pass('Real hidden Message UI connects providers, creates native bot/group through Core, grants one employee and keeps Secretary automatic')
  await page.locator(`.message-contact[data-chat="${dot.id}"]`).click()
  await expect(page.locator('.group-conversation')).toContainText('Dot')
- await rpc('conversation.file',{conversation:'group:'+dot.id,operation:'write',path:'worker-notes.txt',content:'Shared Worker notes\n',create:true})
- await page.getByRole('button',{name:'Shared workspace',exact:true}).click()
- const shared=page.getByRole('dialog',{name:'Shared workspace',exact:true})
+ history.get('dot').push({id:'worker-shared-file',revision:'shared-v1',cursor:'shared-1',role:'assistant',text:'Shared notes',createdAt:Date.now(),files:[{id:'shared-notes',remotePath:'shared-notes',name:'worker-notes.txt',bytes:documentBytes.length,mimeType:'text/plain'}]});await rpc('bot.sync')
+ await page.getByRole('button',{name:'Group shared content',exact:true}).click()
+ const shared=page.locator('.message-library')
  await expect(shared).toBeVisible();await expect(shared).toContainText('worker-notes.txt')
- await shared.getByRole('button',{name:'Close shared workspace',exact:true}).click();await expect(shared).toHaveCount(0)
+ await shared.getByRole('button',{name:'Close message library',exact:true}).click();await expect(shared).toHaveCount(0)
  await expect(page.locator('.group-title strong')).toHaveText('Dot')
- pass('External Worker shared files open through the actual header button, display the authenticated conversation workspace and return to the same conversation')
+ pass('External Worker files open through the unified header button, display authenticated shared files and return to the same conversation')
  await expect(page.locator('.bot-header-avatar .dot-native-avatar[data-native-character="codey"]')).toBeVisible()
  await page.getByRole('button',{name:'Dot native appearance',exact:true}).click();const appearance=page.locator('.dot-native-preview');await expect(appearance).toBeVisible();await expect(appearance.locator('.dot-native-avatar[data-native-character="codey"]')).toBeVisible();assert.equal((await rpc('bot.appearance',{id:dot.id})).editable,false);await page.screenshot({path:path.join(out,'dot-native-preview.png')});await appearance.getByRole('button',{name:'Close',exact:true}).click()
  assert.ok(await page.locator('.grok-native-avatar svg').count()>0)
  const framing=await page.locator('.message-contact[data-chat="'+grok.id+'"] .bot-avatar').evaluate(el=>{const parent=el.parentElement.getBoundingClientRect(),child=el.getBoundingClientRect(),svg=el.querySelector('svg').getBoundingClientRect();return {ratio:child.width/parent.width,svg:svg.width/child.width,padding:getComputedStyle(el.parentElement).padding}});assert.ok(framing.ratio>.98&&framing.svg>.98);assert.equal(framing.padding,'0px')
  pass('Dot keeps its fixed native OpenAI animation and opens its native preview; the Grok SVG fills its avatar without a padded tile')
  const composer=page.locator('.group-compose-box textarea');await composer.fill('Please continue this task.');await composer.press('Enter');await expect(page.locator('.bot-waiting')).toBeVisible()
- history.get('dot').push({id:'dot-reply',revision:'v1',cursor:'1',role:'assistant',text:'The result is ready.\n\n- Sources checked\n- Follow-up work prepared\n\nA later reply can still arrive.',createdAt:Date.now(),files:[]});await rpc('bot.sync');await expect(page.locator('.bot-waiting')).toHaveCount(0);await expect(page.locator('.group-message-row.is-incoming')).toContainText('The result is ready.')
+ history.get('dot').push({id:'dot-reply',revision:'v1',cursor:'1',role:'assistant',text:'The result is ready.\n\n- Sources checked\n- Follow-up work prepared\n\nA later reply can still arrive.',createdAt:Date.now(),files:[]});await rpc('bot.sync');await expect(page.locator('.bot-waiting')).toHaveCount(0);await expect(page.locator('.group-message.from-employee').filter({hasText:'The result is ready.'})).toContainText('The result is ready.')
  await expect(page.getByRole('button',{name:'Mention a member'})).toHaveCount(0);await expect(page.getByRole('button',{name:'Edit group'})).toHaveCount(0)
  pass('Bot UI uses native icons, explicit text send, smooth waiting dots, late reply rendering and no employee mention/governance controls')
  for(const width of [1440,760])for(const language of ['en','zh-CN'])for(const theme of ['white','black']){

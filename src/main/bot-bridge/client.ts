@@ -8,7 +8,7 @@ import * as dots from './dots'
 import * as grok from './grok'
 import {httpJson,httpStream} from './http'
 
-export type RemoteBot={id:string;name:string;provider:BotProvider;kind:'private'|'group';participantIds?:string[];grokShape?:string;grokColor?:string}
+export type RemoteBot={id:string;nativeId?:string;name:string;provider:BotProvider;kind:'private'|'group';participantIds?:string[];grokShape?:string;grokColor?:string}
 export type RemoteMessage={version?:number;id:string;revision:string;cursor:string;role:'user'|'assistant';text:string;createdAt:number;authorName?:string;requestId?:string;turnId?:string;files:BotFile[]}
 export type UploadSource={name:string;bytes:number;mimeType?:string;read:(offset:number,length:number)=>Promise<Buffer>}
 const digest=(s:string)=>createHash('sha256').update(s).digest('hex')
@@ -20,9 +20,11 @@ function fixtureUrl(){
  return url.href
 }
 async function fixture(method:string,args:unknown){const r=await httpJson(fixtureUrl()!,{method:'POST',body:{method,args}});if(r.status!==200)throw Error(r.data?.error??'Bot fixture failed');return r.data}
+export const hasBotFixture=()=>!!fixtureUrl()
+export const callBotFixture=(method:string,args:unknown)=>fixture(method,args)
 export async function remoteBots(provider:BotProvider):Promise<RemoteBot[]>{
  if(fixtureUrl())return fixture('list',{provider})
- if(provider==='dots')return [{id:await dots.getPrimaryRoom(),name:'Dot',provider,kind:'private'}]
+ if(provider==='dots')return [{id:await dots.getPrimaryRoom({force:true}),name:'Dot',provider,kind:'private'}]
  grok.invalidateUsage()
  const result=await grok.rpc('ListGrokBotAgents',{})
  return (result.agents??[]).map((a:any)=>({id:a.agentId||a.legacyAgentId,name:a.name||'Grok Bot',provider,kind:a.kind==='GROK_BOT_AGENT_KIND_ROOM'?'group':'private',participantIds:a.memberAgentIds??[],grokShape:a.avatarShape??'blob',grokColor:a.avatarColor??'black'}))

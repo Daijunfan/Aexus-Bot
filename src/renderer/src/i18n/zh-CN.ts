@@ -1,7 +1,9 @@
 /** Product interface copy only. User names, messages, files and model output are never translated. */
 import {engineeringZh} from './engineering.ts'
+import {botManagementZh} from './bot-management'
 export const zhCN:Record<string,string> = {
   ...engineeringZh,
+  ...botManagementZh,
   "Mission view": "任务视图",
   "Mission views": "任务视图切换",
   "Default visibility": "默认可见范围",

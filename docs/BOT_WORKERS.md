@@ -2,7 +2,41 @@
 
 Dot、Grok Bot 和 Grok 原生群组都作为 Worker 会话出现在 Message 中。它们不是 Aexus 员工，不签发本软件凭据，不拥有团队、插件、频道或计划管理权限。软件只向它们投递明确选中的任务正文、引用和附件，不注入本项目身份、系统包裹提示词或 Core 工具。既有官方会话、账号与历史继续保留。
 
-`bot.sync` 复用本机 ChatGPT/Codex 与 Grok Bot 官方登录态，导入主 Dot、现有 Grok Bot 和原生群组。凭据在 Core 内存中读取，不传给调用员工、云主机或 Bot。中转不另开未认证 HTTP 服务，也不依赖 Bots-API 源码目录或它的 App 运行。连接代码参考本机 Bots-API；支持的真实接口以原生应用协议为准。
+Message 左侧顶部的 Bot 图标打开统一管理器：分别显示 Dot、Grok 的 Bot 数量、Grok 群组数量，以及已接入 Aexus 的会话数量。目录包括尚未接入的原生对象；搜索、平台和类型筛选不改变账户总数。凭据在 Core 内存中读取，不传给调用员工、云主机或 Bot。中转不另开未认证 HTTP 服务，也不依赖 Bots-API 源码目录或它的 App 运行。支持的真实接口以本机原生应用协议为准。
+
+## 原生账户管理
+
+`bot.catalog` 只读取原生资料，不批量导入历史、订阅会话或发送消息。Grok 查询包含账户团队对象；Dot 遍历全部分页。平台返回不完整列表时明确标注；离线时只显示同一账户的上次同步结果和错误，不把读取失败当作零个 Bot。选择“打开会话”才用 `bot.connect` 接入这一对象，原生 ID、已有 Aexus ID 和历史保持稳定。
+
+| 管理操作 | Grok Bot / 原生群组 | OpenAI Dot |
+| --- | --- | --- |
+| 完整目录、数量、打开会话 | 支持 Bot 与群组 | 支持全部 Dot，按需建立消息会话 |
+| 名称与设置 | 名称、职责称谓、说明/指令、原生形状和颜色 | 名称；说明只读，形象固定为原生 Codey |
+| 群成员 | 原生 Bot 多选、搜索、一次保存 | 当前协议未提供对应群组能力 |
+| 创建 | Bot、原生群组 | 账户允许时创建额外 Dot |
+| 运行控制 | 停止当前任务、开始新会话、复制 Bot | 暂停、恢复、设为主 Dot |
+| 删除原生对象 | 显示具体对象并确认后删除 | 显示具体对象并确认后删除 |
+
+这些操作直接改变原生账户中的对象。管理器根据原生所有者/管理权限显示可写操作；只读共享对象不能借 Aexus 身份提升原生权限。未验证或未开放的能力明确不提供，不承诺替代官方应用的账户登录、订阅付款或全部平台设置。
+
+UI、CLI 与 API 使用相同操作：
+
+```sh
+agents bot catalog --json
+agents bot profile --provider grok --native-id NATIVE_ID --json
+agents bot configure --provider grok --native-id NATIVE_ID --expected-version VERSION --patch '{"name":"Research desk","description":"Read and compare sources"}' --json
+agents bot members --provider grok --native-id NATIVE_GROUP_ID --expected-version VERSION --members '["NATIVE_BOT_ID"]' --json
+agents bot connect --provider dots --native-id NATIVE_DOT_ID --json
+agents bot native-create --provider grok --name "Research desk" --client-request-id STABLE_UUID --json
+agents bot control --provider dots --native-id NATIVE_DOT_ID --action pause --expected-version VERSION --client-request-id STABLE_UUID --json
+agents bot native-delete --provider grok --native-id NATIVE_ID --expected-version VERSION --confirm-native-id NATIVE_ID --client-request-id STABLE_UUID --json
+```
+
+`nativeId` 来自原生目录，与 `bot.list` 返回的 Aexus 会话 ID 不同。保存设置和成员前重新核验 `version`，使用局部更新并读回结果。官方应用发生并发修改时保留草稿，用户合并或明确重新加载后再保存；在对象之间切换也保留草稿。原生接口没有跨客户端原子版本写入时，本软件不会宣称具备服务端事务隔离。
+
+创建、复制、重置、删除使用持久化 `clientRequestId`。相同请求重试返回原结果；身份被不同参数复用会拒绝。远端可能已接受但响应丢失时，不盲目再创建或删除一次，先刷新目录确认。开始新会话和原生删除还要求准确的 `confirmNativeId`。原生删除会归档关联的 Aexus 会话，保留已接收的文字记录与工作区；原生远端文件之后可能不可用。
+
+Aexus 显示别名、员工访问授权、断开连接与原生设置分别管理。`bot.update` 只改本地别名；`bot.delete` 只断开本地连接，不删除原生 Bot。重新连接恢复原 Aexus 身份与历史，不恢复旧员工授权。原有 `bot.sync` 批量导入主 Dot、可见 Grok 会话的行为仍兼容；管理器使用元数据目录和按需连接，避免同时拉取整个账户的消息。
 
 ## 自动连接 Mac
 

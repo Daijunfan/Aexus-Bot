@@ -22,6 +22,8 @@ import {SingleFlight} from './single-flight'
 import {removeIndexedConversation} from './message-index-client'
 import {remoteBots,remoteCreate,remoteMessages,remoteRead,remoteSend,remoteUpload,remoteStatus,prepareRemote,watchRemote,type RemoteBot,type RemoteMessage} from './bot-bridge/client'
 import {localBotHosts} from './bot-bridge/local-hosts'
+import {manageBotRequest} from './bot-management'
+import type {NativeBotProfile} from '../shared/bot-management'
 
 const hash=(v:unknown)=>createHash('sha256').update(JSON.stringify(v)).digest('hex')
 const flights=new SingleFlight<any>(),watches=new Map<string,()=>void>(),syncing=new Set<string>()
@@ -39,12 +41,24 @@ function saveMessages(id:string,rows:ChatMessage[],changed:ChatMessage,incoming=
 }
 function importBot(remote:RemoteBot){
  const current=catalog().groups.find(g=>g.bot?.provider===remote.provider&&g.bot.remoteId===remote.id)
- if(current)return mutate(current.id,g=>{g.name=g.bot!.displayName??remote.name;g.bot={...g.bot!,kind:remote.kind,participantIds:remote.participantIds,grokShape:remote.grokShape,grokColor:remote.grokColor}})
- const now=Date.now(),group:ChatGroup={id:'cg_'+randomUUID(),name:remote.name,ownerId:null,adminIds:[],memberIds:[],createdAt:now,updatedAt:now,revision:1,readSequence:0,lastIncomingSequence:0,bot:{provider:remote.provider,remoteId:remote.id,kind:remote.kind,role:'worker',participantIds:remote.participantIds,grokShape:remote.grokShape,grokColor:remote.grokColor}}
+ if(current)return mutate(current.id,g=>{g.name=g.bot!.displayName??remote.name;g.bot={...g.bot!,nativeId:remote.nativeId??g.bot!.nativeId,kind:remote.kind,participantIds:remote.participantIds,grokShape:remote.grokShape,grokColor:remote.grokColor}})
+ const now=Date.now(),group:ChatGroup={id:'cg_'+randomUUID(),name:remote.name,ownerId:null,adminIds:[],memberIds:[],createdAt:now,updatedAt:now,revision:1,readSequence:0,lastIncomingSequence:0,bot:{provider:remote.provider,remoteId:remote.id,nativeId:remote.nativeId,kind:remote.kind,role:'worker',participantIds:remote.participantIds,grokShape:remote.grokShape,grokColor:remote.grokColor}}
  const store=catalog();store.groups.push(group);atomicJson(indexFile,store,true);emitChatChange(group.id);return group
 }
 export function listBots(includeRemoved=false){if(includeRemoved)requireAppAdministrator();return [...catalog().groups.filter(g=>g.bot&&(isAppAdministrator()||g.memberIds.includes(callerEmployee()!.id))),...(includeRemoved?Object.values(removedBots()).map(r=>({...r.group,removed:true})):[])].map(g=>({...g,bot:{...g.bot!,localComputer:localBotHosts.status(g.bot!.provider)},conversation:'group:'+g.id,directEmployeeId:g.bot!.kind==='private'?g.id:undefined,workerRole:'worker',automaticRoles:['secretary']}))}
 const connectLocalComputers=()=>localBotHosts.ensure([...new Set(catalog().groups.flatMap(g=>g.bot?[g.bot.provider]:[]))])
+function matchesNative(group:ChatGroup,profile:NativeBotProfile){return group.bot?.provider===profile.provider&&(group.bot.nativeId===profile.nativeId||group.bot.remoteId===profile.messagingId)}
+const asRemote=(profile:NativeBotProfile,messagingId=profile.messagingId):RemoteBot=>({id:messagingId!,nativeId:profile.nativeId,name:profile.name,provider:profile.provider,kind:profile.kind,participantIds:profile.members,grokShape:profile.grokShape,grokColor:profile.grokColor})
+async function connectManagedBot(profile:NativeBotProfile){
+ requireAppAdministrator()
+ if(!profile.messagingId)throw Error('Native messaging room is unavailable')
+ const removed=removedBots(),record=Object.values(removed).find(record=>matchesNative(record.group,profile))
+ if(record&&!catalog().groups.some(group=>group.id===record.group.id)){
+  const restored={...record.group,memberIds:[],ownerId:null,adminIds:[],mutes:{},bot:{...record.group.bot!,accessRevision:(record.group.bot!.accessRevision??1)+1}}
+  const store=catalog();store.groups.push(restored);atomicJson(indexFile,store,true);delete removed[restored.id];atomicJson(removedFile,removed,true)
+ }
+ const group=importBot(asRemote(profile));await syncMessages(group.id);await connect(group.id);await connectLocalComputers();requireAppAdministrator();return botGroup(group.id)!
+}
 export function botDirectRequest(command:string,args:Record<string,any>):any{
  const g=requireBot(args.employee)
  if(g.bot!.kind!=='private')throw Error('Use chat.* for native Grok groups')
@@ -145,6 +159,12 @@ export async function stopBotWorkers(){stopped=true;clearInterval(timer);timer=u
 export async function botRequest(command:string,args:Record<string,any>){
  if(command==='bot.list')return listBots(args.includeRemoved===true)
  requireAppAdministrator()
+ if(['bot.catalog','bot.profile','bot.connect','bot.configure','bot.members','bot.native-create','bot.control','bot.native-delete'].includes(command))return manageBotRequest(command,args,{
+  connections:()=>listBots(true),
+  updated:profile=>{const g=catalog().groups.find(g=>matchesNative(g,profile));if(g)importBot(asRemote(profile,g.bot!.remoteId))},
+  archive:async profile=>{for(const g of catalog().groups.filter(g=>matchesNative(g,profile)))await botRequest('bot.delete',{id:g.id})},
+  connect:connectManagedBot
+ })
  if(command==='bot.update'){
   const g=requireBot(args.id)
   if(args.expectedRevision!==(g.bot!.profileRevision??1))throw Error('Bot profile changed; reload before saving')
@@ -161,6 +181,7 @@ export async function botRequest(command:string,args:Record<string,any>){
  if(command==='bot.restore'){
   if(botGroup(args.id))return botGroup(args.id)
   const removed=removedBots(),record=removed[args.id];if(!record?.group.bot)throw Error('Unknown removed bot')
+  if(record.group.bot.nativeId)return botRequest('bot.connect',{provider:record.group.bot.provider,nativeId:record.group.bot.nativeId})
   const remote=(await remoteBots(record.group.bot.provider)).find(b=>b.id===record.group.bot!.remoteId);if(!remote)throw Error('The native bot no longer exists')
   const group={...record.group,memberIds:[],ownerId:null,adminIds:[],mutes:{},bot:{...record.group.bot,accessRevision:(record.group.bot.accessRevision??1)+1}}
   const store=catalog();store.groups.push(group);atomicJson(indexFile,store,true);delete removed[args.id];atomicJson(removedFile,removed,true)

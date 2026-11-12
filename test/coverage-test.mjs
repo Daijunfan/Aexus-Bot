@@ -50,7 +50,7 @@ const renderer = rendererFiles.map((f) => readFileSync(f, 'utf8')).join('\n')
 
 // ---- what the terminal exposes ----
 
-const server = ['server.ts','channels.ts','conversation-workspaces.ts','bot-workers.ts','script-monitors.ts',...readdirSync(join(ROOT,'src/main/commands')).filter(name=>name.endsWith('.ts')).map(name=>'commands/'+name)].map(file=>readFileSync(join(ROOT,'src','main',file),'utf8')).join('\n')
+const server = ['server.ts','channels.ts','conversation-workspaces.ts','bot-workers.ts','bot-management.ts','script-monitors.ts',...readdirSync(join(ROOT,'src/main/commands')).filter(name=>name.endsWith('.ts')).map(name=>'commands/'+name)].map(file=>readFileSync(join(ROOT,'src','main',file),'utf8')).join('\n')
 const cli = readFileSync(join(ROOT, 'bin', 'agents'), 'utf8')
 const protocol = readFileSync(join(ROOT, 'src', 'shared', 'api-registry.ts'), 'utf8')
 

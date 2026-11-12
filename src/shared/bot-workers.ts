@@ -3,7 +3,7 @@ import type {AvatarKind} from './office'
 export type BotProvider='dots'|'grok'
 export type BotLocalComputer={state:'stopped'|'starting'|'connected'|'reconnecting'|'external'|'error'|'unsupported';connectedAt?:number;error?:string}
 export type BotIssue={code:string;message:string;detail?:string;retryAt?:number;at:number;turnId?:string}
-export type BotBinding={provider:BotProvider;remoteId:string;kind:'private'|'group';role:'worker';displayName?:string;profileRevision?:number;avatar?:AvatarKind;appearanceRevision?:number;grokShape?:string;grokColor?:string;participantIds?:string[];cursor?:string;initialized?:boolean;accessRevision?:number;connection?:'connecting'|'connected'|'error';error?:string;issue?:BotIssue;localComputer?:BotLocalComputer}
+export type BotBinding={provider:BotProvider;remoteId:string;nativeId?:string;kind:'private'|'group';role:'worker';displayName?:string;profileRevision?:number;avatar?:AvatarKind;appearanceRevision?:number;grokShape?:string;grokColor?:string;participantIds?:string[];cursor?:string;initialized?:boolean;accessRevision?:number;connection?:'connecting'|'connected'|'error';error?:string;issue?:BotIssue;localComputer?:BotLocalComputer}
 export const DEFAULT_DOT_AVATAR:AvatarKind='codex'
 export type BotFile={id:string;name:string;bytes:number;mimeType?:string;remotePath:string}
 export type BotPublication={version?:number;remoteId:string;revision:string;files?:BotFile[];requestId?:string;turnId?:string;failure?:BotIssue;delivery?:'sending'|'accepted'|'uncertain'|'rejected';error?:string}

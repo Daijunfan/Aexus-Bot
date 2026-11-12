@@ -3515,7 +3515,11 @@ macOS Core 会为已接入的 Dot/Grok 自动管理原生 Mac 后台执行组件
 
 Grok 外部会话使用原生账户的只读用量查询；额度耗尽会显示原因和本地时区的重置时间，保留历史与输入草稿，不自动更改套餐或开通付费。`bot.list[].bot.issue` 提供 `code/message/detail?/retryAt?/at/turnId?`；`direct.send-status.executionFailure` 提供关联原消息的同类执行错误。`status=accepted` 是送达确认，不是执行成功。执行失败持久保存、重启恢复，原生连接重建不重放已接收消息。正常发送先唤醒原生运行环境。
 
-Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Worker。消息和文件继续使用 direct.*、chat.*、conversation.*；不会给外部 Bot 签发 Core 身份。普通员工逐项授权，Secretary 全局可用。云端员工使用同一 API，把附件下载到自己的远程工作区；Secretary 始终本地。
+Message 原生管理器通过 `bot.catalog` 显示完整 Bot/群组数量与目录，`bot.profile` 读取资料，`bot.connect` 按需接入一条会话。目录不批量拉取历史或启动全账户监听；Dot 全分页、Grok 团队对象与原生截断均明确处理，离线快照按账户隔离并标为过期。
+
+`bot.configure` 修改已验证的原生字段，`bot.members` 查询/多选保存 Grok 原生 Bot 成员，`bot.native-create` 创建原生 Bot 或群组，`bot.control` 调用提供方支持的暂停/恢复/主 Dot 或停止/重置/复制。读 `bot.profile.actions` 判断实际能力，不猜参数。设置与成员写入携带 `expectedVersion`；修改冲突保留草稿。创建和控制携带稳定 UUID `clientRequestId`，未知远端结果不重放。`bot.native-delete` 在准确 ID 确认及版本核验后删除原生对象，并保留 Aexus 文字记录与工作区；重置也要求 `confirmNativeId`。
+
+以上原生管理操作仅用户与 Secretary 可用，并继续检查原生账户权限。`bot.update/delete/restore` 分别为 Aexus 别名、断开与恢复；`bot.access` 单独授权 Aexus 员工，不改变原生群成员。原有 list/sync/create/group-create 保持兼容。消息和文件继续使用 direct.*、chat.*、conversation.*；不会给外部 Bot 签发 Core 身份。普通员工逐项授权，Secretary 全局可用。云端员工使用同一 API，把附件下载到自己的远程工作区；Secretary 始终本地。详见 [原生账户管理](docs/BOT_WORKERS.md#原生账户管理)。
 
 委派前先保存持续的 message.received 事件计划，收到一条确认并不结束等待。程序监测用 monitor.* 管理、输出稳定 ID 的 JSON 行，空闲不调用模型。规则、授权、重启和多段回复约定见 [外部 Worker](docs/BOT_WORKERS.md) 与 [事件任务](docs/EVENT_TASKS.md)。
 
@@ -3536,7 +3540,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 <!-- BEGIN GENERATED CLI COMMAND INDEX -->
 ## 全部 CLI 命令索引
 
-下面 480 项来自共享协议 `src/shared/api-registry.ts`。命令名中的句点在终端中写成空格；每项都可附加 `--json`。参数、返回值和限制见上文对应章节。
+下面 488 项来自共享协议 `src/shared/api-registry.ts`。命令名中的句点在终端中写成空格；每项都可附加 `--json`。参数、返回值和限制见上文对应章节。
 
 | 命令 | 参数 | 作用 | 对应界面 | 授权策略 |
 | --- | --- | --- | --- | --- |
@@ -3642,6 +3646,14 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents bot create</code> | <code>--name NAME --client-request-id UUID [--description TEXT]</code> | User/Secretary: create a native Grok Worker. A stable UUID is the remote creation identity; unchanged retries never create another bot. No Aexus context is injected. | New Grok bot | operator |
 | <code>agents bot group-create</code> | <code>--name NAME --members JSON --client-request-id UUID</code> | User/Secretary: create a native Grok group from imported Grok Worker conversation IDs. Does not add Aexus employees to the native group; bot.access grants application access separately. | New Grok group | operator |
 | <code>agents bot access</code> | <code>ID [--employee-ids JSON --expected-revision N]</code> | User/Secretary: grant employees access to an external Worker private conversation or Grok group. Secretary always has full access. Ordinary employee grants permit explicit messaging, history and files, never application authority for the bot. | Bot authorized employees | operator |
+| <code>agents bot catalog</code> | <code>—</code> | User/Secretary: read the complete native Dot/Grok account directory and separate bot/group counts, including conversations not connected to Aexus. Fetches metadata only, never all histories. Offline snapshots are marked stale and native truncation is explicit. | Native bot manager | operator |
+| <code>agents bot profile</code> | <code>--provider dots&#124;grok --native-id ID</code> | User/Secretary: read one native bot/group profile and its actual supported management actions. Does not expose account credentials or change the native instructions. | Native bot settings | operator |
+| <code>agents bot connect</code> | <code>--provider dots&#124;grok --native-id ID</code> | User/Secretary: explicitly connect or restore one existing native bot/group to Aexus, preserving native identity and local history. Restoring does not revive employee grants. | Open native conversation | operator |
+| <code>agents bot configure</code> | <code>--provider dots&#124;grok --native-id ID --expected-version HASH --patch JSON</code> | User/Secretary: save supported native profile fields with a fresh version check, targeted updates and read-back verification. This changes the official bot profile, not an Aexus-only alias. | Save native profile | operator |
+| <code>agents bot members</code> | <code>--provider grok --native-id ID [--members JSON --expected-version HASH]</code> | User/Secretary: read or replace native Grok group bot members. Native membership and Aexus employee access are independent. Uses actual native bot IDs and verifies the saved membership. | Native group members | operator |
+| <code>agents bot native-create</code> | <code>--provider dots&#124;grok --name NAME --client-request-id UUID [--kind private&#124;group --description TEXT --members JSON]</code> | User/Secretary: create a native Dot/Grok bot or Grok group. Persisted request identity prevents duplicate native creation after retries or an uncertain response; no Aexus system context is injected. | Create native bot or group | operator |
+| <code>agents bot control</code> | <code>--provider dots&#124;grok --native-id ID --action pause&#124;resume&#124;primary&#124;interrupt&#124;new-conversation&#124;duplicate --expected-version HASH --client-request-id UUID [--confirm-native-id ID]</code> | User/Secretary: use verified native lifecycle controls. Dot supports pause/resume/primary; Grok supports interrupt/new conversation/duplicate. Resetting a conversation requires exact native-ID confirmation. Unsupported actions fail explicitly. | Native bot controls | operator |
+| <code>agents bot native-delete</code> | <code>--provider dots&#124;grok --native-id ID --expected-version HASH --confirm-native-id ID --client-request-id UUID</code> | User/Secretary: delete the native platform bot/group after exact-ID confirmation and fresh-version checks. Verify native absence and archive the Aexus connection/history without deleting workspaces. This is distinct from bot.delete, which only disconnects Aexus. | Delete native bot or group | operator |
 | <code>agents monitor list</code> | <code>[--employee ID]</code> | List own supervised script/program monitors; user and Secretary manage all. Monitor execution remains on the owning employee’s execution host. | Plan event monitors | schedule |
 | <code>agents monitor create</code> | <code>--name NAME --program JSON [--employee ID --cwd DIR --restart-on-launch]</code> | Register an own-workspace monitor program argv (no shell interpolation). Then create a schedule with rule.event monitor.output/monitor.exited and this monitorId BEFORE monitor.start. Emit JSON lines {id:stableEventId,data:any}; Core namespaces events, deduplicates and queues wakeups. The script receives no application identity. | Plan event monitor | worker |
 | <code>agents monitor start</code> | <code>ID</code> | Start a saved monitor on its pinned employee host/workspace. No local fallback. stdout JSON lines become monitor.output; termination becomes monitor.exited. Use schedule.* to select the employee wake action. | Start monitor | worker |
