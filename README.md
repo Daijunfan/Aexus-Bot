@@ -25,7 +25,7 @@ Aexus Bot 提供协作基础设施。具体目标、输入、规则和验收标�
 
 ### Team：组织团队，同时跟进多人工作
 
-Team 展示员工、职责、团队关系和工作状态。**Characters** 用角色场景呈现团队；**Board** 同时打开多个员工的完整工作台；**Workers** 独立管理原生 Coding Agent 会话。
+Team 展示员工、职责、团队关系和工作状态。**Engineering** 将工程组织成 Governor、Manager、Employee 与原生 Worker 的协作流程：管理拓扑与执行 DAG 同屏展示，交付经过员工初验、Manager 复验和最终确认，并与 Mission 同步。**Characters** 用角色场景呈现关联团队；**Board** 同时打开多个员工的完整工作台；**Workers** 独立管理原生 Coding Agent 会话。Research 暂保留入口。详见 [Engineering](docs/ENGINEERING.md)。
 
 你可以按项目安排员工，也可以用分类组织当前要协作的人。文件浏览、编辑、终端、会话、工具调用、审批和任务队列共同构成工作台，方便在成员之间切换和并行处理。
 

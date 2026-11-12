@@ -8,6 +8,7 @@ import {listPlugins,pluginFile} from './plugins/registry'
 const coreDocuments=[
  ['core/api','API.md'],['core/permissions','PERMISSIONS.md'],['core/plan','PLAN.md'],
  ['core/avatars','docs/AVATARS.md'],['core/missions','docs/MISSIONS_AND_QUESTIONS.md'],
+ ['core/engineering','docs/ENGINEERING.md'],
  ['core/scheduler','SCHEDULER.md'],['core/architecture','ARCHITECTURE.md'],
  ['core/conversation-workspaces','docs/CONVERSATION_WORKSPACES.md'],
  ['core/conversation-controls','docs/CONVERSATION_CONTROLS.md'],
@@ -58,6 +59,7 @@ function materialize(){
    '群组 Owner / Admin / Member 与 Company 职位独立；先读 `conversation.policy` 查询可用动作。Secretary 可直接管理群组。群通知使用 `conversation.notice-*`，排期使用 `schedule.*`。频道是只读资讯流，没有成员、讨论或群通知；普通员工须获 `channel.access` 阅读授权，Secretary 自动可读。用 `channel.fetch-text/fetch-images/search` 选择数量、来源、时间及关键词。`workspace.catalog` 列出工作区；共享附件使用 `conversation.entry/download/download-status`。见 `core/message-collaboration`。','',
   '外部 Dot/Grok Worker 委派与授权见 `core/bot-workers`。Grok 可执行原生 X 任务；Dot 可以分多次、长间隔回复。委派前先用 `schedule.*` 保存持续的 message.received 计划，不把确认消息或安静间隔当结束。软件事件与程序监控见 `core/event-tasks`。','',
   '## 查询与操作','',
+  'Engineering 工程用 engineering.*，先读 core/engineering 与 engineering.context。工程独立绑定 Team 和 Mission，Topology 与 DAG 同屏共享角色。Worker 实际执行后必须 Employee 初验、Manager 复验、Manager 链路确认和 Governor 最终确认；不得直接 mission.complete 绕过工程验收。Secretary 可创建和编辑；职级、归属与实际身份仍由 Core 核验。','',
   '正式任务可直接使用 `agents_company_api`，参数 `command` 为已有 Core 命令，`args` 为该命令的参数对象。它以当前员工身份调用同一 API，无需 shell；写操作遵循当前 Ask/Full access，原生 planning 模式只读。初始化和静默阅读不可操作。','',
   '持续目标使用 mission.*，只有显式成功才结束；类型、执行人、秘书和提醒时间见 core/missions。用户给秘书的新私聊已附带自动登记的 Mission ID，先读取再调整，不要重复创建。聊天选择题使用 question.*，保留 Other；有限等待需 fallback，关键决定用 null；question.answer 仅真实用户可调用。先读未处理问题，同一目标的新提醒不能跳过等待。', '',
   'Plan 先调用 `{"command":"plan.query","args":{}}`：读取真实任务 ID/revision、完整规则、时间、人员职位/Team、target.exists、allowedActions。Secretary 也能看到员工已删除的任务；未知旧身份为 null。分页用 offset/limit。根据任务类型使用 mission.* 或 schedule.*，不要把 mission_ ID 传给 schedule.*。排期删除使用 schedule.delete 的 id 或 ids，带上 expectedRevision 或逐 ID 的 expectedRevisions；随后再查 plan.query 确认。','',

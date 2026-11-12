@@ -1,7 +1,7 @@
 import {join} from 'node:path'
 import {createHash,randomUUID} from 'node:crypto'
 import {APP_HOME} from '../shared/protocol'
-import type {Mission,MissionSpec} from '../shared/missions'
+import type {Mission,MissionSpec,EngineeringMission} from '../shared/missions'
 import type {Delegation,PrincipalRef,RequestContext} from '../shared/management'
 import {atomicJson,readJson} from './atomic-file'
 import {readStore} from './store'
@@ -15,11 +15,14 @@ type State={version:1;missions:Saved[]}
 const file=join(APP_HOME,'missions.json'),stamp=()=>new Date().toISOString(),hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex')
 let state:State|undefined,timer:ReturnType<typeof setInterval>|undefined,emit:(channel:string,payload:unknown)=>void=()=>{},running=false,serviceError=''
 const delivering=new Set<string>(),work=new Set<Promise<unknown>>()
+let engineeringParticipant:(id:string,principal:PrincipalRef)=>boolean=()=>false
+/** Engineering registers shared-goal visibility without a runtime dependency back to its executor. */
+export function registerEngineeringMissionAccess(check:typeof engineeringParticipant){engineeringParticipant=check}
 function data(){if(serviceError)throw Error(serviceError);return state??=readJson<State>(file,()=>({version:1,missions:[]}),value=>(value as State)?.version===1&&Array.isArray((value as State)?.missions)&&(value as State).missions.every(item=>typeof item.id==='string'&&item.id.startsWith('mission_')&&typeof item.name==='string'&&typeof item.prompt==='string'&&Array.isArray(item.employeeIds)&&item.employeeIds.length>0&&item.employeeIds.every(id=>typeof id==='string')&&Array.isArray(item.reminders)&&!!item.authority?.requestedBy&&['operator','agent'].includes(item.authority.requestedBy.kind)&&['open','failed','succeeded'].includes(item.status)&&Number.isSafeInteger(item.revision)&&Number.isSafeInteger(item.reminderSeconds)&&item.reminderSeconds>=10&&(item.nextReminderAt===null||typeof item.nextReminderAt==='string'&&Number.isFinite(Date.parse(item.nextReminderAt)))))}
 function save(item?:Saved){try{atomicJson(file,data(),true)}catch(error){serviceError='Mission storage is unavailable: '+(error as Error).message;running=false;clearInterval(timer);throw Error(serviceError)}emit('mission:changed',item?{id:item.id,employees:[...item.employeeIds,...(item.secretaryId?[item.secretaryId]:[])]}:{})}
 const person=(id:string)=>readStore().sessions.find(card=>card.id===id&&!card.deleting)
 const same=(a:PrincipalRef,b:PrincipalRef)=>a.kind===b.kind&&(a.kind==='operator'||b.kind==='agent'&&a.employeeId===b.employeeId)
-function visible(item:Mission,principal=requestContext().principal){return isAppAdministrator(principal)||principal.kind==='agent'&&item.employeeIds.includes(principal.employeeId)||item.employeeIds.every(id=>canSchedule(principal,id))}
+function visible(item:Mission,principal=requestContext().principal){return isAppAdministrator(principal)||!!item.engineering&&engineeringParticipant(item.engineering.id,principal)||principal.kind==='agent'&&item.employeeIds.includes(principal.employeeId)||item.employeeIds.every(id=>canSchedule(principal,id))}
 function manageable(item:Mission,principal=requestContext().principal){return item.employeeIds.every(id=>canSchedule(principal,id))||isAppAdministrator(principal)&&item.employeeIds.some(id=>!person(id))}
 function get(id:string){const item=data().missions.find(item=>item.id===id);if(!item||!visible(item))throw Error('Unknown or unauthorized mission');return item}
 function publicMission(item:Saved):Mission{if(serviceError)throw Error(serviceError);const {authority,authorityInvalidated,credentialHash,clientRequestId,fingerprint,...value}=item;return structuredClone(value)}
@@ -69,7 +72,7 @@ async function deliver(item:Saved,reminder:Mission['reminders'][number],employee
  })
 }
 function remind(item:Saved,trigger:'created'|'interval'|'manual'='interval'){
- if(item.status==='succeeded')return
+ if(item.status==='succeeded'||item.engineering)return
  item.nextReminderAt=new Date(Date.now()+item.reminderSeconds*1000).toISOString()
  if(delivering.has(item.id)){save(item);return}
  const authorityRequestId=item.authority.requestId
@@ -88,19 +91,38 @@ export function questionMissionId(id:string,principal:PrincipalRef){const item=d
 export function missionTaskState(id:string){if(serviceError)return 'unavailable' as const;return data().missions.find(item=>item.id===id)?.status??'missing'}
 export function missionTaskId(employee:string,task:{delegation:Delegation;directMessageId?:string}|undefined){
  if(serviceError)return
- const id=task?.delegation.missionNotice?.id??task?.delegation.questionReply?.missionId
+ const id=task?.delegation.missionNotice?.id??task?.delegation.questionReply?.missionId??(task?.delegation.engineeringNotice?data().missions.find(item=>item.engineering?.id===task.delegation.engineeringNotice!.id&&visible(item,{kind:'agent',employeeId:employee}))?.id:undefined)
  return id??data().missions.find(item=>task?.directMessageId&&item.source?.employeeId===employee&&item.source.messageId===task.directMessageId)?.id
 }
 export function recordMissionFailure(employee:string,task:{delegation:Delegation;directMessageId?:string}|undefined,error:string){
  const id=missionTaskId(employee,task);if(!id)return
  const item=data().missions.find(item=>item.id===id)!
+ if(item?.engineering)return // Engineering records its role/run failures and owns this goal projection.
  if(!item||item.authorityInvalidated||!item.employeeIds.includes(employee)&&item.secretaryId!==employee||task?.delegation.missionNotice&&task.delegation.missionNotice.authorityRequestId!==item.authority.requestId)return
  if(item.status!=='succeeded'){item.status='failed';item.failedAt=stamp();item.deliveryError=error;bump(item);save(item)}
 }
 export function startMissions(broadcast:typeof emit){emit=broadcast;try{data();running=true;reconcileMissions();timer=setInterval(()=>{try{for(const item of data().missions)if(item.status!=='succeeded'&&item.nextReminderAt&&Date.parse(item.nextReminderAt)<=Date.now())remind(item)}catch(error){serviceError='Mission reminders stopped: '+(error as Error).message;running=false;clearInterval(timer);console.error(serviceError)}},1000);timer.unref()}catch(error){serviceError='Cannot start missions: '+(error as Error).message;console.error(serviceError)}}
 export async function stopMissions(){running=false;clearInterval(timer);await Promise.allSettled([...work])}
 export function missionRows(){return data().missions.filter(item=>visible(item)).map(publicMission)}
-export function missionCapabilities(item:Mission){return {allowedActions:['mission.get',...(manageable(item)?['mission.update','mission.complete','mission.fail','mission.remind','mission.archive',...(item.status==='succeeded'?['mission.delete','mission.reopen']:[])]:[])],blockedActions:{}}}
+/** Provisioning recovery only; returns the existing fixed project-goal binding, not a caller's private history. */
+export function existingEngineeringMission(engineeringId:string,governorId:string){const item=data().missions.find(item=>item.clientRequestId===engineeringId+':mission');if(!item)return;if(item.employeeIds.length!==1||item.employeeIds[0]!==governorId||item.engineering&&item.engineering.id!==engineeringId)throw Error('Engineering Mission provisioning identity changed');return item.id}
+/** Only the Engineering service writes this projection after its role/acceptance gates.
+ * Persisted engineering state is authoritative; replaying this reconciliation is idempotent. */
+export function recordEngineeringMission(id:string,engineering:EngineeringMission,result?:string,details?:Pick<MissionSpec,'name'|'prompt'|'reminderSeconds'|'employeeIds'|'viewId'>,authority?:Delegation){
+ const item=data().missions.find(item=>item.id===id);if(!item)throw Error('The Engineering Mission is missing; it cannot be silently replaced')
+ if(item.engineering&&item.engineering.id!==engineering.id)throw Error('Mission already belongs to another Engineering')
+ const complete=engineering.status==='completed',reopened=item.engineering?.status==='completed'&&!complete,desired=complete?'succeeded':['blocked','setup_failed'].includes(engineering.status)?'failed':'open',authorityChanged=!!authority&&JSON.stringify(authority)!==JSON.stringify(item.authority)
+ if(JSON.stringify(item.engineering)===JSON.stringify(engineering)&&item.status===desired&&(!complete||item.result===result)&&!authorityChanged&&(!details||Object.entries(details).every(([key,value])=>Array.isArray(value)?JSON.stringify((item as any)[key])===JSON.stringify(value):(item as any)[key]===value)))return
+ if(details)Object.assign(item,details,{employeeEngines:{...item.employeeEngines,...Object.fromEntries(details.employeeIds.map(id=>[id,person(id)?.engine]).filter(([,engine])=>!!engine))}})
+ if(authorityChanged){item.authority=structuredClone(authority!);item.authorityInvalidated=false;delete item.deliveryError}
+ item.engineering=structuredClone(engineering);item.nextReminderAt=engineering.status==='running'?engineering.nextCheckAt??null:null
+ item.status=desired
+ if(complete){item.status='succeeded';item.result=result;item.completedAt??=stamp();delete item.deliveryError}
+ else if(reopened){item.status='open';delete item.completedAt;delete item.archivedAt;delete item.deliveryError}
+ else if(engineering.status==='blocked'){item.status='failed';item.failedAt??=stamp()}
+ bump(item);save(item)
+}
+export function missionCapabilities(item:Mission):{allowedActions:string[];blockedActions:Record<string,string>}{if(item.engineering)return {allowedActions:['mission.get',...(manageable(item)?['mission.archive']:[])],blockedActions:{'mission.complete':'Complete the Engineering acceptance workflow','mission.update':'Edit the linked Engineering instead','mission.delete':'Engineering history and its Mission are retained'}};return {allowedActions:['mission.get',...(manageable(item)?['mission.update','mission.complete','mission.fail','mission.remind','mission.archive',...(item.status==='succeeded'?['mission.delete','mission.reopen']:[])]:[])],blockedActions:{}}}
 export function archiveMission(id:string,archived:boolean){const item=get(id);if(!manageable(item))throw Error('Forbidden mission');item.archivedAt=archived?stamp():undefined;bump(item);save(item);return publicMission(item)}
 export async function missionRequest(method:string,args:Record<string,any>,notify=true){
  const pendingQuestions=method==='complete'?(await import('./chat-questions')).missionPendingQuestions:undefined
@@ -120,6 +142,7 @@ export async function missionRequest(method:string,args:Record<string,any>,notif
  }
  const item=get(args.id)
  if(method==='get')return publicMission(item)
+ if(item.engineering&&['update','complete','reopen','delete','fail','remind'].includes(method))throw Error('This Mission belongs to Engineering. Use engineering.update/complete/reopen/wake so both acceptance stages and chain checks remain intact.')
  if(!manageable(item)&&!(method==='fail'&&context.principal.kind==='agent'&&item.employeeIds.includes(context.principal.employeeId)))throw Error('Forbidden mission: current authority over every assignee is required')
  if(method==='remind'){remind(item,'manual');return publicMission(item)}
  checkRevision(item,args.expectedRevision)

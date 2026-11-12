@@ -1,6 +1,7 @@
 import {GROUP_COLLABORATION_COMMANDS} from './group-collaboration.ts'
 import {PLAN_PREFERENCE_COMMANDS} from './plan-preferences.ts'
 import {MISSION_COMMANDS} from './missions.ts'
+import {ENGINEERING_COMMANDS} from './engineering.ts'
 import {QUESTION_COMMANDS} from './chat-questions.ts'
 import {BOARD_CATEGORY_COMMANDS} from './board-categories.ts'
 import {MONITOR_COMMANDS} from './script-monitors.ts'
@@ -34,7 +35,7 @@ const DEFINITIONS: {
   cli?:CliSpec
   inputSchema?:Record<string,unknown>
 }[] = [
-  ...MISSION_COMMANDS,...QUESTION_COMMANDS,...PLAN_PREFERENCE_COMMANDS,
+  ...ENGINEERING_COMMANDS,...MISSION_COMMANDS,...QUESTION_COMMANDS,...PLAN_PREFERENCE_COMMANDS,
   ...BOARD_CATEGORY_COMMANDS,
   ...PLAN_COMMANDS,
   ...WORKER_COMMANDS,
@@ -50,7 +51,7 @@ const DEFINITIONS: {
   {name:'card.profile',args:'ID [--offset N] [--limit N]',summary:'Read employee identity, authorized memberships, named workspaces and paged Plan tasks without opening an engine or changing read receipts',gui:'Employee profile',cli:{positionals:['id']},inputSchema:objectSchema({id:nonemptySchema,offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:100}},['id'])},
   {cli:[],"name": "view.list", "args": "", "summary": "List application views and their shared data contracts", "gui": "Shared views / group conversations", "inputSchema": objectSchema({},[])},
   {name:'view.navigation',args:'team|mission|plan [--expanded true|false]',summary:'Set or toggle Team navigation. Legacy mission/plan sections are no-ops because Mission layouts are always visible.',gui:'Primary navigation chevrons',cli:{positionals:['section'],booleanValues:['expanded']},inputSchema:objectSchema({section:{enum:['team','mission','plan']},expanded:{...booleanSchema,description:'Team only: set explicitly or omit to toggle. Mission always displays its layouts.'}},['section'])},
-  {"name": "view.select", "args": "company|messages|plan [--team-view ID] [--team-tab characters|board|workers] [--mission-tab plan] [--toggle-navigation]", "summary": "Select a presentation mode; Team has Characters, Board and Workers; Mission shows database layouts directly; Messages resumes the last conversation", "gui": "Shared views / group conversations", "inputSchema": objectSchema({"id": {"type": "string", "enum": ["company", "messages", "plan"]}, "teamViewId": nonemptySchema, "teamTab": {enum:["characters","board","workers"]},missionTab:{enum:["plan"],description:"Deprecated compatibility alias; Mission has no child destinations."},toggleNavigation:{type:"boolean",description:"Team primary intent: toggle the active Team selector or resume its remembered child. Mission selection is idempotent and always shows its layouts. Cannot be combined with explicit child selection."}},["id"])},
+  {"name": "view.select", "args": "company|messages|plan [--team-view ID] [--team-tab engineering|research|characters|board|workers] [--engineering ID] [--mission-tab plan] [--toggle-navigation]", "summary": "Select a presentation mode; Team has Engineering, Research, Characters, Board and Workers; Mission shows database layouts directly; Messages resumes the last conversation", "gui": "Shared views / group conversations", "inputSchema": objectSchema({"id": {"type": "string", "enum": ["company", "messages", "plan"]}, "teamViewId": nonemptySchema, engineeringId:nonemptySchema, "teamTab": {enum:["engineering","research","characters","board","workers"]},missionTab:{enum:["plan"],description:"Deprecated compatibility alias; Mission has no child destinations."},toggleNavigation:{type:"boolean",description:"Team primary intent: toggle the active Team selector or resume its remembered child. Mission selection is idempotent and always shows its layouts. Cannot be combined with explicit child selection."}},["id"])},
   {cli:{},"name": "chat.list", "args": "", "summary": "List groups for the current authenticated member", "gui": "Shared views / group conversations", "inputSchema": objectSchema({},[])},
   {cli:{},"name": "chat.create", "args": "--name NAME [--team TEAM] [--members JSON] [--owner-id ID] [--storage JSON] [--client-request-id ID]", "summary": "Create a group with an Agent Owner. User/Secretary can choose local or registered-host storage, create a custom named folder or bind an existing folder; employees keep their Team cwd. Stable clientRequestId retries the same caller-owned creation", "gui": "Shared views / group conversations", "inputSchema": objectSchema({"name": {"type": "string", "minLength": 1, "maxLength": 80}, "ownerId": nonemptySchema, "clientRequestId": {type:"string",minLength:1,maxLength:160}, "team": nonemptySchema,storage:STORAGE_FOLDER_SCHEMA, "members": {"type": "array", "items": nonemptySchema, "maxItems": 200}},["name"])},
   {"name": "chat.update", "args": "ID --patch JSON", "summary": "Conversation Owner/Admin: edit group name and membership; Company role does not confer access", "gui": "Shared views / group conversations", "inputSchema": objectSchema({"id": nonemptySchema, "name": {"type": "string", "minLength": 1, "maxLength": 80}, "members": {"type": "array", "items": nonemptySchema, "maxItems": 200}, "addTeams": {"type": "array", "items": nonemptySchema}, "expectedRevision": {"type": "integer", "minimum": 1}},["id"])},
@@ -140,7 +141,7 @@ const DEFINITIONS: {
   { name: 'engine.models', args: '--engine codex|claude|cline|pi|opencode|kilo|deepseek [--kind worker|cloud-native-worker] [--team NAME]', summary: 'List available models before employee creation, without inference; Cloud Native reads the selected host', gui: '创建员工和默认模型设置',inputSchema:objectSchema({engine:{enum:['codex','claude','cline','pi','opencode','kilo','deepseek']},kind:{enum:['worker','cloud-native-worker']},team:nonemptySchema},['engine']) },
   { name: 'settings.set', args: '[--view company|messages|plan | --view-appearance JSON|@file] [--message-wallpaper JSON|@file] [--language en|zh-CN] [--theme violet|blue|mint|teal|cyan|rose|coral|amber|indigo|graphite|custom|white|light|space|black|midnight|sage] [--theme-color #RRGGBB] [--default-permission default|acceptEdits|bypassPermissions] [--explorer-width N] [--explorer-collapsed on|off] [--explorer-tree-collapsed on|off] [--asset-drawer-width N] [--terminal-height N] [--page-zoom N] [--zoom-sensitivity N] [--pan-sensitivity N] [--sidebar-width N] [--board-max-columns N] [--snap-employees on|off] [--team-overview on|off] [--default-codex-model ID] [--default-claude-model ID] [--default-cline-model ID] [--default-pi-model ID]', summary: 'Patch independent view appearances and shared settings; legacy theme flags target Messages only', gui: '背景、灵敏度和团队索引',inputSchema:PREFERENCES_PATCH_SCHEMA },
   {cli:[], name: 'view.get', args: '', summary: 'Read service-owned navigation, including without a window', gui: '当前面板' },
-  { name: 'view.open', args: 'home|messages|plan|team|employee|workspace|conversation|initialization|plugin|settings [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab characters|board|workers] [--mission-tab plan]', summary: 'Open a form, workspace, news channel or employee conversation', gui: '打开资料或会话' },
+  { name: 'view.open', args: 'home|messages|plan|team|employee|workspace|conversation|initialization|plugin|settings [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab engineering|research|characters|board|workers] [--mission-tab plan]', summary: 'Open a form, workspace, news channel or employee conversation', gui: '打开资料或会话' },
   {cli:[], name: 'view.close', args: '', summary: 'Close the current panel after saving workspace edits; keep engines running', gui: '× / Escape / 收起面板' },
   { name: 'view.details', args: 'on|off', summary: 'Show or hide employee details inside a conversation', gui: '员工资料 / 返回会话' },
   { name: 'status', args: '', summary: 'Is the app running, and how many sessions are live', gui: 'The app window being open' },
@@ -205,7 +206,7 @@ const DEFINITIONS: {
   { name: 'commands.complete', args: '<id> <name>', summary: 'What Tab would insert', gui: 'Tab/⏎ in the “/” menu' },
   { name: 'group.list', args: '', summary: 'List departments', gui: 'Department headings' },
   {cli:[], name: 'team-view.list', args: '', summary: 'List All Team and saved Team views with the active selection', gui: '顶部视图标签' },
-  { name: 'team-view.create', args: '--name NAME [--teams @teams.json]', summary: 'Create and select a named view of existing Teams', gui: '＋ 添加视图' },
+  { name: 'team-view.create', args: '--name NAME [--teams @teams.json --select true|false]', summary: 'Create a named view of existing Teams; select defaults to true. Background orchestration uses select=false without changing the current client destination.', gui: '＋ 添加视图',cli:{defaults:{teams:'[]'},booleanValues:['select']},inputSchema:objectSchema({name:nonemptySchema,teams:{type:'array',items:nonemptySchema},select:booleanSchema},['name']) },
   { name: 'team-view.update', args: 'ID --patch @patch.json', summary: 'Rename, reorder, or change Team membership of a custom view', gui: '编辑或拖动视图' },
   {cli:["id"], name: 'team-view.remove', args: 'ID', summary: 'Delete a custom view without deleting Teams', gui: '删除视图' },
   {cli:["id"], name: 'team-view.select', args: 'all|ID', summary: 'Select a saved Team view and its canvas viewport', gui: '切换视图' },
@@ -310,6 +311,7 @@ export type ApiPermission='worker'|'chat'|'layout.read'|'layout.write'|'operator
 const permissions:Record<string,ApiPermission>={};
 permissions['plan.preferences']='operator';permissions['plan.archive']='schedule';
 for(const command of MISSION_COMMANDS)permissions[command.name]='schedule';
+for(const command of ENGINEERING_COMMANDS)permissions[command.name]='schedule';
 for(const command of QUESTION_COMMANDS)permissions[command.name]='chat';
 permissions['direct.send']='chat';permissions['direct.send-status']='chat';permissions['direct.post']='identity';permissions['direct.history']='employee.read';
 for(const command of [...WORKER_COMMANDS,...MONITOR_COMMANDS])permissions[command.name]='worker';

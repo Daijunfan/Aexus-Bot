@@ -1,6 +1,7 @@
 /** Shared read-only classification. Unknown commands require write approval and replay protection; Core authorization is independent. */
 export const READ_ONLY_APIS=new Set(`
 mission.get mission.list mission.summary question.get question.list question.wait
+engineering.get engineering.list engineering.activity engineering.context engineering.export engineering.parse engineering.artifact
 workspace.catalog conversation.files conversation.entry conversation.download-status channel.post-trigger-list channel.post-trigger-history channel.post-trigger-batch
 conversation.upload-status
 direct.history direct.send-status
@@ -21,6 +22,7 @@ workspace.list workspace.read workspace.image workspace.suggest conversation.wor
 plugin.resources plugin.list plugin.describe plugin.windows host.list host.get host.fingerprints host.terminal-list host.terminal-read host.directories terminal.list terminal.read transfer.list transfer.get shared.info view.get view.list
 `.trim().split(/\s+/))
 export function apiReadOnly(command:string,args:Record<string,unknown>={}){
+ if(command==='engineering.prompts')return args.content===undefined
  if(command==='worker.command'){const text=typeof args.text==='string'?args.text.trim():'';return /^\/(help|status|model|effort|permissions|skills|mcp|account|usage|config|history|export|ps)$/.test(text)||/^\/(fast|thinking)(\s+status)?$/.test(text)}
  if(command==='worker.terminal')return ['list','read'].includes(String(args.operation))
  if(command==='worker.file')return ['list','read','image','info','chunk'].includes(String(args.operation))

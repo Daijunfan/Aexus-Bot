@@ -1,5 +1,1359 @@
 [
   {
+    "name": "engineering.create",
+    "args": "--spec JSON|@file [--client-request-id KEY]",
+    "summary": "User/Secretary: create one Engineering, its independent Team, explicit role hierarchy, DAG and one Mission. Stable retries resume partial provisioning without duplicating identities.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spec": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "goal": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64000
+            },
+            "team": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "createTeam": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "hostId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "directory": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "directoryMode": {
+                  "enum": [
+                    "default",
+                    "bind"
+                  ]
+                },
+                "folderName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "parentDirectory": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "roles": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "rank": {
+                    "enum": [
+                      "governor",
+                      "manager",
+                      "employee"
+                    ]
+                  },
+                  "parent": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "employeeId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "engine": {
+                    "enum": [
+                      "codex",
+                      "claude",
+                      "cline",
+                      "pi",
+                      "opencode",
+                      "kilo",
+                      "deepseek"
+                    ]
+                  },
+                  "model": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "checkSeconds": {
+                    "type": "integer",
+                    "minimum": 10,
+                    "maximum": 31536000
+                  },
+                  "position": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      },
+                      "y": {
+                        "type": "number",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ]
+                  }
+                },
+                "required": [
+                  "key",
+                  "title",
+                  "rank"
+                ]
+              },
+              "minItems": 3,
+              "maxItems": 200
+            },
+            "tasks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64000
+                  },
+                  "acceptance": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 16000
+                  },
+                  "position": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      },
+                      "y": {
+                        "type": "number",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ]
+                  }
+                },
+                "required": [
+                  "key",
+                  "title",
+                  "prompt",
+                  "acceptance"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 180
+            },
+            "dependencies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "to": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "requirement": {
+                    "type": "string",
+                    "maxLength": 8000
+                  }
+                },
+                "required": [
+                  "from",
+                  "to"
+                ]
+              },
+              "maxItems": 2000
+            },
+            "collaboration": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "to": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "requirement": {
+                    "type": "string",
+                    "maxLength": 8000
+                  }
+                },
+                "required": [
+                  "from",
+                  "to"
+                ]
+              },
+              "maxItems": 2000
+            },
+            "managerCheckSeconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 31536000
+            },
+            "governorCheckSeconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 31536000
+            }
+          },
+          "required": [
+            "name",
+            "goal",
+            "team",
+            "roles",
+            "tasks",
+            "dependencies"
+          ]
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "spec"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.list",
+    "args": "[--archived active|archived|all]",
+    "summary": "Read Engineering projects in the current participant or application administration scope.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "archived": {
+          "enum": [
+            "active",
+            "archived",
+            "all"
+          ]
+        }
+      }
+    },
+    "gui": "Team / Engineering",
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.get",
+    "args": "--id ID",
+    "summary": "Read both graphs, current role activity, Worker execution records, reviews, periodic checks and progress of one Engineering.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.activity",
+    "args": "--id ID",
+    "summary": "Read current Engineering role activity and live project-only chat bubbles without retransmitting graph/Worker/review history. No execution or state mutation.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.context",
+    "args": "--id ID",
+    "summary": "Read the common initialization router, current identity, exact owned chain/node, prompt paths and next permitted actions; never grants Company or Worker authority.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.artifact",
+    "args": "--id ID --artifact-id ID [--operation info|read|image|chunk --offset N]",
+    "summary": "Read one explicitly Employee-published delivery file in this project, with current owner/host and exact file-version checks. Does not grant access to the Employee workspace or unrelated files.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifactId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operation": {
+          "enum": [
+            "info",
+            "read",
+            "image",
+            "chunk"
+          ]
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "artifactId"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.update",
+    "args": "--id ID --patch JSON|@file --expected-revision N",
+    "summary": "User/Secretary: update engineering settings. Structural edits require draft/paused state; changed work and its downstream approvals are invalidated, histories retained.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "patch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "goal": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64000
+            },
+            "team": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "createTeam": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "hostId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "directory": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "directoryMode": {
+                  "enum": [
+                    "default",
+                    "bind"
+                  ]
+                },
+                "folderName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "parentDirectory": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "roles": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "rank": {
+                    "enum": [
+                      "governor",
+                      "manager",
+                      "employee"
+                    ]
+                  },
+                  "parent": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "employeeId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "engine": {
+                    "enum": [
+                      "codex",
+                      "claude",
+                      "cline",
+                      "pi",
+                      "opencode",
+                      "kilo",
+                      "deepseek"
+                    ]
+                  },
+                  "model": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "checkSeconds": {
+                    "type": "integer",
+                    "minimum": 10,
+                    "maximum": 31536000
+                  },
+                  "position": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      },
+                      "y": {
+                        "type": "number",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ]
+                  }
+                },
+                "required": [
+                  "key",
+                  "title",
+                  "rank"
+                ]
+              },
+              "minItems": 3,
+              "maxItems": 200
+            },
+            "tasks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64000
+                  },
+                  "acceptance": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 16000
+                  },
+                  "position": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      },
+                      "y": {
+                        "type": "number",
+                        "minimum": -100000,
+                        "maximum": 100000
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ]
+                  }
+                },
+                "required": [
+                  "key",
+                  "title",
+                  "prompt",
+                  "acceptance"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 180
+            },
+            "dependencies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "to": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "requirement": {
+                    "type": "string",
+                    "maxLength": 8000
+                  }
+                },
+                "required": [
+                  "from",
+                  "to"
+                ]
+              },
+              "maxItems": 2000
+            },
+            "collaboration": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "to": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "requirement": {
+                    "type": "string",
+                    "maxLength": 8000
+                  }
+                },
+                "required": [
+                  "from",
+                  "to"
+                ]
+              },
+              "maxItems": 2000
+            },
+            "managerCheckSeconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 31536000
+            },
+            "governorCheckSeconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 31536000
+            }
+          }
+        }
+      },
+      "required": [
+        "id",
+        "patch",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.retry",
+    "args": "--id ID --expected-revision N",
+    "summary": "Resume failed Engineering provisioning using the same Team, employees, Mission and request identities.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.start",
+    "args": "--id ID --expected-revision N",
+    "summary": "User/Secretary or its Governor: start the engineering; dependency/review gates remain authoritative.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.pause",
+    "args": "--id ID --expected-revision N",
+    "summary": "User/Secretary or its Governor: pause the engineering; dependency/review gates remain authoritative.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.resume",
+    "args": "--id ID --expected-revision N",
+    "summary": "User/Secretary or its Governor: resume the engineering; dependency/review gates remain authoritative.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.archive",
+    "args": "--id ID --expected-revision N --archived true|false",
+    "summary": "User/Secretary: hide or restore a project without stopping its work.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "archived": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "expectedRevision",
+        "archived"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.layout",
+    "args": "--id ID --graph topology|dag --positions JSON --expected-revision N",
+    "summary": "User/Secretary: save free engineering graph node positions; Characters numbered seats and Company geometry remain unchanged.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "graph": {
+          "enum": [
+            "topology",
+            "dag"
+          ]
+        },
+        "positions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": -100000,
+                "maximum": 100000
+              },
+              "y": {
+                "type": "number",
+                "minimum": -100000,
+                "maximum": 100000
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        }
+      },
+      "required": [
+        "id",
+        "graph",
+        "positions",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.parse",
+    "args": "--graph topology|dag --source TEXT",
+    "summary": "Parse the documented Mermaid flowchart subset into explicit role definitions or Employee tasks/dependencies. Pure preview, no employees or model calls.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "graph": {
+          "enum": [
+            "topology",
+            "dag"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16000000
+        }
+      },
+      "required": [
+        "graph",
+        "source"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.export",
+    "args": "--id ID --graph topology|dag",
+    "summary": "Export a graph as lossless Mermaid including explicit rank and task metadata.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "graph": {
+          "enum": [
+            "topology",
+            "dag"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "graph"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.import",
+    "args": "--id ID --graph topology|dag --source TEXT --expected-revision N",
+    "summary": "User/Secretary: apply Mermaid to the shared Engineering graph. Validates roles, unique chain ownership, DAG dependencies and current execution before provisioning new roles.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "graph": {
+          "enum": [
+            "topology",
+            "dag"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16000000
+        }
+      },
+      "required": [
+        "id",
+        "graph",
+        "source",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.prompts",
+    "args": "--id ID [--path RELATIVE --content TEXT --expected-version HASH]",
+    "summary": "Read the engineering prompt folder or a file; user/Secretary may edit existing prompts with an exact content version. Mirrors are refreshed before role/Worker execution.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 100000
+        },
+        "expectedVersion": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.dispatch",
+    "args": "--id ID --key EMPLOYEE_KEY --text TEXT [--worker-id ID --engine E] --client-request-id KEY --expected-revision N",
+    "summary": "The node Employee or user/Secretary dispatches its owned native Worker; saves exact task, receipt and engine, never treats native completion as acceptance.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64000
+        },
+        "workerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "engine": {
+          "enum": [
+            "codex",
+            "claude",
+            "cline",
+            "pi",
+            "opencode",
+            "kilo",
+            "deepseek"
+          ]
+        },
+        "clientRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "id",
+        "key",
+        "text",
+        "clientRequestId",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.worker-stop",
+    "args": "--id ID --run-id ID --expected-revision N",
+    "summary": "The node Employee or user/Secretary cancels only this engineering run and its exact Worker receipt; unrelated Worker tasks are preserved.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "runId",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.wake",
+    "args": "--id ID --key ROLE_KEY [--message TEXT] --expected-revision N",
+    "summary": "Send an authenticated project report/wakeup to yourself, your parent, owned subordinates or an explicit collaboration target. User/Secretary and project Governor may wake any project role. Reports retain their real sender and grant no general employee control.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16000
+        }
+      },
+      "required": [
+        "id",
+        "key",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.employee-review",
+    "args": "--id ID --key EMPLOYEE_KEY --accepted true|false --result TEXT [--files JSON] --expected-revision N",
+    "summary": "The node Employee records first acceptance after actual Worker completion and optionally publishes exact run-relative delivery files for Manager inspection; automatically wakes the unique Manager. A failed review returns the node to rework.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "result": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64000
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "files": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "runId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              }
+            },
+            "required": [
+              "runId",
+              "path"
+            ]
+          }
+        }
+      },
+      "required": [
+        "id",
+        "key",
+        "accepted",
+        "result",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.manager-review",
+    "args": "--id ID --key EMPLOYEE_KEY --accepted true|false --result TEXT --expected-revision N",
+    "summary": "The node’s current Manager performs second acceptance; only approval turns it green and automatically activates dependency-ready successors. Rejection records evidence and returns work to the Employee.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "result": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64000
+        },
+        "accepted": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "key",
+        "accepted",
+        "result",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.manager-complete",
+    "args": "--id ID --key MANAGER_KEY --result TEXT --expected-revision N",
+    "summary": "The exact Manager explicitly confirms its whole chain after all its nodes passed both reviews; automatically wakes the Governor.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "result": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64000
+        }
+      },
+      "required": [
+        "id",
+        "key",
+        "result",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.reopen",
+    "args": "--id ID --key MANAGER_KEY --result TEXT --expected-revision N",
+    "summary": "The project Governor or user/Secretary reopens an inadequate Manager chain and dependent work, cancels only their linked running receipts, retains evidence and wakes the chain.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+        },
+        "result": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64000
+        }
+      },
+      "required": [
+        "id",
+        "key",
+        "result",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "engineering.complete",
+    "args": "--id ID --result TEXT --expected-revision N",
+    "summary": "The project Governor or user/Secretary explicitly accepts the final result after every Manager and Employee is complete; atomically reconciles the linked Mission success.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "result": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64000
+        }
+      },
+      "required": [
+        "id",
+        "result",
+        "expectedRevision"
+      ]
+    },
+    "gui": "Team / Engineering",
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
     "name": "mission.create",
     "args": "--spec JSON|@file [--client-request-id KEY]",
     "summary": "Create a durable mission until explicitly marked successful. supervised reminds assignees and a Secretary; independent reminds assignees only. Uses current self/subordinate scheduling authority. Native turn completion never completes a mission.",
@@ -11530,8 +12884,8 @@
   },
   {
     "name": "view.select",
-    "args": "company|messages|plan [--team-view ID] [--team-tab characters|board|workers] [--mission-tab plan] [--toggle-navigation]",
-    "summary": "Select a presentation mode; Team has Characters, Board and Workers; Mission shows database layouts directly; Messages resumes the last conversation",
+    "args": "company|messages|plan [--team-view ID] [--team-tab engineering|research|characters|board|workers] [--engineering ID] [--mission-tab plan] [--toggle-navigation]",
+    "summary": "Select a presentation mode; Team has Engineering, Research, Characters, Board and Workers; Mission shows database layouts directly; Messages resumes the last conversation",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -11549,8 +12903,14 @@
           "type": "string",
           "minLength": 1
         },
+        "engineeringId": {
+          "type": "string",
+          "minLength": 1
+        },
         "teamTab": {
           "enum": [
+            "engineering",
+            "research",
             "characters",
             "board",
             "workers"
@@ -15141,7 +16501,7 @@
   },
   {
     "name": "view.open",
-    "args": "home|messages|plan|team|employee|workspace|conversation|initialization|plugin|settings [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab characters|board|workers] [--mission-tab plan]",
+    "args": "home|messages|plan|team|employee|workspace|conversation|initialization|plugin|settings [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab engineering|research|characters|board|workers] [--mission-tab plan]",
     "summary": "Open a form, workspace, news channel or employee conversation",
     "gui": "打开资料或会话",
     "readOnly": false,
@@ -16076,9 +17436,32 @@
   },
   {
     "name": "team-view.create",
-    "args": "--name NAME [--teams @teams.json]",
-    "summary": "Create and select a named view of existing Teams",
+    "args": "--name NAME [--teams @teams.json --select true|false]",
+    "summary": "Create a named view of existing Teams; select defaults to true. Background orchestration uses select=false without changing the current client destination.",
     "gui": "＋ 添加视图",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "select": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
     "readOnly": false,
     "permission": "operator",
     "target": "request"

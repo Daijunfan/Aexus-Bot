@@ -4,7 +4,8 @@ import type {PrincipalRef} from './management'
 import type {ScheduledJob,PlanMetadata} from './scheduler'
 
 export type MissionSpec={name:string;prompt:string;employeeIds:string[];type:'supervised'|'independent';secretaryId?:string;reminderSeconds:number;viewId?:string;plan?:PlanMetadata}
-export type Mission=MissionSpec&{employeeEngines?:Record<string,import('./types').Engine>;id:string;revision:number;createdAt:string;updatedAt:string;createdBy:PrincipalRef;status:'open'|'failed'|'succeeded';result?:string;completedAt?:string;failedAt?:string;nextReminderAt:string|null;archivedAt?:string;deliveryError?:string;source?:{employeeId:string;messageId:string};reminders:Array<{id:string;at:string;finishedAt?:string;trigger?:'created'|'interval'|'manual';recipients:string[];accepted:string[];errors:Record<string,string>}>}
+export type EngineeringMission={id:string;completed:number;total:number;status:import('./engineering').Engineering['status'];nextCheckAt?:string}
+export type Mission=MissionSpec&{engineering?:EngineeringMission}&{employeeEngines?:Record<string,import('./types').Engine>;id:string;revision:number;createdAt:string;updatedAt:string;createdBy:PrincipalRef;status:'open'|'failed'|'succeeded';result?:string;completedAt?:string;failedAt?:string;nextReminderAt:string|null;archivedAt?:string;deliveryError?:string;source?:{employeeId:string;messageId:string};reminders:Array<{id:string;at:string;finishedAt?:string;trigger?:'created'|'interval'|'manual';recipients:string[];accepted:string[];errors:Record<string,string>}>}
 const string=nonemptySchema,id={...string},revision={type:'integer',minimum:1}
 export const MISSION_SPEC_SCHEMA=objectSchema({name:{...string,maxLength:160},prompt:{...string,maxLength:64000},employeeIds:{type:'array',minItems:1,uniqueItems:true,items:id},type:{enum:['supervised','independent']},secretaryId:id,reminderSeconds:{type:'integer',minimum:10,maximum:31536000,default:1800},viewId:id,plan:SCHEDULE_SPEC_SCHEMA.properties.plan},['name','prompt','employeeIds','type','reminderSeconds'])
 export const MISSION_COMMANDS=[
@@ -23,5 +24,5 @@ export const MISSION_COMMANDS=[
 
 /** Presentation adapter only: the scheduler never executes this projection. */
 export function missionPlanRow(mission:Mission,engine:ScheduledJob['action']['engine']):ScheduledJob&{mission:Mission}{
- return {id:mission.id,name:mission.name,action:{type:'agent',employeeId:mission.employeeIds[0],engine,prompt:mission.prompt,viewId:mission.viewId},rule:{kind:'interval',everySeconds:mission.reminderSeconds,anchor:mission.createdAt},enabled:mission.status!=='succeeded',nextAt:mission.nextReminderAt,timeoutSeconds:1800,graceSeconds:60,createdAt:mission.createdAt,updatedAt:mission.updatedAt,revision:mission.revision,createdBy:mission.createdBy,plan:mission.plan,mission}
+ return {id:mission.id,name:mission.name,action:{type:'agent',employeeId:mission.employeeIds[0],engine,prompt:mission.prompt,viewId:mission.viewId},rule:{kind:'interval',everySeconds:mission.reminderSeconds,anchor:mission.createdAt},enabled:mission.engineering?mission.engineering.status==='running':mission.status!=='succeeded',nextAt:mission.nextReminderAt,timeoutSeconds:1800,graceSeconds:60,createdAt:mission.createdAt,updatedAt:mission.updatedAt,revision:mission.revision,createdBy:mission.createdBy,plan:mission.plan,mission}
 }

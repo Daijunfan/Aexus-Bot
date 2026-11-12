@@ -55,6 +55,7 @@ export type PlanFeedEntry=ScheduleRun&{activity?:'mission-reminder';employee:Pla
 export type PlanFeed={entries:PlanFeedEntry[];hasMore:boolean;nextCursor:string|null;retainedHistoryLimit:number}
 export type PlanAnalytics={metric:'schedules'|'runs';groupBy:'status'|'employee'|'team'|'priority';total:number;buckets:{key:string;label:string;value:number}[];scope:string;retainedHistoryLimit?:number}
 export function planState(job:ScheduledJob,run?:ScheduleRun):PlanState{
+  if(job.mission?.engineering){const project=job.mission.engineering;return project.status==='completed'?'completed':['blocked','setup_failed'].includes(project.status)?'attention':project.status==='running'?'running':project.status==='paused'||project.status==='draft'?'paused':'scheduled'}
   if(job.mission)return job.mission.status==='succeeded'?'completed':job.mission.status==='failed'||job.mission.deliveryError?'attention':'scheduled'
   if(run?.status==='running')return 'running'
   if(job.disabledReason)return 'attention'

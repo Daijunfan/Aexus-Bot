@@ -1,5 +1,11 @@
 # Aexus Bot 权限说明
 
+## Engineering
+
+`engineering.*` 以同一 Core/CLI 身份执行。用户/Secretary 配置、创建和编辑工程；读权限限实际参与者与应用管理者。职级与 Team 必须匹配真实员工，每个 Employee 节点只有一位 Manager，Governor 唯一。拓扑与协作线不会改变 Company 权限。Employee 只能派发自己直属的原生 Worker 并执行本节点初验，直属 Manager 负责复验及链路确认，工程 Governor 负责返工与最终确认。用户/Secretary 可显式执行这些分离阶段，保留真实署名和证据。
+
+周期与事件唤醒保留原创建者的真实委派身份/凭据，执行前再次检查当前职级、Team、项目轮次和授权。撤权、删除、暂停和返工会使旧通知失效，不能借存储内容缓存权限。工程原生 Worker 保持实际直属员工、执行主机、工作目录和原生工具协议；系统只能停止工程中记录的精确 Worker 回执，不清理其他任务或按进程名杀进程。双重验收、链路完成与最终证据未满足时，关联 Mission 不允许绕过工程直接完成。见 [Engineering 契约](docs/ENGINEERING.md)。
+
 ## 客户端导航
 
 `view.select` / `view.open` 的 `missionTab` 以及 `view.navigation` 仅控制当前客户端的展示与折叠状态，沿用现有用户/Secretary 界面管理权限。Team 子页、Mission 子页和 Plan 布局的记忆不改变业务身份、工作区、任务范围或运行状态；展开/收起导航不离开编辑器，真正离开未保存表单仍经过保存保护。Plan 统一新建入口按用户选择调用原有 `mission.create` 或 `schedule.create`，保留各自的授权与停止条件。

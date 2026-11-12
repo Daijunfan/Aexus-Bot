@@ -8,6 +8,7 @@ import {stickerRequest} from './message-stickers'
 import {requireGroupExport} from './group-history'
 import {planPreferencesRequest} from './plan-preferences'
 import {missionRequest,registerSecretaryRequest} from './missions'
+import {engineeringRequest} from './engineering'
 import {questionRequest,assertQuestionGate} from './chat-questions'
 import {listConversationFiles,trashConversationFiles,restoreConversationFiles,sharedFileForReading} from './conversation-files'
 import {API_REVISION,knownApi,validateApiArguments} from './api-contract'
@@ -230,6 +231,7 @@ async function handleCurrentRequest(req:Request):Promise<any>{
   if(req.cmd.startsWith('card.'))target=employeeId(req.cmd==='card.rename'?a.cardId:a.id)
   if(req.cmd.startsWith('config.')||req.cmd.startsWith('commands.')||req.cmd.startsWith('approval.')||['engine.inspect','engine.skill'].includes(req.cmd))target=employeeId(a.id)
   if(req.cmd.startsWith('worker.'))target=undefined
+  if(req.cmd.startsWith('engineering.'))target=undefined
   if(req.cmd.startsWith('terminal.')&&a.id){const terminal=listTerminals().find(terminal=>terminal.id===a.id);if(terminal?.worker)throw Error('Native Worker terminals require worker.* ownership checks');target=terminal?.employee}
   if(['view.tools','view.details'].includes(req.cmd))target=getView().employee
   if(req.cmd==='session.open')target=employeeId(a.cardId??a.employee??a.id)
@@ -245,8 +247,10 @@ async function handleCurrentRequest(req:Request):Promise<any>{
   }else authorize(req.cmd,a,target,caller)
   assertInitializationRequest(req.cmd,target)
   if(req.cmd.startsWith('worker.'))validateApiArguments(req.cmd,a)
+  if(req.cmd.startsWith('engineering.'))validateApiArguments(req.cmd,a)
   if(req.cmd.startsWith('mission.')||req.cmd.startsWith('question.')||['plan.preferences','plan.archive'].includes(req.cmd))validateApiArguments(req.cmd,a)
   assertQuestionGate(req.cmd,caller)
+  if(req.cmd.startsWith('engineering.'))return engineeringRequest(req.cmd.slice(12),a,(cmd,args)=>handleRequest({cmd,args}))
   if(['plan.preferences','plan.archive'].includes(req.cmd))return planPreferencesRequest(req.cmd.slice(5),a)
   if(req.cmd.startsWith('mission.'))return missionRequest(req.cmd.slice(8),a)
   if(req.cmd.startsWith('question.'))return questionRequest(req.cmd.slice(9),a)
@@ -502,11 +506,12 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     }
     case 'view.select': {
       validateApiArguments(req.cmd,a)
+      if(a.engineeringId!==undefined){if(a.id!=='company'||a.teamTab!=='engineering')throw Error('Engineering projects belong to Team / Engineering');await engineeringRequest('get',{id:s(a.engineeringId)},(cmd,args)=>handleRequest({cmd,args}))}
       const mode=appView(a.id);if(!mode)throw Error('Unknown application view')
       if(a.toggleNavigation&&(a.teamTab!==undefined||a.teamViewId!==undefined||a.missionTab!==undefined))throw Error('Primary activation cannot set a child view')
       const current=getView(),root=mode.id==='company'&&current.kind==='home'&&!current.pluginId
       if(a.toggleNavigation&&root)return setView({...current,teamNavigationOpen:!current.teamNavigationOpen})
-      if(a.teamTab!==undefined&&(mode.id!=='company'||!['characters','board','workers'].includes(a.teamTab)))throw Error('Choose Characters, Board or Workers within Team')
+      if(a.teamTab!==undefined&&(mode.id!=='company'||!['engineering','research','characters','board','workers'].includes(a.teamTab)))throw Error('Choose Engineering, Research, Characters, Board or Workers within Team')
       if(mode.id!=='company'&&a.teamViewId!==undefined)throw Error('Only Company selects a Team subview')
       if(mode.id==='company'&&a.teamViewId!==undefined&&!teamViewList().views.some(item=>item.id===a.teamViewId))throw Error('Unknown Company subview')
       if(a.missionTab!==undefined&&(mode.id!=='plan'||a.missionTab!=='plan'))throw Error('Mission opens its layouts directly; child destinations were removed')
@@ -523,13 +528,13 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
           return setView(saved)
         }catch{return setView({kind:'messages'})}
       }
-      return setView({kind:mode.kind,...(a.teamTab?{teamTab:a.teamTab}:{}),...(mode.id==='plan'?{missionTab:nextMissionTab}:{} )})
+      return setView({kind:mode.kind,...(a.engineeringId?{engineeringId:a.engineeringId}:{}),...(a.teamTab?{teamTab:a.teamTab}:{}),...(mode.id==='plan'?{missionTab:nextMissionTab}:{} )})
     }
     case 'view.get': return getView()
     case 'view.open': {
       const kind=a.kind as ViewState['kind'],store=readStore()
       if(!['home','team','employee','workspace','conversation','initialization','settings','plugin','clone','messages','plan'].includes(kind))throw new Error('Unknown view kind')
-      if(a.teamTab!==undefined&&(kind!=='home'||!['characters','board','workers'].includes(a.teamTab)))throw Error('Choose Characters, Board or Workers within Team')
+      if(a.teamTab!==undefined&&(kind!=='home'||!['engineering','research','characters','board','workers'].includes(a.teamTab)))throw Error('Choose Engineering, Research, Characters, Board or Workers within Team')
       if(a.missionTab!==undefined&&(kind!=='plan'||a.missionTab!=='plan'))throw Error('Mission opens its layouts directly; child destinations were removed')
       if(a.planViewId!==undefined&&a.missionTab!==undefined&&a.missionTab!=='plan')throw Error('Database views belong to Mission / Plan')
       if(a.planViewId!==undefined&&(kind!=='plan'||!((await planRequest('views',{})) as Array<{id:string}>).some((view:any)=>view.id===a.planViewId)))throw Error('Unknown Plan view')
@@ -864,7 +869,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'group.list':
       {const store=readStore();return a.details?store.groups.map(name=>({name,root:store.teamRoots?.[name],...teamSettings(store,name)})):store.groups}
     case 'team-view.list': return teamViewList()
-    case 'team-view.create': return createTeamView(s(a.name),a.teams??[])
+    case 'team-view.create': validateApiArguments(req.cmd,a);return createTeamView(s(a.name),a.teams??[],a.select??true)
     case 'team-view.update': return updateTeamView(s(a.id),a.patch??{})
     case 'team-view.remove': return removeTeamView(s(a.id))
     case 'team-view.select': return selectTeamView(s(a.id))

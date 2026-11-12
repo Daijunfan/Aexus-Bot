@@ -2,6 +2,13 @@
 
 > 项目当前名称为 **Aexus Bot**，分享地址：[Daijunfan/Aexus-Bot](https://github.com/Daijunfan/Aexus-Bot)。下文 Avalon / Anexus 为历史发布名称；安装包、命令和历史路径按实际记录保留。
 
+## main — 2026-11-12 Engineering
+
+- Add Team Engineering and the reserved Research entry while keeping Characters, Board and Workers. Engineering projects bind one Team and one Mission and display Topology and DAG together.
+- Use circular employee portraits as graph nodes, with free pan/zoom/placement, outside labels, real state/bubbles and correctly colored/animated connections.
+- Add authenticated CLI/API orchestration, Mermaid import/export, native Worker histories/approvals, Employee and Manager acceptance, dependency advancement, explicit chain/final confirmation, rework and periodic checks.
+- Bind editable project prompts, explicit version-checked delivery files and saved user questions to the same workflow. Preserve native identities, Characters seats and current client navigation.
+
 ## main — 2026-11-10 Mission navigation
 
 - Open Mission directly into its remembered database layout, with all layout tabs visible. Remove the intermediate Plan, Engineering and Research selector and Mission disclosure arrow.

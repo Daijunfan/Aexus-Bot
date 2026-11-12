@@ -3,7 +3,7 @@
 export async function showTeamNavigation(page){await page.locator('.company-navigation').waitFor();await page.evaluate(()=>window.agents.call('view.navigation',{section:'team',expanded:true}))}
 export async function selectWorkspaceTab(page,name){
  await page.locator('.company-navigation').waitFor()
- const view=await page.evaluate(()=>window.agents.call('view.get')),team=['Characters','Workers'].includes(name)||name==='Board'&&view.kind!=='plan'
+ const view=await page.evaluate(()=>window.agents.call('view.get')),team=['Engineering','Research','Characters','Workers'].includes(name)||name==='Board'&&view.kind!=='plan'
  if(team){
   if(view.kind!=='home')await page.evaluate(()=>window.agents.call('view.select',{id:'company'}))
   await showTeamNavigation(page)

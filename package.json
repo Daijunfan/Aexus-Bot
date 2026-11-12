@@ -157,7 +157,8 @@
     "test:plan-configuration": "node test/plan-view-configuration-core-test.mjs && node test/plan-view-configuration-ui-test.mjs && node test/plan-view-configuration-ui-test.mjs --web && node test/plan-batch-ui-test.mjs && node test/plan-batch-ui-test.mjs --web",
     "test:application-launcher": "node test/application-launcher-ui-test.mjs && node test/application-launcher-ui-test.mjs --web",
     "test:group-storage": "node test/group-storage-naming-core-test.mjs && node test/group-storage-core-test.mjs && node test/group-storage-ui-test.mjs && node test/group-storage-ui-test.mjs --web",
-    "test:concurrency": "node test/snapshot-wire-test.mjs && node test/snapshot-transport-core-test.mjs && node test/atomic-json-cache-test.mjs && node test/store-read-performance-test.mjs && node test/concurrent-streaming-performance-test.mjs"
+    "test:concurrency": "node test/snapshot-wire-test.mjs && node test/snapshot-transport-core-test.mjs && node test/atomic-json-cache-test.mjs && node test/store-read-performance-test.mjs && node test/concurrent-streaming-performance-test.mjs",
+    "test:engineering": "node test/engineering-format-test.mjs && node test/engineering-core-test.mjs && node test/engineering-mutations-core-test.mjs && node test/engineering-recovery-core-test.mjs && node test/engineering-activity-performance-test.mjs && node test/engineering-ui-test.mjs && node test/engineering-ui-test.mjs --web"
   },
   "build": {
     "appId": "com.agentscompany.app",
@@ -206,7 +207,8 @@
       "docs/FILES_WORKBENCH.md",
       "docs/releases/0.57.0.zh-CN.md",
       "docs/releases/0.58.0.zh-CN.md",
-      "docs/GROUP_COLLABORATION.md"
+      "docs/GROUP_COLLABORATION.md",
+      "docs/ENGINEERING.md"
     ],
     "mac": {
       "target": [

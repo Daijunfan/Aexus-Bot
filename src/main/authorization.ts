@@ -27,10 +27,10 @@ import {readApiDocument} from './api-documents'
 import {catalog as chatCatalog,messages as chatMessages} from './chat-group-store'
 
 type DelegationValidator=(delegation:Delegation,target:string)=>void
-const delegationValidators:Partial<Record<'missionNotice'|'questionReply',DelegationValidator>>={}
+const delegationValidators:Partial<Record<'missionNotice'|'questionReply'|'engineeringNotice',DelegationValidator>>={}
 /** Stateful services register their policy without making authorization import execution services. */
-export function registerDelegationValidator(kind:'missionNotice'|'questionReply',validate:DelegationValidator){delegationValidators[kind]=validate}
-function validateNotice(kind:'missionNotice'|'questionReply',delegation:Delegation,target:string){const validate=delegationValidators[kind];if(!validate)throw Error('Delegation validation is unavailable: '+kind);validate(delegation,target)}
+export function registerDelegationValidator(kind:'missionNotice'|'questionReply'|'engineeringNotice',validate:DelegationValidator){delegationValidators[kind]=validate}
+function validateNotice(kind:'missionNotice'|'questionReply'|'engineeringNotice',delegation:Delegation,target:string){const validate=delegationValidators[kind];if(!validate)throw Error('Delegation validation is unavailable: '+kind);validate(delegation,target)}
 
 export const isGlobal=(principal:PrincipalRef)=>principal.kind==='operator'||hasGlobalRole(undefined,employeeIndex().get(principal.employeeId))
 export function canReadHostCredentials(id:string,principal=requestContext().principal){
@@ -57,6 +57,7 @@ export function delegationFor(targetId:string,context=requestContext()):Delegati
 export function validateDelegation(delegation:Delegation|undefined,targetId:string){
   if(!delegation)return // Old persisted user schedules retain operator ownership.
   const context={principal:delegation.requestedBy,requestId:delegation.requestId,credentialHash:delegation.credentialHash}
+  if(delegation.engineeringNotice){authorize('engineering.get',{},undefined,context);validateNotice('engineeringNotice',delegation,targetId);return}
   if(delegation.missionNotice){authorize('mission.get',{},undefined,context);validateNotice('missionNotice',delegation,targetId);return}
   if(delegation.questionReply){authorize('question.get',{},undefined,context);validateNotice('questionReply',delegation,targetId);return}
   if(delegation.groupRetry){

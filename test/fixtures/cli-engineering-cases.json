@@ -1,0 +1,556 @@
+[
+  {
+    "args": [
+      "engineering",
+      "create",
+      "--spec",
+      "@/remote/engineering.json",
+      "--client-request-id",
+      "create-1"
+    ],
+    "input": {
+      "/remote/engineering.json": "{\"name\":\"Project\",\"roles\":[]}"
+    },
+    "expected": {
+      "cmd": "engineering.create",
+      "args": {
+        "spec": {
+          "name": "Project",
+          "roles": []
+        },
+        "clientRequestId": "create-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "list",
+      "--archived",
+      "all"
+    ],
+    "expected": {
+      "cmd": "engineering.list",
+      "args": {
+        "archived": "all"
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "get",
+      "--id",
+      "eng_1"
+    ],
+    "expected": {
+      "cmd": "engineering.get",
+      "args": {
+        "id": "eng_1"
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "context",
+      "--id",
+      "eng_1"
+    ],
+    "expected": {
+      "cmd": "engineering.context",
+      "args": {
+        "id": "eng_1"
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "activity",
+      "--id",
+      "eng_1"
+    ],
+    "expected": {
+      "cmd": "engineering.activity",
+      "args": {
+        "id": "eng_1"
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "artifact",
+      "--id",
+      "eng_1",
+      "--artifact-id",
+      "ea_1",
+      "--operation",
+      "chunk",
+      "--offset",
+      "262144"
+    ],
+    "expected": {
+      "cmd": "engineering.artifact",
+      "args": {
+        "id": "eng_1",
+        "artifactId": "ea_1",
+        "operation": "chunk",
+        "offset": 262144
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "update",
+      "--id",
+      "eng_1",
+      "--patch",
+      "{\"managerCheckSeconds\":10}",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.update",
+      "args": {
+        "id": "eng_1",
+        "patch": {
+          "managerCheckSeconds": 10
+        },
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "retry",
+      "--id",
+      "eng_1",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.retry",
+      "args": {
+        "id": "eng_1",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "start",
+      "--id",
+      "eng_1",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.start",
+      "args": {
+        "id": "eng_1",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "pause",
+      "--id",
+      "eng_1",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.pause",
+      "args": {
+        "id": "eng_1",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "resume",
+      "--id",
+      "eng_1",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.resume",
+      "args": {
+        "id": "eng_1",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "archive",
+      "--id",
+      "eng_1",
+      "--archived",
+      "false",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.archive",
+      "args": {
+        "id": "eng_1",
+        "archived": false,
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "layout",
+      "--id",
+      "eng_1",
+      "--graph",
+      "topology",
+      "--positions",
+      "{\"node\":{\"x\":10,\"y\":-20}}",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.layout",
+      "args": {
+        "id": "eng_1",
+        "graph": "topology",
+        "positions": {
+          "node": {
+            "x": 10,
+            "y": -20
+          }
+        },
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "parse",
+      "--graph",
+      "topology",
+      "--source",
+      "flowchart TD\ng[\"Governor\"]:::governor"
+    ],
+    "expected": {
+      "cmd": "engineering.parse",
+      "args": {
+        "graph": "topology",
+        "source": "flowchart TD\ng[\"Governor\"]:::governor"
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "export",
+      "--id",
+      "eng_1",
+      "--graph",
+      "dag"
+    ],
+    "expected": {
+      "cmd": "engineering.export",
+      "args": {
+        "id": "eng_1",
+        "graph": "dag"
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "import",
+      "--id",
+      "eng_1",
+      "--graph",
+      "dag",
+      "--source",
+      "flowchart LR\ne[\"Employee\"]:::employee",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.import",
+      "args": {
+        "id": "eng_1",
+        "graph": "dag",
+        "source": "flowchart LR\ne[\"Employee\"]:::employee",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "prompts",
+      "--id",
+      "eng_1",
+      "--path",
+      "notes.md",
+      "--content",
+      "Keep actual newlines\nand Unicode 中文",
+      "--expected-version",
+      "hash"
+    ],
+    "expected": {
+      "cmd": "engineering.prompts",
+      "args": {
+        "id": "eng_1",
+        "path": "notes.md",
+        "content": "Keep actual newlines\nand Unicode 中文",
+        "expectedVersion": "hash"
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "dispatch",
+      "--id",
+      "eng_1",
+      "--key",
+      "node",
+      "--text",
+      "Implement and verify",
+      "--engine",
+      "deepseek",
+      "--worker-id",
+      "worker_1",
+      "--client-request-id",
+      "dispatch-1",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.dispatch",
+      "args": {
+        "id": "eng_1",
+        "key": "node",
+        "text": "Implement and verify",
+        "engine": "deepseek",
+        "workerId": "worker_1",
+        "clientRequestId": "dispatch-1",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "worker-stop",
+      "--id",
+      "eng_1",
+      "--run-id",
+      "run_1",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.worker-stop",
+      "args": {
+        "id": "eng_1",
+        "runId": "run_1",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "wake",
+      "--id",
+      "eng_1",
+      "--key",
+      "node",
+      "--expected-revision",
+      "2",
+      "--message",
+      "Actual blocker evidence\n需要上级检查"
+    ],
+    "expected": {
+      "cmd": "engineering.wake",
+      "args": {
+        "id": "eng_1",
+        "key": "node",
+        "expectedRevision": 2,
+        "message": "Actual blocker evidence\n需要上级检查"
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "employee-review",
+      "--id",
+      "eng_1",
+      "--key",
+      "node",
+      "--accepted",
+      "false",
+      "--result",
+      "Rework needed",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.employee-review",
+      "args": {
+        "id": "eng_1",
+        "key": "node",
+        "accepted": false,
+        "result": "Rework needed",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "manager-review",
+      "--id",
+      "eng_1",
+      "--key",
+      "node",
+      "--accepted",
+      "true",
+      "--result",
+      "Independently checked",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.manager-review",
+      "args": {
+        "id": "eng_1",
+        "key": "node",
+        "accepted": true,
+        "result": "Independently checked",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "manager-complete",
+      "--id",
+      "eng_1",
+      "--key",
+      "lead",
+      "--result",
+      "Whole chain checked",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.manager-complete",
+      "args": {
+        "id": "eng_1",
+        "key": "lead",
+        "result": "Whole chain checked",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "reopen",
+      "--id",
+      "eng_1",
+      "--key",
+      "lead",
+      "--result",
+      "Integrated defect found",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.reopen",
+      "args": {
+        "id": "eng_1",
+        "key": "lead",
+        "result": "Integrated defect found",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "engineering",
+      "complete",
+      "--id",
+      "eng_1",
+      "--result",
+      "Verified final result",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "engineering.complete",
+      "args": {
+        "id": "eng_1",
+        "result": "Verified final result",
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "view",
+      "select",
+      "company",
+      "--team-tab",
+      "engineering",
+      "--engineering",
+      "eng_1"
+    ],
+    "expected": {
+      "cmd": "view.select",
+      "args": {
+        "id": "company",
+        "teamTab": "engineering",
+        "engineeringId": "eng_1"
+      }
+    }
+  },
+  {
+    "args": [
+      "team-view",
+      "create",
+      "--name",
+      "Background engineering scope",
+      "--teams",
+      "[\"Team A\"]",
+      "--select",
+      "false"
+    ],
+    "expected": {
+      "cmd": "team-view.create",
+      "args": {
+        "name": "Background engineering scope",
+        "teams": [
+          "Team A"
+        ],
+        "select": false
+      }
+    }
+  }
+]

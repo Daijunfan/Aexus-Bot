@@ -4,7 +4,8 @@ import type { TeamSettings } from './types'
 export type ViewState = {
   kind: 'home' | 'team' | 'employee' | 'workspace' | 'conversation' | 'initialization' | 'settings' | 'plugin' | 'clone' | 'messages' | 'plan'
   revision: number
-  teamTab?: 'characters' | 'board' | 'workers'
+  teamTab?: 'engineering' | 'research' | 'characters' | 'board' | 'workers'
+  engineeringId?:string
   /** Legacy alias: Mission now opens its database directly. */
   missionTab?: 'plan'
   teamNavigationOpen?: boolean

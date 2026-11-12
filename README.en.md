@@ -23,7 +23,7 @@ Aexus Bot provides collaboration infrastructure. You supply the goals, inputs, r
 
 ### Team — organize people and follow work in parallel
 
-Team presents employees, responsibilities, relationships, and activity. **Characters** shows the team as a character scene; **Board** opens several complete employee workbenches together; **Workers** manages independent native Coding Agent sessions.
+Team presents employees, responsibilities, relationships, and activity. **Engineering** connects Governor, Manager, Employee and native Worker execution through simultaneous Topology/DAG views, two-stage acceptance and a linked Mission. Research currently reserves an entry. **Characters** shows the team as a character scene; **Board** opens several complete employee workbenches together; **Workers** manages independent native Coding Agent sessions.
 
 Organize employees by project or choose the people you want to work with. File browsing, editing, terminals, conversations, tool calls, approvals, and queues form a shared workbench for switching between people and working in parallel.
 

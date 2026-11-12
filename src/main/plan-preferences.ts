@@ -45,7 +45,7 @@ export async function sweepPlanRetention(){
     const kind=item.status==='succeeded'?'succeeded':item.status==='failed'?'failed':null;if(!kind)continue
     const policy=read().retention[kind],at=kind==='succeeded'?item.completedAt:item.failedAt
     if(policy.action==='keep'||!at||Date.now()-Date.parse(at)<policy.afterSeconds*1000)continue
-    if(policy.action==='archive'){if(!item.archivedAt)archiveMission(item.id,true)}
+    if(policy.action==='archive'||item.engineering){if(!item.archivedAt)archiveMission(item.id,true)}
     else if(item.status==='succeeded')await missionRequest('delete',{id:item.id,expectedRevision:item.revision})
    }
    for(const job of jobs){

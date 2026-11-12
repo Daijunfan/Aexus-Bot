@@ -98,6 +98,11 @@ rl.on('line',line=>{
         if(hidden){
           event('item/completed',{threadId:thread,turnId:turn,item:{id:'reading-commentary',type:'agentMessage',text:'PRIVATE_INIT_READING_COMMENTARY'}})
         }
+        if(process.env.AC_ENGINEERING_WORKER_FIXTURE==='1'&&!hidden&&text.includes('[Explicit native Worker assignment]\n')){
+          const assignment=JSON.parse(text.split('[Explicit native Worker assignment]\n')[1]),target=path.join(cwd,'engineering-result-'+assignment.node+'-'+assignment.attempt+'.json')
+          fs.writeFileSync(target,JSON.stringify({node:assignment.node,attempt:assignment.attempt,task:assignment.task,acceptance:assignment.acceptance,checked:true})+'\n')
+          event('item/completed',{threadId:thread,turnId:turn,item:{id:'engineering-delivery',type:'agentMessage',text:'Created and verified '+target}})
+        }
         event('item/completed',{threadId:thread,turnId:turn,item:{id:'answer',type:'agentMessage',text:ack?ackText:hidden?(fs.existsSync(path.join(control,employee+'.bad-ok'))?'NOT_READY':'OK'):(fs.existsSync(path.join(control,employee+'.reply.txt'))?fs.readFileSync(path.join(control,employee+'.reply.txt'),'utf8'):'VISIBLE_REPLY')}})
         event('turn/completed',{threadId:thread,turn:{id:turn,status:'completed'}})
       }

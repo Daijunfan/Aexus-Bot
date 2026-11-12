@@ -115,6 +115,29 @@ function nativeInfo(id:string,entry:Entry,info:WorkerRuntimeInfo){
 function delivery(entry:Entry,receipt:WorkerReceipt,state:WorkerReceipt['state'],error?:string){
  receipt.state=state;receipt.error=error;entry.session.items=entry.session.items.map(item=>item.id===receipt.id&&item.role==='user'?{...item,delivery:{state:state==='running'||state==='completed'?'accepted':state,error}}:item)
 }
+/** Core orchestration projection: the persisted owner and exact receipt must both match.
+ * Not exposed as a Worker API and never used to grant an employee another owner's controls. */
+export function ownedWorkerExecution(id:string,employee:string,clientMessageId:string){
+ const value=records().find(worker=>worker.id===id&&worker.employee===employee)
+ if(!value)throw Error('The engineering Worker was removed or its owner changed')
+ const entry=hydrate(value),receipt=entry.receipts.find(receipt=>receipt.clientMessageId===clientMessageId),index=receipt?entry.session.items.findIndex(item=>item.id===receipt.id):-1
+ let items=index<0?[]:entry.session.items.slice(index+1);const next=items.findIndex(item=>item.role==='user');if(next>=0)items=items.slice(0,next)
+ return {worker:present(value),receipt:receipt?structuredClone(receipt):undefined,approvalCount:approvalsFor('worker:'+id).length,result:receipt?.state==='completed'?renderTranscript(items).slice(-64000):undefined}
+}
+/** Cancel one linked receipt, preserving unrelated queued work and all native history. */
+export async function cancelOwnedWorkerExecution(id:string,employee:string,clientMessageId:string){
+ const current=records().find(worker=>worker.id===id);if(!current)return // Removal already waits for its owned process tree.
+ if(current.employee!==employee)throw Error('Engineering Worker ownership changed; no task was stopped')
+ ownedWorkerExecution(id,employee,clientMessageId)
+ const value=records().find(worker=>worker.id===id&&worker.employee===employee)!,entry=hydrate(value),receipt=entry.receipts.find(receipt=>receipt.clientMessageId===clientMessageId)
+ if(!receipt||!['queued','running'].includes(receipt.state))return
+ if(receipt.state==='queued'){delivery(entry,receipt,'interrupted','Engineering work was stopped or superseded');update(id,entry,true);return}
+ if(entry.current?.id!==receipt.id)throw Error('The engineering Worker task changed; no other task was stopped')
+ entry.controller?.abort();cancelApprovals('worker:'+id)
+ const deadline=Date.now()+1000
+ while(receipt.state==='running'&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,20))
+ if(receipt.state==='running')await closeEntry(id,entry,true)
+}
 function finishBlocks(entry:Entry){entry.session.items=entry.session.items.map(item=>item.role==='assistant'?{...item,blocks:item.blocks.map(block=>block.kind==='tool'?{...block,running:false}:block.kind==='thinking'?{...block,done:true}:block)}:item)}
 function cancelQueue(entry:Entry,reason:string){for(const receipt of entry.receipts)if(receipt.state==='queued')delivery(entry,receipt,'interrupted',reason)}
 async function closeEntry(id:string,entry:Entry,preserveQueue=false){

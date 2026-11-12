@@ -1,6 +1,8 @@
 import {onPluginFlush,flushPlugins} from '../plugins'
 import {useBeforeUnloadGuard} from './useBeforeUnloadGuard'
 import {WorkersView} from './WorkersView'
+import {EngineeringView} from './EngineeringView'
+import '../styles/team-navigation.css'
 import {AgentBoard,type BoardDrafts} from './AgentBoard'
 import {NativeWorkerDialog} from './NativeWorkerDialog'
 import {useCatalog} from './useCatalog'
@@ -37,7 +39,7 @@ type HostHealth=RemoteHealth&{checkedAt?:number;error?:string}
 export const HomeView=memo(function HomeView({ groupUnread=0, store, view, sessions=[], busyIds,disconnectedIds,activities,interactions, onOpen, act, assetWidth, onAssetResize, children,underHeader }: {groupUnread?:number;children?:ReactNode;underHeader?:ReactNode;interactions:ManagementInteraction[];activities:Record<string,ActivityPreview>;store:Store;view:ViewState;sessions?:Session[];busyIds:Set<string>;disconnectedIds:Set<string>;onOpen:(card:StoredSession)=>void;act:Action;assetWidth:number;onAssetResize:(width:number|undefined)=>void}) {
   useI18n()
 
-  const teamTab=view.teamTab??'characters',[boardDrafts,setBoardDrafts]=useState<BoardDrafts>({}),[workerDrafts,setWorkerDrafts]=useState<BoardDrafts>({})
+  const teamTab=view.teamTab??'characters',primaryTab=teamTab==='board'||teamTab==='workers'?'characters':teamTab,[boardDrafts,setBoardDrafts]=useState<BoardDrafts>({}),[workerDrafts,setWorkerDrafts]=useState<BoardDrafts>({})
   const creationAttempt=useRef({panel:'',signature:'',id:crypto.randomUUID()});const formIdentity=JSON.stringify([view.kind,view.employee,view.name]);if(creationAttempt.current.panel!==formIdentity)creationAttempt.current={panel:formIdentity,signature:'',id:crypto.randomUUID()}
   const [creatingWorker,setCreatingWorker]=useState(false),[focusWorker,setFocusWorker]=useState<string>()
   const workers=useCatalog<NativeWorker>('worker.list',presentationForView(view)==='company',event=>event.channel==='workers:changed'||event.channel==='terminal:changed'||event.channel==='store:changed')
@@ -112,7 +114,37 @@ export const HomeView=memo(function HomeView({ groupUnread=0, store, view, sessi
       {presentationForView(view)==='company'&&<div className="company-actions"><button className="add-team" aria-label={uiText("Add Team")} title={uiText("Add Team")} onClick={()=>void showPanel({kind:'team'})}><Icon name="organization"/> {uiText("Add Team")}</button><button className="add-employee" aria-label={uiText("Add Employee")} title={uiText("Add Employee")} onClick={()=>void showPanel({kind:'employee'})}><Icon name="person-add"/> {uiText("Add Employee")}</button><button className="add-worker" aria-label={uiText('Add Worker')} title={uiText('Add Worker')} onClick={addWorker}><Icon name="terminal"/> {uiText('Add Worker')}</button></div>}
     </header>
     {underHeader}
-    <div className={`office-layout ${view.shared?'shared-open':''}`}>{view.shared&&<SharedDrawer width={assetWidth} onResize={onAssetResize} onClose={()=>void act('view.shared',{enabled:false})}/>}{children??<div className="team-content">{view.teamNavigationOpen&&<nav className="team-subviews" id="team-subview-navigation" aria-label={uiText('Team views')}><div role="tablist" aria-label={uiText('Team subviews')}>{(['characters','board','workers'] as const).map(tab=><button key={tab} type="button" role="tab" id={"team-tab-"+tab} aria-controls="team-subview-panel" tabIndex={teamTab===tab?0:-1} aria-selected={teamTab===tab} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const tabs=['characters','board','workers'] as const,next=tabs[event.key==='Home'?0:event.key==='End'?2:(tabs.indexOf(tab)+(event.key==='ArrowRight'?1:2))%3];chooseMode(null);void act('view.select',{id:'company',teamTab:next});document.getElementById('team-tab-'+next)?.focus()}} onClick={()=>{chooseMode(null);void act('view.select',{id:'company',teamTab:tab})}}><Icon name={tab==='characters'?'organization':tab==='board'?'layout':'terminal'}/>{tab==='characters'?'Characters':tab==='board'?'Board':'Workers'}</button>)}</div>{selectedView&&teamTab!=='workers'&&<div className="team-scope-pill"><span title={selectedView.name}>{selectedView.name}</span><button type="button" aria-label={uiText('Show all teams')} title={uiText('Show all teams')} onClick={()=>void act('view.select',{id:'company',teamViewId:'all',teamTab})}><Icon name="close"/></button></div>}<span>{teamTab==='workers'?<>{workers.value.length} Worker</>:<>{teamEmployees.filter(card=>!card.deleting).length} {uiText(teamEmployees.filter(card=>!card.deleting).length===1?'Agent':'Agents')}</>}</span></nav>}<div className="team-subview-panel" id="team-subview-panel" role="tabpanel" aria-label={'Team / '+teamTab} aria-labelledby={view.teamNavigationOpen?'team-tab-'+teamTab:undefined}>{teamTab==='board'?<AgentBoard catalogStore={store} store={teamStore} sessions={sessions} obscured={view.kind!=='home'||creatingWorker||!!removal} drafts={boardDrafts} setDrafts={setBoardDrafts} onOpen={open}/>:teamTab==='workers'?<WorkersView store={store} workers={workers.value} obscured={view.kind!=='home'||creatingWorker||!!removal} drafts={workerDrafts} setDrafts={setWorkerDrafts} focusWorker={focusWorker} onAdd={addWorker} refresh={workers.refresh} error={workers.error} loading={workers.loading}/>:<OfficeCanvas obscured={view.kind!=='home'||creatingWorker||!!removal} selection={editMode?{mode:editMode,ids:new Set(selectedIds),toggle:toggleSelection}:undefined} interactions={interactions} key={`${store.activeTeamViewId??ALL_TEAM_VIEW}:${selectedView?JSON.stringify(selectedView.teams):''}`} activities={activities} cloudStatus={cloudStatus} plugins={plugins} store={store} busyIds={busyIds} disconnectedIds={disconnectedIds} act={act} onOpen={open} onEdit={edit} onView={onView}/>}</div></div>}</div>
+    <div className={'office-layout '+(view.shared?'shared-open':'')}>
+      {view.shared&&<SharedDrawer width={assetWidth} onResize={onAssetResize} onClose={()=>void act('view.shared',{enabled:false})}/>}
+      {children??<div className="team-content">
+        {view.teamNavigationOpen&&<nav className="team-subviews team-primary-nav" id="team-subview-navigation" aria-label={uiText('Team views')}>
+          <div className="team-nav-left">
+            {selectedView&&['characters','board'].includes(teamTab)&&<div className="team-scope-pill"><span title={selectedView.name}>{selectedView.name}</span><button type="button" aria-label={uiText('Show all teams')} title={uiText('Show all teams')} onClick={()=>void act('view.select',{id:'company',teamViewId:'all',teamTab})}><Icon name="close"/></button></div>}
+          </div>
+          <div role="tablist" aria-label={uiText('Team subviews')}>
+            {(['engineering','research','characters'] as const).map(tab=><button key={tab} type="button" role="tab" id={'team-tab-'+tab} aria-controls="team-subview-panel" tabIndex={primaryTab===tab?0:-1} aria-selected={primaryTab===tab} onKeyDown={event=>{
+              if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return
+              event.preventDefault()
+              const tabs=['engineering','research','characters'] as const
+              const next=tabs[event.key==='Home'?0:event.key==='End'?2:(tabs.indexOf(tab)+(event.key==='ArrowRight'?1:2))%3]
+              chooseMode(null);void act('view.select',{id:'company',teamTab:next})
+              document.getElementById('team-tab-'+next)?.focus()
+            }} onClick={()=>{chooseMode(null);void act('view.select',{id:'company',teamTab:tab})}}>
+              <Icon name={tab==='engineering'?'git-merge':tab==='research'?'beaker':'organization'}/>{tab==='engineering'?'Engineering':tab==='research'?'Research':'Characters'}
+            </button>)}
+          </div>
+          <div className="team-nav-right">
+            {primaryTab==='characters'&&<div role="tablist" aria-label="Characters workspaces"><button type="button" role="tab" aria-selected={teamTab==='board'} onClick={()=>{chooseMode(null);void act('view.select',{id:'company',teamTab:'board'})}}><Icon name="layout"/> Board</button><button type="button" role="tab" aria-selected={teamTab==='workers'} onClick={()=>{chooseMode(null);void act('view.select',{id:'company',teamTab:'workers'})}}><Icon name="terminal"/> Workers</button></div>}
+            <span>{teamTab==='workers'?workers.value.length+' Workers':teamEmployees.filter(card=>!card.deleting).length+' Agents'}</span>
+          </div>
+        </nav>}
+        <div className="team-subview-panel" id="team-subview-panel" role="tabpanel" aria-label={'Team / '+teamTab} aria-labelledby={view.teamNavigationOpen?'team-tab-'+primaryTab:undefined}>
+          {teamTab==='engineering'?<EngineeringView store={store} view={view} act={act}/>:teamTab==='research'?<section className="engineering-research-empty" aria-label="Research"><Icon name="beaker"/><h2>Research</h2><p>{uiText('Research is reserved for a future workspace.')}</p></section>:teamTab==='board'?<AgentBoard catalogStore={store} store={teamStore} sessions={sessions} obscured={view.kind!=='home'||creatingWorker||!!removal} drafts={boardDrafts} setDrafts={setBoardDrafts} onOpen={open}/>:
+           teamTab==='workers'?<WorkersView store={store} workers={workers.value} obscured={view.kind!=='home'||creatingWorker||!!removal} drafts={workerDrafts} setDrafts={setWorkerDrafts} focusWorker={focusWorker} onAdd={addWorker} refresh={workers.refresh} error={workers.error} loading={workers.loading}/>:
+           <OfficeCanvas obscured={view.kind!=='home'||creatingWorker||!!removal} selection={editMode?{mode:editMode,ids:new Set(selectedIds),toggle:toggleSelection}:undefined} interactions={interactions} key={JSON.stringify([store.activeTeamViewId??ALL_TEAM_VIEW,selectedView?.teams])} activities={activities} cloudStatus={cloudStatus} plugins={plugins} store={store} busyIds={busyIds} disconnectedIds={disconnectedIds} act={act} onOpen={open} onEdit={edit} onView={onView}/>}
+        </div>
+      </div>}
+    </div>
     {editMode&&!children&&teamTab==='characters'&&<aside className="canvas-edit-toolbar" role="toolbar" aria-label={uiText("Canvas editing")}>
       <div className="canvas-edit-modes"><button aria-pressed={editMode==='employee'} onClick={()=>chooseMode('employee')}>{uiText("Select employees")}</button><button aria-pressed={editMode==='team'} onClick={()=>chooseMode('team')}>{uiText("Select teams")}</button></div>
       <p>{uiText("Click on the canvas to select")}{editMode==='employee'?uiText("employee"):uiText("Team")}{uiText("for multiple selection.")}</p>

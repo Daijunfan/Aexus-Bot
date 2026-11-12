@@ -123,9 +123,9 @@ function teamViewName(store:Store,name:unknown,id?:string){
   if(value.toLowerCase()==='all team'||store.teamViews?.some(view=>view.id!==id&&view.name.toLowerCase()===value.toLowerCase()))throw new Error('视图名称已存在')
   return value
 }
-export function createTeamView(name:string,teams:string[]):TeamView{
+export function createTeamView(name:string,teams:string[],activate=true):TeamView{
   const store=readStore(),view={id:randomUUID(),name:teamViewName(store,name),teams:teamViewTeams(store,teams)}
-  store.teamViews=[...(store.teamViews??[]),view];if(!setClientView(view.id))store.activeTeamViewId=view.id;writeStore(store);return view
+  store.teamViews=[...(store.teamViews??[]),view];if(activate&&!setClientView(view.id))store.activeTeamViewId=view.id;writeStore(store);return view
 }
 export function updateTeamView(id:string,patch:{name?:string;teams?:string[];index?:number}):TeamView{
   const store=readStore(),view=store.teamViews?.find(value=>value.id===id)
