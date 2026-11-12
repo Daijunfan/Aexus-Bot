@@ -8,10 +8,8 @@ import {conversationCategories,isBuiltinMessageCategory,inCategory,uniqueConvers
 import {useCatalog} from './useCatalog'
 import {EmployeeProfile} from './EmployeeProfile'
 import {affectsInbox} from '../../../shared/store-changes'
-import {useDialogFocus} from '../office/useDialogFocus'
 import {useSortableList} from '../chat/useSortableList'
 import {mergeOrder,orderedKeys} from '../../../shared/messenger-order'
-import {useSurfaceMotion} from '../chat/surfaceMotion'
 import {MessageWallpaper} from '../chat/MessageWallpaper'
 import {translate as uiText,useI18n,interfaceLocale} from '../i18n'
 import {ForwardMessageDialog} from './ForwardMessageDialog'
@@ -162,7 +160,5 @@ export function MessageHeader({employee,session,opening,settings,search,onSearch
   </header>
 }
 export function MessageProfile({employee,store,onClose,onWorkspace}:{employee:StoredSession;store:Store;onClose:()=>void;onWorkspace:()=>void;onEdit?:()=>void}){
- const surface=useSurfaceMotion<HTMLElement>('panel')
- useDialogFocus('.message-profile',true)
- return <aside ref={surface} className="message-profile profile-sheet" role="dialog" aria-modal="true" aria-label={uiText('Employee information')}><EmployeeProfile key={employee.id} employee={employee} store={store} onBack={onClose} onWorkspace={onWorkspace}/></aside>
+ return <EmployeeProfile key={employee.id} employee={employee} store={store} onBack={onClose} onWorkspace={onWorkspace} workspace/>
 }

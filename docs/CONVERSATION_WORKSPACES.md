@@ -2,6 +2,12 @@
 
 An employee has one execution workspace: the directory assigned in Team. Joining a group never creates another employee directory, changes cwd, switches host, or changes a native session. `workspace.catalog` returns this assigned `company:EMPLOYEE_ID` workspace only. Use `conversation.file` to read shared group content and `conversation.upload` to share results from the employee’s own workspace.
 
+## One shared-file manager
+
+Message uses one manager for shared files, previews, uploads, new text files, editing, renaming and recoverable removal. It does not allocate employee folders or open a second group folder browser. Text saves use the `hash` returned by `conversation.file --operation read`; concurrent changes retain the editor draft until the user explicitly reloads or cancels. Native Bot files and legacy published media keep their existing connector boundaries.
+
+Group `conversation.file --operation move --path OLD --to NEW --expected-version VERSION` renames a file or folder and updates affected published attachment paths and message-recovery records. Message IDs, text, authors, accepted work and delivery/read receipts remain unchanged. Existing message links resolve the renamed resource through its updated conversation entry. Current members retain equal shared-file rights; an outside caller cannot rename files. `expectedVersion` comes from `conversation.file --operation info` or `conversation.files`; collisions and stale versions are rejected without overwriting data. Metadata-write failure attempts to restore the original location. Accepted native prompts and external OS paths remain their original snapshots; consumers should refresh `conversation.entry` after a path change.
+
 ## Choose storage when creating a group
 
 User and Secretary may pass `storage:{mode:"create"|"bind",hostId?,directory?,folderName?}` to `chat.create`. With hostId the directory belongs to that registered cloud host; otherwise it belongs to the Core host. In create mode, directory is the parent and folderName defaults to a filesystem-safe group label. In bind mode, directory must already exist and is used directly; no rename or overwrite occurs. Omitting storage retains a managed Core folder. Ordinary employee creators use this default and cannot grant themselves arbitrary host/path access.

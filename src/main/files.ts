@@ -113,7 +113,11 @@ export function workspaceFiles(root:string,operation:string,args:Record<string,a
   if(operation==='mkdir'){fs.mkdirSync(file,{recursive:false});return {path:args.path,created:true}}
   if(operation==='move') {
     const next=workspacePath(root,String(args.to),true)
-    if(fs.existsSync(next))throw new Error('目标路径已存在')
+    if(args.expectedVersion!==undefined&&fileVersion(file)!==args.expectedVersion)throw Error('File changed; refresh before renaming')
+    if(fs.existsSync(next)){
+      const a=fs.statSync(file),b=fs.statSync(next),caseOnly=a.dev===b.dev&&a.ino===b.ino&&file.toLowerCase()===next.toLowerCase()&&!fs.readdirSync(path.dirname(next)).includes(path.basename(next))
+      if(!caseOnly)throw new Error('目标路径已存在')
+    }
     fs.renameSync(file,next);return {path:args.to}
   }
   if(operation==='trash') {

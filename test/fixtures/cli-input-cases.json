@@ -6356,5 +6356,30 @@
         "id": "fate-saber-chibi"
       }
     }
+  },
+  {
+    "args": [
+      "conversation",
+      "file",
+      "group:example",
+      "--operation",
+      "move",
+      "--path",
+      "before.txt",
+      "--to",
+      "after.txt",
+      "--expected-version",
+      "opaque-version"
+    ],
+    "expected": {
+      "cmd": "conversation.file",
+      "args": {
+        "conversation": "group:example",
+        "operation": "move",
+        "path": "before.txt",
+        "to": "after.txt",
+        "expectedVersion": "opaque-version"
+      }
+    }
   }
 ]

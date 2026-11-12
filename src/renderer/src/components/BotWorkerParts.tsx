@@ -9,6 +9,7 @@ import {translate as uiText,useI18n} from '../i18n'
 import {useDialogFocus} from '../office/useDialogFocus'
 import {api} from '../api'
 import {Icon} from './Icon'
+import {MessageWorkspace} from './MessageWorkspace'
 import '../styles/bot-workers.css'
 
 type AccessEmployee={id:string;title:string;role:string;team:string}
@@ -37,36 +38,32 @@ export function BotConnectionDialog({bot,mode,onClose,onSaved}:{bot:ChatGroup;mo
 }
 export function BotAccessDialog({id,name,onClose,onRefresh}:{id:string;name?:string;onClose:()=>void;onRefresh?:()=>void}){
  useI18n()
- useDialogFocus('.bot-access-dialog',true)
  const [data,setData]=useState<AccessResult|null>(null),[employeeIds,setEmployeeIds]=useState<string[]>([]),[initial,setInitial]=useState<string[]>([])
- const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[saved,setSaved]=useState(false)
+ const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[saved,setSaved]=useState(false),[discard,setDiscard]=useState(false)
  useEffect(()=>{
   let alive=true
   void api.call<AccessResult>('bot.access',{id}).then(result=>{if(!alive)return;setData(result);setEmployeeIds(result.employeeIds);setInitial(result.employeeIds)}).catch(cause=>{if(alive)setError((cause as Error).message)}).finally(()=>{if(alive)setLoading(false)})
   return()=>{alive=false}
  },[id])
  const dirty=useMemo(()=>[...employeeIds].sort().join('\n')!==[...initial].sort().join('\n'),[employeeIds,initial])
+ const close=()=>{if(discard)setDiscard(false);else if(dirty)setDiscard(true);else onClose()}
  const toggle=(employeeId:string)=>setEmployeeIds(value=>value.includes(employeeId)?value.filter(item=>item!==employeeId):[...value,employeeId])
  const save=async()=>{
   if(!data||saving||!dirty)return
   setSaving(true);setError('');setSaved(false)
   try{const result=await api.call<AccessResult>('bot.access',{id,employeeIds,expectedRevision:data.revision});setData(result);setEmployeeIds(result.employeeIds);setInitial(result.employeeIds);setSaved(true);onRefresh?.()}catch(cause){setError((cause as Error).message)}finally{setSaving(false)}
  }
- return createPortal(<div className="group-editor-overlay bot-access-overlay" onKeyDown={event=>{if(event.key==='Escape'&&!saving){event.stopPropagation();onClose()}}}>
-  <div className="group-editor-backdrop" onClick={()=>!saving&&onClose()}/>
-  <section className="group-editor bot-access-dialog" role="dialog" aria-modal="true" aria-label={uiText('Authorized people')}>
-   <header><div><span>{uiText('BOT ACCESS')}</span><h2>{uiText('Authorized people')}</h2>{name&&<p className="bot-access-name">{name}</p>}</div><button disabled={saving} aria-label={uiText('Close')} onClick={onClose}><Icon name="close"/></button></header>
+ return <MessageWorkspace className="bot-access-dialog" title={uiText('Authorized people')} subtitle={name} icon="organization" closeLabel={uiText('Close')} onClose={close} busy={saving} dirty={dirty} scroll={false} footer={<><span className="message-workspace-footer-note">{uiText('Secretary is always authorized.')}</span><button disabled={saving} onClick={onClose}>{uiText('Cancel')}</button><button className="primary" disabled={saving||!data||!dirty||discard} onClick={()=>void save()}>{uiText(saving?'Saving…':'Save access')}</button></>}>
+   {discard&&<div className="message-workspace-discard" role="alert"><p>{uiText('Discard unsaved access changes?')}</p><button onClick={()=>setDiscard(false)}>{uiText('Keep editing')}</button><button onClick={onClose}>{uiText('Discard changes')}</button></div>}
    <p className="bot-dialog-note">{uiText('Selected employees can message and use shared files. Secretary is always authorized.')}</p>
    {loading?<p className="bot-loading"><span className="spinner"/>{uiText('Loading…')}</p>:<div className="bot-access-list">
     <div className="bot-access-row automatic"><span><strong>{uiText('Secretary')}</strong><small>{uiText('Always authorized')}</small></span><em>{uiText('Full access')}</em></div>
     {data?.employees.filter(employee=>employee.role!=='secretary').map(employee=><label className="bot-access-row" key={employee.id}>
-     <input type="checkbox" checked={employeeIds.includes(employee.id)} onChange={()=>toggle(employee.id)}/>
+     <input type="checkbox" disabled={saving||discard} checked={employeeIds.includes(employee.id)} onChange={()=>toggle(employee.id)}/>
      <span><strong>{employee.title}</strong><small>{employee.team} · {uiText(employee.role==='employee'?'Employee':employee.role==='manager'?'Manager':employee.role==='governor'?'Governor':employee.role==='secretary'?'Secretary':employee.role)}</small></span>
     </label>)}
    </div>}
    {error&&<p className="group-error" role="alert">{error}</p>}
    {saved&&<p className="bot-access-saved" role="status">{uiText('Access saved')}</p>}
-   <footer><button disabled={saving} onClick={onClose}>{uiText('Cancel')}</button><button className="primary" disabled={saving||loading||!dirty} onClick={()=>void save()}>{saving?uiText('Saving…'):uiText('Save access')}</button></footer>
-  </section>
- </div>,document.body)
+ </MessageWorkspace>
 }

@@ -14,13 +14,14 @@ import {SingleFlight} from './single-flight'
 import {nextDelivery,routeRecipients} from './delivery'
 import {transcriptItems} from './transcripts'
 import {fileVersion} from './read-cache'
+import {withGroupFileMutation} from './group-file-mutations'
 import fs from 'node:fs'
 import {workspaceFiles} from './files'
 import {attachmentPaths,attachmentInfo,type MessageAttachment} from '../shared/message-attachments'
 import {quoteShape,validateQuote} from '../shared/message-quotes'
 import {randomUUID,createHash} from 'node:crypto'
 import {join} from 'node:path'
-import {atomicJson} from './atomic-file'
+import {atomicJson,readJson} from './atomic-file'
 import {readStore} from './store'
 import {authorize,callerEmployee,requestContext,delegationFor,validateDelegation,isAppAdministrator,requireAppAdministrator} from './authorization'
 import {employeeReady} from '../shared/types'
@@ -141,15 +142,25 @@ function messageText(value:unknown,hasAttachments:boolean,max:number){
  if(Array.from(value).length>max)throw Error('Message exceeds '+max+' characters; keep group updates concise')
  return value
 }
-async function append(group:ChatGroup,args:Record<string,any>,targets:string[],kind:ChatMessage['kind'],broadcast=false,workTargets:string[]=[],acknowledgment=false,targetViews?:Map<string,string|undefined>,card?:{pollId?:string;checklistId?:string}){
- const principal=requestContext().principal,attachments=await groupAttachments(group.id,args.images,args.files)
+const append=(...args:Parameters<typeof appendMessage>)=>args[1].images?.length||args[1].files?.length?withGroupFileMutation('group:'+args[0].id,()=>appendMessage(...args)):appendMessage(...args)
+async function appendMessage(group:ChatGroup,args:Record<string,any>,targets:string[],kind:ChatMessage['kind'],broadcast=false,workTargets:string[]=[],acknowledgment=false,targetViews?:Map<string,string|undefined>,card?:{pollId?:string;checklistId?:string}){
+ const principal=requestContext().principal,clientMessageId=messageKey(args.clientMessageId),quote=args.replyQuote===undefined?undefined:quoteShape(args.replyQuote)
+ const fingerprintFor=(text:string,attachments:Pick<MessageAttachment,'path'|'bytes'|'kind'>[])=>createHash('sha256').update(JSON.stringify([text,broadcast?[]:[...targets].sort(),kind,args.replyTo??null,args.viewId??null,...(quote?[quote]:[]),...(args.replyConversation?[args.replyConversation,!!args.replyTextOnly]:[]),...(attachments.length?[attachments.map(file=>[file.path,file.bytes,file.kind])]:[]),...(args.topicId&&args.topicId!=='general'?[args.topicId]:[]),...(card?[card]:[])])).digest('hex')
+ const previous=messages(group.id).find(message=>message.clientMessageId===clientMessageId&&authorEquals(message.author,principal))
+ if(previous){
+  const paths=[...attachmentPaths(args.images).map(path=>({path,kind:'image' as const})),...attachmentPaths(args.files).map(path=>({path,kind:'file' as const}))]
+  const original=paths.length?(previous.attachments??readJson<Record<string,{message:ChatMessage}>>(join(directory,group.id+'-removed.json'),()=>({}))[previous.id]?.message.attachments??[]):[],snapshot=paths.map((file,index)=>({...file,bytes:original[index]?.bytes??0}))
+  const text=messageText(typeof args.text==='string'?args.text:'',paths.length>0,!isAppAdministrator(principal)?GROUP_PUBLISH_POLICY.maxCharacters:64000)
+  if(previous.fingerprint!==fingerprintFor(text,snapshot))throw Error('Client message ID already used with different content')
+  return {message:previous,created:false}
+ }
+ const attachments=await groupAttachments(group.id,args.images,args.files)
  group=requireGroup(group.id)
  const text=messageText(typeof args.text==='string'?args.text:'',attachments.length>0,!isAppAdministrator(principal)?GROUP_PUBLISH_POLICY.maxCharacters:64000)
  validateMessageImages(text,attachments.filter(file=>file.kind==='image').length)
- const clientMessageId=messageKey(args.clientMessageId)
- const all=messages(group.id),quote=args.replyQuote===undefined?undefined:quoteShape(args.replyQuote),fingerprint=createHash('sha256').update(JSON.stringify([text,broadcast?[]:[...targets].sort(),kind,args.replyTo??null,args.viewId??null,...(quote?[quote]:[]),...(args.replyConversation?[args.replyConversation,!!args.replyTextOnly]:[]),...(attachments.length?[attachments.map(file=>[file.path,file.bytes,file.kind])]:[]),...(args.topicId&&args.topicId!=='general'?[args.topicId]:[]),...(card?[card]:[])])).digest('hex')
- const previous=all.find(message=>message.clientMessageId===clientMessageId&&authorEquals(message.author,principal))
- if(previous){if(previous.fingerprint!==fingerprint)throw Error('Client message ID already used with different content');return {message:previous,created:false}}
+ const all=messages(group.id),fingerprint=fingerprintFor(text,attachments)
+ const concurrent=all.find(message=>message.clientMessageId===clientMessageId&&authorEquals(message.author,principal))
+ if(concurrent){if(concurrent.fingerprint!==fingerprint)throw Error('Client message ID already used with different content');return {message:concurrent,created:false}}
  const inheritedTopic=args.replyTo&&!args.crossReply?all.find(message=>message.id===args.replyTo)?.topicId:undefined
  const topicId=requireGroupPosting(group,{...args,topicId:args.topicId??inheritedTopic,...card})
  if(!attachments.length&&!isAppAdministrator(principal)&&principal.kind==='agent'&&emptyAgentPost(args.text))throw Error('Public replies require nonempty text')

@@ -5000,6 +5000,13 @@
         false
       ],
       [
+        "expectedVersion",
+        "expected-version",
+        "text",
+        false,
+        false
+      ],
+      [
         "create",
         "create",
         "boolean",

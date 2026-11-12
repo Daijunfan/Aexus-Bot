@@ -1,5 +1,4 @@
 import {GroupAvatar} from './GroupAvatar'
-import {useSurfaceMotion} from '../chat/surfaceMotion'
 import {translate as uiText,useI18n} from '../i18n'
 import {useCallback,useEffect,useRef,useState} from 'react'
 import type {Store} from '../../../shared/types'
@@ -7,15 +6,15 @@ import {employeeReady} from '../../../shared/types'
 import type {ChatGroupView} from '../../../shared/chat-groups'
 import {conversationKey,plainMessagePreview,type ForwardDraftInput,type ForwardResult,type ForwardStatus} from '../../../shared/messenger'
 import {useMessenger} from './useMessenger'
-import {useDialogFocus} from '../office/useDialogFocus'
 import {onPluginFlush} from '../plugins'
 import {EmployeePortrait} from './EmployeePortrait'
 import {Icon} from './Icon'
+import {MessageWorkspace} from './MessageWorkspace'
 import {api} from '../api'
 
 export function ForwardMessageDialog({store,groups}:{store:Store;groups:ChatGroupView[]}){
  useI18n()
- const surface=useSurfaceMotion<HTMLDivElement>('dialog'),messenger=useMessenger()!,reply=messenger.replyTarget
+ const messenger=useMessenger()!,reply=messenger.replyTarget
  const requested=useRef(messenger.forward),saved=reply?undefined:messenger.state.pendingForward
  const [draft,setDraft]=useState<ForwardDraftInput>(()=>saved?(({updatedAt:_,...value})=>value)(saved):{clientMessageId:crypto.randomUUID(),messages:reply?[{conversation:reply.conversation,id:reply.id}]:messenger.forward!.messages,comment:'',textOnly:false,preview:{text:Array.from(reply?.quote?.text??reply?.text??messenger.forward!.text).slice(0,1200).join(''),images:reply?.images??messenger.forward!.images},attempted:false})
  const [query,setQuery]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[status,setStatus]=useState<ForwardStatus|null>(null)
@@ -31,7 +30,6 @@ export function ForwardMessageDialog({store,groups}:{store:Store;groups:ChatGrou
  const update=(patch:Partial<ForwardDraftInput>)=>{const value={...latest.current,...patch};latest.current=value;setDraft(value);setError('');if(!reply){dirty.current=true;clearTimeout(timer.current);timer.current=setTimeout(()=>void flush().catch(cause=>{if(alive.current)setError((cause as Error).message)}),300)}}
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;clearTimeout(timer.current);void flush().catch(()=>{})}},[flush])
  useEffect(()=>onPluginFlush(flush),[flush])
- useDialogFocus('.message-forward-dialog',true)
  const check=useCallback(async()=>{const value=await api.call<ForwardStatus>('messenger.forward-status',{clientMessageId:latest.current.clientMessageId});if(alive.current)setStatus(value);return value},[])
  useEffect(()=>{if(!reply&&draft.attempted)void check().catch(cause=>{if(alive.current)setError((cause as Error).message)})},[check,reply])
  const target=draft.to??'',locked=!reply&&draft.attempted,images=draft.preview.images
@@ -58,10 +56,12 @@ export function ForwardMessageDialog({store,groups}:{store:Store;groups:ChatGrou
   finally{if(alive.current)setBusy(false)}
  }
  const statusText=status?.status==='sent'?uiText('Forwarded successfully.'):status?.status==='interrupted'?uiText('The queued forward was interrupted. It will not be sent again automatically.'):status?.status==='uncertain'?uiText('Delivery is not confirmed. Check the result or destination; this attempt will not be sent again.'):status?.active?uiText('Forwarding is still in progress. You can close this window and check later.'):locked&&status?.retryable?uiText('Nothing was dispatched by this attempt. You can retry it safely.'):locked?uiText('Checking the forwarding result…'):null
- return <div ref={surface} className="group-editor-overlay" onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();void close()}}}>
-  <div className="group-editor-backdrop" onClick={()=>void close()}/>
-  <section className="message-forward-dialog" role="dialog" aria-modal="true" aria-label={reply?uiText('Reply in another conversation'):uiText('Forward messages')}>
-   <header><div><span>{uiText('SHARE THE CONTEXT')}</span><h2>{reply?uiText('Choose where to reply'):<>{uiText('Forward')} {draft.messages.length===1?uiText('a message'):uiText('{0} messages',[draft.messages.length])}</>}</h2></div><button disabled={!!reply&&busy} aria-label={reply?uiText('Close reply destination'):uiText('Close forwarding')} onClick={()=>void close()}><Icon name="close"/></button></header>
+ return <MessageWorkspace className="message-forward-dialog" title={reply?uiText('Choose where to reply'):uiText('Forward')+' '+(draft.messages.length===1?uiText('a message'):uiText('{0} messages',[draft.messages.length]))} label={uiText(reply?'Reply in another conversation':'Forward messages')} icon={reply?'reply':'arrow-right'} closeLabel={uiText(reply?'Close reply destination':'Close forwarding')} onClose={()=>void close()} busy={!!reply&&busy} scroll={false} footer={<>
+    {!reply&&<button disabled={busy} onClick={()=>void discard()}>{uiText('Discard setup')}</button>}
+    <button disabled={!!reply&&busy} onClick={()=>void close()}>{uiText(reply?'Cancel':'Close')}</button>
+    {locked&&status?.status!=='sent'&&<button disabled={busy} onClick={()=>{setBusy(true);setError('');void check().catch(cause=>setError((cause as Error).message)).finally(()=>setBusy(false))}}>{uiText('Check result')}</button>}
+    {locked&&!status?.retryable?<button className="primary" disabled={busy||!target} onClick={()=>void open(status?.result)}>{uiText('Open destination')}</button>:<button className="primary" disabled={!target||busy||!!reply&&images>0&&!draft.textOnly&&!reply.quote} onClick={()=>void send()}><Icon name="arrow-right"/>{reply?(busy?uiText('Opening conversation…'):uiText('Continue reply')):busy?uiText('Forwarding…'):locked?uiText('Retry forwarding'):uiText('Forward')}</button>}
+</>}>
    {differentSelection&&<p className="message-forward-note">{uiText('Your saved forwarding attempt is open. Discard it before choosing other messages.')}</p>}
    <div className="message-forward-preview"><Icon name="arrow-right"/><p>{sourceName&&<strong className="message-forward-source">{uiText('From {0}',[sourceName])}</strong>}{plainMessagePreview(draft.preview.text)||uiText('Attachments')}{images>0&&<small>{uiText('{0} attachments',[images])}</small>}</p></div>
    {locked?<div className="message-forward-result"><strong>{uiText('Destination')}: {targetName??target}</strong><p role="status">{statusText}</p></div>:<>
@@ -77,12 +77,5 @@ export function ForwardMessageDialog({store,groups}:{store:Store;groups:ChatGrou
    {!locked&&<p className="message-forward-note">{reply?uiText(target.startsWith('group:')?'Your reply and quoted text will be visible in this group. Review the kept draft before sending.':'Your destination draft is kept. Nothing is sent until you review it and press Send.'):target.startsWith('group:')?uiText('This sends the selected content to every current group member.'):uiText('This sends the selected content to the employee’s existing conversation. Busy employees receive it in their queue.')}</p>}
    {!reply&&<p className="message-forward-note">{uiText('Closing keeps this setup. Discarding does not cancel messages or work already sent.')}</p>}
    {error&&<p role="alert" className="group-error">{uiText(error)}</p>}
-   <footer>
-    {!reply&&<button disabled={busy} onClick={()=>void discard()}>{uiText('Discard setup')}</button>}
-    <button disabled={!!reply&&busy} onClick={()=>void close()}>{uiText(reply?'Cancel':'Close')}</button>
-    {locked&&status?.status!=='sent'&&<button disabled={busy} onClick={()=>{setBusy(true);setError('');void check().catch(cause=>setError((cause as Error).message)).finally(()=>setBusy(false))}}>{uiText('Check result')}</button>}
-    {locked&&!status?.retryable?<button className="primary" disabled={busy||!target} onClick={()=>void open(status?.result)}>{uiText('Open destination')}</button>:<button className="primary" disabled={!target||busy||!!reply&&images>0&&!draft.textOnly&&!reply.quote} onClick={()=>void send()}><Icon name="arrow-right"/>{reply?(busy?uiText('Opening conversation…'):uiText('Continue reply')):busy?uiText('Forwarding…'):locked?uiText('Retry forwarding'):uiText('Forward')}</button>}
-   </footer>
-  </section>
- </div>
+ </MessageWorkspace>
 }

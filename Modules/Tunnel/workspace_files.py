@@ -314,8 +314,12 @@ def workspace_files(root, operation, args):
         return dict(path=value, created=True)
     if operation == 'move':
         target = locate(args['to'], True)
+        if args.get('expectedVersion') is not None and version(file)!=args['expectedVersion']:
+            raise ValueError('File changed; refresh before renaming')
         if target.exists():
-            raise ValueError('目标路径已存在')
+            case_only = file.samefile(target) and str(file).lower()==str(target).lower() and target.name not in os.listdir(target.parent)
+            if not case_only:
+                raise ValueError('目标路径已存在')
         file.rename(target)
         return dict(path=args['to'])
     trash = locate('.agents-company/trash')

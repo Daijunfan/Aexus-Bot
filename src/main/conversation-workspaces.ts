@@ -21,6 +21,7 @@ import {atomicJson,readJson} from './atomic-file'
 import {workspaceFiles,workspacePath} from './files'
 import {startTransfer,getTransfer,cancelTransfer,type FileEndpoint} from './transfers'
 import {fileVersion} from './read-cache'
+import {withGroupFileMutation,moveGroupFileReferences} from './group-file-mutations'
 
 type Identity={conversation:string;kind:'group'|'channel';id:string;name:string;memberIds:string[];storage?:GroupStorage}
 type Directory={version:1;folderName:string;members:Record<string,string>}
@@ -105,7 +106,12 @@ export function conversationFileEndpoint(conversation:string,value:string,destin
  if(destination)writable(file)
  const read=info.kind==='group'?async(operation:string,args:Record<string,any>)=>withCaller(context,async()=>{
   validate(operation,args)
-  const result=remote?await remoteFiles('group-files-'+info.id,remote,operation,{...args,strictLinks:true}):workspaceFiles(root,operation,{...args,literalPaths:true},{by:args.by,keepReceipt:args.keepReceipt,expectedVersion:args.expectedVersion})
+  const io=(method:string,input:Record<string,any>)=>remote?remoteFiles('group-files-'+info.id,remote,method,{...input,strictLinks:true}):Promise.resolve(workspaceFiles(root,method,{...input,literalPaths:true},{by:input.by,keepReceipt:input.keepReceipt,expectedVersion:input.expectedVersion}))
+  const result=await io(operation,args)
+  if(operation==='move'){
+   try{moveGroupFileReferences(info.id,args.path,args.to,value=>remote?value:directoryPath(root,value))}
+   catch(error){try{await io('move',{path:args.to,to:args.path})}catch{throw Error('The file moved, but its references could not be saved. The file is retained at '+args.to+'. Refresh before retrying.')}throw error}
+  }
   validate(operation,args);return result
  }):undefined
  return {root,path:file,...(remote?{remote}:{}),...(read?{read}:{}),changed:()=>sharedFilesChanged(conversation),validate}
@@ -117,6 +123,19 @@ export async function sharedFileIO(end:FileEndpoint,operation:string,args:Record
 
 export async function conversationFile(args:Record<string,any>){
  authorize('conversation.file',args)
+ if(args.operation!=='move'||!String(args.conversation).startsWith('group:'))return performConversationFile(args)
+ return withGroupFileMutation(args.conversation,async()=>{
+  const info=allowed(args.conversation),{root,remote}=layout(info),from=remote?relative(args.path):directoryPath(root,relative(args.path)),to=remote?relative(args.to):directoryPath(root,relative(args.to))
+  const result=await performConversationFile(args,false)
+  if(!remote){
+   try{moveGroupFileReferences(info.id,from,to,value=>directoryPath(root,value))}
+   catch(error){try{await performConversationFile({conversation:args.conversation,operation:'move',path:to,to:from},false)}catch{throw Error('The file moved, but its references could not be saved. The file is retained at '+to+'. Refresh before retrying.')}throw error}
+  }
+  sharedFilesChanged(info.conversation);return result
+ })
+}
+async function performConversationFile(args:Record<string,any>,notify=true){
+ authorize('conversation.file',args)
  const info=allowed(args.conversation),{root,data,remote}=layout(info),principal=requestContext().principal,operation=args.operation
  const operations={list:'list',read:'read',image:'read-image',info:'copy-info',chunk:'copy-read',write:'write',mkdir:'mkdir',move:'move',trash:'trash',restore:'restore'} as const
  if(!Object.hasOwn(operations,operation))throw Error('Choose a supported shared file operation')
@@ -126,7 +145,7 @@ export async function conversationFile(args:Record<string,any>){
   const end=conversationFileEndpoint(info.conversation,file,writing),id=rootRestore?args.id.slice(5):args.id
   if(operation==='restore'){const receipt=await sharedFileIO(end,'trash-info',{id});relative(receipt.path)}
   const result=await sharedFileIO(end,operations[operation as keyof typeof operations],{...args,path:file,...(target?{to:target}:{}),...(id?{id}:{}),offset:args.offset??0,length:262144,by:principal})
-  if(writing)sharedFilesChanged(info.conversation)
+  if(writing&&notify)sharedFilesChanged(info.conversation)
   if(operation==='list')return {...result,path:result.path==='.'?'':result.path,entries:result.entries.filter((entry:any)=>!['.agents-company','.margin-reader'].includes(entry.name.toLowerCase())&&!entry.name.startsWith('.agents-transfer-')).map((entry:any)=>({...entry,managed:false,writable:true}))}
   if(operation==='trash')return {...result,id:'root:'+result.id}
   return result
@@ -146,7 +165,7 @@ export async function conversationFile(args:Record<string,any>){
  const own=!isAppAdministrator(principal)&&principal.kind==='agent'?data.members[principal.employeeId]:undefined,rootWrite=writing&&info.kind==='group',useOwn=writing&&!!own&&info.kind!=='group',subroot=useOwn?path.join(root,own!):root
  const strip=(value:string)=>useOwn?path.relative(subroot,path.join(root,value)):value
  const result=workspaceFiles(subroot,operations[operation as keyof typeof operations],{...args,...(rootRestore?{id:args.id.slice(5)}:{}),path:operation==='restore'?'.':strip(file),...(target?{to:strip(target)}:{}),offset:args.offset??0,length:262144,...(info.kind==='group'?{literalPaths:true}:{})})
- if(writing)sharedFilesChanged(info.conversation)
+ if(writing&&notify)sharedFilesChanged(info.conversation)
  if(operation==='info')return {...result,version:fileVersion(noLinks(root,file))}
  if(operation==='list')return {...result,path:(result.path??'').split(path.sep).join('/'),entries:result.entries!.filter((entry:{name:string})=>!['.agents-company','.margin-reader'].includes(entry.name)&&!entry.name.startsWith('.agents-transfer-')).map((entry:{path:string})=>({...entry,path:entry.path.split(path.sep).join('/'),managed:info.kind==='channel'&&Object.values(data.members).includes(entry.path),writable:info.kind==='group'||isAppAdministrator(principal)||entry.path.split(path.sep)[0]===own}))}
  if(operation==='trash'&&rootWrite)return {...result,id:'root:'+result.id}

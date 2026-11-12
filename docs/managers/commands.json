@@ -10405,8 +10405,8 @@
   },
   {
     "name": "conversation.file",
-    "args": "CONVERSATION --operation list|read|image|info|chunk|write|mkdir|move|trash|restore [--path PATH] [--to PATH] [--content TEXT] [--hash HASH] [--create] [--hidden] [--offset N] [--id TRASH_ID]",
-    "summary": "Group members have equal shared-file rights including root and peer folder contents. No per-employee group folder is allocated. Core metadata stays protected; legacy channel members write only their own named subtree. info returns an opaque version for upload updates.",
+    "args": "CONVERSATION --operation list|read|image|info|chunk|write|mkdir|move|trash|restore [--path PATH] [--to PATH] [--content TEXT] [--hash HASH] [--expected-version VERSION] [--create] [--hidden] [--offset N] [--id TRASH_ID]",
+    "summary": "Group members have equal shared-file rights including root and peer folder contents. No per-employee group folder is allocated. Core metadata stays protected; legacy channel members write only their own named subtree. info returns an opaque version for upload updates. Group moves preserve published attachment references; expectedVersion protects a rename against concurrent changes.",
     "gui": "Shared file browser",
     "inputSchema": {
       "type": "object",
@@ -10442,6 +10442,10 @@
           "maxLength": 4194304
         },
         "hash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedVersion": {
           "type": "string",
           "minLength": 1
         },
