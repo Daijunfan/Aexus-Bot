@@ -140,6 +140,17 @@ function decryptV10(blob, password) {
 
 let grokCache = null;
 
+/** Native machine identity and sealed-file key, kept inside the local Core only. */
+export function getGrokComputerKeys() {
+  const data = readJson(GROK_SECRETS_PATH, 'Grok Bot session'), password = keychainPassword();
+  const machineId = decryptV10(data['cursor-machine-id'], password);
+  const fileKey = decryptV10(data['local-exec-file-key'], password);
+  if (!/^[0-9A-Za-z_-]{1,127}$/.test(machineId) || Buffer.from(fileKey, 'base64').length !== 32) {
+    throw new CredentialError('Grok Bot has no usable native computer identity. Connect this Mac once in Grok Bot.', 'missing_computer');
+  }
+  return {machineId, fileKey};
+}
+
 export function getGrokAuth({ maxAgeMs = 60_000 } = {}) {
   if (grokCache && Date.now() - grokCache.cachedAt < maxAgeMs) return grokCache.value;
 

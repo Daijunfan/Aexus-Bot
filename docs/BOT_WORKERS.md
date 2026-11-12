@@ -4,6 +4,16 @@ Dot、Grok Bot 和 Grok 原生群组都作为 Worker 会话出现在 Message 中
 
 `bot.sync` 复用本机 ChatGPT/Codex 与 Grok Bot 官方登录态，导入主 Dot、现有 Grok Bot 和原生群组。凭据在 Core 内存中读取，不传给调用员工、云主机或 Bot。中转不另开未认证 HTTP 服务，也不依赖 Bots-API 源码目录或它的 App 运行。连接代码参考本机 Bots-API；支持的真实接口以原生应用协议为准。
 
+## 自动连接 Mac
+
+macOS Core 启动后，会为已经接入的 Dot 和 Grok 自动启动各自的原生后台执行组件。只使用 Web 界面时也有效：Mac 上的 Aexus Core 保持运行即可，ChatGPT 和 Grok Bot 主应用不必打开。官方应用需要已经安装并登录；本项目直接调用其本机组件，不重新分发这些运行时。
+
+Dot 沿用原生 Mac 安装标识、登录和已启用插件，使用 ChatGPT 自带的 `exec-server` 连接原生执行通道；Grok 沿用既有机器 ID、加密文件密钥、原生本机执行服务及执行权限。启动不改变已有权限，不注入 Company 身份或 Core token，不更换执行主机。已有原生进程由原来的程序管理；Aexus 只停止自己启动的执行进程，Grok 主应用接管监督后不会被 Aexus 退出终止。
+
+`bot.list[].bot.localComputer` 是当前 Core 的运行投影，不写入聊天历史：`starting`、`connected`、`reconnecting`、`external`（已有原生进程管理）、`error`、`unsupported` 或 `stopped`，可附带 `connectedAt/error`。`connected` 只在收到原生连接确认后出现；进程存在、消息已发送或历史可读都不代表本机已连通。启动失败后后台重试，断线由原生通道重连，不重发用户任务。删除一个 Bot 保留同提供方其他会话的本机连接；移除最后一个会话后停止该提供方由 Aexus 管理的组件。Linux/Windows Core 不会自动改到另一台 Mac 执行。
+
+本机连接与模型账户额度分别检查。Grok 额度耗尽仍可维持 Mac 通道，但模型任务需要等待账户额度恢复；不会自动开通按量付费或冒报任务完成。
+
 用户与 Secretary 自动拥有全部会话的操作能力。其他员工必须由 `bot.access {id,employeeIds,expectedRevision}` 授权；撤销后不能继续发送、读取、下载，依赖该来源的事件计划也会失效。云端员工使用同一身份和同一 API，不接收用户 token。外部 Worker 自身永远不能调用这些管理接口。
 
 `bot.create` 创建 Grok Bot；`bot.group-create` 用已导入的 Grok Worker 会话 ID 创建原生群组。`clientRequestId` 必须为稳定 UUID，相同参数重试复用同一个远端创建身份。Grok 群组原生 Bot 成员与本软件的员工授权名单分别保存。不会把本软件的员工身份注册为 Grok Bot，也不会自动重置或删除官方历史。

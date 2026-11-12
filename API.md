@@ -3511,6 +3511,8 @@ agents channel source-update SOURCE_ID --patch '{"enabled":false}' --json
 
 ## 外部 Worker 与事件唤醒
 
+macOS Core 会为已接入的 Dot/Grok 自动管理原生 Mac 后台执行组件，无需打开两个官方主应用；浏览器与桌面使用同一 Core 生命周期。`bot.list[].bot.localComputer` 返回 `state:stopped|starting|connected|reconnecting|external|error|unsupported`、可选 `connectedAt/error`。connected 来自真实原生通道确认，external 仅表示已有原生进程管理；消息送达、Mac 连接和模型额度互相独立。沿用既有原生账户、机器标识、插件和执行权限，不向 Bot 提供 Core 身份，不切换执行主机。断线与启动失败在后台恢复，不重放任务。详见 [外部 Worker](docs/BOT_WORKERS.md#自动连接-mac)。
+
 Grok 外部会话使用原生账户的只读用量查询；额度耗尽会显示原因和本地时区的重置时间，保留历史与输入草稿，不自动更改套餐或开通付费。`bot.list[].bot.issue` 提供 `code/message/detail?/retryAt?/at/turnId?`；`direct.send-status.executionFailure` 提供关联原消息的同类执行错误。`status=accepted` 是送达确认，不是执行成功。执行失败持久保存、重启恢复，原生连接重建不重放已接收消息。正常发送先唤醒原生运行环境。
 
 Message 通过 bot.list/sync/create/group-create/access 管理外部 Dot/Grok Worker。消息和文件继续使用 direct.*、chat.*、conversation.*；不会给外部 Bot 签发 Core 身份。普通员工逐项授权，Secretary 全局可用。云端员工使用同一 API，把附件下载到自己的远程工作区；Secretary 始终本地。
@@ -3632,7 +3634,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents direct send-status</code> | <code>--employee ID --client-message-id KEY</code> | Read an existing private input acceptance without replaying work. Native employee input is user/Secretary-only; external Worker sends are available to their currently authorized sender. | Private send recovery | chat |
 | <code>agents direct acknowledge</code> | <code>--employee ID --message-id ID</code> | User/Secretary: acknowledge an exact published incoming private message. A stale ID never acknowledges a newer post. | Private message read state | operator |
 | <code>agents bot appearance</code> | <code>ID [--avatar ID --expected-revision N]</code> | User/Secretary: read Dot’s fixed native OpenAI Codey animation. Other Dot character overrides are unsupported. Grok uses its original native shape, color and animation. Does not modify the external Worker prompt or identity. | Bot appearance | operator |
-| <code>agents bot list</code> | <code>[--include-removed]</code> | List authorized Dot/Grok Worker conversations and durable execution/usage issues with reset times. User/Secretary may include removed local connections for explicit restoration. Native bots have no application credentials. | Message bot workers | chat |
+| <code>agents bot list</code> | <code>[--include-removed]</code> | List authorized Dot/Grok Worker conversations, native Mac executor state in bot.localComputer, and durable execution/usage issues with reset times. User/Secretary may include removed local connections for explicit restoration. Native bots have no application credentials. | Message bot workers | chat |
 | <code>agents bot update</code> | <code>ID --name NAME --expected-revision N</code> | User/Secretary: edit the local display name of an external Worker without changing its native prompt, identity or configuration. Uses an independent profile revision. | Edit bot | operator |
 | <code>agents bot delete</code> | <code>ID</code> | User/Secretary: remove a Dot/Grok connection from Aexus, revoke local access and stop its watcher. Retain the native bot and recoverable history; ordinary sync never reimports removed connections. | Remove bot | operator |
 | <code>agents bot restore</code> | <code>ID</code> | User/Secretary: explicitly restore a removed local bot connection after verifying the native bot still exists. Restore history and appearance; employee grants must be added again. | Restore bot | operator |

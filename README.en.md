@@ -62,7 +62,7 @@ Message brings news channels, private conversations, and groups into one workspa
 
 ![Message information board with source browsing and filtering](docs/images/intelligence-channels.png)
 
-External Workers such as Dot and Grok can also participate in conversations while keeping their native identities and histories.
+External Workers such as Dot and Grok can also participate in conversations while keeping their native identities and histories. With the official apps installed and signed in on macOS, Aexus automatically connects their native local executors, including for Web clients, without opening either main app. Existing Mac identities and execution permissions are retained. [Native integration details](docs/BOT_WORKERS.md).
 
 ![Group discussion with distinct member identities and replies](docs/images/group-discussion.png)
 

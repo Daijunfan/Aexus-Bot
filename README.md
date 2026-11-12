@@ -62,7 +62,7 @@ Message 汇集资讯频道、私聊和群组，让阅读与讨论在一个地方
 
 ![Message 资讯看板：按来源浏览与筛选信息](docs/images/intelligence-channels.png)
 
-Dot、Grok 等外部 Worker 也可以参与会话，保留各自的原生身份和历史。
+Dot、Grok 等外部 Worker 也可以参与会话，保留各自的原生身份和历史。在 macOS 上，安装并登录两个官方应用后，Aexus 会自动接入它们的本机执行通道，使用 Web 时也不必同时打开官方主应用；沿用已有登录、Mac 标识与执行权限。[了解原生接入](docs/BOT_WORKERS.md)。
 
 ![群组中的多成员讨论，每位成员保留独立身份与回复](docs/images/group-discussion.png)
 

@@ -5536,7 +5536,7 @@
   {
     "name": "bot.list",
     "args": "[--include-removed]",
-    "summary": "List authorized Dot/Grok Worker conversations and durable execution/usage issues with reset times. User/Secretary may include removed local connections for explicit restoration. Native bots have no application credentials.",
+    "summary": "List authorized Dot/Grok Worker conversations, native Mac executor state in bot.localComputer, and durable execution/usage issues with reset times. User/Secretary may include removed local connections for explicit restoration. Native bots have no application credentials.",
     "gui": "Message bot workers",
     "inputSchema": {
       "type": "object",

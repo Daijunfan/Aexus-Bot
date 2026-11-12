@@ -21,6 +21,7 @@ import type {FileEndpoint} from './transfers'
 import {SingleFlight} from './single-flight'
 import {removeIndexedConversation} from './message-index-client'
 import {remoteBots,remoteCreate,remoteMessages,remoteRead,remoteSend,remoteUpload,remoteStatus,prepareRemote,watchRemote,type RemoteBot,type RemoteMessage} from './bot-bridge/client'
+import {localBotHosts} from './bot-bridge/local-hosts'
 
 const hash=(v:unknown)=>createHash('sha256').update(JSON.stringify(v)).digest('hex')
 const flights=new SingleFlight<any>(),watches=new Map<string,()=>void>(),syncing=new Set<string>()
@@ -42,7 +43,8 @@ function importBot(remote:RemoteBot){
  const now=Date.now(),group:ChatGroup={id:'cg_'+randomUUID(),name:remote.name,ownerId:null,adminIds:[],memberIds:[],createdAt:now,updatedAt:now,revision:1,readSequence:0,lastIncomingSequence:0,bot:{provider:remote.provider,remoteId:remote.id,kind:remote.kind,role:'worker',participantIds:remote.participantIds,grokShape:remote.grokShape,grokColor:remote.grokColor}}
  const store=catalog();store.groups.push(group);atomicJson(indexFile,store,true);emitChatChange(group.id);return group
 }
-export function listBots(includeRemoved=false){if(includeRemoved)requireAppAdministrator();return [...catalog().groups.filter(g=>g.bot&&(isAppAdministrator()||g.memberIds.includes(callerEmployee()!.id))),...(includeRemoved?Object.values(removedBots()).map(r=>({...r.group,removed:true})):[])].map(g=>({...g,conversation:'group:'+g.id,directEmployeeId:g.bot!.kind==='private'?g.id:undefined,workerRole:'worker',automaticRoles:['secretary']}))}
+export function listBots(includeRemoved=false){if(includeRemoved)requireAppAdministrator();return [...catalog().groups.filter(g=>g.bot&&(isAppAdministrator()||g.memberIds.includes(callerEmployee()!.id))),...(includeRemoved?Object.values(removedBots()).map(r=>({...r.group,removed:true})):[])].map(g=>({...g,bot:{...g.bot!,localComputer:localBotHosts.status(g.bot!.provider)},conversation:'group:'+g.id,directEmployeeId:g.bot!.kind==='private'?g.id:undefined,workerRole:'worker',automaticRoles:['secretary']}))}
+const connectLocalComputers=()=>localBotHosts.ensure([...new Set(catalog().groups.flatMap(g=>g.bot?[g.bot.provider]:[]))])
 export function botDirectRequest(command:string,args:Record<string,any>):any{
  const g=requireBot(args.employee)
  if(g.bot!.kind!=='private')throw Error('Use chat.* for native Grok groups')
@@ -136,10 +138,10 @@ async function connect(id:string){
 export function startBotWorkers(){
  stopped=false
  for(const g of catalog().groups.filter(g=>g.bot)){const all=messages(g.id);let changed=false;for(const m of all)if(m.bot?.delivery==='sending'){m.bot.delivery='uncertain';m.bot.error='Core stopped before delivery confirmation; inspect native history before sending again';changed=true}if(changed)saveMessages(g.id,all,all.at(-1)!)}
- const tick=()=>{const groups=catalog().groups.filter(g=>g.bot);for(const [id,close]of watches)if(!groups.some(g=>g.id===id)){watches.delete(id);close()}for(const g of groups)void withCaller(operatorContext(),async()=>{await syncMessages(g.id);await connect(g.id)}).catch(()=>{})}
+ const tick=()=>{void connectLocalComputers().catch(error=>console.error('[Bot computer]',error.message));const groups=catalog().groups.filter(g=>g.bot);for(const [id,close]of watches)if(!groups.some(g=>g.id===id)){watches.delete(id);close()}for(const g of groups)void withCaller(operatorContext(),async()=>{await syncMessages(g.id);await connect(g.id)}).catch(()=>{})}
  tick();timer=setInterval(tick,15000);timer.unref()
 }
-export function stopBotWorkers(){stopped=true;clearInterval(timer);timer=undefined;for(const close of watches.values())close();watches.clear()}
+export async function stopBotWorkers(){stopped=true;clearInterval(timer);timer=undefined;for(const close of watches.values())close();watches.clear();await localBotHosts.close()}
 export async function botRequest(command:string,args:Record<string,any>){
  if(command==='bot.list')return listBots(args.includeRemoved===true)
  requireAppAdministrator()
@@ -153,6 +155,7 @@ export async function botRequest(command:string,args:Record<string,any>){
   const removed=removedBots();if(removed[args.id])return {removed:true,id:args.id}
   const g=requireBot(args.id),store=catalog();removed[g.id]={group:g,removedAt:Date.now()};atomicJson(removedFile,removed,true)
   watches.get(g.id)?.();watches.delete(g.id);store.groups=store.groups.filter(item=>item.id!==g.id);atomicJson(indexFile,store,true);removeIndexedConversation('group:'+g.id);emitChatChange(g.id);controlChanged('group:'+g.id)
+  await connectLocalComputers()
   return {removed:true,id:g.id}
  }
  if(command==='bot.restore'){
@@ -161,13 +164,14 @@ export async function botRequest(command:string,args:Record<string,any>){
   const remote=(await remoteBots(record.group.bot.provider)).find(b=>b.id===record.group.bot!.remoteId);if(!remote)throw Error('The native bot no longer exists')
   const group={...record.group,memberIds:[],ownerId:null,adminIds:[],mutes:{},bot:{...record.group.bot,accessRevision:(record.group.bot.accessRevision??1)+1}}
   const store=catalog();store.groups.push(group);atomicJson(indexFile,store,true);delete removed[args.id];atomicJson(removedFile,removed,true)
-  importBot(remote);await syncMessages(group.id);await connect(group.id);emitChatChange(group.id);controlChanged('group:'+group.id);return botGroup(group.id)
+  importBot(remote);await syncMessages(group.id);await connect(group.id);await connectLocalComputers();emitChatChange(group.id);controlChanged('group:'+group.id);return botGroup(group.id)
  }
  if(command==='bot.sync'){
   const providers=await Promise.all((['dots','grok'] as BotProvider[]).map(async provider=>{
    try{const remote=await remoteBots(provider),removed=Object.values(removedBots()),bots=remote.filter(b=>!removed.some(r=>r.group.bot?.provider===b.provider&&r.group.bot.remoteId===b.id)),groups=bots.map(importBot);await Promise.allSettled(groups.map(async g=>{await syncMessages(g.id);await connect(g.id)}));return {provider,connected:true,count:bots.length}}
    catch(error){return {provider,connected:false,error:(error as Error).message}}
   }))
+  await connectLocalComputers()
   return {providers,conversations:listBots()}
  }
  if(command==='bot.access'){
@@ -200,7 +204,7 @@ export async function botRequest(command:string,args:Record<string,any>){
    if(existing&&(existing.name!==args.name.trim()||existing.kind!==(members?'group':'private')))throw Error('This remote creation identity belongs to another native conversation')
    const remote=existing??await remoteCreate(args.name.trim(),args.description??'',key,members),g=importBot(remote)
    const latest=readJson<typeof requests>(file,()=>({}));latest[key]={fingerprint,id:g.id};atomicJson(file,latest,true)
-   await syncMessages(g.id);await connect(g.id);return botGroup(g.id)
+   await syncMessages(g.id);await connect(g.id);await connectLocalComputers();return botGroup(g.id)
   })
  }
  throw Error('Unknown bot command')

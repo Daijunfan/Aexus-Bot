@@ -41,7 +41,7 @@ function headers(auth) {
   };
 }
 
-export async function rpc(method, body, { auth, timeoutMs = 45_000, service = 'GrokBotService' } = {}) {
+export async function rpc(method, body, { auth, timeoutMs = 45_000, service = 'GrokBotService', signal }:any = {}) {
   const a = auth || getGrokAuth();
   if (a.expired) {
     throw new CredentialError('Grok Bot 登录已过期，请打开一次 Grok Bot 应用刷新会话。', 'expired');
@@ -53,6 +53,7 @@ export async function rpc(method, body, { auth, timeoutMs = 45_000, service = 'G
       body: body || {},
       headers: {...headers(a),'connect-timeout-ms':String(timeoutMs)},
       timeoutMs,
+      signal,
     });
   } catch (err) {
     throw new Error(`Grok Bot ${method} 网络错误：${err.message}`);

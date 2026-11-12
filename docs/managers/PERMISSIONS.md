@@ -364,6 +364,8 @@ MiniNotion 只暴露获授权页面，数据库包含记录且记录可单独覆
 
 ## 外部 Worker 与监控程序
 
+Mac 原生执行组件由 Core 为已经接入的提供方自动启动，沿用官方登录、机器标识和既有本机执行权限。只调用已安装运行时，不自动打开官方窗口、不修改权限上限、不提供 Core token 或 Company 角色。bot.localComputer 仅向原有会话可读主体投影非敏感连接状态；它不授予新的员工或云端主机权限。已有官方进程不被终止，退出仅关闭 Aexus 自己启动且仍由它监督的进程；删除最后一个同提供方会话会停止这一接入。模型用量限制与 Mac 连接分开处理，不更改付费设置。
+
 Grok 用量检查仅查询原生账户可用额度，不写入账单、套餐或按量付费设置。已获会话权限的员工可通过 `bot.list` 和发送回执读取该会话的运行问题及重置时间；不返回账户付款资料、用量明细或原生错误中的个人账户链接。
 
 Dot/Grok 不是 Company 员工，不获取 Core token、管理角色或本项目的系统上下文。bot.access 按会话授权员工显式调用同一 direct/chat/conversation API；Secretary 自动可用。bot.create/group-create/sync/access 由用户/Secretary 管理，外部 Bot 自身不可调用。本地和云端员工的资源权限相同，文件默认下载到本人的 Company 执行主机。程序监控使用所属员工的主机与工作区，没有 Core 身份；普通员工仅管理自己的监控，Secretary 全局管理。事件来源权限同时检查计划创建者和执行员工，撤销后待处理任务不再执行。详见 docs/BOT_WORKERS.md、docs/EVENT_TASKS.md。
