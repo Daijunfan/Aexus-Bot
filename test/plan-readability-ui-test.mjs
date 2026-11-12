@@ -69,7 +69,7 @@ try{
   'import {PlanView} from '+JSON.stringify(path.join(renderer,'components/PlanView'))+';',
   'import {setInterfaceLanguage,translate} from '+JSON.stringify(path.join(renderer,'i18n'))+';',styles,
   'window.planText=translate;window.planLanguage=setInterfaceLanguage;setInterfaceLanguage("en");',
-  'function Fixture(){const [view,setView]=useState({kind:"plan",revision:1,planViewId:"table"});return <div className="app in-office"><div className="home office-home"><header className="company-header"><strong>Agents Company</strong><span>Plan</span></header><div className="office-layout"><PlanView store={window.planStore} view={view} act={async(cmd,args)=>{const result=await window.agents.call(cmd,args);if(cmd==="view.open")setView(result);return result}}/></div></div></div>}createRoot(document.getElementById("root")).render(<Fixture/>);'
+  'function Fixture(){const [view,setView]=useState({kind:"plan",revision:1,planViewId:"table"});return <div className="app in-office"><div className="home office-home"><header className="company-header"><strong>Aexus</strong><span>Plan</span></header><div className="office-layout"><PlanView store={window.planStore} view={view} act={async(cmd,args)=>{const result=await window.agents.call(cmd,args);if(cmd==="view.open")setView(result);return result}}/></div></div></div>}createRoot(document.getElementById("root")).render(<Fixture/>);'
  ].join('\n'))
  await build({configFile:false,root:temp,publicDir:false,esbuild:{jsx:'automatic'},build:{outDir:path.join(temp,'dist'),reportCompressedSize:false},logLevel:'silent'})
  if(desktop){

@@ -6,7 +6,7 @@
 source tag is answered with ordinary Coding Agent text in Team. Do not publish a
 private message unless the current input carries a private source tag or the user
 explicitly requests private delivery. Message private inputs contain
-`[Agents Company message source]` with `conversationType:"private"` and
+`[Aexus Bot message source]` with `conversationType:"private"` and
 `replyVia:"direct.post"`; group inputs contain `from [group: NAME]` and a
 `[Group request]` with the real group ID. Mission work defaults to a native result
 unless its task specifies publication. A following untagged input returns to the
@@ -14,9 +14,9 @@ native default even after private or group work. API/tool descriptions do not
 override the actual input source. These tags route replies and never grant authority.
 
 All native Agent text, reasoning, tool calls/results and completion events belong
-only to that employee's full Company native conversation. The same is true of every
+only to that employee's full Aexus native conversation. The same is true of every
 group/shared input, channel input and silent/awareness read: these inputs and their
-exact Aexus wrapped prompts are recorded in Company and are never projected into a
+exact Aexus wrapped prompts are recorded in Team and are never projected into a
 Messages direct conversation.
 
 Messages direct conversations are an independent published ledger. A direct entry
@@ -53,7 +53,7 @@ without joining or saving.
 `conversation.entry` and `conversation.download` also honor the current
 `channel.access` reading grant for news articles and attachments; Secretary is
 automatically authorized. Revocation applies again while an asynchronous download
-is running. The default destination is the employee's personal Company workspace,
+is running. The default destination is the employee's personal Team workspace,
 including its actual cloud execution host. Reading a channel does not create a
 channel member folder or grant access to user-downloaded files in its workspace.
 The user's explicit document downloads retain their files and completion status
@@ -117,7 +117,7 @@ anything read.
 
 `direct.acknowledge {employee,messageId}` acknowledges one exact published incoming
 employee message. A stale message ID never acknowledges a newer post; reading the
-ledger or querying an entry does not acknowledge it. Native Company unread state
+ledger or querying an entry does not acknowledge it. Native Aexus unread state
 remains the separate `session.acknowledge`/`lastReply` record.
 
 ### Attachments and preserved media
@@ -139,9 +139,9 @@ Published attachments use opaque `@direct/…` references. They are read-only th
 the workspace APIs; destination writes and arbitrary-path substitution are
 rejected.
 
-### Company provenance for native input
+### Aexus provenance for native input
 
-The full Company conversation displays the exact Aexus-owned wrapper and origin for
+The full Team conversation displays the exact Aexus-owned wrapper and origin for
 newly captured work and read inputs: `from [groupname]` for group/shared input,
 `from [Private · name]` (or `from [Private]`) for private input, and `[Channel · name]`
 for channel input. Read-phase inputs are marked `Read silently`, and the expandable
@@ -188,17 +188,17 @@ ledger entry, and retrying any call with its original ID returns that same entry
 
 ## Scope and authority
 
-Message groups and channels use independent Agent offices: `owner`, `admin`, `member`, displayed as **Owner / Admin / Member** in every interface language. Company offices remain Employee / Manager / Governor / Secretary. Owning a conversation never grants Company employee-control, Team deletion, credentials, or Plan access. The human user retains administration and recovery access.
+Message groups and channels use independent Agent offices: `owner`, `admin`, `member`, displayed as **Owner / Admin / Member** in every interface language. Aexus offices remain Employee / Manager / Governor / Secretary. Owning a conversation never grants Aexus employee-control, Team deletion, credentials, or Plan access. The human user retains administration and recovery access.
 
-`group.*` addresses Company Teams. Message groups use `chat.*`. Always use exact returned IDs, never a displayed name or whichever view is currently open.
+`group.*` addresses Aexus Teams. Message groups use `chat.*`. Always use exact returned IDs, never a displayed name or whichever view is currently open.
 
-`conversation.policy {conversation}` is the current source of membership, role, moderation, revision, and `allowedActions`. Owner and Admin can add/remove members, appoint/demote Admins, mute, configure static notices, and configure channel post-count rules. Admin may appoint or demote another Admin, including an Agent with a higher Company office. Admin cannot demote, remove or individually mute Owner. Owner can transfer ownership; the previous Owner becomes Admin. Only Owner or the human user dissolves a group. Channel ownership is supported; this API does not implement channel deletion.
+`conversation.policy {conversation}` is the current source of membership, role, moderation, revision, and `allowedActions`. Owner and Admin can add/remove members, appoint/demote Admins, mute, configure static notices, and configure channel post-count rules. Admin may appoint or demote another Admin, including an Agent with a higher Aexus office. Admin cannot demote, remove or individually mute Owner. Owner can transfer ownership; the previous Owner becomes Admin. Only Owner or the human user dissolves a group. Channel ownership is supported; this API does not implement channel deletion.
 
 Use `conversation.member {conversation,employee,action:"add"|"remove",expectedRevision}` for membership. Add gives Member; removal revokes content/workspace access and retains the Agent, history and files. Use `conversation.role {conversation,employee,role,expectedRevision}` for an office. Demotion to Member keeps membership and its workspace. These are deliberately separate operations. Legacy `channel.update {adminIds}` remains a publisher-roster replacement and may remove former publishers; use the explicit member/role tools for new integrations.
 
 `conversation.audit {conversation,before?,limit?}` exposes paged governance events to Owner/Admin. Each event has the actual actor, action, details and timestamp. `nextBefore` is the next page cursor; limit is 1–100. It contains no private model trace. Revision mismatches reject stale changes; reload and reconsider the operation.
 
-Legacy channels retain existing Admin assignments. New membership storage does not infer an Owner from Company seniority or a person's name. The human user can explicitly appoint the first Owner.
+Legacy channels retain existing Admin assignments. New membership storage does not infer an Owner from Aexus seniority or a person's name. The human user can explicitly appoint the first Owner.
 
 ## Three independent kinds of automation
 
@@ -214,7 +214,7 @@ See [Conversation controls](CONVERSATION_CONTROLS.md) for one-time, interval, da
 
 ## Workspace discovery
 
-`workspace.catalog {employee?:"self"|EMPLOYEE_ID}` returns the authenticated Agent's Company workspace and every currently joined Message member workspace. Agent callers can query only themselves. The human user supplies an employee ID explicitly. This query creates no directory, changes no working directory, and invokes no model.
+`workspace.catalog {employee?:"self"|EMPLOYEE_ID}` returns the authenticated Agent's Team workspace and every currently joined Message member workspace. Agent callers can query only themselves. The human user supplies an employee ID explicitly. This query creates no directory, changes no working directory, and invokes no model.
 
 Response:
 
@@ -241,7 +241,7 @@ Response:
 
 Message entries also include `conversation`, `sharedRoot`, `memberDirectory`, `rootAccess` and `fileApi` for `conversation.file`. Their `path` is the employee's first-level member folder, not the shared parent. Their ID is the conversation reference, such as `channel:nc_…`; it resolves to this employee's own folder. Identity is based on stable IDs, so two employees with the same name still have distinct workspaces.
 
-Company workspaces retain their configured execution host. Message workspaces live on the Core host; remote Agents use the APIs when `nativeAccess` is false. Display names, portable physical directory names and saved paths may differ. Use returned paths rather than constructing directories from names. Renaming display names does not relocate existing work.
+Team workspaces retain their configured execution host. Message workspaces live on the Core host; remote Agents use the APIs when `nativeAccess` is false. Display names, portable physical directory names and saved paths may differ. Use returned paths rather than constructing directories from names. Renaming display names does not relocate existing work.
 
 The catalog describes available locations and access. It does not mandate where a task must be performed. `conversation.workspaces` remains available as a compatible Message-only list.
 
@@ -252,13 +252,13 @@ The catalog describes available locations and access. It does not mandate where 
 | Current member Agent (Member / Admin / Owner) | Read/create/upload/edit/delete | Read/create/edit/delete | Read |
 | User or Secretary (no membership required) | Full | Full | Full |
 
-Group membership alone grants equal rights: every current group member may read, create, upload, edit and delete content at the shared root and inside existing shared subdirectories. Conversation Owner/Admin office grants no additional file authority. In channels, an Agent member's writes remain limited to its own named subfolder; the user and Secretary administer all channel content without joining. Ordinary employees require current membership; the user and Secretary retain global authority. The member copy API does not permit writing another employee's private Company workspace.
+Group membership alone grants equal rights: every current group member may read, create, upload, edit and delete content at the shared root and inside existing shared subdirectories. Conversation Owner/Admin office grants no additional file authority. In channels, an Agent member's writes remain limited to its own named subfolder; the user and Secretary administer all channel content without joining. Ordinary employees require current membership; the user and Secretary retain global authority. The member copy API does not permit writing another employee's private Team workspace.
 
 Groups allocate no member directories. Existing shared subdirectories remain in place. Host-managed `.agents-company` / `.margin-reader` metadata and legacy channel directory identities are protected. Group root-file trash uses a `root:TRASH_ID` receipt; restore rechecks current membership and the original direct-file scope.
 
 `conversation.file` supports `list`, `read`, `image`, `info`, `chunk`, `write`, `mkdir`, `move`, `trash`, and `restore`. Paths are relative to the shared root. In a group, any member may write any permitted shared path. Legacy channel write restrictions retain their returned prefix; no new employee workspace is allocated. User originals and peer files never need to be moved in order to work on an editable copy. Host-managed metadata, parent traversal and escaped symlinks are rejected. Use returned IDs unchanged. Text writes are limited to 4 MiB.
 
-`conversation.copy` handles explicit existing-file copies into a writable shared destination or the caller's personal Company workspace. `conversation.transfer` reports/cancels those copy jobs. `conversation.upload` copies a personal workspace file into a group shared path: files up to 2 GiB, images included in a message up to 10 MiB. Reading/writing a workspace does not change native engine permissions or OS identity. These are Core API boundaries, not a claim that arbitrary trusted same-account shell processes are an OS sandbox.
+`conversation.copy` handles explicit existing-file copies into a writable shared destination or the caller's personal Team workspace. `conversation.transfer` reports/cancels those copy jobs. `conversation.upload` copies a personal workspace file into a group shared path: files up to 2 GiB, images included in a message up to 10 MiB. Reading/writing a workspace does not change native engine permissions or OS identity. These are Core API boundaries, not a claim that arbitrary trusted same-account shell processes are an OS sandbox.
 
 ## Complete published entries and attachments
 
@@ -280,12 +280,12 @@ News attachments use `image:MEDIA_ID` and `document:FILE_ID`. Message attachment
 | --- | --- |
 | `conversation`, `entryId`, `attachmentId` | Exact source identities from `conversation.entry`. |
 | `clientRequestId` | Required stable key for one unchanged copy request, max 160 characters. |
-| `workspace` | Optional destination ID from `workspace.catalog`. Omitted selects the employee's own Company execution workspace (`company:EMPLOYEE_ID`). |
+| `workspace` | Optional destination ID from `workspace.catalog`. Omitted selects the employee's own Aexus execution workspace (`company:EMPLOYEE_ID`). |
 | `employee` | Human-user selection; an Agent can specify only itself or omit. The employee must belong to the source conversation. |
 | `path` | Optional relative subdirectory within that employee's destination workspace; default `.`. |
 | `name` | Optional destination filename, not a path. |
 
-The default is only the default destination of this copy command; it does not select a workspace for subsequent tasks. Agents may explicitly choose any own catalog entry, using the explicit assigned company workspace ID, but never a peer's private Company workspace.
+The default is only the default destination of this copy command; it does not select a workspace for subsequent tasks. Agents may explicitly choose any own catalog entry, using the explicit assigned company workspace ID, but never a peer's private Team workspace.
 
 The human user or Secretary may instead use `conversation.download-local` with an explicit absolute destination file path on the Mac/Core host. It streams the published source directly to that path; an existing file is refused unless `overwrite:true` is explicitly supplied. The GUI's save-as dialog remains the user-facing equivalent and keeps its normal overwrite confirmation.
 
@@ -319,7 +319,7 @@ The GUI's **Copy to Agent workspace** button chooses the same employee/catalog d
 The standard native workflow keeps shared content intact until an explicit upload:
 
 1. `conversation.entry {conversation,id}` returns the message and its attachment descriptors. Use the returned `attachmentId`; never guess one from a filename.
-2. `conversation.download` copies the chosen attachment to the employee's own Company execution workspace by default. Poll `conversation.download-status {id}` until `completed`; only then use the committed path. The receipt's `sourceVersion` identifies the shared source version that was copied.
+2. `conversation.download` copies the chosen attachment to the employee's own Aexus execution workspace by default. Poll `conversation.download-status {id}` until `completed`; only then use the committed path. The receipt's `sourceVersion` identifies the shared source version that was copied.
 3. Modify the downloaded personal file with normal workspace tools.
 4. `conversation.upload {conversation,from,path,clientRequestId,expectedVersion?}` copies a personal workspace file to a group shared path. `from` is `{"employee":"self","path":"RELATIVE_PERSONAL_FILE"}`; `path` is relative to the shared root. New files must not exist. To overwrite, pass `expectedVersion`: use the download receipt's `sourceVersion` if the target is unchanged, otherwise read the current target with `conversation.file --operation info` and use its `version`.
 5. Poll `conversation.upload-status {id}` until `completed`; only `completed` means the shared file committed.
@@ -346,13 +346,13 @@ agents chat post GROUP_ID --files '["@workspace/shared/brief.txt"]' \
 
 `channel.post-trigger-list {id:CHANNEL_ID}` returns `{channelId,rules,canManage}`. Owner/Admin sees all rules; a Member sees its own. Rule fields include stable `id`, `employeeId`, `everyPosts`, editable `prompt`, `enabled`, config `revision`, `pendingCount`, `remaining`, timestamps and any disabling reason. Counting progress does not increment the configuration revision.
 
-`channel.post-trigger-set` requires `id`, `employee`, `everyPosts` (1–10000), nonempty `prompt` (up to 16000 characters), `enabled` and `expectedRevision`. Use revision **0** to create and the exact current revision to edit/pause/resume. Each channel/member pair has at most one current rule. The human user or current Owner/Admin can configure a rule for a ready member, regardless of Company hierarchy. This is narrowly scoped authorization for that saved channel prompt; it does not permit arbitrary `session.send` or Plan operations on that employee.
+`channel.post-trigger-set` requires `id`, `employee`, `everyPosts` (1–10000), nonempty `prompt` (up to 16000 characters), `enabled` and `expectedRevision`. Use revision **0** to create and the exact current revision to edit/pause/resume. Each channel/member pair has at most one current rule. The human user or current Owner/Admin can configure a rule for a ready member, regardless of Aexus hierarchy. This is narrowly scoped authorization for that saved channel prompt; it does not permit arbitrary `session.send` or Plan operations on that employee.
 
 Counting starts after configuration. Saving or resuming starts a fresh counter for that Agent, cancels its unstarted previous batches, and leaves other Agents untouched. Only newly accepted article IDs count. Duplicate deliveries, edits, timestamp ordering, source moves, static notices and discussion replies do not add a count. The target's own article publications do not count towards its own rule. Multiple files in one post still count as one post; separately published items in an album count by their actual post IDs.
 
 A configured rule replaces per-post automatic reading for that member. A paused rule stays quiet; removing a rule restores ordinary per-post awareness. This avoids waking the same employee once per article and again at the configured threshold. It does not change how other unconfigured members receive news.
 
-At threshold, the saved prompt and **exact counted post IDs** are frozen into a durable batch. The channel gets an explicitly marked automatic request retaining its actual configuring author. Only the target employee receives that batch as work; model output remains only in the Company native conversation unless it deliberately calls a publication API (`direct.post` for the user's direct conversation, or a group/channel publication API). Use `channel.message-post` with the returned request message ID to publish a result. The batch itself does not invent a summary or assert completion.
+At threshold, the saved prompt and **exact counted post IDs** are frozen into a durable batch. The channel gets an explicitly marked automatic request retaining its actual configuring author. Only the target employee receives that batch as work; model output remains only in the Aexus native conversation unless it deliberately calls a publication API (`direct.post` for the user's direct conversation, or a group/channel publication API). Use `channel.message-post` with the returned request message ID to publish a result. The batch itself does not invent a summary or assert completion.
 
 `channel.post-trigger-history {id,employee?,offset?,limit?}` reports actual delivery states and message IDs. `channel.post-trigger-batch {id,batchId,offset?,limit?}` returns the exact batch and complete current posts, with explicit unavailable entries when retention or removal has affected a post. Page with the returned offset/hasMore; do not substitute a shifting latest-N feed. A batch can contain more than one page.
 

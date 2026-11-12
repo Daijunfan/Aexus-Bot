@@ -16,7 +16,7 @@ try{
  for(const team of ['Routing Build','Routing Notes'])for(const role of ['employee','manager','governor']){const card=await f.cli('card','create','--title',role+' '+team,'--group',team,'--management-role',role,'--profession','Reference verifier','--engine','codex','--model','gpt-6-luna','--effort','low');await f.ready(card.id);cards.push(card)}
  const by=(role,team='Routing Build')=>cards.find(card=>card.managementRole===role&&card.group===team),worker=by('employee'),manager=by('manager'),governor=by('governor'),writer=by('employee','Routing Notes'),tokens=new Map(await Promise.all(cards.map(async card=>[card.id,await f.token(card.id)])))
  const index=await rpc('api.docs'),plugins=await rpc('plugin.list'),documents=['core/api','core/permissions','core/plan','core/scheduler','core/architecture',...plugins.flatMap(plugin=>['plugin/'+plugin.id+'/api','plugin/'+plugin.id+'/schema'])],reference=new Map()
- assert.equal(index.document,'index');assert.equal(index.catalogRoot,path.join(f.env.AGENTS_COMPANY_HOME,'api-docs'));assert.match(index.markdown,/Plan 是 Core 视图，不是 MiniNotion 插件/);assert.ok(index.markdown.length<16000)
+ assert.equal(index.document,'index');assert.equal(index.catalogRoot,path.join(f.env.AGENTS_COMPANY_HOME,'api-docs'));assert.match(index.markdown,/MiniNotion.*插件独立/);assert.ok(index.markdown.length<16000)
  for(const document of documents)reference.set(document,await rpc('api.docs',{document}))
  const router=trace(cards[0],'thread-start').developerInstructions,initial=trace(cards[0],'initializing').text
  assert.ok(router.length>0&&router.length<1500);assert.ok(initial.length<2200)

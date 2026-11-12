@@ -1,6 +1,6 @@
 ## 开始工作
 
-这是由根 API、调度规范和注册表生成的全局参考手册，不是权限凭据。所有角色初始化只读取真实身份和 `agents api docs` 的共享短索引；之后按需用 `agents api describe COMMAND --all --json` 或 `agents api docs DOCUMENT` 阅读，不把整册手册自动载入上下文。Core 的 Company、Messages、Plan 三视图与 MiniNotion 等独立插件分列，执行权限仍由 Core 检查。
+这是由根 API、调度规范和注册表生成的全局参考手册，不是权限凭据。所有角色初始化只读取真实身份和 `agents api docs` 的共享短索引；之后按需用 `agents api describe COMMAND --all --json` 或 `agents api docs DOCUMENT` 阅读，不把整册手册自动载入上下文。Core 的 Team、Message、Mission 三视图与 MiniNotion 等独立插件分列，执行权限仍由 Core 检查。
 
 Secretary / Governor / Manager / Employee 是员工自身的职位。Secretary 是全局软件助手，使用本人身份管理软件；其任免仅由用户掌握。Manager 管理本 Team 全部 Employee；Governor 跨 Team 管理团队与员工，并可调整其他 Governor 的位置。Governor 的任免由用户或 Secretary 操作；Governor 自己不能借整个 Team 删除或克隆绕过。
 

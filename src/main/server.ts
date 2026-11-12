@@ -275,7 +275,7 @@ async function handleCurrentRequest(req:Request):Promise<any>{
     const entry=await prepareDirectInput(target,{...args,resolvedReply:reply})
     const work=async(attempt:PrivateSendAttempt)=>{
       const mission=await registerSecretaryRequest(target!,entry,caller)
-      const workArgs=mission?{...args,text:String(args.text??'')+'\n\n[Aexus durable Mission '+mission.id+'] This user request was registered before dispatch. Read mission.get, refine assignees/type/reminderSeconds using mission.update, and continue until the actual goal is achieved. Acknowledge success explicitly with mission.complete and concrete result evidence; a native turn ending is not success. Use question.ask with this missionId for a required user decision.'}:args
+      const workArgs=mission?{...args,text:String(args.text??'')+'\n\n[Aexus Mission]\n'+JSON.stringify({id:mission.id,registered:true})}:args
       const decorated:PrivateSendAttempt={directMessageId:entry.id,get queueId(){return attempt.queueId},queued:id=>{attempt.queued(id);directDelivery(target!,entry.id,'queued')},dispatching:id=>{attempt.dispatching(id);updateDirectInput(target!,entry.id,{nativeTaskId:id,outbound:{taskId:id}})},accepted:id=>{attempt.accepted(id);directDelivery(target!,entry.id,'accepted')},failed:error=>{attempt.failed(error);directDelivery(target!,entry.id,'failed',String((error as Error)?.message??error))},interrupted:reason=>{attempt.interrupted(reason);directDelivery(target!,entry.id,'interrupted',reason)}}
       return handleAuthorizedRequest({cmd:mode==='enqueue'?'session.enqueue':'session.send'}, {...workArgs,id:undefined,employee:target,...(reply?{crossReply:reply}:{}),replyConversation:undefined},target,caller,decorated)
     }

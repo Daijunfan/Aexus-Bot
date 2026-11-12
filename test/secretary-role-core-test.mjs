@@ -73,8 +73,8 @@ const stop=()=>{if(closing)return;closing=true;void started.then(async app=>{con
  const view=await rpc('team-view.create',{name:'Only B',teams:['B']},token);await rpc('team-view.select',{id:view.id},token)
  assert.deepEqual((await rpc('management.topology',{},token)).teams.map(team=>team.name).sort(),['A','B'])
  await rpc('session.send',{employee:secretary.id,text:'A bounded application administration request.'});await f.until(async()=>!(await f.status(secretary.id)).busy,'Secretary administration turn')
- const nativeWork=()=>JSON.parse(fs.readFileSync(path.join(f.control,secretary.id+'-work.json'),'utf8')).text,roleHeader=()=>JSON.parse(nativeWork().split('[Agents Company role]\n')[1].split('\n')[0])
- assert.equal((await f.status(secretary.id)).currentTask.viewId,undefined);assert.ok(!nativeWork().includes('[Agents Company task view]'));assert.deepEqual(roleHeader(),{employeeId:secretary.id,managementRole:'secretary',responsibility:who.roleDescription})
+ const nativeWork=()=>JSON.parse(fs.readFileSync(path.join(f.control,secretary.id+'-work.json'),'utf8')).text,roleHeader=()=>{const value=nativeWork().split('[Aexus context update]\n')[1];if(!value)return;const {employeeId,managementRole}=JSON.parse(value.split('\n')[0]);return {employeeId,managementRole}}
+ assert.equal((await f.status(secretary.id)).currentTask.viewId,undefined);assert.ok(!nativeWork().includes('[Aexus target view]'));assert.equal(roleHeader(),undefined);assert.ok(!nativeWork().includes('delivery contract'))
  const scheduled=await rpc('schedule.create',{spec:{name:'Application housekeeping',action:{type:'agent',employeeId:secretary.id,prompt:'Inspect application configuration only.'},afterSeconds:3600,enabled:false}},token);assert.equal(scheduled.action.viewId,undefined);await rpc('schedule.delete',{id:scheduled.id},token)
  checks.push('Secretary genuinely appoints, demotes and removes Governors; company filters do not constrain authority and no Governor task-view field is imposed')
 
@@ -117,7 +117,7 @@ const stop=()=>{if(closing)return;closing=true;void started.then(async app=>{con
  assert.ok((await viewRpc('identity')).error,'a view without content grants must lose the automatic Secretary exception');assert.ok((await viewRpc('create-chat',{name:'No stale Secretary grant',members:[worker.id]})).error);await deny(token,'plugin.call',{id:'mininotion',method:'page.get',params:{pageId:page.id}})
  await rpc('session.send',{employee:secretary.id,text:'Check the current explicit role after a user-approved downgrade.'});await f.until(async()=>!(await f.status(secretary.id)).busy,'downgraded native turn');assert.deepEqual(roleHeader(),{employeeId:secretary.id,managementRole:'governor'})
  await rpc('card.management-role',{id:secretary.id,role:'secretary'});assert.equal((await rpc('auth.whoami',{},token)).appAdministrator,true)
- await rpc('session.send',{employee:secretary.id,text:'Check the restored application administrator identity.'});await f.until(async()=>!(await f.status(secretary.id)).busy,'restored Secretary native turn');assert.deepEqual(roleHeader(),{employeeId:secretary.id,managementRole:'secretary',responsibility:who.roleDescription})
+ await rpc('session.send',{employee:secretary.id,text:'Check the restored application administrator identity.'});await f.until(async()=>!(await f.status(secretary.id)).busy,'restored Secretary native turn');assert.deepEqual(roleHeader(),{employeeId:secretary.id,managementRole:'secretary'})
  await rpc('auth.revoke',{id:secretary.id});assert.ok((await viewRpc('identity')).error);await rpc('plugin.close',{id:pluginView.id})
  const renewed=await f.token(secretary.id);assert.equal((await rpc('auth.whoami',{},renewed)).managementRole,'secretary')
  await f.until(async()=>(await rpc('session.status')).every(card=>!card.busy),'all temporary native work idle')

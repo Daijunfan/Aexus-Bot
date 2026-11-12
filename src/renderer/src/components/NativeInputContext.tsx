@@ -1,4 +1,4 @@
-import type {NativeInputContext as NativeInputContextData} from '../../../shared/message-source'
+import {SOURCE_VIEW_LABELS,type NativeInputContext as NativeInputContextData} from '../../../shared/message-source'
 import {translate as uiText,useI18n} from '../i18n'
 import '../styles/native-input-context.css'
 
@@ -7,12 +7,12 @@ function sourceLabel(origin:NativeInputContextData['origin']){
  if(kind==='group')return name?`[${name}]`:`[${uiText('Group')}]`
  if(kind==='direct')return name?`[${uiText('Private')} · ${name}]`:`[${uiText('Private')}]`
  if(kind==='channel')return name?`[${uiText('Channel')} · ${name}]`:`[${uiText('Channel')}]`
- if(kind==='company')return `[${uiText('Company')}]`
- if(kind==='plan')return '[Mission]'
+ if(kind==='company')return `[${SOURCE_VIEW_LABELS.company}]`
+ if(kind==='plan')return `[${SOURCE_VIEW_LABELS.plan}]`
  return name?`[${uiText('Unknown')} · ${name}]`:`[${uiText('Unknown')}]`
 }
 
-/** Compact provenance for the exact native input shown only in the full Company conversation. */
+/** Compact provenance for the exact native input shown only in the full Team conversation. */
 export function NativeMessageContext({context}:{context:NativeInputContextData}){
  useI18n()
  const source=sourceLabel(context.origin)

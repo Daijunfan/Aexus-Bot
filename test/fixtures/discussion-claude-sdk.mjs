@@ -22,7 +22,7 @@ export function query({prompt,options}){
   yield {type:'system',subtype:'init',session_id:sessionId,model:'fixture-claude',slash_commands:[]}
   for await(const input of prompt){
    if(closed)return;interrupted=false
-   const text=typeof input.message.content==='string'?input.message.content:input.message.content.filter(part=>part.type==='text').map(part=>part.text).join(''),ack=/^\[Agents Company (group|channel) acknowledgment\]\n/.test(text),uuid=input.uuid,hidden=text.includes('[Agents Company private initialization]')
+   const text=typeof input.message.content==='string'?input.message.content:input.message.content.filter(part=>part.type==='text').map(part=>part.text).join(''),ack=/^\[Aexus (group|channel) acknowledgment\]\n/.test(text),uuid=input.uuid,hidden=text.includes('[Aexus initialization]')
    nativeNote('send',{input:input.message.content});note(ack?'ack':hidden?'initializing':'work',{text,sessionId,at:Date.now()});let response='WORK_FINISHED',failure
    if(text.includes('ACK_TOOL_FIXTURE')){
     const values=[];for(const name of ['Bash','Read','Write','Edit'])values.push(...await decisions(name,{}))

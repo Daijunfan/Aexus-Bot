@@ -28,7 +28,7 @@ const BACKGROUND_START = process.env.AGENTS_COMPANY_BACKGROUND_START === '1'
 if ((HEADLESS || HIDDEN) && process.platform === 'darwin') app.setActivationPolicy('prohibited')
 // Keep the existing Electron profile when the product display name changes.
 app.commandLine.appendSwitch('disable-http-cache')
-app.setPath('userData', process.env.AGENTS_COMPANY_HOME ? join(process.env.AGENTS_COMPANY_HOME, 'electron') : join(app.getPath('appData'), 'Agents Company'))
+app.setPath('userData', process.env.AGENTS_COMPANY_HOME ? join(process.env.AGENTS_COMPANY_HOME, 'electron') : join(app.getPath('appData'), 'Aexus'))
 
 let mainWindow:BrowserWindow|undefined
 let pluginDesktop:ReturnType<typeof attachPluginDesktop>|undefined

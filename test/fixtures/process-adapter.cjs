@@ -23,7 +23,7 @@ async function nativeTool(name,input,callId='fixture-tool-'+crypto.randomUUID())
    let result
    if(acp)update({sessionUpdate:'tool_call',toolCallId:callId,title:'tunnel__'+name,kind:'other',status:'pending',rawInput:input});else send({type:'tool_execution_start',toolCallId:callId,toolName:name,args:input})
    if(acp){const allowed=await new Promise(resolve=>{permission={id:callId+'-permit',discussionPermission:true,receive:resolve};send({jsonrpc:'2.0',id:permission.id,method:'session/request_permission',params:{sessionId:sid,toolCall:{toolCallId:callId,title:'tunnel__'+name,kind:'other',rawInput:input},options:[{optionId:'allow_once',kind:'allow_once'},{optionId:'reject_once',kind:'reject_once'}]}})});note(name==='agents_company_documentation'?'documentation-permission':'discussion-permission',{allowed});if(!allowed)throw Error('Native discussion tool was denied');result=await companyMcp(name,input,callId)}
-   else{const allowed=await new Promise(resolve=>{permission={id:callId+'-permit',discussionPermission:true,receive:resolve};send({type:'extension_ui_request',id:permission.id,method:'confirm',title:'Agents Company tool permission',message:JSON.stringify({toolName:name,toolCallId:callId,input})})});note(name==='agents_company_documentation'?'documentation-permission':'discussion-permission',{allowed});if(!allowed)throw Error('Native discussion tool was denied');result=await new Promise(resolve=>{permission={id:callId,discussion:true,receive:resolve};send({type:'extension_ui_request',id:callId,method:'input',title:name==='agents_company_documentation'?'Agents Company documentation':'Agents Company discussion',placeholder:JSON.stringify({toolCallId:callId,input})})})}
+   else{const allowed=await new Promise(resolve=>{permission={id:callId+'-permit',discussionPermission:true,receive:resolve};send({type:'extension_ui_request',id:permission.id,method:'confirm',title:'Aexus tool permission',message:JSON.stringify({toolName:name,toolCallId:callId,input})})});note(name==='agents_company_documentation'?'documentation-permission':'discussion-permission',{allowed});if(!allowed)throw Error('Native discussion tool was denied');result=await new Promise(resolve=>{permission={id:callId,discussion:true,receive:resolve};send({type:'extension_ui_request',id:callId,method:'input',title:name==='agents_company_documentation'?'Aexus documentation':'Aexus discussion',placeholder:JSON.stringify({toolCallId:callId,input})})})}
    note(name==='agents_company_documentation'?'documentation-tool':'discussion-tool',{input,result,callId,at:Date.now()})
    if(acp)update({sessionUpdate:'tool_call_update',toolCallId:callId,title:'tunnel__'+name,status:result.error||result.result?.isError?'failed':'completed',rawOutput:JSON.stringify(result)});else send({type:'tool_execution_end',toolCallId:callId,toolName:name,result,isError:!!result.isError})
  return result
@@ -61,7 +61,7 @@ function finish(text='山海皆可平',cancel=false,failure){
 }
 async function prompt(r,text){
  current=r;if(!acp)result(r,{})
- const marker=text.includes('[Agents Company channel acknowledgment]\n')?'[Agents Company channel acknowledgment]\n':'[Agents Company group acknowledgment]\n',at=text.indexOf(marker),hidden=text.includes('[Agents Company private initialization]')
+ const marker=text.includes('[Aexus channel acknowledgment]\n')?'[Aexus channel acknowledgment]\n':'[Aexus group acknowledgment]\n',at=text.indexOf(marker),hidden=text.includes('[Aexus initialization]')
  note(at>=0?'ack':hidden?'initializing':'work',{text,sessionId:sid,at:Date.now()})
  if(hidden){await initialize(r);return}
  if(at>=0){
@@ -70,7 +70,7 @@ async function prompt(r,text){
   if(text.includes('ACK_TOOL_FIXTURE')){
    permission={id:'ack-permit-'+crypto.randomUUID(),file:path.join(process.cwd(),'ack-forbidden.txt'),ack:response};const input={path:permission.file,content:'must not run'}
    if(acp)send({jsonrpc:'2.0',id:permission.id,method:'session/request_permission',params:{sessionId:sid,toolCall:{toolCallId:permission.id,title:'Write: ack-forbidden.txt',kind:'edit',rawInput:input},options:[{optionId:'allow_once',kind:'allow_once'},{optionId:'reject_once',kind:'reject_once'}]}})
-   else send({type:'extension_ui_request',id:permission.id,method:'confirm',title:'Agents Company tool permission',message:JSON.stringify({toolName:'write',toolCallId:permission.id,input})})
+   else send({type:'extension_ui_request',id:permission.id,method:'confirm',title:'Aexus tool permission',message:JSON.stringify({toolName:'write',toolCallId:permission.id,input})})
   }else finishAck(response)
   return
  }
@@ -87,21 +87,21 @@ async function prompt(r,text){
  }
  if(!acp&&text.includes('TUNNEL_FIXTURE ')){
   const request=JSON.parse(text.slice(text.lastIndexOf('TUNNEL_FIXTURE ')+15))
-  permission={id:'permit-'+crypto.randomUUID(),request};send({type:'extension_ui_request',id:permission.id,method:'confirm',title:'Agents Company tool permission',message:JSON.stringify({...request,toolCallId:permission.id})});return
+  permission={id:'permit-'+crypto.randomUUID(),request};send({type:'extension_ui_request',id:permission.id,method:'confirm',title:'Aexus tool permission',message:JSON.stringify({...request,toolCallId:permission.id})});return
  }
- if(!acp&&text.includes('UNAPPROVED_TUNNEL_FIXTURE')){permission={id:'unapproved',tunnelReply:true};send({type:'extension_ui_request',id:permission.id,method:'input',title:'Agents Company Tunnel',placeholder:JSON.stringify({toolName:'tunnel__execute',toolCallId:'unapproved',input:{command:'echo must-not-run'}})});return}
+ if(!acp&&text.includes('UNAPPROVED_TUNNEL_FIXTURE')){permission={id:'unapproved',tunnelReply:true};send({type:'extension_ui_request',id:permission.id,method:'input',title:'Aexus Tunnel',placeholder:JSON.stringify({toolName:'tunnel__execute',toolCallId:'unapproved',input:{command:'echo must-not-run'}})});return}
 
  if(text.includes('FAIL_FIXTURE')){current=undefined;if(acp)send({jsonrpc:'2.0',id:r.id,error:{code:-32000,message:'Fixture model failure'}});else {send({type:'message_end',message:{role:'assistant',stopReason:'error',errorMessage:'Fixture model failure'}});send({type:'agent_settled'})}return}
  if(text.includes('WRITE_FIXTURE')){
   permission={id:'permit-'+crypto.randomUUID(),file:path.join(process.cwd(),'approval.txt')};const input={path:permission.file,content:'approved'}
   if(acp)send({jsonrpc:'2.0',id:permission.id,method:'session/request_permission',params:{sessionId:sid,toolCall:{toolCallId:permission.id,title:'Write: approval.txt',kind:'edit',rawInput:input},options:[{optionId:'allow_once',kind:'allow_once'},{optionId:'reject_once',kind:'reject_once'}]}})
-  else send({type:'extension_ui_request',id:permission.id,method:'confirm',title:'Agents Company tool permission',message:JSON.stringify({toolName:'write',toolCallId:permission.id,input})})
+  else send({type:'extension_ui_request',id:permission.id,method:'confirm',title:'Aexus tool permission',message:JSON.stringify({toolName:'write',toolCallId:permission.id,input})})
   return
  }
  if(!acp&&text.includes('NATIVE_SELECT_FIXTURE')){permission={id:'pi-native-select',nativeUI:true};send({type:'extension_ui_request',id:permission.id,method:'select',title:'Choose a native Pi action',options:['Review','Continue']});return}
  if(!acp&&text.includes('NATIVE_INPUT_FIXTURE')){permission={id:'pi-native-input',nativeUI:true};send({type:'extension_ui_request',id:permission.id,method:'input',title:'Native Pi instructions',placeholder:'Write instructions'});return}
  if(text.includes('HOLD_FIXTURE'))return
- timer=setTimeout(()=>finish(text.includes('[Agents Company private initialization]')?'OK':text.includes('UNICODE_FIXTURE')?'春\u2028雨\u2029秋':'山海皆可平'),text.includes('QUEUE_FIXTURE')?700:30)
+ timer=setTimeout(()=>finish(text.includes('[Aexus initialization]')?'OK':text.includes('UNICODE_FIXTURE')?'春\u2028雨\u2029秋':'山海皆可平'),text.includes('QUEUE_FIXTURE')?700:30)
 }
 let buffer='';process.stdin.setEncoding('utf8');process.stdin.on('data',chunk=>{buffer+=chunk;let i;while((i=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,i);buffer=buffer.slice(i+1);if(!line)continue;const r=JSON.parse(line),method=r.method||r.type,p=r.params||r
  if(process.env.AC_WORKER_PARITY)fs.appendFileSync(path.join(dir,'fixture-protocol.jsonl'),JSON.stringify(r)+'\n')
@@ -110,7 +110,7 @@ let buffer='';process.stdin.setEncoding('utf8');process.stdin.on('data',chunk=>{
   if(permission.discussionPermission){const receive=permission.receive;permission=undefined;receive(acp?r.result?.outcome?.optionId==='allow_once':!!r.confirmed);continue}
   if(permission.discussion){const receive=permission.receive;permission=undefined;let value;try{value=JSON.parse(r.value)}catch{value={error:r.value??'Missing discussion response'}}receive(value);continue}
   if(permission.tunnelReply){finish(r.value??'cancelled');continue}
-  const allow=acp?r.result?.outcome?.optionId==='allow_once':r.confirmed;if(permission.ack!==undefined){const reply=permission.ack;note('ack-tool-result',{allowed:!!allow});if(allow)fs.writeFileSync(permission.file,'must not run');permission=undefined;finishAck(reply);continue}if(permission.request){if(allow){permission.tunnelReply=true;send({type:'extension_ui_request',id:permission.id,method:'input',title:'Agents Company Tunnel',placeholder:JSON.stringify({...permission.request,toolCallId:permission.id})})}else finish('denied');continue}if(allow)fs.writeFileSync(permission.file,'approved');finish(allow?'approved':'denied');continue}
+  const allow=acp?r.result?.outcome?.optionId==='allow_once':r.confirmed;if(permission.ack!==undefined){const reply=permission.ack;note('ack-tool-result',{allowed:!!allow});if(allow)fs.writeFileSync(permission.file,'must not run');permission=undefined;finishAck(reply);continue}if(permission.request){if(allow){permission.tunnelReply=true;send({type:'extension_ui_request',id:permission.id,method:'input',title:'Aexus Tunnel',placeholder:JSON.stringify({...permission.request,toolCallId:permission.id})})}else finish('denied');continue}if(allow)fs.writeFileSync(permission.file,'approved');finish(allow?'approved':'denied');continue}
  if(method==='initialize')result(r,{protocolVersion:1,agentInfo:{name:'cline-fixture',version:'3.0.65'},agentCapabilities:{loadSession:true}})
  else if(method==='session/load'&&!fs.existsSync(saved))send({jsonrpc:'2.0',id:r.id,error:{code:-32002,message:'Resource not found: '+p.sessionId}})
  else if(method==='session/new'||method==='session/load'){if(method==='session/new')sid=Date.now()+'_'+crypto.randomUUID();if(p.sessionId)sid=p.sessionId;mcpServers=p.mcpServers??[];result(r,models())}

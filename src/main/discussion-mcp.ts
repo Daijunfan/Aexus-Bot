@@ -30,7 +30,7 @@ export async function openDiscussionMcp(state:Live,stableCatalog=false){
    else if(input.method==='tools/call'){
     try{
      const invoke=input.params?.name===DISCUSSION_TOOL.name?invokeDiscussionTool:input.params?.name===DOCUMENTATION_TOOL.name?invokeDocumentationTool:input.params?.name===API_TOOL.name?invokeApiTool:undefined
-     if(!invoke)throw Error('Unknown Agents Company tool')
+     if(!invoke)throw Error('Unknown Aexus tool')
      if(input.id===undefined)throw Error('Discussion tool calls require a request ID')
      const value=await invoke(state,input.params.arguments,String(input.id),controller.signal)
      result=nativeToolResult(value)

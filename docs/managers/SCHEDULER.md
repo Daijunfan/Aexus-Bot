@@ -12,7 +12,7 @@ workspace: employee
 ## Purpose
 
 持久化地安排某个员工在指定时间使用指定模型、思考程度执行任务。调度器属于
-Avalon Core，不依赖窗口或任何插件。CLI、Plan 视图与插件使用同一个
+Aexus Bot Core，不依赖窗口或任何插件。CLI、Mission 视图与插件使用同一个
 `schedule.*` 协议。**本版本未向 MiniNotion 接入此调度器**；MiniNotion 原有的页面
 提醒/重复事项是另一项领域功能。
 
@@ -209,7 +209,7 @@ Plan is now a first-class view over this same scheduler. `afterSeconds`, `employ
 
 ## Plan 统一调度与严格下行权限
 
-所有角色的定时、重复、事件触发员工工作统一使用本 API，并能在 Core Plan 中查询和调整。各职位都可创建、读取、修改、暂停恢复或删除自己及可管理目标的一次/重复/事件任务，不论记录由谁创建。Employee 只能给自己排期；Manager 可给自己及本 Team 的 Employee 排期；Governor 可给自己及全局 Employee/Manager 排期，不能管理另一 Governor 或 Secretary；Secretary 代表用户管理全局合法员工排期，包括同级其他 Secretary。Manager/Governor 仍不能向同级或上级分派。修改按当前目标权限判定，不按 `createdBy` 作者；变更目标须同时可管理原目标和新目标，原 `createdBy` 审计不重写。用户与 Secretary 可调整全部合法员工规划；Secretary 任免仍由用户控制。
+所有角色的定时、重复、事件触发员工工作统一使用本 API，并能在 Core Mission 中查询和调整。各职位都可创建、读取、修改、暂停恢复或删除自己及可管理目标的一次/重复/事件任务，不论记录由谁创建。Employee 只能给自己排期；Manager 可给自己及本 Team 的 Employee 排期；Governor 可给自己及全局 Employee/Manager 排期，不能管理另一 Governor 或 Secretary；Secretary 代表用户管理全局合法员工排期，包括同级其他 Secretary。Manager/Governor 仍不能向同级或上级分派。修改按当前目标权限判定，不按 `createdBy` 作者；变更目标须同时可管理原目标和新目标，原 `createdBy` 审计不重写。用户与 Secretary 可调整全部合法员工规划；Secretary 任免仍由用户控制。
 
 `schedule.create/update/preview/run/resume/trigger` 等目标操作均受同一权限边界保护。撤权后旧自动授权保持停用；合法调用者显式 update/resume 才重新授权，manual run/signal trigger 使用当前调用者的本次授权，不能借用原作者凭据，manual run 也不会重新启用旧自动委派。后台到期运行复核保存的授权，实际执行和异步准备之后再次复核。新增 `action.channelId` 明确关联员工引擎频道，要求目标持续具有发布成员身份。旧 UI 的 `source:channel:ID` 仅迁移为经过校验的频道引用，不授予权限。移除成员会停用关联任务。
 
@@ -236,7 +236,7 @@ also accept `--expected-revision` to guard against a changed task.
 
 ## Conversation notices are separate from Plan
 
-Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Company managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Company roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Aexus managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Aexus roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
 
 
 ## Secretary 应用管理

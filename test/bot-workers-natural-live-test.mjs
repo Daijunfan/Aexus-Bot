@@ -76,7 +76,7 @@ try{
  await rpc('direct.send',{employee:secretary.id,text:prompt,clientMessageId:'natural-bot-delegation'})
  const deployment=await until(()=>delegationAttempts[0],'Secretary delegates to the synthetic Dot')
  assert.ok(deployment.text.trim(),'Delegation must contain a real task')
- assert.ok(!/\[Agents Company|agents_company|AGENTS_COMPANY|Core Plan|system instruction|系统提示|You are an AI/i.test(deployment.text),'Delegated task must not contain Company routing wrappers or system instructions')
+ assert.ok(!/\[Aexus|agents_company|AGENTS_COMPANY|Core Plan|system instruction|系统提示|You are an AI/i.test(deployment.text),'Delegated task must not contain Company routing wrappers or system instructions')
  assert.deepEqual([...deployment.argsKeys].sort(),['binding','files','requestId','text'],'Provider receives only the raw task contract')
  const watch=deployment.schedules[0]
  assert.ok(watch,'A matching message.received schedule must already be durable on disk when the delegation reaches the provider')

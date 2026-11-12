@@ -346,7 +346,7 @@
   {
     "name": "engineering.context",
     "args": "--id ID",
-    "summary": "Read the common initialization router, current identity, exact owned chain/node, prompt paths and next permitted actions; never grants Company or Worker authority.",
+    "summary": "Read the common initialization router, current identity, exact owned chain/node, prompt paths and next permitted actions; never grants Aexus or Worker authority.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -821,7 +821,7 @@
   {
     "name": "engineering.layout",
     "args": "--id ID --graph topology|dag --positions JSON --expected-revision N",
-    "summary": "User/Secretary: save free engineering graph node positions; Characters numbered seats and Company geometry remain unchanged.",
+    "summary": "User/Secretary: save free engineering graph node positions; Characters numbered seats and Aexus geometry remain unchanged.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4359,7 +4359,7 @@
   {
     "name": "worker.skill",
     "args": "ID --name NAME [--prompt TEXT --client-message-id KEY]",
-    "summary": "Invoke a currently advertised native skill/command in this Worker without employee prompts or Company tools.",
+    "summary": "Invoke a currently advertised native skill/command in this Worker without employee prompts or Aexus tools.",
     "gui": "Worker skills",
     "inputSchema": {
       "type": "object",
@@ -4763,7 +4763,7 @@
   {
     "name": "worker.create",
     "args": "[--employee ID] --engine codex|claude|cline|pi|opencode|kilo|deepseek [--title NAME --cwd PATH --client-request-id ID]",
-    "summary": "Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Company tools.",
+    "summary": "Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Aexus tools.",
     "gui": "Team / Add Worker",
     "inputSchema": {
       "type": "object",
@@ -5266,8 +5266,8 @@
   {
     "name": "direct.send",
     "args": "--employee ID --text TEXT [--images JSON --files JSON --mode send|enqueue|steer --client-message-id KEY --reply-to ID]",
-    "summary": "Send a private message using employee ID. For a native employee, only user/Secretary may dispatch work. For an external Dot/Grok Worker ID from bot.list, any employee with bot.access may explicitly delegate raw text/images/files; no Company context is injected. Native session.send/enqueue alone do not publish private messages.",
-    "gui": "Messages private composer",
+    "summary": "Send a private message using employee ID. For a native employee, only user/Secretary may dispatch work. For an external Dot/Grok Worker ID from bot.list, any employee with bot.access may explicitly delegate raw text/images/files; no Aexus context is injected. Native session.send/enqueue alone do not publish private messages.",
+    "gui": "Message private composer",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -5645,7 +5645,7 @@
   {
     "name": "bot.create",
     "args": "--name NAME --client-request-id UUID [--description TEXT]",
-    "summary": "User/Secretary: create a native Grok Worker. A stable UUID is the remote creation identity; unchanged retries never create another bot. No Company context is injected.",
+    "summary": "User/Secretary: create a native Grok Worker. A stable UUID is the remote creation identity; unchanged retries never create another bot. No Aexus context is injected.",
     "gui": "New Grok bot",
     "inputSchema": {
       "type": "object",
@@ -9182,7 +9182,7 @@
     "name": "messenger.state",
     "args": "",
     "summary": "User or Secretary: read conversation preferences, drafts and orders. categories projects permanent type:* filters plus editable custom mf_* categories; folders contains only custom records. Use category IDs for directory queries and reorder scopes.",
-    "gui": "Messages organization",
+    "gui": "Message organization",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -9286,7 +9286,7 @@
     "name": "messenger.conversation",
     "args": "--conversations JSON --patch JSON",
     "summary": "User or Secretary: pin, favorite, archive, mark unread or set local group notifications (all/direct/off) in one atomic update",
-    "gui": "Messages list and bulk actions",
+    "gui": "Message list and bulk actions",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -9340,7 +9340,7 @@
     "name": "messenger.message",
     "args": "CONVERSATION [MESSAGE_ID | --ids JSON] --patch JSON",
     "summary": "User or Secretary: save, pin, react to or hide an existing public message; native history stays intact",
-    "gui": "Messages actions",
+    "gui": "Message actions",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -9502,7 +9502,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 160,
-          "description": "Frozen Company team-view scope for a private/group attempt; not a Plan or plugin view."
+          "description": "Frozen Team category scope for a private/group attempt; not a Plan or plugin view."
         },
         "sourceView": {
           "type": "string",
@@ -9533,7 +9533,7 @@
     "name": "messenger.search",
     "args": "[--conversation REF] [--query TEXT] [--filter all|saved|pinned|media|audio|files|links] [--author all|you|employee] [--offset N] [--limit N]",
     "summary": "User or Secretary: search full public histories and saved/media/link references without inference or read acknowledgements",
-    "gui": "Messages search and shared content",
+    "gui": "Message search and shared content",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -9747,7 +9747,7 @@
   {
     "name": "assets.tree",
     "args": "[--view Company|Messages|Plan] [--team NAME] [--employee ID] [--conversation REF]",
-    "summary": "User-only: read the fixed Company, Messages and Plan workspace tree",
+    "summary": "User-only: read the fixed Aexus, Messages and Plan workspace tree",
     "gui": "Files and assets",
     "inputSchema": {
       "type": "object",
@@ -10551,7 +10551,7 @@
   {
     "name": "conversation.policy",
     "args": "CONVERSATION",
-    "summary": "Read independent Owner/Admin/Member offices, moderation state and allowed actions; Company rank grants no conversation office",
+    "summary": "Read independent Owner/Admin/Member offices, moderation state and allowed actions; Aexus rank grants no conversation office",
     "gui": "Conversation administration",
     "inputSchema": {
       "type": "object",
@@ -10617,7 +10617,7 @@
   {
     "name": "conversation.mute",
     "args": "CONVERSATION --member ID|all --muted true|false [--duration-seconds N] --expected-revision N",
-    "summary": "Owner/Admin changes public posting restrictions; all restricts Member posting in groups. Channels do not support moderation. Never changes Company work permissions.",
+    "summary": "Owner/Admin changes public posting restrictions; all restricts Member posting in groups. Channels do not support moderation. Never changes Aexus work permissions.",
     "gui": "Conversation moderation",
     "inputSchema": {
       "type": "object",
@@ -11395,7 +11395,7 @@
   {
     "name": "chat.invites",
     "args": "ID",
-    "summary": "Owner/Admin lists local authenticated invite codes and their expiry, approval and use counts. Codes never grant a Core identity or Company authority.",
+    "summary": "Owner/Admin lists local authenticated invite codes and their expiry, approval and use counts. Codes never grant a Core identity or Aexus authority.",
     "gui": "Group invitations",
     "inputSchema": {
       "type": "object",
@@ -12445,7 +12445,7 @@
   {
     "name": "conversation.upload",
     "args": "--conversation group:ID --from JSON --path FILE --client-request-id KEY [--expected-version VERSION]",
-    "summary": "Copy an own Company-workspace file into the group shared folder. All members have equal file rights. New files never overwrite; replacing requires the exact version returned by conversation.file info. Returns an async receipt, no automatic group speech.",
+    "summary": "Copy an own Aexus-workspace file into the group shared folder. All members have equal file rights. New files never overwrite; replacing requires the exact version returned by conversation.file info. Returns an async receipt, no automatic group speech.",
     "gui": "Upload edited shared file",
     "inputSchema": {
       "type": "object",
@@ -12571,7 +12571,7 @@
   {
     "name": "conversation.download",
     "args": "CONVERSATION --entry-id ID --attachment-id ID --client-request-id KEY [--workspace WORKSPACE_ID --employee ID --path DIR --name FILENAME]",
-    "summary": "Copy one published private/group/channel attachment into your own Company execution workspace by default. Optional workspace ID must refer to that same assigned Team workspace. Streams with size/version/integrity checks; sources retained and existing destinations never overwritten.",
+    "summary": "Copy one published private/group/channel attachment into your own Aexus execution workspace by default. Optional workspace ID must refer to that same assigned Team workspace. Streams with size/version/integrity checks; sources retained and existing destinations never overwritten.",
     "gui": "Download to employee workspace",
     "inputSchema": {
       "type": "object",
@@ -13079,7 +13079,7 @@
   {
     "name": "chat.update",
     "args": "ID --patch JSON",
-    "summary": "Conversation Owner/Admin: edit group name and membership; Company role does not confer access",
+    "summary": "Conversation Owner/Admin: edit group name and membership; Aexus role does not confer access",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -13147,7 +13147,7 @@
   {
     "name": "chat.mute",
     "args": "ID --member EMPLOYEE_ID|all [--for SECONDS | --off]",
-    "summary": "Conversation Owner/Admin: mute visible posts; Company rank grants no moderation; reading and work remain available",
+    "summary": "Conversation Owner/Admin: mute visible posts; Aexus rank grants no moderation; reading and work remain available",
     "gui": "Group member moderation",
     "inputSchema": {
       "type": "object",
@@ -13458,7 +13458,7 @@
   {
     "name": "chat.post",
     "args": "ID [--text TEXT] [--images JSON] [--files JSON] [--kind summary|decision|blocker|question|result|message] [--reply-to ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only] [--client-message-id ID]",
-    "summary": "Explicitly publish a group message; ordinary native output stays only in Company; private replies require direct.post",
+    "summary": "Explicitly publish a group message; ordinary native output stays only in Team; private replies require direct.post",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -14376,7 +14376,7 @@
     "name": "schedule.list",
     "args": "[--employee ID --source NAMESPACE]",
     "summary": "Read raw saved schedules, including orphan records for application administrators; prefer plan.query for people, times and capabilities",
-    "gui": "Plan database",
+    "gui": "Mission database",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -14399,7 +14399,7 @@
     "name": "schedule.get",
     "args": "ID",
     "summary": "Read the exact saved configuration and revision, even when its employee was removed; discover IDs through plan.query",
-    "gui": "Plan task editor",
+    "gui": "Mission task editor",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -14421,7 +14421,7 @@
     "name": "schedule.create",
     "args": "--spec @file.json | --name NAME --employee ID|self --prompt TEXT (--after-seconds N | --at ISO | --time HH:mm | --every-seconds N | --on-event EVENT) [--enabled true|false|on|off | --paused] [--view VIEW_ID --days 7 --timezone IANA --month-day last --max-occurrences N --client-request-id KEY --duration-minutes N --channel ID --event-channel ID --event-conversation REF --event-employee ID --monitor-id ID --cooldown-seconds N]",
     "summary": "Schedule an existing employee or yourself; enabled by default; --paused or --enabled false disables automatic runs; Governor requires --view; retry-safe clientRequestId",
-    "gui": "Plan task editor",
+    "gui": "Mission task editor",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -14821,7 +14821,7 @@
     "name": "schedule.update",
     "args": "ID --patch @file.json [--expected-revision N]",
     "summary": "Update an idle schedule; full action/rule replacement, optional revision; retains execution count",
-    "gui": "Plan task editor",
+    "gui": "Mission task editor",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -15198,7 +15198,7 @@
     "name": "schedule.pause",
     "args": "ID [--expected-revision N]",
     "summary": "Pause future triggers without stopping the current run",
-    "gui": "Plan task editor",
+    "gui": "Mission task editor",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -15224,7 +15224,7 @@
     "name": "schedule.resume",
     "args": "ID [--expected-revision N]",
     "summary": "Resume future triggers after rechecking the current target and original delegation",
-    "gui": "Plan task editor",
+    "gui": "Mission task editor",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -15250,7 +15250,7 @@
     "name": "schedule.delete",
     "args": "[ID | --ids JSON] [--expected-revision N | --expected-revisions JSON]",
     "summary": "Delete selected schedules, including orphaned records for Secretary; preflight all IDs and revisions before any cancellation; retain run history. Self-deletion removes future triggers and returns continuingRunIds while allowing that same current Agent turn to finish; other active runs are cancelled",
-    "gui": "Plan task editor",
+    "gui": "Mission task editor",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -15312,7 +15312,7 @@
     "name": "schedule.preview",
     "args": "[ID [--patch JSON|@file] | --spec @file.json] [--after ISO --count N]",
     "summary": "Preview saved or draft occurrences without executing; a saved job retains its consumed quota",
-    "gui": "Plan preview",
+    "gui": "Mission preview",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16100,7 +16100,7 @@
     "name": "schedule.run",
     "args": "ID [--expected-revision N]",
     "summary": "Run once now; may use a model, does not consume the next occurrence",
-    "gui": "Plan task editor",
+    "gui": "Mission task editor",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16126,7 +16126,7 @@
     "name": "schedule.history",
     "args": "[ID] [--employee ID --limit N]",
     "summary": "Read durable run and job IDs, exact execution times and outcomes; deletion preserves authorized history",
-    "gui": "Plan execution history",
+    "gui": "Mission execution history",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16154,7 +16154,7 @@
     "name": "schedule.trigger",
     "args": "ID --event-id KEY",
     "summary": "Submit a deduplicated signal to an event schedule; current caller and original scheduling authority are checked; native channel events cannot be forged",
-    "gui": "Plan event rule",
+    "gui": "Mission event rule",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16181,7 +16181,7 @@
     "name": "schedule.cancel",
     "args": "ID",
     "summary": "Cancel an active run, preserving its history",
-    "gui": "Plan task editor",
+    "gui": "Mission task editor",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16202,7 +16202,7 @@
   {
     "name": "settings.get",
     "args": "",
-    "summary": "Read independent Company, Messages and Plan appearances, shared controls and default employee models",
+    "summary": "Read independent Aexus, Messages and Plan appearances, shared controls and default employee models",
     "gui": "应用设置",
     "readOnly": true,
     "permission": "operator",
@@ -16590,7 +16590,7 @@
     "name": "session.inbox",
     "args": "",
     "summary": "Read bounded direct-message previews for authorized employees; no model calls, terminal startup or read acknowledgements",
-    "gui": "Messages conversation list",
+    "gui": "Message conversation list",
     "readOnly": true,
     "permission": "employee.read",
     "target": "session-or-employee"

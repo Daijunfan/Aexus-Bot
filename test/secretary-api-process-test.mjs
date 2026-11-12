@@ -11,7 +11,7 @@ try{
  fs.symlinkSync(path.join(root,'node_modules'),path.join(temp,'node_modules'),'dir');const entry=process.env.AGENTS_COMPANY_TEST_CORE_ENTRY??path.join(temp,'daemon.cjs')
  if(!process.env.AGENTS_COMPANY_TEST_CORE_ENTRY)await build({entryPoints:[path.join(root,'src/main/daemon.ts')],outfile:entry,bundle:true,platform:'node',format:'cjs',packages:'external',define:{__AGENTS_PROJECT_ROOT__:JSON.stringify(root)},logLevel:'silent'})
  let fixture=fs.readFileSync(path.join(root,'test/fixtures/process-adapter.cjs'),'utf8')
- fixture=fixture.replace("title:name==='agents_company_documentation'?'Agents Company documentation':'Agents Company discussion'","title:name==='agents_company_documentation'?'Agents Company documentation':name==='agents_company_api'?'Agents Company API':'Agents Company discussion'")
+ fixture=fixture.replace("title:name==='agents_company_documentation'?'Aexus documentation':'Aexus discussion'","title:name==='agents_company_documentation'?'Aexus documentation':name==='agents_company_api'?'Aexus API':'Aexus discussion'")
  const marker=' const post=control&&employee?workPostArgs(text,control,employee):undefined';assert.equal(fixture.split(marker).length,2)
  const hook=`
  const apiFile=control&&employee?path.join(control,employee+'.api-request.json'):undefined;

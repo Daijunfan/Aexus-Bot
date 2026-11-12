@@ -1,4 +1,4 @@
-# Avalon Core and multi-agent boundaries
+# Aexus Bot Core and multi-agent boundaries
 
 The desktop, operator CLI and employee CLI call the same Core operations. The
 company does not use Codex/Claude's built-in subagents as employees.
@@ -71,7 +71,7 @@ closes the gateway, and a failed connection has no local execution fallback.
 
 ## Presentation
 
-Company Views is a compact menu over the existing team-view Core APIs; it retains
+Team views is a compact menu over the existing team-view Core APIs; it retains
 saved view IDs, ordering, camera state and editing. Messages is a sibling Core view,
 not a second messaging backend. The renderer reuses the same conversation state,
 composer, approvals, transcript blocks and exact-reply read guard. The office canvas
@@ -90,19 +90,23 @@ lightweight session metadata; only the viewed conversation fetches its full hist
 
 ## Employee bootstrap and grouped topology
 
-`ensureEmployeeBootstrap` prepares a brief identity/document-routing prompt and the required
-small launchers before creating or opening an employee and after role changes. It no longer
-copies full Core or plugin handbooks into each workspace. Shared folders still never share
-identity. Codex receives thread developer instructions; Claude receives a preset append and
-a changed-role reminder without discarding history. Native subagent tools remain disabled.
+`ensureEmployeeBootstrap` prepares a short shared router and runtime launchers without
+copying handbooks into workspaces. Codex uses developer instructions and Claude a
+native system append; ACP/RPC adapters provide the same router once at native context
+creation. `employee-context.ts` records the actual native conversation ID, router
+fingerprint and current identity/role fingerprint only after an input receipt or a
+successful native turn. This cache survives Core restarts. Identity or policy changes
+produce one refresh; normal user messages contain only their current origin, target,
+references, attachments and task facts. Core permission checks remain live and do not
+consult this delivery cache. Initialization must still prove real identity/index reads.
 
 `api-documents.ts` is a public documentation leaf, independent of authorization and plugin
 runtime. It projects canonical application resources and validated installed plugin API/schema
 into one `APP_HOME/api-docs` directory, replacing only changed contents. `readApiDocument`
 accepts a catalogued ID and returns `{markdown,document,path,catalogRoot}`; `index` is short
-and lists Company, Messages and Plan before plugins. Each plugin has a method/summary
+and lists Team, Message and Mission before plugins. Each plugin has a method/summary
 `index`; its `command/<method>` virtual document selects one exact schema entry and
-references the existing schema file, without producing a file per command. Core Plan is the `plan.*`/`schedule.*`
+references the existing schema file, without producing a file per command. Core Mission is the `plan.*`/`schedule.*`
 view of existing scheduler records, distinct from MiniNotion's document databases. The native
 read-only documentation tool and `api.docs` reuse this source for remote and isolated engines.
 No extra execution system, private per-role documentation store or workspace copy is introduced.
@@ -159,7 +163,7 @@ Within a Team, below-Manager hierarchies prefer the badge bottom exit and shared
 
 The Node daemon and Electron shell share `runtime.ts` and authenticated `handleRequest`. `web/server.ts` adds HTTP requests, a persistent WebSocket event stream and bounded mutation deduplication. `web/auth.ts` exchanges the operator token for an HttpOnly session, validates CSRF/origin and revokes subscriptions on logout. Employee bearer credentials retain their existing scope; they never become operators.
 
-`client-state.ts` owns each client's navigation, selected Team view and camera. Company geometry and role data stay shared. Governor tasks pin their view at acceptance. Uploads transfer bytes and downloads stream authorized server files. Plugin UIs use view-scoped gateways and isolated frames; backend plugins remain trusted. The remote Electron shell is presentation-only and does not expose local Core powers.
+`client-state.ts` owns each client's navigation, selected Team view and camera. Aexus geometry and role data stay shared. Governor tasks pin their view at acceptance. Uploads transfer bytes and downloads stream authorized server files. Plugin UIs use view-scoped gateways and isolated frames; backend plugins remain trusted. The remote Electron shell is presentation-only and does not expose local Core powers.
 
 `sessions.ts` retains project lifecycle/authority and delegates execution to `engines/runtime.ts` and its Codex/Claude drivers. Detection and installation resolve binaries at use time. Model providers remain separate from engine IDs. Capabilities, native-history compatibility and execution-host restrictions remain explicit.
 
@@ -215,11 +219,11 @@ Ten database layouts share the original scheduler records and identities. `plan.
 
 ## Independent presentation appearance
 
-`Preferences.viewAppearance` owns separate Company, Messages and Plan color selections.
+`Preferences.viewAppearance` owns separate Team, Message and Mission color selections.
 The shared preferences helper normalizes legacy data and merges sparse patches; legacy
 color fields mirror Messages only. Core validates and persists the same patch shape exposed
 by CLI and GUI. App derives the active presentation from navigation (including dialog
-return destinations) and applies its tokens before paint. Company and Plan own their
+return destinations) and applies its tokens before paint. Aexus and Plan own their
 readable canvas/database styling; neither imports the conversation wallpaper. Plugin
 themes, company geometry and scheduler records remain independently owned.
 
@@ -274,7 +278,7 @@ A successful history refresh cannot clear an uncertain-send warning or silently 
 
 ## Native Worker
 
-`native-workers.ts` 保存直属关系、设置、持久草稿和幂等任务接收状态，`engines/worker-runtime.ts` 复用原生 Codex app-server、Claude SDK、ACP 和 Pi RPC 传输；使用共享 transcript reducer 构建独立 Worker 会话，不使用 PTY/TUI，不注入员工身份、初始化或 Company 工具。`native-worker-env.ts` 仅移除控制器身份/路由，保留用户原生配置和认证；SDK 所需的自身运行标记单独保留。
+`native-workers.ts` 保存直属关系、设置、持久草稿和幂等任务接收状态，`engines/worker-runtime.ts` 复用原生 Codex app-server、Claude SDK、ACP 和 Pi RPC 传输；使用共享 transcript reducer 构建独立 Worker 会话，不使用 PTY/TUI，不注入员工身份、初始化或 Aexus 工具。`native-worker-env.ts` 仅移除控制器身份/路由，保留用户原生配置和认证；SDK 所需的自身运行标记单独保留。
 
 Workers 只在独立子视图展示。连接与读取不启动模型；点击发送的文本先持久接收再调度。消息重试键、草稿 CAS、发送写入屏障与延迟清空分别保护执行去重和新输入。模型/推理原地设置，权限变更显式重新连接后生效。GUI/CLI 调用相同认证 Core 操作，普通员工只控制直属 Worker，权限变更限用户/Secretary。
 
@@ -330,7 +334,7 @@ is inert and never opens a platform picker.
 `shared/engines.ts` adds the stable `deepseek` ID. The existing ACP transport and
 runtime normalize its model tuple IDs, `reasoning_effort` choices and `session/resume`
 semantics. Core remains the owner of role authority, queues, transcripts, publishing
-and schedules. Native history restoration does not replay Company messages.
+and schedules. Native history restoration does not replay Aexus messages.
 
 `deepseek-config.ts` reads the user's native YAML/credential sources without evaluating
 embedded code or returning secrets. It creates a private employee overlay for native
@@ -341,7 +345,7 @@ company employees. Invalid credential documents cannot leak parser excerpts or b
 the global engine catalog.
 
 `bin/deepseek-worker.cjs` is a terminal client for the original ACP engine, launched by
-the existing PTY broker. It passes no Company identity, tools or role prompt. A private
+the existing PTY broker. It passes no Aexus identity, tools or role prompt. A private
 input frame preserves multiline tasks without displaying transport JSON. The internal
 Node bootstrap flag is removed before launching the native engine. Worker ownership,
 stop/remove behavior and file/history preservation stay in the existing Core APIs.

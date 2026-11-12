@@ -6,7 +6,7 @@ import {boundedApiResult} from './api-results'
 
 export const DOCUMENTATION_TOOL={
  name:'agents_company_documentation',
- description:'Read identity and index, then only the needed reference. Exact inputs: {operation:"identity"}; {operation:"index"}; {operation:"describe",command:"schedule.create"}; {operation:"document",document:"core/secretary-api"}. document is a published ID, never a file path, query or nested args. For plugin methods use document:"plugin/mininotion/command/page.create". apiRevision identifies the current schema; rediscover after a schema error or application update rather than reusing historical parameters. Large documents return api-result-page; read via agents_company_api api.result. Plan is Core; MiniNotion is separate. Reading never grants execution authority. This tool cannot execute operations.',
+ description:'只读查询：identity 获取当前身份，index 查看简短目录，document 按发布的文档 ID 读取，describe 查询一个 Core 命令的准确 schema。仅在首次进入、身份变化或任务需要时读取。文档不授予权限，也不执行操作。',
  inputSchema:{type:'object',additionalProperties:false,required:['operation'],properties:{operation:{type:'string',enum:['identity','index','document','describe']},document:{type:'string',description:'For operation=document: a document ID such as core/plan, plugin/mininotion/index or plugin/mininotion/command/page.create.'},command:{type:'string',description:'For operation=describe: a Core command such as schedule.create, never a plugin method or document ID.'}}}
 } as const
 

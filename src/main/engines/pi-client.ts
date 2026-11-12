@@ -32,8 +32,8 @@ export function piClient(options:{nativeWorker?:boolean;onProcess?:(child:ChildP
   }
 
   const policy=path.join(options.directory,'company-permissions.mjs')
-  fs.writeFileSync(policy,`export default function(pi){pi.on('tool_call',async(event,ctx)=>{const allowed=await ctx.ui.confirm('Agents Company tool permission',JSON.stringify({toolName:event.toolName,toolCallId:event.toolCallId,input:event.input}));if(!allowed)return {block:true,reason:'Declined by Agents Company permission policy'};});}\n`,{mode:0o600})
-  const coreTools=[{descriptor:options.discussion,title:'Agents Company discussion'},{descriptor:options.documentation,title:'Agents Company documentation'},{descriptor:options.api,title:'Agents Company API'}].filter((item):item is {descriptor:CoreTool;title:string}=>!!item.descriptor)
+  fs.writeFileSync(policy,`export default function(pi){pi.on('tool_call',async(event,ctx)=>{const allowed=await ctx.ui.confirm('Aexus tool permission',JSON.stringify({toolName:event.toolName,toolCallId:event.toolCallId,input:event.input}));if(!allowed)return {block:true,reason:'Declined by Aexus permission policy'};});}\n`,{mode:0o600})
+  const coreTools=[{descriptor:options.discussion,title:'Aexus discussion'},{descriptor:options.documentation,title:'Aexus documentation'},{descriptor:options.api,title:'Aexus API'}].filter((item):item is {descriptor:CoreTool;title:string}=>!!item.descriptor)
   const discussion=path.join(options.directory,'company-discussion.mjs')
   if(coreTools.length)fs.writeFileSync(discussion,`export default function(pi){for(const {tool,title} of ${JSON.stringify(coreTools.map(item=>({tool:item.descriptor.tool,title:item.title})))} ){pi.registerTool({name:tool.name,label:tool.name,description:tool.description,parameters:tool.inputSchema,async execute(toolCallId,input,signal,_update,ctx){if(signal?.aborted)throw Error('Interrupted');const reply=await ctx.ui.input(title,JSON.stringify({toolCallId,input}));if(reply===undefined||signal?.aborted)throw Error('Core tool cancelled');const value=JSON.parse(reply);if(value.isError)throw Error(value.error);return {content:value.content??[{type:'text',text:JSON.stringify(value.result)}],details:undefined}}});}}\n`,{mode:0o600})
   const env={...engineProcessEnvironment('pi',childEnv(options.cwd,options.workRoot)),...options.env,PI_CODING_AGENT_DIR:options.directory}
@@ -61,9 +61,9 @@ export function piClient(options:{nativeWorker?:boolean;onProcess?:(child:ChildP
       const coreTool=message.method==='input'?coreTools.find(item=>item.title===message.title)?.descriptor:undefined
       if(coreTool){
         void Promise.resolve().then(()=>{const request=JSON.parse(message.placeholder);if(typeof request.toolCallId!=='string')throw Error('Core tool call ID required');return coreTool.call(request.input,request.toolCallId)}).then(result=>{if(!closed){const content=nativeToolResult(result).content;send({type:'extension_ui_response',id:message.id,value:JSON.stringify(content.some(item=>item.type==='image')?{content}:{result})})}}).catch(error=>{if(!closed)send({type:'extension_ui_response',id:message.id,value:JSON.stringify({isError:true,error:redact(String(error))})})})
-      }else if(message.method==='input'&&message.title==='Agents Company Tunnel'){
+      }else if(message.method==='input'&&message.title==='Aexus Tunnel'){
         void Promise.resolve().then(()=>{if(!options.onTunnelCall)throw Error('Tunnel is unavailable');return options.onTunnelCall(JSON.parse(message.placeholder))}).then(result=>{if(!closed)send({type:'extension_ui_response',id:message.id,value:JSON.stringify(result)})}).catch(error=>{if(!closed)send({type:'extension_ui_response',id:message.id,value:JSON.stringify({isError:true,content:[{type:'text',text:redact(String(error))}]})})})
-      }else if(message.method==='confirm'&&message.title==='Agents Company tool permission'){
+      }else if(message.method==='confirm'&&message.title==='Aexus tool permission'){
         let request:any;try{request=JSON.parse(message.message)}catch{send({type:'extension_ui_response',id:message.id,cancelled:true});return}
         void (options.onPermission?.(request)??Promise.resolve(false)).then(confirmed=>{if(!closed)send({type:'extension_ui_response',id:message.id,confirmed})}).catch(()=>{if(!closed)send({type:'extension_ui_response',id:message.id,cancelled:true})})
       }else if(['select','confirm','input','editor'].includes(message.method)){

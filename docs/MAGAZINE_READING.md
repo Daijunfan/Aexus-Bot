@@ -6,7 +6,7 @@
 
 1. 通过 `channel.fetch-text` / `channel.search` 找到已获阅读授权的来源与文章。
 2. `conversation.entry {conversation:"channel:CHANNEL_ID",id:"POST_ID"}` 返回实际附件，以及各自的 download 调用参数。
-3. 用附件返回的 ID 调用 `conversation.download`，提供稳定的 `clientRequestId`；省略目标时使用调用员工自己的 `workspace.catalog` Company 工作区。
+3. 用附件返回的 ID 调用 `conversation.download`，提供稳定的 `clientRequestId`；省略目标时使用调用员工自己的 `workspace.catalog` Team 工作区。
 4. 轮询 `conversation.download-status`，直到 completed；queued/running 不代表文件已经可用。外刊原件尚未取回时先显示 phase=server，随后 phase=transfer。取消只取消自己的副本，撤权后不继续复制。
 5. 对返回的工作区相对路径调用 `workspace.pdf`。
 6. 用 `direct.post` 回复用户；群内公开交付先 `conversation.upload` 图片，等上传完成后用返回的 publishedPath 调用 `chat.post`。

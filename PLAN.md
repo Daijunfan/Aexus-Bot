@@ -28,7 +28,7 @@ agents schedule preview JOB_ID --count 5 --json
 
 Every employee can schedule itself. `self` resolves from the authenticated Agent ID, never a name, directory or caller-supplied identity. A user must provide an explicit employee ID. Every role may create, read, modify, pause, resume and delete its own one-off, recurring and event plans regardless of who created the record. Authorization follows the current target: a Manager covers itself and lower-role Employees in its own Team; a Governor covers itself and global Employees/Managers, but not another Governor or Secretary; a Secretary covers itself and every legitimate employee, including other Secretaries. No Agent may schedule a different peer or superior outside those scopes. Modification uses the current target, not the record’s `createdBy`; changing the target requires authority over both the old and new target, and `createdBy` remains unchanged audit history. Non-administrators see the plans they can manage, not only ones they authored. Secretary can read the complete Plan database, including missing-target records; mutation and execution capabilities are returned per row.
 
-Self scheduling carries a Core-created, self-target-only delegation. This does not open direct `session.send` authority for Employees or let callers supply delegation fields. An explicit update or resume is re-authorized against the current actor and target; a manual run or signal trigger uses the caller’s current authorization, not the original author’s credentials, and does not re-enable a revoked automatic delegation. Background due runs recheck the saved delegation. Roles and credential revocation are rechecked before a run starts and after asynchronous startup. A removed employee or revoked authority disables affected future work; revoked automatic delegation stays disabled until a legitimate actor explicitly updates or resumes the task. Governor targets still require `action.viewId` / `--view` with a stable Company subview ID.
+Self scheduling carries a Core-created, self-target-only delegation. This does not open direct `session.send` authority for Employees or let callers supply delegation fields. An explicit update or resume is re-authorized against the current actor and target; a manual run or signal trigger uses the caller’s current authorization, not the original author’s credentials, and does not re-enable a revoked automatic delegation. Background due runs recheck the saved delegation. Roles and credential revocation are rechecked before a run starts and after asynchronous startup. A removed employee or revoked authority disables affected future work; revoked automatic delegation stays disabled until a legitimate actor explicitly updates or resumes the task. Governor targets still require `action.viewId` / `--view` with a stable Aexus subview ID.
 ## When to run
 
 Exactly one of `rule` and `afterSeconds` is required when creating a schedule. Relative time is resolved on the Core host at acceptance, not after the current task completes.
@@ -149,12 +149,12 @@ Detailed reproducible workflows and acceptance criteria: [Plan and MiniNotion sc
 
 Plan now covers every database layout ID in the source-versioned MiniNotion plugin. `plan.timeline` supplies estimated and actual run spans, `plan.analytics` aggregates full authorized record sets, and `plan.feed` supplies actual execution activity with cursor pagination. `plan.durationMinutes` / `--duration-minutes` is optional planning metadata, independent of timeout and actual run duration. Saved `options` preserve timezone, timeline scale, planner mode and chart choices. Form submits through `schedule.create`; future one-time timeline moves require confirmation and `expectedRevision`.
 
-The full layout mapping, schemas, examples, architectural decisions and step-by-step interactive casebook are in [Plan view parity](docs/PLAN_VIEW_PARITY.md). Automated regressions lock the observed failures after the interactive exploration, rather than standing in for it.
+The full layout mapping, schemas, examples, architectural decisions and step-by-step interactive casebook are in [Mission view parity](docs/PLAN_VIEW_PARITY.md). Automated regressions lock the observed failures after the interactive exploration, rather than standing in for it.
 
 ## Editing and independent appearance
 
 Plan uses its own `Preferences.viewAppearance.plan`, with a white database surface by
-default. Company and Messages colors do not change it. Configure it in the Plan tab at
+default. Aexus and Messages colors do not change it. Configure it in the Plan tab at
 the top of Application settings, or with `agents settings set --view plan --theme white`.
 
 Click any non-control cell in a task row, its name, or a task card/occurrence to open the
@@ -242,7 +242,7 @@ window state are presentation actions and do not require a parallel scheduling A
 
 ## Conversation notices are separate from Plan
 
-Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Company managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Company roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Aexus managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Aexus roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
 
 
 ## Secretary 应用管理

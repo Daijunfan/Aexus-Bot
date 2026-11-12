@@ -7,7 +7,7 @@ import type {Live} from './sessions'
 
 export const DISCUSSION_TOOL={
  name:'agents_company_discussion_post',
- description:'Explicitly publish a nonempty GROUP reply using the current group/message IDs. Native ordinary output appears only in Company. For a private answer to the user call direct.post through the Core API, not this group tool. Unmentioned awareness turns are silent.',
+ description:'Explicitly publish a nonempty GROUP reply using the current group/message IDs. Native ordinary output appears only in Team. For a private answer to the user call direct.post through the Core API, not this group tool. Unmentioned awareness turns are silent.',
  inputSchema:{type:'object',additionalProperties:false,required:['conversationType','conversationId','messageId','text'],properties:{conversationType:{type:'string',enum:['group']},conversationId:{type:'string',minLength:1},messageId:{type:'string',minLength:1},text:{type:'string',minLength:1,maxLength:2000,description:'Public reply text.'}}}
 } as const
 

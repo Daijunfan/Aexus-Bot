@@ -89,7 +89,7 @@ stay Windows-native. Native tools and their outputs are unchanged. Missing remot
 directories fail before model invocation. Windows cloud execution follows the SSH
 user's permissions; it does not inherit the Mac workspace-write path policy.
 
-## Company management and process isolation
+## Aexus management and process isolation
 
 Management APIs use the shared transcript/session layer and do not enable native Codex or Claude subagents. Team Manager authority is separate from engine tool permissions. Local macOS Isolated mode uses an outer Seatbelt process profile and private native-engine state; Codex's nested sandbox is disabled because macOS rejects sandbox reapplication. The outer profile enforces host-state/credential isolation and workspace writes. Work folder read boundaries remain in the outer policy; Claude keeps its file-tool scope hooks. Isolated native-history cloning is explicitly unavailable. Remote Isolated startup is rejected until an independently isolated remote OS environment is supplied; remote Trusted Managers use employee-bound SSH return channels.
 
@@ -117,7 +117,7 @@ Kilo's current Mac global configuration contains only the official DeepSeek `dee
 - Read only, Workspace write and Full access use the native permission service. A persisted native permission is explicitly synchronized on resume; reopening does not silently preserve an older elevated preset. Source-controlled policy code applies only to Aexus-owned employee sessions, without editing the user's native home patch or credentials.
 - Native configuration is shared from `DSH_HOME` / `~/.dsh`; employee session, storage and attachment data are isolated under `APP_HOME/agent-access`. Native child Agents, independent native Goal continuations and workflows are disabled for employees; Core owns application delegation, scheduling and authority.
 - Current ACP does not advertise images, standalone Plan mode, cloning, steering or native background-process control. Those operations fail explicitly. Cloud execution and strict process isolation remain unsupported; no host or permission fallback occurs.
-- A Worker is a clean native Harness session with no Company identity, tools or role prompt. Since the official launcher exposes ACP rather than a shipped terminal chat app, Aexus supplies a thin terminal client over that same ACP protocol. Model/tool execution, native configuration, approvals and history remain in Harness. `:help` lists native terminal controls; multiline tasks preserve their exact content.
+- A Worker is a clean native Harness session with no Aexus identity, tools or role prompt. Since the official launcher exposes ACP rather than a shipped terminal chat app, Aexus supplies a thin terminal client over that same ACP protocol. Model/tool execution, native configuration, approvals and history remain in Harness. `:help` lists native terminal controls; multiline tasks preserve their exact content.
 - The optional npm installation uses a committed SHA-512 recipe and dependency lock, without package scripts or global PATH changes. Managed npm launchers require Node.js >=24.9; an existing Desktop CLI can reuse its bundled runtime.
 - Icon: Simple Icons DeepSeek vector, CC0-1.0; source and checksum are in `src/renderer/src/assets/engines/sources.json`. Runtime distribution and trademarks retain their own terms.
 
@@ -126,7 +126,7 @@ Verification is separated into a no-runtime Core contract test, installed-runtim
 
 ## Native Worker workbench
 
-All seven engines use the same graphical conversation, slash palette, model/settings bar, file explorer and optional human shell. The shell is not the Coding Agent transport. Controls are discovered from the connected engine and active model; unsupported capabilities fail explicitly. Workers retain native configuration/history and have no employee identity, onboarding or Company tools.
+All seven engines use the same graphical conversation, slash palette, model/settings bar, file explorer and optional human shell. The shell is not the Coding Agent transport. Controls are discovered from the connected engine and active model; unsupported capabilities fail explicitly. Workers retain native configuration/history and have no employee identity, onboarding or Aexus tools.
 
 | Engine | Native protocol | Additional controls exposed by Workers |
 | --- | --- | --- |

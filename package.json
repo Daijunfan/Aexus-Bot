@@ -160,7 +160,8 @@
     "test:group-storage": "node test/group-storage-naming-core-test.mjs && node test/group-storage-core-test.mjs && node test/group-storage-ui-test.mjs && node test/group-storage-ui-test.mjs --web",
     "test:concurrency": "node test/snapshot-wire-test.mjs && node test/snapshot-transport-core-test.mjs && node test/atomic-json-cache-test.mjs && node test/store-read-performance-test.mjs && node test/concurrent-streaming-performance-test.mjs",
     "test:engineering": "node test/engineering-format-test.mjs && node test/engineering-core-test.mjs && node test/engineering-mutations-core-test.mjs && node test/engineering-recovery-core-test.mjs && node test/engineering-activity-performance-test.mjs && node test/engineering-ui-test.mjs && node test/engineering-ui-test.mjs --web",
-    "test:bot-local-hosts": "node test/bot-local-hosts-core-test.mjs && node test/bot-local-hosts-native-test.mjs"
+    "test:bot-local-hosts": "node test/bot-local-hosts-core-test.mjs && node test/bot-local-hosts-native-test.mjs",
+    "test:agent-context": "node test/agent-context-runtime-test.mjs && node test/agent-context-process-test.mjs && node test/api-documents-test.mjs"
   },
   "build": {
     "appId": "com.agentscompany.app",
@@ -204,6 +205,7 @@
       "docs/CONVERSATION_CONTROLS.md",
       "docs/MESSAGE_COLLABORATION.md",
       "docs/MAGAZINE_READING.md",
+      "docs/AGENT_CONTEXT.md",
       "docs/AVATARS.md",
       "docs/BOT_WORKERS.md",
       "docs/EVENT_TASKS.md",

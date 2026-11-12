@@ -31,7 +31,7 @@ try{
   assert.match(launch.developerInstructions,/agents_company_documentation/)
   if(commonInstructions===undefined)commonInstructions=launch.developerInstructions
   else assert.equal(launch.developerInstructions,commonInstructions,'Build and Work share the same router prompt')
-  assert.ok(work.text.startsWith('[Agents Company role]\n'+JSON.stringify({employeeId:employee.id,managementRole:'employee'})+'\n'));assert.ok(!work.text.includes('[Agents Company message source]'));assert.ok(work.text.endsWith('Read the current directory.'));assert.ok(!work.text.includes('[Agents Company private initialization]'))
+  assert.ok(work.text.startsWith('[Aexus message source]\n'));assert.ok(!work.text.includes('[Aexus context update]'));assert.ok(work.text.includes('"view":"Team"'));assert.ok(work.text.endsWith('Read the current directory.'));assert.ok(!work.text.includes('[Aexus initialization]'))
   const history=(await cli('session','transcript','--employee',employee.id)).items
   assert.equal(history.filter(item=>item.role==='user').length,1)
   assert.ok(!JSON.stringify(history).includes('PRIVATE_INIT_READING_COMMENTARY'))

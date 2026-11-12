@@ -17,7 +17,7 @@ const model=http.createServer(async(req,res)=>{
   if(req.url?.includes('count_tokens')){res.writeHead(200,{'content-type':'application/json'}).end('{"input_tokens":1}');return}
   const codex=req.url?.endsWith('/responses'),claude=req.url?.includes('/messages');if(!codex&&!claude){res.writeHead(404).end();return}
   const body=JSON.parse(raw);received.push(body);const count=modelCount++,operation=initializing?['identity','index'][count]:undefined,serialized=JSON.stringify(body)
-  if(count===0){assert.match(serialized,/Agents Company private initialization/);assert.match(serialized,/agents_company_documentation/);assert.doesNotMatch(serialized,/\.agents-company\/employees\//)}
+  if(count===0){assert.match(serialized,/Aexus initialization/);assert.match(serialized,/agents_company_documentation/);assert.doesNotMatch(serialized,/\.agents-company\/employees\//)}
   if(initializing&&count===1)assert.ok(serialized.includes(employee.id),'identity came back from the real employee-bound tool')
   if(initializing&&count===2){assert.match(serialized,/API 文档索引/);assert.match(serialized,/Plan.*Core/);assert.doesNotMatch(serialized,/### card\.create/,'full API is not autoloaded')}
   const invocation=initializing?(operation?{name:'agents_company_documentation',input:{operation}}:undefined):[

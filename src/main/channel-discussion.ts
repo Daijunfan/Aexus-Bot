@@ -23,7 +23,7 @@ import {emptyAgentPost,type ChatDelivery,type ChatAcknowledgmentPolicy} from '..
 const fields=(args:Record<string,any>,keys:string[])=>{for(const key of Object.keys(args))if(args[key]!==undefined&&!keys.includes(key))throw Error('Unknown channel discussion field: '+key)}
 const key=(value:unknown,label:string)=>{if(typeof value!=='string'||!value.trim()||value!==value.trim())throw Error('Provide a valid '+label);return value}
 const sameAuthor=(a:PrincipalRef,b:PrincipalRef)=>a.kind===b.kind&&(a.kind==='operator'||b.kind==='agent'&&a.employeeId===b.employeeId)
-export const CHANNEL_DISCUSSION_POLICY={maxCharacters:2000,guidance:CONVERSATION_CONTROL_GUIDANCE+' News and messages reach current administrators as shared context. Mentions and user replies identify work targets. Publish within a received user or Secretary discussion using channel.message-post and exact IDs. Ordinary assistant output remains private; Core records reading receipts.'}
+export const CHANNEL_DISCUSSION_POLICY={maxCharacters:2000,guidance:'Channels are read-only information feeds. Use the current source and history IDs to read authorized material. Results belong to Team or the explicitly requested private/group destination; channel publication is unavailable.'}
 function channel(id:unknown){const row=one('SELECT * FROM channels WHERE id=?',canonicalChannelId(key(id,'channel ID')));if(!row)throw Error('Unknown news channel');return row}
 export function channelAdminIds(id:string){return channelOffices(id).adminIds}
 function readable(id:unknown,administrative=false){const row=channel(id),principal=requestContext().principal;requireChannelReader(row.id);return row}
@@ -96,7 +96,7 @@ export function channelTaskPrompt(context:ChannelTaskContext,employeeId:string,d
  if(reading)return base
  const batch=value.kind==='message'&&value.message.trigger?value.message.trigger:undefined
  const batchSource=batch?'\n[Counted source batch]\n'+JSON.stringify({batchId:batch.batchId,postCount:batch.postCount,command:'channel.post-trigger-batch',args:{id:row.id,batchId:batch.batchId,offset:0,limit:50}}):''
- return base+batchSource+'\n\n'+CHANNEL_DISCUSSION_POLICY.guidance+'\n[Shared workspace]\n'+JSON.stringify(workspaceForMember('channel:'+row.id,employeeId))+'\nUse workspace.catalog to inspect your available locations and permissions. Read shared files with conversation.file. Context: agents channel context '+row.id+' --entry '+context.entryId+' --json. News: agents channel timeline '+row.id+' --kind news --before-entry '+context.entryId+' --limit 20 --json; paginate with --cursor NEXT_CURSOR. Publish with agents channel message-post '+row.id+' --reply-to '+context.entryId+' --text "Reply text" --json.'
+ return base+batchSource
 }
 export function recoverChannelDeliveries(){run("UPDATE channel_deliveries SET status='interrupted',error='Core restarted. Check the private conversation before retrying.' WHERE status IN ('routing','queued','running')");run("UPDATE channel_deliveries SET status='interrupted',error='Channels are read-only feeds; automatic employee delivery is disabled' WHERE kind='news' AND status='pending'")}
 

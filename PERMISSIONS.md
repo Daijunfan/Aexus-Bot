@@ -2,7 +2,7 @@
 
 ## Engineering
 
-`engineering.*` 以同一 Core/CLI 身份执行。用户/Secretary 配置、创建和编辑工程；读权限限实际参与者与应用管理者。职级与 Team 必须匹配真实员工，每个 Employee 节点只有一位 Manager，Governor 唯一。拓扑与协作线不会改变 Company 权限。Employee 只能派发自己直属的原生 Worker 并执行本节点初验，直属 Manager 负责复验及链路确认，工程 Governor 负责返工与最终确认。用户/Secretary 可显式执行这些分离阶段，保留真实署名和证据。
+`engineering.*` 以同一 Core/CLI 身份执行。用户/Secretary 配置、创建和编辑工程；读权限限实际参与者与应用管理者。职级与 Team 必须匹配真实员工，每个 Employee 节点只有一位 Manager，Governor 唯一。拓扑与协作线不会改变 Aexus 权限。Employee 只能派发自己直属的原生 Worker 并执行本节点初验，直属 Manager 负责复验及链路确认，工程 Governor 负责返工与最终确认。用户/Secretary 可显式执行这些分离阶段，保留真实署名和证据。
 
 周期与事件唤醒保留原创建者的真实委派身份/凭据，执行前再次检查当前职级、Team、项目轮次和授权。撤权、删除、暂停和返工会使旧通知失效，不能借存储内容缓存权限。工程原生 Worker 保持实际直属员工、执行主机、工作目录和原生工具协议；系统只能停止工程中记录的精确 Worker 回执，不清理其他任务或按进程名杀进程。双重验收、链路完成与最终证据未满足时，关联 Mission 不允许绕过工程直接完成。见 [Engineering 契约](docs/ENGINEERING.md)。
 
@@ -18,7 +18,7 @@
 
 `plan.preferences` 仅用户/Secretary 可写，控制显示和已结束任务的保留策略。自动清理保留实际配置者的身份，并在执行前核验其当前应用管理权和凭据；不得清除未成功的持续任务，也不终止仍有后续计划的工作。`plan.archive` 按当前任务管理权检查目标，归档只影响显示。详见 [任务与选择题契约](docs/MISSIONS_AND_QUESTIONS.md)。
 
-群文件管理沿用既有“当前群成员共享内容权利相同”的规则：`conversation.files` 只读文件元数据；`conversation.file-trash`、`conversation.file-restore` 校验当前成员资格、已发布路径、文件版本及回收记录。用户/Secretary 可不入群管理，其他 Company 职级不授予群内容权限。删除可恢复且影响所有引用同一文件的群消息；原正文、作者、任务和阅读回执保留。版本冲突整批拒绝，恢复不覆盖同名新文件，撤权后不能读取或恢复旧回收记录。原生外部 Bot 文件没有本地删除能力，接口明确拒绝，不借本地工作区假装删除原生数据。
+群文件管理沿用既有“当前群成员共享内容权利相同”的规则：`conversation.files` 只读文件元数据；`conversation.file-trash`、`conversation.file-restore` 校验当前成员资格、已发布路径、文件版本及回收记录。用户/Secretary 可不入群管理，其他 Aexus 职级不授予群内容权限。删除可恢复且影响所有引用同一文件的群消息；原正文、作者、任务和阅读回执保留。版本冲突整批拒绝，恢复不覆盖同名新文件，撤权后不能读取或恢复旧回收记录。原生外部 Bot 文件没有本地删除能力，接口明确拒绝，不借本地工作区假装删除原生数据。
 
 `chat.retry` 仅供用户/Secretary 显式补送原接收人中尚未进入原生轮次的失败投递。保留原消息作者、正文、附件和其他成员回执；重试委派记录实际发起人，执行时再次校验其当前职位、凭据、群成员范围和工作控制权限。已有 taskId、送达/阅读证据或匹配原生上下文的任务不重放。群成员身份不授予普通员工重试其他成员工作的权限。定时任务占用期间允许排队输入，执行和配置修改仍受原预约保护，恢复原生设置后才继续队列。
 
@@ -30,7 +30,7 @@
 
 `chat.details-update`、话题关闭/归档/置顶、消息清理及封禁遵循当前群 Owner/Admin 与应用管理权限。普通成员按独立的 text/media/polls/topics/addMembers/pin 授权执行；颜色和标签不授予权限。投票和表情以真实调用者记录，不能冒充用户；匿名投票不返回原始身份或未揭晓的测验答案。清单编辑保留现有完成者，不等价于 Mission 成功。
 
-邀请只允许已认证员工加入当前本地群，不提供 Core 登录身份或 Company 职位。审批、撤销、封禁、创建者当前群权限和 Agent 凭据均在执行时复查。旧的 member-add 也不能绕过封禁。消息作者可移除自己的共享内容，Owner/Admin 可移除任意消息；恢复不重放已接受的工作。保留策略仅清理新消息的公开正文，原文件和恢复记录保留。
+邀请只允许已认证员工加入当前本地群，不提供 Core 登录身份或 Aexus 职位。审批、撤销、封禁、创建者当前群权限和 Agent 凭据均在执行时复查。旧的 member-add 也不能绕过封禁。消息作者可移除自己的共享内容，Owner/Admin 可移除任意消息；恢复不重放已接受的工作。保留策略仅清理新消息的公开正文，原文件和恢复记录保留。
 
 内容保护限制应用内转发、跨会话引用、导出、下载和群外复制，CLI 同样执行；不声称限制可信操作系统账号、截图或已进入原生上下文的文本。本地贴纸收藏由用户/Secretary 管理，署名和发送仍走既有上传与群消息流程。完整约定见 [群组协作](docs/GROUP_COLLABORATION.md)。
 
@@ -58,7 +58,7 @@ Governor 仍不能创建、删除、升降级自己或其他 Governor，不能�
 
 职位定义集中于 `src/shared/roles.ts`，包含控制/创建/删除/赋予的目标角色、执行位置与 `appAdministrator`。`userManaged` 仅标记只能由用户任免的最高职位 Secretary；Governor 的生命周期由各角色的目标列表保护。更名、Team、工作目录和视图都不会授予职位。旧名为 Secretary 的员工不会自动升级。
 
-Secretary 可出现在 Company、Messages、Plan 中；视图只过滤展示。它使用 Core 主机的本地引擎和本地工作区，Cloud Team 可选择 `workEnvironment:local`。它没有 Governor 的任务视图绑定。Manager/Governor 的员工管理能力保持原有职位规则；插件和云主机内容使用逐项授权，不因职位自动开放全库。
+Secretary 可出现在 Team、Message、Mission 中；视图只过滤展示。它使用 Core 主机的本地引擎和本地工作区，Cloud Team 可选择 `workEnvironment:local`。它没有 Governor 的任务视图绑定。Manager/Governor 的员工管理能力保持原有职位规则；插件和云主机内容使用逐项授权，不因职位自动开放全库。
 
 秘书使用自己的普通认证 Core/CLI 管理软件，与 UI 进入相同 dispatcher。`channel.access {id}` 读取授权；写入 `{id,employeeIds,expectedRevision}` 替换阅读人员，只有用户或 Secretary 可调用。普通员工只能发现和读取获授权频道；Secretary 自动访问所有频道。阅读授权不赋予发布、群组办公室或自动任务能力。`messenger.state` 读取用户保存的分类与顺序，`messenger.reorder {scope,order,expectedOrder}` 修改同一持久化列表；并发冲突必须回读。
 
@@ -115,9 +115,9 @@ Agent 省略 manager 时指向自己作为来源；用户须明确指定。Manag
 
 所有新建 Employee / Manager / Governor / Secretary 都在自己的原生会话完成同一简短隐藏初始化：只读本人真实身份和共享 API 索引，然后简短确认。就绪只依据本人身份和索引工具均成功返回且引擎正常结束；文本写出 OK 不能替代真实读取，多一句隐藏说明也不构成失败。初始化期间显示黄灯，未就绪前不接受正式请求；失败可重试。初始化轮不进入本项目可见历史或已读回执，但保留在原生引擎上下文中；不预加载完整手册、不执行其中示例。
 
-初始化员工仅能调用必要的只读身份与文档入口，不执行写操作或请求工具提权。完整 Core 三视图与所有已安装插件 API/schema 统一投影到 `APP_HOME/api-docs`，原生只读文档工具及 `api.docs {document?}` 按文档 ID 读取；远端、隔离环境无需复制手册或放宽文件权限。Company、Messages、Plan 是 Core 视图，Plan 的 `plan.*` / `schedule.*` 不等于 MiniNotion 插件 API。
+初始化员工仅能调用必要的只读身份与文档入口，不执行写操作或请求工具提权。完整 Core 三视图与所有已安装插件 API/schema 统一投影到 `APP_HOME/api-docs`，原生只读文档工具及 `api.docs {document?}` 按文档 ID 读取；远端、隔离环境无需复制手册或放宽文件权限。Team、Message、Mission 是 Core 视图，Plan 的 `plan.*` / `schedule.*` 不等于 MiniNotion 插件 API。
 
-所有角色都可读完整公开文档；`api.list/describe --all` 只扩展文档发现，缺省仍过滤当前身份可调用的命令。插件先读 `plugin/<id>/index` 的方法摘要，再按需读 `plugin/<id>/command/<method>` 单条真实 schema，无须为一个操作加载整册。知道命令不等于能执行：Employee / Manager / Governor 的现有控制与写入权限、群成员检查和插件工作区边界不变；频道主动读取见下文。统一路由要求遵循身份中的 roleDescription；正式请求只附一段当前认证职位，Secretary 还附简短的应用管理/委派职责，升降级后立即刷新。公开文档不按角色复制到工作区。
+所有角色都可读完整公开文档；`api.list/describe --all` 只扩展文档发现，缺省仍过滤当前身份可调用的命令。插件先读 `plugin/<id>/index` 的方法摘要，再按需读 `plugin/<id>/command/<method>` 单条真实 schema，无须为一个操作加载整册。知道命令不等于能执行：Employee / Manager / Governor 的现有控制与写入权限、群成员检查和插件工作区边界不变；频道主动读取见下文。统一路由在原生上下文首次提供，后续消息只携带当前来源、任务和内容；身份或规则版本变化时补发一次更新。身份缓存不授予权限，升降级立即由 Core 校验。公开文档不按角色复制到工作区。
 
 Trusted 保留系统账号的实际文件权限；API 授权不等于对同用户无限制进程的操作系统级防篡改沙箱。Isolated 使用现有外层系统隔离，不支持时拒绝启动。Governor/Secretary 的分级生命周期保护在所有公司管理 API 入口强制执行。
 
@@ -127,7 +127,7 @@ Trusted 保留系统账号的实际文件权限；API 授权不等于对同用�
 
 
 
-`session.acknowledge` 只允许用户确认 Company/原生会话中确切的 replyId；Messages 私聊条目的已读由用户或 Secretary 通过 `direct.acknowledge` 按确切 messageId 确认，两者互不清除。任何 Agent 的读取或订阅都不会清除用户未读状态；隐藏窗口也不代用户确认。初始化不产生未读消息。Web 端使用认证用户会话及页面可见性检查；桌面端额外验证原生窗口状态。
+`session.acknowledge` 只允许用户确认 Team/原生会话中确切的 replyId；Messages 私聊条目的已读由用户或 Secretary 通过 `direct.acknowledge` 按确切 messageId 确认，两者互不清除。任何 Agent 的读取或订阅都不会清除用户未读状态；隐藏窗口也不代用户确认。初始化不产生未读消息。Web 端使用认证用户会话及页面可见性检查；桌面端额外验证原生窗口状态。
 
 Cloud Hosts 按具体主机授权，与直接 host.* API 共用权限：普通员工只看到授权主机和已有 Team 必需的绑定主机；阅读查看配置/状态，不返回凭据；修改可调整连接并执行远端操作；@root 新增可注册新主机。仅用户/Secretary 可读 SSH 私钥、完整 SSH 配置文件或删除主机，普通修改权不会导出这些文件。原生执行仍受其 OS/工作目录和审批模式约束。
 
@@ -137,9 +137,9 @@ Cloud Hosts 按具体主机授权，与直接 host.* API 共用权限：普通�
 
 所有职位都可用 `avatar.list` 查询完整可选目录，包括初始化期间。`character`/`avatarStyle` 或 `avatar` 仅选择视觉形象；`profession`（旧字段 `role`）仅描述职业；职级仍由 `managementRole` 控制。Manager 可用 `card.avatar` 修改自己及本 Team Employee，Governor 可在其控制范围内跨 Team 修改；该接口不修改名字、引擎、权限、职位、目录或历史。
 
-## Messages 视图
+## Message 视图
 
-Messages 与原会话复用相同权限、阅读范围和员工身份，但私聊内容来自独立的已发布账本：只有用户/Secretary 显式 `direct.send` 或认证员工显式 `direct.post` 才产生条目。`direct.history` 只读返回已发布的正文、媒体与投递证据，沿用现有 `session.transcript` 可读范围（本人、管理范围或用户/Secretary）。它不返回原生输出、共享输入、包装提示或静默阅读，不发起模型调用，不替用户确认已读。`session.inbox` 仍只读返回原生 Company 公开摘要，不是私聊账本。选择员工后的输入使用 `direct.send`（默认排队），停止、审批和工作区仍走已有原生 Core API；绑定关系和真实权限不变。
+Messages 与原会话复用相同权限、阅读范围和员工身份，但私聊内容来自独立的已发布账本：只有用户/Secretary 显式 `direct.send` 或认证员工显式 `direct.post` 才产生条目。`direct.history` 只读返回已发布的正文、媒体与投递证据，沿用现有 `session.transcript` 可读范围（本人、管理范围或用户/Secretary）。它不返回原生输出、共享输入、包装提示或静默阅读，不发起模型调用，不替用户确认已读。`session.inbox` 仍只读返回原生 Aexus 公开摘要，不是私聊账本。选择员工后的输入使用 `direct.send`（默认排队），停止、审批和工作区仍走已有原生 Core API；绑定关系和真实权限不变。
 
 未指定 `replyConversation` 时，`direct.send`/`direct.post` 的 `replyTo` 只能指向该员工已发布的私聊条目。Core 在原有权限校验后解析引用，不信任客户端提供的引用正文或作者；其他会话的 ID 不可引用。发送或排队执行时重新校验引用与原发起者权限。引用不会授予原消息作者的权限，不跨员工读取文件，不清除已读状态，也不改写已执行的历史。新消息的发送者来自认证委派，时间来自 Core 实际记录；旧记录缺失的信息保留为未知。
 
@@ -151,13 +151,13 @@ Message 的右键菜单复用原有 Core 授权；移除悬浮操作条不改变
 
 ## 群聊与共享视图
 
-群成员可读取本群消息、共享上下文并在未禁言时发布。群组 Owner/Admin 管理成员和禁言，Owner 解散群组，用户保留恢复入口；Company 职位不授予群内治理或他人私聊权限。
+群成员可读取本群消息、共享上下文并在未禁言时发布。群组 Owner/Admin 管理成员和禁言，Owner 解散群组，用户保留恢复入口；Aexus 职位不授予群内治理或他人私聊权限。
 
 `chat.send`、`chat.post` 投递到发送时的全部当前成员，Agent 作者不接收自己的发文。用户消息的 mentions 与同群回复原作者确定工作对象；未指定对象时全员处理。员工只能向其控制权限内的显式 mentions 分配工作，其余成员接收上下文。`chat.post` 不分配正式工作。
 
-全员在各自原生会话与 FIFO 中阅读。Core 校验凭据和成员资格后记录接收/已读；awareness 表示知悉，work 随后执行任务。公开发言使用明确的 `chat.post` 或讨论工具；原生会话输出只属于 Company 完整会话，不会自动成为私聊或群聊消息。给用户私聊使用 `direct.post`。发言不改变员工控制权限或工作区范围。
+全员在各自原生会话与 FIFO 中阅读。Core 校验凭据和成员资格后记录接收/已读；awareness 表示知悉，work 随后执行任务。公开发言使用明确的 `chat.post` 或讨论工具；原生会话输出只属于 Team 完整会话，不会自动成为私聊或群聊消息。给用户私聊使用 `direct.post`。发言不改变员工控制权限或工作区范围。
 
-用户对 Company/原生会话、Messages 私聊、群聊和频道的已读按精确 reply/direct message/entry 记录：原生工作台与 Company 共用同一 `lastReply` 的精确 `replyId`/`readAt`；Messages 私聊条目使用独立的 `direct.acknowledge`/`readSequence`，与原生 `lastReply` 互不清除。原生工作 turn 中最后一次显式 `chat.post` 到群的 `groupReply` 绑定本轮最终原生 `lastReply`，任一侧已读经同一 Core `session.acknowledge`/`chat.acknowledge` 同步，群读水印覆盖该序号时关联 `lastReply` 同为已读。没有群发布的原生回执只在原生工作台/Company 间共通，不会写入 Messages；不同 turn、消息 ID 或群不会仅因文字相同而合并。旧 `replyId` 不清除新回复读态；群先读、turn 稍后结束时新 `lastReply` 继承已读，绑定跨重启保留。关联只同步读态，不向群成员暴露 Company 正文。Agent 的 `delivery.readAt` 仍是独立工作回执，普通员工不能代用户确认，用户或 Secretary 可显式调用 API。用户仅可编辑本人发布的消息。删除群组保留可恢复历史、员工、工作区及独立调度。接口参数见 [API.md](API.md)。
+用户对 Team/原生会话、Messages 私聊、群聊和频道的已读按精确 reply/direct message/entry 记录：原生工作台与 Aexus 共用同一 `lastReply` 的精确 `replyId`/`readAt`；Messages 私聊条目使用独立的 `direct.acknowledge`/`readSequence`，与原生 `lastReply` 互不清除。原生工作 turn 中最后一次显式 `chat.post` 到群的 `groupReply` 绑定本轮最终原生 `lastReply`，任一侧已读经同一 Core `session.acknowledge`/`chat.acknowledge` 同步，群读水印覆盖该序号时关联 `lastReply` 同为已读。没有群发布的原生回执只在原生工作台/Aexus 间共通，不会写入 Messages；不同 turn、消息 ID 或群不会仅因文字相同而合并。旧 `replyId` 不清除新回复读态；群先读、turn 稍后结束时新 `lastReply` 继承已读，绑定跨重启保留。关联只同步读态，不向群成员暴露 Aexus 正文。Agent 的 `delivery.readAt` 仍是独立工作回执，普通员工不能代用户确认，用户或 Secretary 可显式调用 API。用户仅可编辑本人发布的消息。删除群组保留可恢复历史、员工、工作区及独立调度。接口参数见 [API.md](API.md)。
 
 ## Plan 与自主排期
 
@@ -230,7 +230,7 @@ All 右侧固定显示外包、私聊、群组、频道四个类别筛选；不�
 
 `settings.set` 沿用既有全局管理能力，Secretary 也可代用户配置。`viewAppearance.company/messages/plan` 分别保存配色与自定义颜色，局部修改在 Core 合并，不会覆盖未提供的其他视图；非法视图、字段或颜色整次拒绝。旧 `theme/themeColor` 仅映射 Messages。界面语言、模型默认值和页面大小继续共用，外观不改变员工、原生会话、工作区、计划权限、画布几何或群消息/新闻数据。设置导航与颜色预览不运行计划任务。
 
-`settings.set {messageWallpaper:{pattern,layout,density,opacity}}` 复用既有设置权限和偏好存储。它只调整 Messages 装饰：五组原创小图案、整齐/散落布局、密度和浓淡；局部修改保留其他字段，非法输入整次拒绝。预览、改变花纹和恢复默认都不读取或修改消息、任务、已读、成员或凭据。Company/Plan 配色和权限保持独立。
+`settings.set {messageWallpaper:{pattern,layout,density,opacity}}` 复用既有设置权限和偏好存储。它只调整 Messages 装饰：五组原创小图案、整齐/散落布局、密度和浓淡；局部修改保留其他字段，非法输入整次拒绝。预览、改变花纹和恢复默认都不读取或修改消息、任务、已读、成员或凭据。Aexus/Plan 配色和权限保持独立。
 
 ### Message 拖动排序
 
@@ -242,12 +242,12 @@ All 右侧固定显示外包、私聊、群组、频道四个类别筛选；不�
 
 调度元数据和视图不授予角色权限。Core 在创建、修改、预览、触发、恢复、执行及异步准备后校验目标和原始委派。旧同级调度在恢复时停用，保留历史和稳定 ID。`action.channelId` 要求目标仍是该员工引擎频道的发布者；channel.posted 事件同时要求目标及普通调度发起者具有来源频道成员资格。Collector 凭据无权调用任何 Plan 调度 API。
 
-所有角色通过本人身份说明获得统一指引：员工自动任务应调用 Core Plan API，读取返回 ID 并核对规则；不要用临时 sleep、cron、第二套调度器或插件文档提醒代替。此行为指引与 API 授权共同工作，不宣称给共享系统账号上的任意 shell 进程提供额外操作系统沙箱。
+所有角色通过本人身份说明获得统一指引：员工自动任务应调用 Core Mission API，读取返回 ID 并核对规则；不要用临时 sleep、cron、第二套调度器或插件文档提醒代替。此行为指引与 API 授权共同工作，不宣称给共享系统账号上的任意 shell 进程提供额外操作系统沙箱。
 
 
 ## 跨视图员工资料
 
-`card.profile {id,offset?,limit?}` 复用 employee.read 目标授权，只读返回 Company 身份、可见群组/频道中的真实成员身份、稳定工作目录和分页 Plan 摘要。管理员可读员工不等于能读其未加入的群聊；普通 Agent 的会话身份投影按本人成员关系过滤；用户与 Secretary 可全局查看和管理。资料不返回提示词、凭据或私聊正文，不创建目录、不启动引擎、不改变本人已读。异步读排期之后重新核对权限与成员关系。初始化状态不妨碍只读查看身份，仍不能以此启动正式任务。
+`card.profile {id,offset?,limit?}` 复用 employee.read 目标授权，只读返回 Aexus 身份、可见群组/频道中的真实成员身份、稳定工作目录和分页 Plan 摘要。管理员可读员工不等于能读其未加入的群聊；普通 Agent 的会话身份投影按本人成员关系过滤；用户与 Secretary 可全局查看和管理。资料不返回提示词、凭据或私聊正文，不创建目录、不启动引擎、不改变本人已读。异步读排期之后重新核对权限与成员关系。初始化状态不妨碍只读查看身份，仍不能以此启动正式任务。
 
 员工资料中管理职位与编码引擎只读；原有独立任免接口继续按职位能力矩阵授权。更换角色仅在显式展开后使用原外观编辑流程。员工资料仅展示 Team 分配的执行 workspace；群文件统一从 Message 的共享文件入口管理。群组 Agent 成员可读写全部共享内容，Secretary 无需加入即可维护。旧目录和文件原地保留；频道的旧布局限制与现有标识保持兼容，不新建额外员工工作区。
 
@@ -272,7 +272,7 @@ Secretary 可查询全部 Plan 排期与保留的执行记录，包含目标员�
 
 ## 云端文档与频道存储
 
-外部频道 fileStorage 由用户或 Secretary 显式绑定既有 Cloud Hosts hostId 和云端内容寻址媒体目录。采集器只能提交本来源文件名、MIME、大小、SHA-256 和缩略图等元数据；不能指定任意主机路径、取得用户凭据或自动写入 Mac。channel.file-download 可由用户或 Secretary 显式调用，复用现有 SSH 传输与频道 conversation.workspace。每次远端读取核对当前帖子、路由和绑定，提交前校验大小与 SHA-256；同名用户文件保留。channel.file-status 只查询进度，不能开始传输。员工取用已发布附件走 `conversation.download`，默认落入本人 Company 执行工作区；用户或 Secretary 可用 `conversation.download-local` 保存到明确选择的 Mac/Core 主机绝对路径，默认拒绝覆盖已有文件。远端源和目标在员工执行主机上分块流式处理，不在渲染器构造整文件 Blob。
+外部频道 fileStorage 由用户或 Secretary 显式绑定既有 Cloud Hosts hostId 和云端内容寻址媒体目录。采集器只能提交本来源文件名、MIME、大小、SHA-256 和缩略图等元数据；不能指定任意主机路径、取得用户凭据或自动写入 Mac。channel.file-download 可由用户或 Secretary 显式调用，复用现有 SSH 传输与频道 conversation.workspace。每次远端读取核对当前帖子、路由和绑定，提交前校验大小与 SHA-256；同名用户文件保留。channel.file-status 只查询进度，不能开始传输。员工取用已发布附件走 `conversation.download`，默认落入本人 Aexus 执行工作区；用户或 Secretary 可用 `conversation.download-local` 保存到明确选择的 Mac/Core 主机绝对路径，默认拒绝覆盖已有文件。远端源和目标在员工执行主机上分块流式处理，不在渲染器构造整文件 Blob。
 
 所有平台均使用容量策略，不按一周自动清理；外刊只在用户点击后取回并保留请求缓存。本地已下载件遵循已有共享原件/成员工作区权限，不因云端过期、帖子删除或服务重启删除。
 
@@ -282,9 +282,9 @@ Secretary 可查询全部 Plan 排期与保留的执行记录，包含目标员�
 
 ## Conversation notices are separate from Plan
 
-Current group conversation offices (Owner/Admin/Member) are independent of Company managementRole and grant no extra file authority. Ordinary employees need actual conversation Owner/Admin to moderate; the user and Secretary administer all groups without joining, while retaining the actual caller identity. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` retains its own employee scheduling contracts. Channel post-count workflows are retired; employees explicitly use channel.fetch-text, channel.fetch-images or channel.search.
+Current group conversation offices (Owner/Admin/Member) are independent of Aexus managementRole and grant no extra file authority. Ordinary employees need actual conversation Owner/Admin to moderate; the user and Secretary administer all groups without joining, while retaining the actual caller identity. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` retains its own employee scheduling contracts. Channel post-count workflows are retired; employees explicitly use channel.fetch-text, channel.fetch-images or channel.search.
 
-`conversation.entry/download/download-status` provides full stored published content and a verified copy into the caller's own Company execution workspace by default (or its explicit company workspace ID), never a peer's private workspace. `conversation.download-local` is limited to the user or Secretary and writes to an explicitly chosen absolute Mac/Core-host path, refusing an existing file unless overwrite is explicit. Group members may then edit the personal copy and use `conversation.upload` to create (never overwrite) or update a shared file with `expectedVersion`; group files are limited to 2 GiB and message images to 10 MiB. Uploading never publishes a message: use explicit `chat.post` with `@workspace/…` paths. Receipts are durable, deduplicate identical retries, and an interrupted request is not replayed after restart. See [MESSAGE_COLLABORATION.md](docs/MESSAGE_COLLABORATION.md) for these separate contracts. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+`conversation.entry/download/download-status` provides full stored published content and a verified copy into the caller's own Aexus execution workspace by default (or its explicit company workspace ID), never a peer's private workspace. `conversation.download-local` is limited to the user or Secretary and writes to an explicitly chosen absolute Mac/Core-host path, refusing an existing file unless overwrite is explicit. Group members may then edit the personal copy and use `conversation.upload` to create (never overwrite) or update a shared file with `expectedVersion`; group files are limited to 2 GiB and message images to 10 MiB. Uploading never publishes a message: use explicit `chat.post` with `@workspace/…` paths. Receipts are durable, deduplicate identical retries, and an interrupted request is not replayed after restart. See [MESSAGE_COLLABORATION.md](docs/MESSAGE_COLLABORATION.md) for these separate contracts. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
 
 ## Asset center
 
@@ -307,7 +307,7 @@ continue through the existing authenticated transfer/channel operations.
 
 Team 的 Characters / Board 只是同一员工与会话的两种展示。Board 输入使用 `session.*` 原生工作会话（sourceView=company），不自动调用私聊或群聊发布 API。打开 Board 不启动全部引擎。用户与 Secretary 可在 `worker.create` 不指定 employee、指定已有本地 cwd，创建独立 Worker；这些 Worker 仅由用户或 Secretary 管理。Secretary 同时省略 employee 和 cwd 时保留创建自身直属 Worker 的兼容用法。员工省略 employee 仍归自己直属管理，不能控制独立 Worker。引擎原生配置、工作文件、认证与历史不变。
 
-`worker.*` 向四种员工职位开放，按 Worker 的直属创建者校验，不继承跨员工管理权。用户可统一管理；员工仅能列出、创建和控制自己直属的 Worker。Worker 无 Company principal、令牌和初始化上下文，不能调用 Core。普通 `terminal.*` 不暴露或控制 Worker 原生会话，必须通过 `worker.*` 重新检查所有权。 `worker.draft` 沿用相同所有权，不派发任务；条件写入避免旧响应清空更新的草稿。创建重试键属于真实调用者，不跨身份复用。Worker GUI 使用结构化会话；旧终端输入/尺寸接口明确拒绝，不能绕过所有权检查。工作目录与执行主机受直属员工现有边界限制；不支持的严格隔离或执行目标明确拒绝，不能回退或提升权限。
+`worker.*` 向四种员工职位开放，按 Worker 的直属创建者校验，不继承跨员工管理权。用户可统一管理；员工仅能列出、创建和控制自己直属的 Worker。Worker 无 Aexus principal、令牌和初始化上下文，不能调用 Core。普通 `terminal.*` 不暴露或控制 Worker 原生会话，必须通过 `worker.*` 重新检查所有权。 `worker.draft` 沿用相同所有权，不派发任务；条件写入避免旧响应清空更新的草稿。创建重试键属于真实调用者，不跨身份复用。Worker GUI 使用结构化会话；旧终端输入/尺寸接口明确拒绝，不能绕过所有权检查。工作目录与执行主机受直属员工现有边界限制；不支持的严格隔离或执行目标明确拒绝，不能回退或提升权限。
 
 ## 订阅同步回执
 
@@ -342,9 +342,9 @@ Team 的 Characters / Board 只是同一员工与会话的两种展示。Board �
 
 ## 已发布私聊与显式群发
 
-原生 Agent 的普通正文、思考和工具过程只属于该员工的 Company 完整会话，任务来自群聊时也一样；它们从不会自动成为 Messages 私聊或群聊消息。给用户发私聊必须显式调用 `direct.post`（可用 text、images、files；每个 `clientMessageId` 对应一条消息，不同 ID 可连续发送多段文字、图片或文件）。不要用 `session.send/enqueue` 给自己创建任务来回复。用户在群里要求私聊时调用 `direct.post`；只有显式 `chat.post` 或 `agents_company_discussion_post` 才发布群消息，`direct.post` 不派发工作、不触发其他 Agent、也不群发。群内点名/回复选择工作对象，其他成员及员工报告的接收者只静默阅读；阅读协议没有工具，不派生自动互答。静默阅读不是私聊发言。普通输出、JSON、工具结果和完成事件都不自动转发私聊或群聊。群发仍检查真实成员、禁言、凭据和幂等请求。
+原生 Agent 的普通正文、思考和工具过程只属于该员工的 Team 完整会话，任务来自群聊时也一样；它们从不会自动成为 Messages 私聊或群聊消息。给用户发私聊必须显式调用 `direct.post`（可用 text、images、files；每个 `clientMessageId` 对应一条消息，不同 ID 可连续发送多段文字、图片或文件）。不要用 `session.send/enqueue` 给自己创建任务来回复。用户在群里要求私聊时调用 `direct.post`；只有显式 `chat.post` 或 `agents_company_discussion_post` 才发布群消息，`direct.post` 不派发工作、不触发其他 Agent、也不群发。群内点名/回复选择工作对象，其他成员及员工报告的接收者只静默阅读；阅读协议没有工具，不派生自动互答。静默阅读不是私聊发言。普通输出、JSON、工具结果和完成事件都不自动转发私聊或群聊。群发仍检查真实成员、禁言、凭据和幂等请求。
 
-Messages 私聊是独立已发布账本，只显示显式 `direct.send`/`direct.post` 产生的正文、图片和文件；Company 完整原生历史保留原生文本、思考、工具和共享输入，并为新捕获的工作/阅读输入显示 `[群名]` 或 `[Private · 姓名]` 来源及完整 Aexus 包装提示，旧历史缺失的包装不补造。每条消息最多 16 个附件；本机发送副本在源文件修改或删除后仍保留，远端媒体留在原执行主机并逐次校验版本与工作区/主机绑定，不静默下载到 Mac。工作期间持续显示头像动作和三点提示，完成、中断或失败后结束。原生最终答复属于 Company，不自动写入 Messages；仅当该原生 turn 最后一次显式 `chat.post` 的群消息通过 `groupReply` 绑定本轮最终 `lastReply` 时，群读水印才同步这份已关联原生回执。Messages 私聊未读由 `direct.acknowledge` 管理，与 Company/群已读互不清除；关联只同步原生读态，不向群成员暴露 Company 正文。
+Messages 私聊是独立已发布账本，只显示显式 `direct.send`/`direct.post` 产生的正文、图片和文件；Team 完整原生历史保留原生文本、思考、工具和共享输入，并为新捕获的工作/阅读输入显示 `[群名]` 或 `[Private · 姓名]` 来源及完整 Aexus 包装提示，旧历史缺失的包装不补造。每条消息最多 16 个附件；本机发送副本在源文件修改或删除后仍保留，远端媒体留在原执行主机并逐次校验版本与工作区/主机绑定，不静默下载到 Mac。工作期间持续显示头像动作和三点提示，完成、中断或失败后结束。原生最终答复属于 Aexus，不自动写入 Messages；仅当该原生 turn 最后一次显式 `chat.post` 的群消息通过 `groupReply` 绑定本轮最终 `lastReply` 时，群读水印才同步这份已关联原生回执。Messages 私聊未读由 `direct.acknowledge` 管理，与 Aexus/群已读互不清除；关联只同步原生读态，不向群成员暴露 Aexus 正文。
 
 ## 原生引擎服务来源
 
@@ -364,11 +364,11 @@ MiniNotion 只暴露获授权页面，数据库包含记录且记录可单独覆
 
 ## 外部 Worker 与监控程序
 
-Mac 原生执行组件由 Core 为已经接入的提供方自动启动，沿用官方登录、机器标识和既有本机执行权限。只调用已安装运行时，不自动打开官方窗口、不修改权限上限、不提供 Core token 或 Company 角色。bot.localComputer 仅向原有会话可读主体投影非敏感连接状态；它不授予新的员工或云端主机权限。已有官方进程不被终止，退出仅关闭 Aexus 自己启动且仍由它监督的进程；删除最后一个同提供方会话会停止这一接入。模型用量限制与 Mac 连接分开处理，不更改付费设置。
+Mac 原生执行组件由 Core 为已经接入的提供方自动启动，沿用官方登录、机器标识和既有本机执行权限。只调用已安装运行时，不自动打开官方窗口、不修改权限上限、不提供 Core token 或 Aexus 角色。bot.localComputer 仅向原有会话可读主体投影非敏感连接状态；它不授予新的员工或云端主机权限。已有官方进程不被终止，退出仅关闭 Aexus 自己启动且仍由它监督的进程；删除最后一个同提供方会话会停止这一接入。模型用量限制与 Mac 连接分开处理，不更改付费设置。
 
 Grok 用量检查仅查询原生账户可用额度，不写入账单、套餐或按量付费设置。已获会话权限的员工可通过 `bot.list` 和发送回执读取该会话的运行问题及重置时间；不返回账户付款资料、用量明细或原生错误中的个人账户链接。
 
-Dot/Grok 不是 Company 员工，不获取 Core token、管理角色或本项目的系统上下文。bot.access 按会话授权员工显式调用同一 direct/chat/conversation API；Secretary 自动可用。bot.create/group-create/sync/access 由用户/Secretary 管理，外部 Bot 自身不可调用。本地和云端员工的资源权限相同，文件默认下载到本人的 Company 执行主机。程序监控使用所属员工的主机与工作区，没有 Core 身份；普通员工仅管理自己的监控，Secretary 全局管理。事件来源权限同时检查计划创建者和执行员工，撤销后待处理任务不再执行。详见 docs/BOT_WORKERS.md、docs/EVENT_TASKS.md。
+Dot/Grok 不是 Aexus 员工，不获取 Core token、管理角色或本项目的系统上下文。bot.access 按会话授权员工显式调用同一 direct/chat/conversation API；Secretary 自动可用。bot.create/group-create/sync/access 由用户/Secretary 管理，外部 Bot 自身不可调用。本地和云端员工的资源权限相同，文件默认下载到本人的 员工执行主机。程序监控使用所属员工的主机与工作区，没有 Core 身份；普通员工仅管理自己的监控，Secretary 全局管理。事件来源权限同时检查计划创建者和执行员工，撤销后待处理任务不再执行。详见 docs/BOT_WORKERS.md、docs/EVENT_TASKS.md。
 
 
 用户明确选择 Dot 固定使用 OpenAI 原生蓝色电脑 Codey 动画。bot.appearance 返回只读原生形象信息（editable:false），其他角色覆盖请求明确拒绝；不改外部 Worker 提示词、身份、权限、文件授权或原生账号资料。Dot 展示不依赖员工角色库的启用状态。Grok 保持原生 shape/color 与动画。
@@ -382,7 +382,7 @@ Dot/Grok 不是 Company 员工，不获取 Core token、管理角色或本项目
 
 `deepseek` 使用 Core 本地的官方 Harness ACP 引擎。权限、角色和插件授权仍由同一 Core dispatcher 检查，不因引擎、Team 名称或 Board 展示而改变。只读、工作区写入、完全访问分别映射原生权限预设；空闲时切换权限会保留原生会话身份，并通过原生权限服务同步实际状态，不能只改界面值或依赖重启。初始化、私有上下文阅读和应用 API 写入仍执行现有检查。
 
-公司员工的原生会话与存储分开保存，禁用原生子 Agent、独立 Goal 续跑与 workflow 委派，使用 Core 的授权委派与 Plan。原生认证从既有 `DSH_HOME` 读取，不向客户端返回密钥，不把它变成 Company 用户身份。独立 Worker 没有 Company principal、初始化或 Company 工具，原生模型、文件与审批在用户选择的工作目录和原生配置下执行。当前不支持云端原生执行、严格隔离、图片输入、原生计划模式、克隆或追加；失败不会切换主机或提高权限。
+公司员工的原生会话与存储分开保存，禁用原生子 Agent、独立 Goal 续跑与 workflow 委派，使用 Core 的授权委派与 Plan。原生认证从既有 `DSH_HOME` 读取，不向客户端返回密钥，不把它变成 Aexus 用户身份。独立 Worker 没有 Aexus principal、初始化或 Aexus 工具，原生模型、文件与审批在用户选择的工作目录和原生配置下执行。当前不支持云端原生执行、严格隔离、图片输入、原生计划模式、克隆或追加；失败不会切换主机或提高权限。
 
 ## Board 分类
 
@@ -393,7 +393,7 @@ Team 位置使用 `room.place {name,column,row,expectedPlacement?}` 的整数工
 
 ### Native Worker conversation authority
 
-`worker.snapshot/send/dequeue/respond/configure` use the same authenticated direct-ownership policy as Worker lifecycle operations. User/Secretary may administer all; other employees control only directly owned Workers. Workers receive no employee identity or Company token. Model/effort changes remain native session operations; only user/Secretary may change Worker permissions, which require an explicit reconnect before new work. Every dispatch revalidates the physical directory and fixed execution host. Stop/Remove target only the owned native connection and process tree and wait for termination; they never remove work files or native history.
+`worker.snapshot/send/dequeue/respond/configure` use the same authenticated direct-ownership policy as Worker lifecycle operations. User/Secretary may administer all; other employees control only directly owned Workers. Workers receive no employee identity or Aexus token. Model/effort changes remain native session operations; only user/Secretary may change Worker permissions, which require an explicit reconnect before new work. Every dispatch revalidates the physical directory and fixed execution host. Stop/Remove target only the owned native connection and process tree and wait for termination; they never remove work files or native history.
 
 
 Worker 图形工作台中的斜杠命令、工具查询、原生模式、上下文归档/分叉、文件和可选 Shell 均通过 `worker.*` 复查直接所有权。`worker.inspect` 的 account/mcp，以及 `worker.configure` 的权限和高级 nativeOptions，以及手动 Shell `worker.terminal` 只允许用户/Secretary；普通员工仍可设置自身直属 Worker 的已公布模型与模式。原生进程不获得 Core principal 或令牌。附件、传输与文件操作使用 Worker 当前物理工作目录和固定主机边界。背景任务 ID 仅能来自本 Worker 原生会话；删除等待原生进程树与其手动 Shell 退出，其他 Worker 不受影响。

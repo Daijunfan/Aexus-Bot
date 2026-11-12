@@ -1,4 +1,4 @@
-import {MESSAGE_REPLY_GUIDANCE,MESSAGE_DELIVERY_CONTRACT} from '../../shared/message-source'
+import {MESSAGE_REPLY_GUIDANCE} from '../../shared/message-source'
 import { retireRootInstructions,provisionWorkspace } from './workspace-provision'
 import { writeWindowsCompanyLauncher,writeWindowsPluginLauncher } from './windows-launchers'
 import { applicationRoot } from '../resources'
@@ -15,7 +15,7 @@ import { rolePolicy,roleDescription } from '../../shared/roles'
 export {provisionWorkspace} from './workspace-provision'
 
 const quote=(text:string)=>`'${text.replace(/'/g,"'\\''")}'`
-export const ROUTER_PROMPT='你是 Aexus Bot 的 Agent。使用只读工具 agents_company_documentation：首次进入及职位变化后以 operation="identity" 获取真实身份、职位职责与工作范围，再以 operation="index" 读取共享工具目录。按当前任务用 document 或 describe 读取所需的 Core 与插件 API，不要一次加载整套手册。Team、Message、Mission 是 Core 视图；MiniNotion 是独立插件，不能与 Plan 混淆。插件不绑定团队；先用 plugin.resources 发现本人获授权的具体内容，再用 plugin.call 调用插件 API。阅读/修改/新增按内容分别授权，Secretary 自动拥有全部权限并可管理 plugin.access。文档对所有员工开放，执行权限仍由 Core 校验。按身份中的 roleDescription 行动。Secretary 是应用管理秘书：在已授权范围内直接完成软件和插件操作，不就已明确的要求和必要生效步骤反复询问；确需其他员工时再委派。正式工作可用 agents_company_api 的 command/args 直接调用已授权的 Core API，Plan 操作先调用 plan.query 获取真实任务 ID、时间、目标角色和 allowedActions。写操作按原生权限批准，完成后回读核验；不要直接改宿主状态。'+' '+MESSAGE_REPLY_GUIDANCE
+export const ROUTER_PROMPT='你是 Aexus Bot 的员工。首次进入原生会话时用 agents_company_documentation 读取 identity 和 index；身份变化时只刷新 identity。按任务用 document / describe 查询具体文档或参数，不加载整套手册。Team、Message、Mission 是应用视图；MiniNotion 等插件独立，插件内容先用 plugin.resources 发现授权。正式工作用 agents_company_api，以真实身份执行；权限由 Core 逐次检查。排期与持续目标使用 Mission 的 plan.*、schedule.*、mission.*，细节按需查文档。 回复按本条来源和用户明确要求决定，不继承上一条来源。Team、CLI 和普通 Mission 工作使用原生正文；Message 私聊使用 direct.post；群聊使用 chat.post 或 agents_company_discussion_post。跨会话发送仅按用户明确要求；静默阅读不发言、不派生工作。不要将内部路由或消息 ID 当作答复。图文与附件按需查 core/magazine-reading。'
 
 function safeWrite(root:string,file:string,content:string,executable=false){
  if(fs.existsSync(file)&&fs.lstatSync(file).isSymbolicLink())throw Error('Cannot replace a bootstrap symlink')
@@ -43,8 +43,6 @@ exec env ELECTRON_RUN_AS_NODE=1 ${quote(process.execPath)} ${quote(cli)} "$@"
 /** Exactly one routing prompt, independent of role, team, plugin and employee identity. */
 export function employeeInstructions(card:StoredSession,store:Store,_cli?:string){assertManagementKind(card,hasGlobalRole(store.access,card),employeeSettings(store,card).mode==='cloud');return ROUTER_PROMPT}
 
-/** Refresh the authenticated role on each formal turn without expanding the common bootstrap. */
-export function employeeRolePrompt(card:StoredSession,text:string){return '[Agents Company role]\n'+JSON.stringify({employeeId:card.id,managementRole:card.managementRole??'employee',...(rolePolicy(card.managementRole).appAdministrator?{responsibility:roleDescription(card.managementRole)}:{})})+'\n\n'+MESSAGE_DELIVERY_CONTRACT+'\n\n'+text}
 
 export function ensureEmployeeBootstrap(card:StoredSession,store=readStore()){
  const settings=employeeSettings(store,card),root=employeeRoot(store,card)
@@ -78,5 +76,5 @@ export function provisionEmployee(cwd:string,root:string,settings:TeamSettings){
 }
 
 export function initializationPrompt(_card:StoredSession,_store:Store){
- return '[Agents Company private initialization]\n\n'+ROUTER_PROMPT+'\n\n现在只做初始化：实际调用文档工具读取 identity 和 index，不执行写操作，不联系其他员工，不运行工作任务，不读取整册手册。确认身份与目录已成功读取后，最终只返回 OK；读取失败则如实报告错误，不要假装完成。'
+ return '[Aexus initialization]\n读取文档工具 identity 和 index，确认两者成功后只返回 OK；初始化仅做这两项读取，不执行工作或写操作。'
 }

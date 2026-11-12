@@ -1,4 +1,4 @@
-# Avalon CLI Plugin Contract v1
+# Aexus Bot CLI Plugin Contract v1
 
 插件是一份独立的软件包：领域逻辑和数据归插件自己的 CLI/API；Avalon
 负责发现插件、提供 Team 工作目录、安装文档与启动器，以及承载渲染界面。

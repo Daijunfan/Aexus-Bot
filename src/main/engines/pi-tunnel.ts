@@ -15,7 +15,7 @@ export default function(pi){
     pi.registerTool({name:'tunnel__'+tool.name,label:'Tunnel '+tool.name,description:tool.description,parameters:tool.inputSchema,
       async execute(toolCallId,input,signal,_onUpdate,ctx){
         if(signal?.aborted)throw Error('Interrupted');
-        const value=await ctx.ui.input('Agents Company Tunnel',JSON.stringify({toolName:'tunnel__'+tool.name,toolCallId,input}));
+        const value=await ctx.ui.input('Aexus Tunnel',JSON.stringify({toolName:'tunnel__'+tool.name,toolCallId,input}));
         if(signal?.aborted||value===undefined)throw Error('Tunnel request cancelled');
         const result=JSON.parse(value);
         if(result.isError)throw Error(result.content.map(part=>part.text??'').join('\\n'));

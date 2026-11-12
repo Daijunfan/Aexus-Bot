@@ -22,7 +22,7 @@ agents mission complete --id MISSION_ID --expected-revision 3 --result '已检�
 
 ## 聊天中的应用选择题
 
-这是 Messages 中的持久化选择卡，不调用 Coding Agent 原生的审批/提问控件。所有 Company 员工均可在自己的私聊或有权发布的 Company 群里提问；外部 Dot/Grok 原生会话不被伪装成本地选择题。
+这是 Messages 中的持久化选择卡，不调用 Coding Agent 原生的审批/提问控件。所有 Aexus 员工均可在自己的私聊或有权发布的 Aexus 群里提问；外部 Dot/Grok 原生会话不被伪装成本地选择题。
 
 ```sh
 agents question ask --conversation employee:MY_ID --question '这项任务采用哪种交付方式？' --options '[{"id":"brief","label":"简短报告"},{"id":"full","label":"完整报告和证据"}]' --timeout-seconds 600 --fallback '{"optionId":"full"}' --client-request-id decision-1 --json

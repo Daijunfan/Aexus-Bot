@@ -94,6 +94,8 @@ export type EmployeeReply={id:string;itemId:string;text:string;createdAt:number;
 
 /** A session as persisted in the app's own store. */
 export type StoredSession = {
+  /** Delivery cache only; never an authorization or initialization receipt. */
+  instructionContext?:{nativeId:string;revision:string;identity:string}
   lastReply?:EmployeeReply
   initialization?: EmployeeInitialization
   managementRole?:ManagementRole

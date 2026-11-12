@@ -8,7 +8,7 @@ export async function deepseekProvider(){
   try{
    if(req.method!=='POST'){res.writeHead(200,{'content-type':'application/json'}).end(JSON.stringify({data:[{id:'deepseek-v4-flash',display_name:'DeepSeek Flash',type:'model',created_at:'2026-01-01T00:00:00Z'},{id:'deepseek-v4-pro',display_name:'DeepSeek Pro',type:'model',created_at:'2026-01-01T00:00:00Z'}]}));return}
    let raw='';for await(const chunk of req)raw+=chunk
-   const body=JSON.parse(raw),messages=body.messages??[],last=messages.findLastIndex(message=>message.role==='user'&&text(message.content)),prompt=text(messages[last]?.content),scenario=prompt.includes('[Agents Company private initialization]')?'INIT':[...prompt.matchAll(/CASE_[A-Z_]+/g)].at(-1)?.[0]??'PROBE',tools=body.tools??[],called=messages.slice(last+1).flatMap(message=>(message.content??[])).filter(block=>block.type==='tool_use')
+   const body=JSON.parse(raw),messages=body.messages??[],last=messages.findLastIndex(message=>message.role==='user'&&text(message.content)),prompt=text(messages[last]?.content),scenario=prompt.includes('[Aexus initialization]')?'INIT':[...prompt.matchAll(/CASE_[A-Z_]+/g)].at(-1)?.[0]??'PROBE',tools=body.tools??[],called=messages.slice(last+1).flatMap(message=>(message.content??[])).filter(block=>block.type==='tool_use')
    requests.push({scenario,model:body.model,body,url:req.url});if(requests.length===1){fs.mkdirSync('artifacts/deepseek/native',{recursive:true});fs.writeFileSync('artifacts/deepseek/native/tool-schema.json',JSON.stringify(tools,null,2))}let content=[{type:'text',text:scenario==='INIT'||scenario==='PROBE'?'OK':'NATIVE_OK '+scenario}]
    const tool=fragment=>tools.find(tool=>tool.name?.includes(fragment))?.name
    if(scenario==='INIT'){

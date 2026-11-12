@@ -62,7 +62,7 @@ try{
  assert.deepEqual(api.active,['tunnel__read_file']);assert.equal(events.tool_call({toolName:'bash'}).block,true)
  let forwarded
  const result=await registered[0].execute('id',{path:'remote.txt'},new AbortController().signal,null,{ui:{input:async(title,placeholder)=>{forwarded={title,...JSON.parse(placeholder)};return JSON.stringify({content:[{type:'text',text:'remote bytes'}]})}}})
- assert.equal(forwarded.title,'Agents Company Tunnel');assert.equal(forwarded.toolName,'tunnel__read_file');assert.equal(forwarded.toolCallId,'id');assert.equal(result.content[0].text,'remote bytes')
+ assert.equal(forwarded.title,'Aexus Tunnel');assert.equal(forwarded.toolName,'tunnel__read_file');assert.equal(forwarded.toolCallId,'id');assert.equal(result.content[0].text,'remote bytes')
  // A real local stdio MCP shim must preserve target fields and multi-byte context across HTTP chunks.
  const expected='群组甲频道乙中文来源😀'.repeat(9000),toolInput={conversationType:'channel',conversationId:'channel-fixture',messageId:'message-fixture',text:null}
  let bridged

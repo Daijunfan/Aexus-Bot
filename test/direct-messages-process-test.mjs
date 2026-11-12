@@ -8,7 +8,7 @@ import {writeNativeProfiles} from './fixtures/native-profiles.mjs'
 const root=path.resolve(import.meta.dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'direct-process-')),checks=[];let f
 try{
  let fixture=fs.readFileSync(path.join(root,'test/fixtures/process-adapter.cjs'),'utf8'),marker=' const post=control&&employee?workPostArgs(text,control,employee):undefined'
- fixture=fixture.replace("title:name==='agents_company_documentation'?'Agents Company documentation':'Agents Company discussion'","title:name==='agents_company_documentation'?'Agents Company documentation':name==='agents_company_api'?'Agents Company API':'Agents Company discussion'")
+ fixture=fixture.replace("title:name==='agents_company_documentation'?'Aexus documentation':'Aexus discussion'","title:name==='agents_company_documentation'?'Aexus documentation':name==='agents_company_api'?'Aexus API':'Aexus discussion'")
  assert.equal(fixture.split(marker).length,2)
  fixture=fixture.replace(marker,`
  const apiFile=control&&employee?path.join(control,employee+'.api-request.json'):undefined;

@@ -29,7 +29,7 @@ agents conversation file group:GROUP_ID --operation list --json
 agents conversation file group:GROUP_ID --operation read --path brief.txt --json
 ```
 
-All current group members have equal read/create/upload/edit/delete rights over shared content. User and Secretary administer without joining. Company position and group Owner/Admin office do not confer access to another employee’s private Team workspace. Core checks do not sandbox arbitrary same-account Trusted native tools.
+All current group members have equal read/create/upload/edit/delete rights over shared content. User and Secretary administer without joining. Aexus position and group Owner/Admin office do not confer access to another employee’s private Team workspace. Core checks do not sandbox arbitrary same-account Trusted native tools.
 
 Channel news feeds use reading grants, without new employee membership or personal folders. Channel roots retain the user’s explicit downloads and legacy content. Existing channel member-subfolder restrictions remain compatible for old layouts; they do not allocate another execution workspace in `workspace.catalog`.
 

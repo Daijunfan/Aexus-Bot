@@ -8,7 +8,8 @@ import { openEngine } from './engines/runtime'
 import type { EngineDriver } from './engines/contract'
 import { AsyncQueue } from './engines/session-support'
 import { taskViewId,taskViewPrompt } from './task-view'
-import {messageSourceView,type MessageSourceView} from '../shared/message-source'
+import {messageSourceView,SOURCE_VIEW_LABELS,type MessageSourceView} from '../shared/message-source'
+import {employeeContextPrompt,confirmEmployeeContext,type PendingInstructions} from './employee-context'
 import {messageSourcePrompt} from './message-source'
 import { discussionPolicy as chatAcknowledgmentPolicy,discussionPrompt as chatTaskPrompt,discussionTarget,recordDiscussionDelivery as updateChatDelivery } from './discussion-context'
 import { openDiscussionTool } from './discussion-tool'
@@ -49,7 +50,7 @@ import { conversation,forget,restoreTranscript,saveTranscript,resolveMessageRepl
 import { approvalsFor,cancelApprovals } from './approvals'
 import { teamSettings,employeeSettings,nativeSessionRefs,type Session,type StoredSession } from '../shared/types'
 import { employeeRoot,employeeWorkspace,executionEmployee,cloudRelative } from './workspaces'
-import { provisionEmployee,ensureEmployeeBootstrap,employeeInstructions,employeeRolePrompt } from './plugins/documents'
+import { provisionEmployee,ensureEmployeeBootstrap,employeeInstructions } from './plugins/documents'
 import { checkCloudNative,cloudNativeTarget } from './cloud-native'
 
 const removingEmployees=new Set<string>(),removingTeams=new Set<string>()
@@ -69,6 +70,7 @@ export type Live = {
   privateInitialization?:boolean
   acknowledging?:boolean
   bootstrapInstructions?:string
+  pendingInstructions?:PendingInstructions
   cardId: string
   currentTask?:CurrentTask
   kind: EmployeeKind
@@ -118,12 +120,14 @@ function nativeInputContext(state:Live,prompt:string,directOverride?:string,sour
  if(directId)origin={kind:'direct',name,id:state.cardId,messageId:directId}
  else if(sourceOverride===undefined&&task?.chat&&'groupId' in task.chat)origin={kind:'group',id:task.chat.groupId,messageId:task.chat.messageId,name:chatCatalog().groups.find(g=>g.id===(task.chat as any).groupId)?.name??'Former group'}
  else if(sourceOverride===undefined&&task?.chat&&'channelId' in task.chat)origin={kind:'channel',id:task.chat.channelId,messageId:task.chat.entryId,name:'Channel'}
- else origin={kind:source==='company'?'company':source==='plan'?'plan':'unknown',name:source==='messages'?'Messages':source==='company'?'Company':source==='plan'?'Plan':'Unknown source'}
- return {origin,phase:state.acknowledging?'read':'work',prompt,...(state.remoteLaunch?.instructions?{executionInstructions:state.remoteLaunch.instructions}:{})}
+ else origin={kind:source==='plan'?'plan':'company',name:SOURCE_VIEW_LABELS[source??'company']}
+ return {origin,phase:state.acknowledging?'read':'work',prompt}
 }
 let broadcast: Emitter = () => {}
 const observers = new Set<Emitter>()
 const emit: Emitter = (channel, payload) => {
+  const data=payload as any,state=live.get(data?.sessionId)
+  if(state&&!state.acknowledging&&((channel==='session:receipt'&&data.taskId===state.pendingInstructions?.taskId)||(channel==='session:result'&&data.success===true)||(channel==='session:message'&&data.message?.type==='result'&&!data.message.is_error&&data.message.subtype==='success')))confirmEmployeeContext(state)
   const hidden=privateTurns.get((payload as {sessionId?:string})?.sessionId??'')
   if(hidden)hidden(channel,payload)
   if(hidden&&live.get((payload as {sessionId?:string})?.sessionId??'')?.acknowledging&&['session:message','session:agent','session:codex','session:turn-start','session:turn-end','session:error'].includes(channel))broadcast('session:context-event',{sessionId:(payload as any).sessionId,event:channel,payload})
@@ -312,7 +316,9 @@ export async function steerMessage(id:string,text:string,sourceView?:MessageSour
   if(s.acknowledging)throw Error('Wait for group acknowledgment, or queue this message instead.')
   if(!s.running||!text.trim())throw new Error('请在任务运行时追加非空指令')
   const engineText=taskViewPrompt(s.currentTask?.viewId,messageSourcePrompt(sourceView,text))
-  await s.driver.steer(engineText)
+  const prepared=employeeContextPrompt(s,engineText,s.currentTask?.messageId)
+  await s.driver.steer(prepared.text)
+  if(prepared.pending)confirmEmployeeContext(s,prepared.pending)
   emit('session:user',{sessionId:id,text,author:requestContext().principal,...(sourceView?{sourceView}:{})});broadcast('session:input-context',{sessionId:id,context:nativeInputContext(s,engineText,directMessageId,sourceView??null)});return true
 }
 export async function backgroundProcesses(id:string,processId?:string,stop=false){
@@ -441,7 +447,7 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
   validateDelegation(delegation,s.cardId)
   const replyText=reply?'[Reply to a previous message in this conversation]\n'+JSON.stringify(reply)+'\n\n[Current user request]\n'+text:text
   const attachmentText=files.length?replyText+'\n\n[Attached files in this employee workspace]\n'+JSON.stringify(files)+'\nRead these files when relevant; attaching a file does not execute it.':replyText
-  const acceptedDelegation=delegation,prefix=s.engine!=='codex'&&bootstrap!==s.bootstrapInstructions?bootstrap+'\n\n[Current user request]\n':''
+  const acceptedDelegation=delegation
   // Validate before acknowledging, and rebuild this projection again at actual work dispatch.
   const acknowledgmentText=chatTaskPrompt(chat,s.cardId,acceptedDelegation,attachmentText,true)
   if(!privateTurns.has(sessionId)){s.currentTask={messageId:newSessionId(),delegation,startedAt:Date.now(),runId:owner,viewId,...(sourceView?{sourceView}:{}),...(privateSend?.directMessageId?{directMessageId:privateSend.directMessageId}:{}),chat};rememberMeta(sessionId,{currentTask:s.currentTask})}
@@ -457,10 +463,12 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
     validateDelegation(acceptedDelegation,s.cardId)
     if(chat&&!chatAcknowledgmentPolicy(chat,s.cardId).acknowledged)throw Error('Group acknowledgment is required before work can begin')
     if(notice){finishNotice('completed');return}
-    const engineText=nativeControl?text:prefix+taskViewPrompt(viewId,!chat&&!s.privateInitialization&&!privateTurns.has(sessionId)?messageSourcePrompt(sourceView,attachmentText):chatTaskPrompt(chat,s.cardId,acceptedDelegation,attachmentText))
+    const engineText=nativeControl?text:taskViewPrompt(viewId,!chat&&!s.privateInitialization&&!privateTurns.has(sessionId)?messageSourcePrompt(sourceView,attachmentText):chatTaskPrompt(chat,s.cardId,acceptedDelegation,attachmentText))
     s.bootstrapInstructions=bootstrap
     const closePublication=chat?openDiscussionTool(s,chat):undefined
-    try{s.driver.send(s.privateInitialization||nativeControl?engineText:employeeRolePrompt(readStore().sessions.find(card=>card.id===s.cardId)!,engineText),images,taskId)}catch(error){closePublication?.();throw error}
+    const prepared=nativeControl?{text:engineText,pending:undefined}:employeeContextPrompt(s,engineText,taskId)
+    s.pendingInstructions=prepared.pending
+    try{s.driver.send(prepared.text,images,taskId)}catch(error){s.pendingInstructions=undefined;closePublication?.();throw error}
     if(closePublication)void s.driver.whenIdle().then(closePublication,closePublication)
     privateSend?.accepted(taskId!)
   }
@@ -695,7 +703,7 @@ async function acknowledgeGroupRequest(state:Live,sessionId:string,chat:ChatTask
     if(channel==='session:turn-end')failure?reject(Error(failure)):resolve()
   })
   const target=discussionTarget(chat)
-  const prompt='[Agents Company '+target.conversationType+' acknowledgment]\n'+JSON.stringify({...chat,...target,employeeId:state.cardId,mode:policy.mode,required:policy.required,muted:policy.muted})+
+  const prompt='[Aexus '+target.conversationType+' acknowledgment]\n'+JSON.stringify({...chat,...target,employeeId:state.cardId,mode:policy.mode,required:policy.required,muted:policy.muted})+
     '\nRead the shared context in this conversation. '+
     (policy.mode==='awareness'?'This message is for your awareness, not a work assignment. ':'Core dispatches your work after this reading stage. ')+
     'This stage has no tools; Core records receipt on completion.\n[Accepted request]\n'+text

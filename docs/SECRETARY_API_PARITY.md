@@ -11,9 +11,9 @@
 Secretary 通过自己的身份执行用户可在界面完成的业务操作；`operator` API 权限分类包含 Secretary，不需要 operator token。无需加入群组或获得频道阅读授权。优先调用业务 API，完成后回读确认；不要因为旧文档提到“用户专属”而让用户亲自操作。
 
 - 频道：`channel.list/get/context` 发现完整频道、作者与读接口；`channel.fetch-text/fetch-images/search` 读取；`channel.access` 管理阅读人员，携带当前 revision。
-- 私聊：`direct.send` 代表用户发送输入（默认 `enqueue`，可选 `send`/`steer`）；`direct.history` 只读已发布账本；`direct.acknowledge` 确认确切已读；`direct.send-status` 用同一 `clientMessageId` 读取接受状态。员工（包括 Secretary 自己）在 Message 私聊答复时以自身认证身份调用 `direct.post`，Team 普通输入仍使用原生正文，不能对自己调用 `direct.send`；原生正文、思考和工具只属于 Company 完整会话。
+- 私聊：`direct.send` 代表用户发送输入（默认 `enqueue`，可选 `send`/`steer`）；`direct.history` 只读已发布账本；`direct.acknowledge` 确认确切已读；`direct.send-status` 用同一 `clientMessageId` 读取接受状态。员工（包括 Secretary 自己）在 Message 私聊答复时以自身认证身份调用 `direct.post`，Team 普通输入仍使用原生正文，不能对自己调用 `direct.send`；原生正文、思考和工具只属于 Team 完整会话。
 - 排序：先 `messenger.state` 读取 `orders[scope]`，再 `messenger.reorder {scope,order,expectedOrder}`。频道用 `channel:ID`，分类用分类 ID；保存的是用户实际使用的同一列表。冲突时回读，不覆盖其他窗口。
-- 管理：Company、群组、文件、头像、收藏下载、订阅、主机、插件和 Plan 使用同一 Core dispatcher。Secretary 可管理其他员工的资源和合法排期；Worker 保留原直属归属和完全干净的原生上下文。
+- 管理：Aexus、群组、文件、头像、收藏下载、订阅、主机、插件和 Plan 使用同一 Core dispatcher。Secretary 可管理其他员工的资源和合法排期；Worker 保留原直属归属和完全干净的原生上下文。
 - 阅读与工作分开：查询不会标记用户已读、启动任务或自动收藏下载。只有显式修改 API 才产生对应效果，仍遵守原生 Ask/Full access、planning 和参数/版本校验。
 
 `question.answer` 是明确的用户决定例外：只有真实用户可以回答保存的选择题，Secretary 不能替用户作答；这不是缺失的 GUI/API 能力。群投票使用 `chat.poll-vote` 记录 Secretary 自己的选择，不等于回答用户决定。
@@ -119,7 +119,7 @@ Message 的 Private 分类包含员工私聊，以及 `bot.kind=private` 的 Dot
 
 | 区域 | 规范入口与边界 |
 | --- | --- |
-| Company：Team、员工、形象、位置、关系、资料 | `group.*`、`card.*`、`office.*`、`room.*`、`connector.*`、`management.*`、`team-view.*`；保留职级与生命周期限制 |
+| Aexus：Team、员工、形象、位置、关系、资料 | `group.*`、`card.*`、`office.*`、`room.*`、`connector.*`、`management.*`、`team-view.*`；保留职级与生命周期限制 |
 | 私聊：用户输入、已发布正文、状态、已读与原生工作 | `direct.send/history/send-status/acknowledge` 管理用户输入与已发布账本；`session.*`、`config.*` 管理原生工作、排队、停止与设置；员工发布仅用自身身份 `direct.post` |
 | 群组、成员、禁言和固定通知 | `chat.*` / `conversation.policy/role/mute/silence/notice-*`；普通员工要求实际 Owner/Admin；Secretary 无需加入可全局管理，显式发布保留真实作者 |
 | 频道、发布引擎、来源、头像、管理员、订阅、文章 | `channel.*`；普通员工需要阅读授权；Secretary 默认全局访问，保留真实发布身份 |
@@ -153,3 +153,13 @@ Secretary 任免及 Agent 身份凭据签发由用户掌握。其他 GUI 业务 
 用户发给 Secretary 的新私聊请求自动登记为 Mission；先读取附带 ID，再使用 mission.update 调整目标/执行人/类型/提醒时间。只有 mission.complete 记录验收成功才停止。mission.fail 是待跟进状态，不能当作终止。其他 Secretary 也可作为执行人。
 
 需要用户决定时使用 question.ask，不能用 Coding Agent 原生提问/审批界面替代。有限等待带明确 fallback，关键问题用 null。读 question.wait/get 的真实结果；pending 就让出该任务，新消息不会覆盖保存的问题。Other 始终可用；Secretary 不可替用户调用 question.answer。参数通过 api.docs core/missions 或 docs/MISSIONS_AND_QUESTIONS.md 阅读。
+
+## 秘书工作的基本顺序
+
+1. 保持用户原目标与验收要求，登记或复用 Mission；私聊已经携带登记 ID 时先读取，不重复创建。
+2. 软件和插件操作可按现有授权直接完成，包括必要的生效步骤，不反复询问已明确的要求。业务任务交给合适员工，秘书负责组织、核验和持续督办。
+3. 核对真实文件、输出、交付与审核结果，未达到目标不能因为一轮结束或内部进度就标为成功；不要增加与用户目标无关的硬门槛。
+4. 委派和长任务使用既有 Mission、排期及事件通知跟踪；一次确认消息和短暂安静都不表示任务结束。按需读取对应领域文档，不把全部流程重复塞进每条任务。
+5. 确需用户决定时用 question.*，保留 Other 与已保存问题。新消息和提醒不覆盖待处理决定。
+6. 认证、额度等阻塞须附真实证据，保留目标等待条件变化，不反复探测、不擅自更改付费设置。
+7. 只在真实达标后显式确认 Mission 成功；任免 Secretary 始终由用户决定。

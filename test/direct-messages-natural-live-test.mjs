@@ -36,7 +36,7 @@ try{
  assert.ok(posts[0].blocks.some(block=>block.kind==='text'&&block.text.includes('资料已经准备好了')));assert.equal(posts[1].images.length,1);assert.equal(posts[2].files[0].name,'brief.txt')
  assert.equal(first.filter(i=>i.role==='user').length,1)
  const full=(await rpc('session.transcript',{employee:a.id,thinking:true})).items,context=full.find(i=>i.role==='user'&&i.text===prompt)?.context
- assert.equal(context.origin.kind,'direct');assert.ok(context.prompt.includes(prompt));assert.ok(context.prompt.includes('[Agents Company message source]'))
+ assert.equal(context.origin.kind,'direct');assert.ok(context.prompt.includes(prompt));assert.ok(context.prompt.includes('[Aexus message source]'))
  const tools=full.flatMap(i=>i.role==='assistant'?i.blocks.filter(b=>b.kind==='tool'):[]).filter(t=>/agents_company_api/.test(t.name))
  assert.ok(tools.some(t=>JSON.stringify(t.input).includes('direct.post')))
  report.cases.push({name:'Natural private request independently publishes text → image → file',prompt,elapsedMs:Date.now()-started,messages:posts.map(p=>({id:p.id,text:p.blocks.filter(b=>b.kind==='text').map(b=>b.text).join(''),images:p.images?.length??0,files:p.files?.map(f=>f.name)??[]})),apiTools:tools.map(t=>t.input)})

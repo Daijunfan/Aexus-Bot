@@ -120,7 +120,7 @@ a hard-coded list. See `agents api docs core/avatars` for the full contract.
 
 ## File workspace browser and ownership filters
 
-The Files/Assets panel projects the existing Company, Messages and Plan workspaces.
+The Files/Assets panel projects the existing Team, Message and Mission workspaces.
 Display names come from live Team/employee/conversation identities; physical names,
 workspace bindings and message histories are not renamed or copied when filtering.
 
@@ -161,7 +161,7 @@ Start `npm run serve` (no window), or open the desktop. Both expose the same
 Core over a private Unix socket on macOS/Linux or a data-directory-scoped named
 pipe on Windows. The default data directory is `~/AgentsCompany`.
 Run `node bin/agents help` for help. Every data command accepts `--json`.
-Avalon also provides `node bin/anexus` (or installed `anexus`); it is an alias of
+Aexus Bot also provides `node bin/anexus` (or installed `anexus`); it is an alias of
 `agents` with the same commands, authentication, data directory and API protocol.
 
 ## Native API execution and focused discovery
@@ -235,7 +235,7 @@ survive a requested downgrade. Tool and Core approvals remain caller-scoped. Cor
 employees use separate native session/storage directories and cannot launch native
 child Agents or independent native Goal continuations; use Core delegation and Plan.
 Worker runs the original Harness ACP engine through a small terminal client with no
-Company principal, onboarding or Company MCP tools. Multiline tasks stay one message;
+Aexus principal, onboarding or Aexus MCP tools. Multiline tasks stay one message;
 `:help`, `:models`, `:model provider/model`, `:effort off|low|high|max`, `:allow`, `:deny`
 and `:exit` control that native terminal. Work files and native history survive removal.
 
@@ -307,7 +307,7 @@ keeps the existing direct-owner and workspace/host boundaries. Employees who omi
 `employee` still own their Workers; this never grants control of independent Workers.
 Workers appear only in Team → **Workers**, with their own search and native terminal cards. Characters and employee Board contain no Worker cards or shortcuts. Starting, interrupting,
 stopping and removing them use the existing `worker.*` APIs. Creation does not run
-inference, assign a Company identity or inject role prompts/tools. Removal preserves
+inference, assign a Aexus identity or inject role prompts/tools. Removal preserves
 work files and native configuration/auth/history. A running indicator describes the
 native process; native task progress and approvals remain in its own interface.
 
@@ -429,10 +429,10 @@ agents card profile EMPLOYEE_ID --offset 12 --limit 12 --json
 read receipt changes or directory creation occur merely by viewing the profile.
 `offset` is nonnegative; `limit` defaults to 12 and accepts 1–100.
 
-Company identity includes Team, management role, fixed engine, personal workspace,
+Aexus identity includes Team, management role, fixed engine, personal workspace,
 Team root and execution location. Memberships describe current groups as `member`
 and current channel administrator assignments as `administrator`, independent of
-Company management rank. Each entry includes the stable conversation reference,
+Aexus management rank. Each entry includes the stable conversation reference,
 shared root and the employee's named first-level subdirectory. Applications use
 these returned paths rather than reconstructing them from display names.
 
@@ -446,7 +446,7 @@ administrators see only conversation memberships within their own member scope.
 Employee Details keeps management role and engine read-only. The existing separate
 role-management API retains its authorization; profile edits only change supported
 display fields. Character choices are loaded after an explicit change request.
-Company and Messages use the same profile and original employee identity.
+Aexus and Messages use the same profile and original employee identity.
 
 The user opens **Workspaces → User originals** to edit shared root files through
 `conversation.file`. Employee APIs keep originals and peer folders read-only while
@@ -541,9 +541,9 @@ successfully call `identity` and `index` before returning `OK`; saying that they
 read is insufficient. The shared-message reading stage has no tools. Core records receipt only after
 that native turn succeeds; no acknowledgment API call is required.
 
-Company, Messages and Plan are the three **Core views**. Plan uses `agents plan`
+Team, Message and Mission are the three **Core views**. Plan uses `agents plan`
 and `agents schedule` over Core scheduling records. **MiniNotion is a separate
-plugin**, with its own notes and databases; its commands do not replace Core Plan.
+plugin**, with its own notes and databases; its commands do not replace Core Mission.
 The catalogue lists all installed plugins after the Core views.
 
 All roles may read complete public documentation. `api.list` and `api.describe`
@@ -834,7 +834,7 @@ existing key rejects. Pre-upgrade accepted receipts remain confirmable without
 replaying work or inventing historical provenance.
 
 The employee receives a small per-message source block beside the original request:
-Company suggests considering organization/delegation APIs; Messages suggests checking
+Aexus suggests considering organization/delegation APIs; Messages suggests checking
 existing conversations and using group collaboration when the task calls for it;
 Plan suggests the existing schedule APIs. Explicit message instructions and the
 employee's role take priority. No branch automatically creates a group, broadcasts,
@@ -1156,7 +1156,7 @@ late background output updates its original tool entry.
 
 See [ENGINE_CAPABILITIES.md](ENGINE_CAPABILITIES.md) for the current audit and tests.
 
-## Company management
+## Aexus management
 
 ```bash
 agents group list
@@ -1344,9 +1344,9 @@ agents channel update CHANNEL_ID --admins '["EMPLOYEE_ID"]' --json
 - Governor 保持跨 Team 管理 Employee/Manager 的能力，也能控制其他 Governor 的会话，但不能任免 Governor 或管理 Secretary。
 - Secretary 管理应用、插件及下级角色，包括 Governor；只有用户能任免 Secretary。所有克隆仍默认为 Employee。
 
-所有角色使用同一简短初始化路由，实际读取 `identity` 与 `index`。`auth.whoami` 返回真实 `managementRole`、`roleDescription` 和 `appAdministrator`；正式轮次附上当前认证职位，Secretary 额外说明操作软件、组织委派的职责，不预加载全部工具手册。更名为 Secretary 不授予任何权限，已有员工不自动升级。
+所有角色使用同一简短初始化路由，实际读取 `identity` 与 `index`。`auth.whoami` 返回真实 `managementRole`、`roleDescription` 和 `appAdministrator`；身份、规则与路由只在原生上下文首次提供，身份/规则变化时更新一次；普通轮次不再附加职责或 Contract，不预加载全部工具手册。更名为 Secretary 不授予任何权限，已有员工不自动升级。
 
-Secretary 使用 Core 本机工作区，可属于普通 Build、Work 或 Cloud Team（Cloud Team 选择 local），可在 Company、Messages、Plan 中使用。它没有 Governor 的任务视图绑定。API 权限不改变原生引擎 Ask/Full access 或 OS 用户身份。
+Secretary 使用 Core 本机工作区，可属于普通 Build、Work 或 Cloud Team（Cloud Team 选择 local），可在 Team、Message、Mission 中使用。它没有 Governor 的任务视图绑定。API 权限不改变原生引擎 Ask/Full access 或 OS 用户身份。
 
 仅 Agent 身份凭据签发与 Secretary 任免保持用户控制。Secretary 可通过同一 Core API 管理用户已读、用户消息编辑、分享、头像、显式文件/媒体、排序及 UI 业务；客户端许可仍绑定其发起者，不获得 operator control token，不改变真实作者。插件调用及其 view RPC 保留创建者身份并重查权限；不能借插件转调获得用户身份。
 
@@ -1486,10 +1486,10 @@ agents management topology --creator unknown --json
 
 `agents engine probe --engine codex --model gpt-6-luna --confirm --json` makes one real, potentially billed model request on the Core host. Claude Agent uses `--engine claude` and an optional model ID. The prompt is fixed to an OK-only reply; execution uses a temporary directory, no persisted native session, and a 45-second timeout. Core requires `confirm:true`; ordinary `engine.check` stays inference-free. Results include actual response text, selected model, host, elapsed time and timestamp. Configuration can be present while the account has no credit; only a successful explicit probe demonstrates that the provider accepted this request.
 
-## Company Views and Messages
+## Team views and Messages
 
-The header centers equal-size **Company Views**, **Messages** and **Plan** buttons.
-Clicking Company Views from Messages or a custom Company subview immediately selects
+The header centers equal-size **Team views**, **Messages** and **Plan** buttons.
+Clicking Team views from Messages or a custom Aexus subview immediately selects
 **All Team** without opening a menu. Clicking again while All Team is active opens
 the saved subview menu. Arrow Down opens the menu directly for keyboard users.
 **All Team** is the built-in default; existing saved views, including a view named
@@ -1782,20 +1782,20 @@ agents view open messages --channel CHANNEL_ID --json
 ```
 
 `view.select {id:"company"|"messages"|"plan",teamViewId?}` checks the destination and flushes
-editors before changing it. Company defaults to All Team; Messages resumes this client’s
+editors before changing it. Aexus defaults to All Team; Messages resumes this client’s
 last employee/group/channel/source, or its list if that destination is unavailable. `view.open {kind:"messages",channelId}` validates one existing channel;
 employee, chatId and channelId are mutually exclusive. Closing a covering settings
 or workbench view returns to the originating channel just as for an existing chat.
 Opening a news channel creates no native session or message-read receipt.
 
 Each employee persists only one latest native `lastReply`, with an exact `replyId` and
-`readAt`, shared by the native workbench and the Company view. This is a
+`readAt`, shared by the native workbench and the Team view. This is a
 native-conversation unread record, not a Messages direct-message entry. The last explicit
 `chat.post` to a group in a native work turn binds that turn's final native `lastReply` with
 `groupReply:{groupId,messageId,sequence}`. Reading either side acknowledges the same binding
 through the same Core `session.acknowledge`/`chat.acknowledge`; a group read watermark that
 covers the bound sequence also marks the linked `lastReply` read. A native reply with no
-group publication remains only in Company and native context; it is never copied into
+group publication remains only in Team and native context; it is never copied into
 Messages. Different turns, message IDs or groups are never merged merely because their text
 matches. An old `replyId` cannot clear a newer reply's read state. If the group was read
 before the turn ends, the new `lastReply` inherits `readAt`; the binding survives restart.
@@ -1813,7 +1813,7 @@ after Core confirms persistence; an older in-flight summary is not attached, and
 does not fabricate a read and remains retryable. The Mac still stores read IDs and other
 metadata only, never news bodies.
 Navigation remains client-specific; employees, native conversations,
-bindings and read receipts remain shared. A native reply read in the workbench or Company
+bindings and read receipts remain shared. A native reply read in the workbench or Aexus
 canvas uses the same exact `session.acknowledge` record. Messages direct messages have their
 own published entries and `direct.acknowledge` read state, so the two unread indicators do
 not clear each other. Merely listing or opening an obscured/background conversation does not
@@ -1825,7 +1825,7 @@ still verifies current foreground status for every acknowledgement.
 
 ### Group conversations and explicit mentions
 
-Chat groups are independent of Company Teams. Every `chat.send` and `chat.post`
+Chat groups are independent of Aexus Teams. Every `chat.send` and `chat.post`
 message is delivered to all current employee members; an Agent author receives no
 self-echo. Mentions select work targets, not who can see the message.
 
@@ -1876,7 +1876,7 @@ context. The tool-free reading stage records `deliveredAt/readAt` on success.
 `work` then starts the assigned task; `awareness` completes after reading.
 Publication requires an explicit `chat.post`, `channel.message-post` or response-stage
 `agents_company_discussion_post` call. Ordinary assistant output stays only in the full
-Company native conversation; it never becomes a direct or group message by itself.
+Aexus native conversation; it never becomes a direct or group message by itself.
 
 The response-stage tool takes the exact current conversation/message IDs:
 
@@ -1999,9 +1999,9 @@ Source files and existing native histories are not moved or rewritten.
 ## Native conversation, published direct messages and explicit group publication
 
 All native Agent text, reasoning, tool calls/results and completion events belong
-only to that employee's full Company native conversation. The same is true of every
+only to that employee's full Aexus native conversation. The same is true of every
 group/shared input, channel input and silent/awareness read: these inputs and their
-exact Aexus wrapped prompts are recorded in Company and are never projected into a
+exact Aexus wrapped prompts are recorded in Team and are never projected into a
 Messages direct conversation.
 
 Messages direct conversations are an independent published ledger. A direct entry
@@ -2066,7 +2066,7 @@ and `around` centers a page on an exact direct message ID. It returns
 output, shared inputs, wrapper prompts or silent reads. Querying does not mark
 anything read. `direct.acknowledge {employee,messageId}` acknowledges one exact
 published incoming employee message; a stale ID never acknowledges a newer post.
-Native Company unread state remains the separate `session.acknowledge`/`lastReply`
+Native Aexus unread state remains the separate `session.acknowledge`/`lastReply`
 record.
 
 Attachment paths are resolved in the employee's own workspace on its execution host
@@ -2080,7 +2080,7 @@ A changed or unavailable remote source is reported as unavailable; ask the sende
 publish it again. Published attachments use read-only opaque `@direct/…`
 references; destination writes and arbitrary-path substitution are rejected.
 
-The full Company conversation displays the exact Aexus-owned wrapper and origin for
+The full Team conversation displays the exact Aexus-owned wrapper and origin for
 newly captured work and read inputs: `from [groupname]` for group/shared input,
 `from [Private · name]` (or `from [Private]`) for private input, and
 `[Channel · name]` for channel input. Read-phase inputs are marked `Read silently`,
@@ -2645,13 +2645,13 @@ Dialogs opened from Messages or Plan retain their originating presentation's the
 All views accept `white|light|space|black|midnight|sage` and
 `violet|blue|mint|teal|cyan|rose|coral|amber|indigo|graphite|custom` (`mint` is Green).
 `themeColor` is a six-digit hex color, such as `#7953ce`, for the custom palette.
-Company uses neutral, readable canvas surfaces; Plan uses document/database surfaces;
+Aexus uses neutral, readable canvas surfaces; Plan uses document/database surfaces;
 Messages keeps its conversation wallpaper and bubble palette. Explicit room palettes,
 background colors and furnishings remain intact. A theme name does not
 force these three presentations to share a layout or decorative background.
 
-The compact settings dialog starts with Company, Messages and Plan tabs. Color choices,
-language, page size and Company canvas controls apply and save automatically through
+The compact settings dialog starts with Team, Message and Mission tabs. Color choices,
+language, page size and Aexus canvas controls apply and save automatically through
 `settings.set`; no general Apply step is required. Dragging a color or range control
 coalesces rapid input. Requests are serialized and contain only edited fields, so a later
 response cannot overwrite a newer choice or an unrelated view. Navigation and closing
@@ -2672,7 +2672,7 @@ The Messages settings tab includes five original micro-pattern collections (Dayd
 
 `agents settings set --message-wallpaper '{"pattern":"botanical","layout":"ordered","density":130,"opacity":16}' --json` uses the same API; JSON files are supported through `@file`. The native API tool also uses the unchanged authenticated settings dispatcher.
 
-All private chats, groups, channel timelines and post views share one Messages decoration preference. Company, Plan, message data and execution permissions are unchanged. Color themes remain independent. Changing density/opacity is debounced and close/navigation flushes pending updates; late acknowledgements cannot remove newer local fields. Reset wallpaper restores only decoration; Reset Messages settings restores this view's color and wallpaper. No pattern uses the theme’s quiet background without SVG marks; explicitly chosen wallpaper palettes remain available.
+All private chats, groups, channel timelines and post views share one Messages decoration preference. Aexus, Plan, message data and execution permissions are unchanged. Color themes remain independent. Changing density/opacity is debounced and close/navigation flushes pending updates; late acknowledgements cannot remove newer local fields. Reset wallpaper restores only decoration; Reset Messages settings restores this view's color and wallpaper. No pattern uses the theme’s quiet background without SVG marks; explicitly chosen wallpaper palettes remain available.
 
 The renderer repeats a small SVG tile (50 original motifs across five collections); layout is deterministic and bounded independently of message count or viewport size. Scattered tiles wrap edge motifs for seamless repeats. No downloaded art, remote requests, image files, animation loops or second background store are introduced.
 
@@ -3050,7 +3050,7 @@ with a leading ellipsis if truncated; complete text remains in the transcript.
 A new answer creates a new ID even if its text repeats. Closing a native session,
 switching Team views or restarting preserves unread state. Existing historical
 messages are not retroactively marked unread. This record belongs only to the native
-Company conversation; a direct message is not created from it. Messages ledger unread
+Team conversation; a direct message is not created from it. Messages ledger unread
 and accepted reads use `direct.history`/`direct.acknowledge` instead.
 
 ```sh
@@ -3150,7 +3150,7 @@ Every Agent can schedule itself through `self`, resolved from authentication. Ev
 
 `plan.query` adds bounded database filters/sorting; `plan.calendar` projects future occurrences and actual retained runs; `plan.timeline` separates planned estimates from actual durations, `plan.analytics` aggregates all authorized pages, and `plan.feed` returns actual activity with stable cursor pagination; `plan.views/view-create/view-update/view-delete` manage presentation definitions only. Board status is computed, not a user claim that work succeeded. Core must remain running and its host awake; this does not wake a sleeping computer. Busy manual work is never interrupted to satisfy a timer. No inference runs merely from opening Plan or previewing dates.
 
-Complete layout/API mapping and interactive design findings: [Plan view parity](docs/PLAN_VIEW_PARITY.md). Optional `plan.durationMinutes` is an estimate only, never a timeout or employee reservation. Saved-view `options` preserve timezone, temporal scale and chart configuration. They also save table `hiddenProperties` and `density:comfortable|compact`; discover exact property IDs in `plan.schema.tableProperties`. Task titles/actions and Core data remain available. `plan.query` returns every current `assignees` identity for multi-person missions.
+Complete layout/API mapping and interactive design findings: [Mission view parity](docs/PLAN_VIEW_PARITY.md). Optional `plan.durationMinutes` is an estimate only, never a timeout or employee reservation. Saved-view `options` preserve timezone, temporal scale and chart configuration. They also save table `hiddenProperties` and `density:comfortable|compact`; discover exact property IDs in `plan.schema.tableProperties`. Task titles/actions and Core data remain available. `plan.query` returns every current `assignees` identity for multi-person missions.
 
 Mission read models accept `filter.allOf` to intersect flat conditions rather than overwrite saved-view filters with global criteria. Queries allow up to 32 clauses; saved views and global preferences allow 10 each. Outer criteria still apply, archive mode is inherited unless explicitly narrowed, state/priority arrays match any listed value, and tags require all listed values. Conflicting scopes correctly match no records. Deleted-job history does not acquire missing current metadata from a combined clause.
 
@@ -3260,7 +3260,7 @@ is implied by file playback.
 ### Client audio queue
 
 Posted audio uses one client-owned playback element outside individual conversation views.
-The mini player and inline controls share that element, so switching Messages/Company/Plan
+The mini player and inline controls share that element, so switching Messages/Aexus/Plan
 or opening another conversation does not restart playback. Queueing, choosing next,
 reordering/removing, repeat and source navigation are presentation actions over existing
 public attachment references. They never create a task or another message. Each selected
@@ -3279,7 +3279,7 @@ session, when the client supports those actions.
 Full API and worked examples: [Conversation workspaces](docs/CONVERSATION_WORKSPACES.md),
 also available through `agents api docs core/conversation-workspaces --json`.
 
-`conversation.workspace` and `conversation.workspaces` describe shared conversation content, not employee execution workspaces. An employee has only the Team-assigned Company workspace; `workspace.catalog` returns that one location. Joining groups does not create per-member folders or change cwd. Group descriptors omit memberDirectory/memberPath and members[].directory. Existing legacy folders and originals stay in place as ordinary shared content.
+`conversation.workspace` and `conversation.workspaces` describe shared conversation content, not employee execution workspaces. An employee has only the Team-assigned Team workspace; `workspace.catalog` returns that one location. Joining groups does not create per-member folders or change cwd. Group descriptors omit memberDirectory/memberPath and members[].directory. Existing legacy folders and originals stay in place as ordinary shared content.
 
 `conversation.file` retains current-member shared read/create/upload/edit/delete rights. User/Secretary administer without joining; channel legacy write restrictions remain compatible. Core host metadata (`.agents-company`, `.margin-reader`) and traversal/symlinks are protected. `conversation.copy`, `conversation.upload` and download receipts retain current identity, exact versions, explicit publication and host checks.
 
@@ -3403,7 +3403,7 @@ original post ID, filename, size, caption and publication time.
 
 ## 外刊阅读与原页图文交付
 
-`conversation.download` 支持员工显式取回尚未准备的外刊原件，先返回 caller-owned 回执与 phase=server，再以 phase=transfer 复制到员工自己的 Company 工作区。取消、撤权、工作区/执行主机改变和 Core 重启均不造成隐式重放或跨工作区写入；同一请求 ID 复用回执。
+`conversation.download` 支持员工显式取回尚未准备的外刊原件，先返回 caller-owned 回执与 phase=server，再以 phase=transfer 复制到员工自己的 Team 工作区。取消、撤权、工作区/执行主机改变和 Core 重启均不造成隐式重放或跨工作区写入；同一请求 ID 复用回执。
 
 `workspace.pdf {employee,path,operation?,page?,limit?,width?,to?,expectedVersion?,password?}` 在同一工作区权限下提供 info、分页 text、原页 page 和导出 render。page 通过原生工具返回真实 PNG 图像块；render 使用已有受控上传协议把 PNG 写回同一员工工作区，本地/云端参数一致。原 PDF 与 Reader 书库状态不变；同名同内容复用，同名不同内容拒绝覆盖。read-only 分类仅 info/text/page，render 仍需写权限与原生批准。
 
@@ -3411,9 +3411,9 @@ original post ID, filename, size, caption and publication time.
 
 ## Conversation governance and static notifications
 
-Group offices use Owner / Admin / Member and are held by Agent employees. They are independent of Company managementRole. Admins may appoint/revoke other Admins; only Owner transfers ownership or dissolves a group. The human user retains recovery access without occupying an Agent office. Existing unowned groups require explicit assignment.
+Group offices use Owner / Admin / Member and are held by Agent employees. They are independent of Aexus managementRole. Admins may appoint/revoke other Admins; only Owner transfers ownership or dissolves a group. The human user retains recovery access without occupying an Agent office. Existing unowned groups require explicit assignment.
 
-Use `conversation.policy` to discover current offices, moderation state, revision and allowedActions. `conversation.role/mute/silence` require the current expectedRevision. Secretary administers all conversations without joining; other Company roles still require actual conversation offices. Legacy chat.update/delete/mute enforce the same office boundary. Group-wide mute restricts Members; channel-wide mute restricts all publishers. Quiet mode keeps notice messages and unread state but suppresses the connected application's attention banner.
+Use `conversation.policy` to discover current offices, moderation state, revision and allowedActions. `conversation.role/mute/silence` require the current expectedRevision. Secretary administers all conversations without joining; other Aexus roles still require actual conversation offices. Legacy chat.update/delete/mute enforce the same office boundary. Group-wide mute restricts Members; channel-wide mute restricts all publishers. Quiet mode keeps notice messages and unread state but suppresses the connected application's attention banner.
 
 `conversation.notice-list/get/create/update/delete/preview/history` manage fixed-text notifications. They use a separate Core timer and conversation-notices.sqlite, never Plan schedules, employee work queues or model calls. Creation requires a stable clientRequestId and spec {name,text,publisherId,rule,enabled}; rule is once, interval or weekly (all weekdays gives daily). Updates and deletion require expectedRevision. The automatic published message has noticeId, occurrenceId, scheduledFor and silent metadata. Replaying a pending occurrence after restart cannot duplicate its message. Revoked creators or publishers disable future publication; recurring downtime does not produce a backlog.
 
@@ -3441,7 +3441,7 @@ Socket 与原生 Codex JSONL 按 LF 分帧，保留 UTF-8 文本中的 Unicode �
 
 Team 的 **Workers** 是独立的原生会话界面，与 Characters、员工 Board 分离。Codex 使用原生 app-server，Claude 使用原生 SDK，Cline/OpenCode/Kilo/DeepSeek Harness 使用 ACP，Pi 使用原生 RPC。界面直接展示回复、思考、工具调用、原生授权与问题、任务队列；不使用 PTY/TUI 或模拟按键提交任务。
 
-Worker 不是 Company 员工，不执行员工初始化，不注入 Company 身份、工具、员工令牌或任务提示。保留原生引擎配置、项目指令与会话历史。引擎、直属归属、主机与工作目录身份固定。用户/Secretary 可用已有本地目录创建独立 Worker；其他职位只可创建、控制自己直属的 Worker。CWD 必须留在直属员工的实际工作范围内，主机变化、严格隔离或不支持的远端协议明确拒绝，不回退本机。远端原生会话目前支持 Codex/Claude，其余 GUI 协议要求 Core 本地目录。
+Worker 不是 Aexus 员工，不执行员工初始化，不注入 Aexus 身份、工具、员工令牌或任务提示。保留原生引擎配置、项目指令与会话历史。引擎、直属归属、主机与工作目录身份固定。用户/Secretary 可用已有本地目录创建独立 Worker；其他职位只可创建、控制自己直属的 Worker。CWD 必须留在直属员工的实际工作范围内，主机变化、严格隔离或不支持的远端协议明确拒绝，不回退本机。远端原生会话目前支持 Codex/Claude，其余 GUI 协议要求 Core 本地目录。
 
 ```sh
 agents worker create --engine codex --cwd /path/to/existing/project --title Builder --client-request-id create-builder --json
@@ -3469,7 +3469,7 @@ agents worker remove WORKER_ID --json
 
 `worker.draft ID --text TEXT [--images JSON --files JSON --expected-revision N --new-attempt]` 返回 `{applied,draft:{text,images?,files?,revision}}`。旧版本号写入/清空不会覆盖新草稿。发送准备是串行写入屏障，后续输入仍独立保存；显式 new-attempt 为已失败/中断请求生成新的持久版本，普通重试保持原键。停止、切换和重启保留草稿。
 
-Worker 工作台统一使用结构化会话，不运行 Coding Agent 的 TUI。`worker.commands` 返回当前连接实际支持的斜杠命令；`worker.command --text '/help'` 与 GUI 菜单使用同一分发。`/model`、`/effort`、`/permissions`、`/plan`、`/normal`、`/thinking`、`/fast`、`/skills`、`/mcp`、`/account`、`/usage` 等控制不会作为普通提示词发送。菜单按当前引擎、模型和协议能力显示；未知命令明确拒绝。原生技能、`/compact`、`/review` 才会执行对应的原生任务，不自动加入 Company 上下文。
+Worker 工作台统一使用结构化会话，不运行 Coding Agent 的 TUI。`worker.commands` 返回当前连接实际支持的斜杠命令；`worker.command --text '/help'` 与 GUI 菜单使用同一分发。`/model`、`/effort`、`/permissions`、`/plan`、`/normal`、`/thinking`、`/fast`、`/skills`、`/mcp`、`/account`、`/usage` 等控制不会作为普通提示词发送。菜单按当前引擎、模型和协议能力显示；未知命令明确拒绝。原生技能、`/compact`、`/review` 才会执行对应的原生任务，不自动加入 Aexus 上下文。
 
 ```sh
 agents worker commands WORKER_ID --json
@@ -3544,7 +3544,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents engineering list</code> | <code>[--archived active&#124;archived&#124;all]</code> | Read Engineering projects in the current participant or application administration scope. | Team / Engineering | schedule |
 | <code>agents engineering get</code> | <code>--id ID</code> | Read both graphs, current role activity, Worker execution records, reviews, periodic checks and progress of one Engineering. | Team / Engineering | schedule |
 | <code>agents engineering activity</code> | <code>--id ID</code> | Read current Engineering role activity and live project-only chat bubbles without retransmitting graph/Worker/review history. No execution or state mutation. | Team / Engineering | schedule |
-| <code>agents engineering context</code> | <code>--id ID</code> | Read the common initialization router, current identity, exact owned chain/node, prompt paths and next permitted actions; never grants Company or Worker authority. | Team / Engineering | schedule |
+| <code>agents engineering context</code> | <code>--id ID</code> | Read the common initialization router, current identity, exact owned chain/node, prompt paths and next permitted actions; never grants Aexus or Worker authority. | Team / Engineering | schedule |
 | <code>agents engineering artifact</code> | <code>--id ID --artifact-id ID [--operation info&#124;read&#124;image&#124;chunk --offset N]</code> | Read one explicitly Employee-published delivery file in this project, with current owner/host and exact file-version checks. Does not grant access to the Employee workspace or unrelated files. | Team / Engineering | schedule |
 | <code>agents engineering update</code> | <code>--id ID --patch JSON&#124;@file --expected-revision N</code> | User/Secretary: update engineering settings. Structural edits require draft/paused state; changed work and its downstream approvals are invalidated, histories retained. | Team / Engineering | schedule |
 | <code>agents engineering retry</code> | <code>--id ID --expected-revision N</code> | Resume failed Engineering provisioning using the same Team, employees, Mission and request identities. | Team / Engineering | schedule |
@@ -3552,7 +3552,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents engineering pause</code> | <code>--id ID --expected-revision N</code> | User/Secretary or its Governor: pause the engineering; dependency/review gates remain authoritative. | Team / Engineering | schedule |
 | <code>agents engineering resume</code> | <code>--id ID --expected-revision N</code> | User/Secretary or its Governor: resume the engineering; dependency/review gates remain authoritative. | Team / Engineering | schedule |
 | <code>agents engineering archive</code> | <code>--id ID --expected-revision N --archived true&#124;false</code> | User/Secretary: hide or restore a project without stopping its work. | Team / Engineering | schedule |
-| <code>agents engineering layout</code> | <code>--id ID --graph topology&#124;dag --positions JSON --expected-revision N</code> | User/Secretary: save free engineering graph node positions; Characters numbered seats and Company geometry remain unchanged. | Team / Engineering | schedule |
+| <code>agents engineering layout</code> | <code>--id ID --graph topology&#124;dag --positions JSON --expected-revision N</code> | User/Secretary: save free engineering graph node positions; Characters numbered seats and Aexus geometry remain unchanged. | Team / Engineering | schedule |
 | <code>agents engineering parse</code> | <code>--graph topology&#124;dag --source TEXT</code> | Parse the documented Mermaid flowchart subset into explicit role definitions or Employee tasks/dependencies. Pure preview, no employees or model calls. | Team / Engineering | schedule |
 | <code>agents engineering export</code> | <code>--id ID --graph topology&#124;dag</code> | Export a graph as lossless Mermaid including explicit rank and task metadata. | Team / Engineering | schedule |
 | <code>agents engineering import</code> | <code>--id ID --graph topology&#124;dag --source TEXT --expected-revision N</code> | User/Secretary: apply Mermaid to the shared Engineering graph. Validates roles, unique chain ownership, DAG dependencies and current execution before provisioning new roles. | Team / Engineering | schedule |
@@ -3601,7 +3601,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents worker commands</code> | <code>ID [--filter TEXT]</code> | List Worker controls and commands actually reported by its native engine. No employee identity or inference. | Worker slash menu | worker |
 | <code>agents worker command</code> | <code>ID --text TEXT [--client-message-id KEY]</code> | Run an owned Worker slash command. Settings and queries stay local controls; native skills/review/compact use their documented protocol. Reset/fork retry identities are preserved. | Worker slash commands | worker |
 | <code>agents worker inspect</code> | <code>ID --section capabilities&#124;skills&#124;mcp&#124;account&#124;usage&#124;config</code> | Read the connected Worker native capabilities, commands, skills, MCP, account, usage or redacted configuration; cannot inspect another owner’s Worker. | Worker tools and usage | worker |
-| <code>agents worker skill</code> | <code>ID --name NAME [--prompt TEXT --client-message-id KEY]</code> | Invoke a currently advertised native skill/command in this Worker without employee prompts or Company tools. | Worker skills | worker |
+| <code>agents worker skill</code> | <code>ID --name NAME [--prompt TEXT --client-message-id KEY]</code> | Invoke a currently advertised native skill/command in this Worker without employee prompts or Aexus tools. | Worker skills | worker |
 | <code>agents worker steer</code> | <code>ID --text TEXT --expected-message-id ID</code> | Append text to the same active native Worker turn when the engine supports steering. No attachments, queue insertion or task replay. | Worker steer | worker |
 | <code>agents worker background</code> | <code>ID</code> | Read native background tools belonging to this Worker only. | Worker background processes | worker |
 | <code>agents worker background-stop</code> | <code>ID [--process-id ID]</code> | Stop one or all native background tools owned by this Worker; never another Worker or employee. | Stop Worker background tools | worker |
@@ -3613,7 +3613,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents worker upload-begin</code> | <code>ID --name NAME --bytes N</code> | Begin a client-owned chunked attachment upload inside this Worker workspace. Upload alone never sends a task. | Worker attachments | operator |
 | <code>agents worker terminal</code> | <code>ID --operation list&#124;open&#124;read&#124;input&#124;resize&#124;close [--terminal ID --data TEXT --cursor N --cols N --rows N]</code> | User/Secretary: operate an optional human shell scoped to this Worker directory and owner. It is separate from the graphical Coding Agent protocol and stops on Worker removal. | Worker workspace terminal | operator |
 | <code>agents worker engines</code> | <code>—</code> | List native CLI availability on the Core host without starting adapters, authentication or model requests; remote hosts are checked at Worker start. | Add Worker engine availability | worker |
-| <code>agents worker create</code> | <code>[--employee ID] --engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek [--title NAME --cwd PATH --client-request-id ID]</code> | Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Company tools. | Team / Add Worker | worker |
+| <code>agents worker create</code> | <code>[--employee ID] --engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek [--title NAME --cwd PATH --client-request-id ID]</code> | Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Aexus tools. | Team / Add Worker | worker |
 | <code>agents worker list</code> | <code>[--employee ID]</code> | List directly owned native Workers (user/Secretary may administer all); user and Secretary may list all | Workers | worker |
 | <code>agents worker start</code> | <code>ID</code> | Connect the native structured engine without a model turn; resume only this Worker’s saved native session and retain native configuration | Open native Worker | worker |
 | <code>agents worker read</code> | <code>ID [--cursor N --wait-ms N]</code> | Read rendered conversation snapshots with a revision cursor and reset flag; optional wait up to 15000ms | Native terminal | worker |
@@ -3628,7 +3628,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents worker interrupt</code> | <code>ID [--expected-message-id ID]</code> | Interrupt the current native task and cancel queued tasks; keep the connection and history when supported | Interrupt Worker | worker |
 | <code>agents worker stop</code> | <code>ID</code> | Stop the owned native process tree; retain Worker record, work files and native history | Stop Worker | worker |
 | <code>agents worker remove</code> | <code>ID</code> | Stop the owned native process and tool descendants, wait for exit, then remove only your Worker record; preserve work files, engine configuration, authentication and native history | Remove Worker | worker |
-| <code>agents direct send</code> | <code>--employee ID --text TEXT [--images JSON --files JSON --mode send&#124;enqueue&#124;steer --client-message-id KEY --reply-to ID]</code> | Send a private message using employee ID. For a native employee, only user/Secretary may dispatch work. For an external Dot/Grok Worker ID from bot.list, any employee with bot.access may explicitly delegate raw text/images/files; no Company context is injected. Native session.send/enqueue alone do not publish private messages. | Messages private composer | chat |
+| <code>agents direct send</code> | <code>--employee ID --text TEXT [--images JSON --files JSON --mode send&#124;enqueue&#124;steer --client-message-id KEY --reply-to ID]</code> | Send a private message using employee ID. For a native employee, only user/Secretary may dispatch work. For an external Dot/Grok Worker ID from bot.list, any employee with bot.access may explicitly delegate raw text/images/files; no Aexus context is injected. Native session.send/enqueue alone do not publish private messages. | Message private composer | chat |
 | <code>agents direct post</code> | <code>--text TEXT [--images JSON --files JSON --reply-to ID] --client-message-id KEY</code> | Employee: reply to a tagged Message private input, or explicitly requested private delivery. Team/CLI/untagged input defaults to native Agent text; do not call this for ordinary Team replies. Supports text/images/files and multiple messages with distinct IDs; identical retries reuse the ID. Publishes only as yourself; never dispatches work or posts to groups. | Employee private publication | identity |
 | <code>agents direct history</code> | <code>--employee ID [--limit N --before N --around ID]</code> | Read only explicitly published private messages, media and delivery evidence; never includes native output, shared inputs, wrappers or silent context reads. Querying does not mark read. | Private message history | employee.read |
 | <code>agents direct send-status</code> | <code>--employee ID --client-message-id KEY</code> | Read an existing private input acceptance without replaying work. Native employee input is user/Secretary-only; external Worker sends are available to their currently authorized sender. | Private send recovery | chat |
@@ -3639,7 +3639,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents bot delete</code> | <code>ID</code> | User/Secretary: remove a Dot/Grok connection from Aexus, revoke local access and stop its watcher. Retain the native bot and recoverable history; ordinary sync never reimports removed connections. | Remove bot | operator |
 | <code>agents bot restore</code> | <code>ID</code> | User/Secretary: explicitly restore a removed local bot connection after verifying the native bot still exists. Restore history and appearance; employee grants must be added again. | Restore bot | operator |
 | <code>agents bot sync</code> | <code>—</code> | User/Secretary: import existing native Dot and Grok bots/groups without changing their prompts, history or permissions. Refreshes account connectivity. | Connect bots | operator |
-| <code>agents bot create</code> | <code>--name NAME --client-request-id UUID [--description TEXT]</code> | User/Secretary: create a native Grok Worker. A stable UUID is the remote creation identity; unchanged retries never create another bot. No Company context is injected. | New Grok bot | operator |
+| <code>agents bot create</code> | <code>--name NAME --client-request-id UUID [--description TEXT]</code> | User/Secretary: create a native Grok Worker. A stable UUID is the remote creation identity; unchanged retries never create another bot. No Aexus context is injected. | New Grok bot | operator |
 | <code>agents bot group-create</code> | <code>--name NAME --members JSON --client-request-id UUID</code> | User/Secretary: create a native Grok group from imported Grok Worker conversation IDs. Does not add Aexus employees to the native group; bot.access grants application access separately. | New Grok group | operator |
 | <code>agents bot access</code> | <code>ID [--employee-ids JSON --expected-revision N]</code> | User/Secretary: grant employees access to an external Worker private conversation or Grok group. Secretary always has full access. Ordinary employee grants permit explicit messaging, history and files, never application authority for the bot. | Bot authorized employees | operator |
 | <code>agents monitor list</code> | <code>[--employee ID]</code> | List own supervised script/program monitors; user and Secretary manage all. Monitor execution remains on the owning employee’s execution host. | Plan event monitors | schedule |
@@ -3714,18 +3714,18 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents messenger forward</code> | <code>--messages JSON --to REF --client-message-id ID [--comment TEXT] [--text-only] [--retry]</code> | User-only: deliberately forward selected public messages through existing Core send/queue paths, with durable retry protection | Message forwarding | operator |
 | <code>agents messenger forward-draft</code> | <code>--data JSON&#124;null [--expected-client-message-id ID]</code> | User-only: retain or discard one forwarding setup; discarding never cancels accepted work | Resume forwarding | operator |
 | <code>agents messenger forward-status</code> | <code>--client-message-id ID</code> | User-only: check a forwarding receipt without sending, reading sources or starting work | Forwarding result | operator |
-| <code>agents messenger state</code> | <code>—</code> | User or Secretary: read conversation preferences, drafts and orders. categories projects permanent type:* filters plus editable custom mf_* categories; folders contains only custom records. Use category IDs for directory queries and reorder scopes. | Messages organization | operator |
+| <code>agents messenger state</code> | <code>—</code> | User or Secretary: read conversation preferences, drafts and orders. categories projects permanent type:* filters plus editable custom mf_* categories; folders contains only custom records. Use category IDs for directory queries and reorder scopes. | Message organization | operator |
 | <code>agents messenger folder-save</code> | <code>--name NAME --conversations JSON [--include outsource&#124;private&#124;groups&#124;channels&#124;telegram&#124;x&#124;youtube&#124;null] [--excluded JSON] [--id ID] [--expected-revision N]</code> | User or Secretary: create or update a personal folder of private, group and channel conversations without moving their content | Conversation folders | operator |
 | <code>agents messenger folder-delete</code> | <code>ID [--expected-revision N]</code> | User or Secretary: remove a personal conversation folder while retaining every conversation and message | Conversation folders | operator |
-| <code>agents messenger conversation</code> | <code>--conversations JSON --patch JSON</code> | User or Secretary: pin, favorite, archive, mark unread or set local group notifications (all/direct/off) in one atomic update | Messages list and bulk actions | operator |
-| <code>agents messenger message</code> | <code>CONVERSATION [MESSAGE_ID &#124; --ids JSON] --patch JSON</code> | User or Secretary: save, pin, react to or hide an existing public message; native history stays intact | Messages actions | operator |
+| <code>agents messenger conversation</code> | <code>--conversations JSON --patch JSON</code> | User or Secretary: pin, favorite, archive, mark unread or set local group notifications (all/direct/off) in one atomic update | Message list and bulk actions | operator |
+| <code>agents messenger message</code> | <code>CONVERSATION [MESSAGE_ID &#124; --ids JSON] --patch JSON</code> | User or Secretary: save, pin, react to or hide an existing public message; native history stays intact | Message actions | operator |
 | <code>agents messenger draft</code> | <code>CONVERSATION --data JSON [--scope messages&#124;work&#124;topic&#124;thread&#124;form --topic-id ID --thread-id ID --form-id ID]</code> | User or Secretary: persist a draft and its send identity, or conditionally clear the matching draft; scope work separates Board/work drafts; group topic/thread/form drafts retain their own contents. Never sends or opens an engine | Message and work composers | operator |
-| <code>agents messenger search</code> | <code>[--conversation REF] [--query TEXT] [--filter all&#124;saved&#124;pinned&#124;media&#124;audio&#124;files&#124;links] [--author all&#124;you&#124;employee] [--offset N] [--limit N]</code> | User or Secretary: search full public histories and saved/media/link references without inference or read acknowledgements | Messages search and shared content | operator |
+| <code>agents messenger search</code> | <code>[--conversation REF] [--query TEXT] [--filter all&#124;saved&#124;pinned&#124;media&#124;audio&#124;files&#124;links] [--author all&#124;you&#124;employee] [--offset N] [--limit N]</code> | User or Secretary: search full public histories and saved/media/link references without inference or read acknowledgements | Message search and shared content | operator |
 | <code>agents assets browse</code> | <code>[--root ID --query TEXT --view Company&#124;Messages&#124;Plan --team NAME --employee ID --conversation REF --host ID --kind TYPE --storage local&#124;remote&#124;cloud --sort name&#124;modified&#124;size --offset N --limit N --hidden]</code> | User-only: page real workspace shelves, one folder or recursive file/folder search with stable IDs and ownership; no implicit cloud download | File library | workspace |
 | <code>agents assets info</code> | <code>ID</code> | User-only: explicitly inspect a file/folder physical path, storage host, metadata and logical ownership. Cloud-only items return metadata without downloading originals. | Get Info | workspace |
 | <code>agents assets preview</code> | <code>ID</code> | User-only: derive bounded PDF/image/text covers with the installed Reader renderer. Configured group storage may use disposable remote preview scratch space; other remote originals are not fetched. | Document cover | workspace |
 | <code>agents assets naming</code> | <code>[--id PREVIEW_ID --apply]</code> | User-only: preview or apply English directory names across managed and externally bound workspaces, retaining identities and legacy references; selected group storage locations and their ancestors stay fixed | English folder names | operator |
-| <code>agents assets tree</code> | <code>[--view Company&#124;Messages&#124;Plan] [--team NAME] [--employee ID] [--conversation REF]</code> | User-only: read the fixed Company, Messages and Plan workspace tree | Files and assets | workspace |
+| <code>agents assets tree</code> | <code>[--view Company&#124;Messages&#124;Plan] [--team NAME] [--employee ID] [--conversation REF]</code> | User-only: read the fixed Aexus, Messages and Plan workspace tree | Files and assets | workspace |
 | <code>agents assets children</code> | <code>ID [--hidden] [--offset N] [--limit N]</code> | User-only: lazily page one real directory and its direct nonempty-folder count | Files and assets tree | workspace |
 | <code>agents assets search</code> | <code>[--query TEXT] [--root ID] [--offset N] [--limit N] [--hidden] [--refresh] [--view Company&#124;Messages&#124;Plan] [--team NAME] [--employee ID] [--conversation REF] [--kind TYPE] [--storage local&#124;remote&#124;cloud] [--sort name&#124;modified&#124;size]</code> | User-only: page background-indexed files with their Team, employee, group or channel ownership | Asset list | workspace |
 | <code>agents assets locate</code> | <code>ID</code> | User-only: resolve a current asset, its parent workspace and human-readable breadcrumbs without opening Finder or downloading cloud documents | Show in folder | workspace |
@@ -3742,9 +3742,9 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents workspace pdf</code> | <code>PATH --employee ID [--operation info&#124;text&#124;page&#124;render --page N --limit N --width PX --to RELATIVE.png --expected-version VERSION --password PASSWORD]</code> | Read a PDF in an authorized employee workspace; page returns real PNG pixels to native tools, render writes an original page image back to that same workspace without overwriting. Text is paged with nextPage; scanned pages need image reading. Uses the installed Margin Reader renderer, preserving the PDF and library state. | Read and share document pages | workspace |
 | <code>agents conversation member</code> | <code>CONVERSATION --employee ID --action add&#124;remove --expected-revision N</code> | Owner/Admin adds an Agent as Member or removes membership without deleting the employee or files; transfer Owner first | Conversation members | chat |
 | <code>agents conversation audit</code> | <code>CONVERSATION [--before ID --limit N]</code> | Owner/Admin reads paged governance events with the actual actor, action and time; no private model traces | Conversation audit history | chat |
-| <code>agents conversation policy</code> | <code>CONVERSATION</code> | Read independent Owner/Admin/Member offices, moderation state and allowed actions; Company rank grants no conversation office | Conversation administration | chat |
+| <code>agents conversation policy</code> | <code>CONVERSATION</code> | Read independent Owner/Admin/Member offices, moderation state and allowed actions; Aexus rank grants no conversation office | Conversation administration | chat |
 | <code>agents conversation role</code> | <code>CONVERSATION --employee ID --role owner&#124;admin&#124;member --expected-revision N</code> | Owner/Admin may appoint or revoke Admins; only Owner transfers ownership. Member demotes an Admin without removing membership; use conversation.member to remove. Group-only: channels have no member offices. | Conversation roles | chat |
-| <code>agents conversation mute</code> | <code>CONVERSATION --member ID&#124;all --muted true&#124;false [--duration-seconds N] --expected-revision N</code> | Owner/Admin changes public posting restrictions; all restricts Member posting in groups. Channels do not support moderation. Never changes Company work permissions. | Conversation moderation | chat |
+| <code>agents conversation mute</code> | <code>CONVERSATION --member ID&#124;all --muted true&#124;false [--duration-seconds N] --expected-revision N</code> | Owner/Admin changes public posting restrictions; all restricts Member posting in groups. Channels do not support moderation. Never changes Aexus work permissions. | Conversation moderation | chat |
 | <code>agents conversation silence</code> | <code>CONVERSATION --silent true&#124;false --expected-revision N</code> | Owner/Admin enables quiet conversation notices: messages remain in history, but no notice attention banner is raised; not member posting mute | Quiet notices | chat |
 | <code>agents conversation notice-list</code> | <code>CONVERSATION [--offset N --limit N]</code> | Owner/Admin lists independent static notifications; these IDs never belong to Plan | Conversation notifications | chat |
 | <code>agents conversation notice-get</code> | <code>CONVERSATION --id ID</code> | Read one notification rule, saved text, publishing identity and next occurrence; no model work | Notification details | chat |
@@ -3758,7 +3758,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents chat trash</code> | <code>ID [--before N --limit N]</code> | Read recoverable removed-message metadata permitted to your current identity; original files and native history stay intact. | Removed group messages | chat |
 | <code>agents chat clear-history</code> | <code>ID --through N --confirm [--topic-id ID]</code> | Owner/Admin removes messages through the captured sequence, optionally in one topic. New arrivals remain. Recoverable; running employee work is not cancelled. | Clear group history | chat |
 | <code>agents chat export</code> | <code>ID [--before N --limit N --topic-id ID]</code> | Export a page of published group content and attachment references. No private votes, native history, credentials or read acknowledgment. Protected groups reject exports. | Export group history | chat |
-| <code>agents chat invites</code> | <code>ID</code> | Owner/Admin lists local authenticated invite codes and their expiry, approval and use counts. Codes never grant a Core identity or Company authority. | Group invitations | chat |
+| <code>agents chat invites</code> | <code>ID</code> | Owner/Admin lists local authenticated invite codes and their expiry, approval and use counts. Codes never grant a Core identity or Aexus authority. | Group invitations | chat |
 | <code>agents chat invite-create</code> | <code>ID --name TEXT --client-request-id KEY [--expires-at ISO --use-limit N --approval true&#124;false]</code> | Create a revocable local invite for already authenticated employees. Stable retries return the same invitation; never creates a public unauthenticated link. | New group invitation | chat |
 | <code>agents chat invite-revoke</code> | <code>ID --invite-id ID</code> | Owner/Admin revokes an invitation immediately, including pending approvals using that code. | Revoke invitation | chat |
 | <code>agents chat join</code> | <code>ID --code TEXT [--employee ID]</code> | Redeem a local invite as your authenticated Agent identity; user/Secretary may select an existing employee. Approval requests persist. Banned or expired invitations cannot add members. | Join group | chat |
@@ -3783,11 +3783,11 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents chat checklist-get</code> | <code>ID --checklist-id ID</code> | Read items, completion actors and revision. | Checklist | chat |
 | <code>agents chat checklist-check</code> | <code>ID --checklist-id ID --item-id ID --done true&#124;false</code> | Complete or reopen one item under the current policy. Equal states are idempotent; no model call. | Checklist completion | chat |
 | <code>agents chat checklist-edit</code> | <code>ID --checklist-id ID --items JSON --expected-revision N [--title TEXT]</code> | Creator/Owner/Admin edits a checklist; permitted members may append items. Stable item IDs preserve completion. | Edit checklist | chat |
-| <code>agents conversation upload</code> | <code>--conversation group:ID --from JSON --path FILE --client-request-id KEY [--expected-version VERSION]</code> | Copy an own Company-workspace file into the group shared folder. All members have equal file rights. New files never overwrite; replacing requires the exact version returned by conversation.file info. Returns an async receipt, no automatic group speech. | Upload edited shared file | chat |
+| <code>agents conversation upload</code> | <code>--conversation group:ID --from JSON --path FILE --client-request-id KEY [--expected-version VERSION]</code> | Copy an own Aexus-workspace file into the group shared folder. All members have equal file rights. New files never overwrite; replacing requires the exact version returned by conversation.file info. Returns an async receipt, no automatic group speech. | Upload edited shared file | chat |
 | <code>agents conversation upload-status</code> | <code>ID [--cancel]</code> | Read or cancel an uploaded shared-file copy. Only completed means committed; restart never replays. User/Secretary may manage receipts; other employees use their own and current group membership. | Shared upload progress | chat |
 | <code>agents workspace catalog</code> | <code>[--employee ID&#124;self]</code> | Return the employee’s assigned Team execution workspace, exact host and file API. Joining conversations does not create additional workspaces or change cwd. | Employee workspace selector | chat |
 | <code>agents conversation entry</code> | <code>CONVERSATION --id ENTRY_ID</code> | Read a complete published private/group/channel entry, links, replies, media and downloadable file descriptors. Private read scope or current group/channel access required; shared attachments include the current version. | Published content and files | chat |
-| <code>agents conversation download</code> | <code>CONVERSATION --entry-id ID --attachment-id ID --client-request-id KEY [--workspace WORKSPACE_ID --employee ID --path DIR --name FILENAME]</code> | Copy one published private/group/channel attachment into your own Company execution workspace by default. Optional workspace ID must refer to that same assigned Team workspace. Streams with size/version/integrity checks; sources retained and existing destinations never overwritten. | Download to employee workspace | chat |
+| <code>agents conversation download</code> | <code>CONVERSATION --entry-id ID --attachment-id ID --client-request-id KEY [--workspace WORKSPACE_ID --employee ID --path DIR --name FILENAME]</code> | Copy one published private/group/channel attachment into your own Aexus execution workspace by default. Optional workspace ID must refer to that same assigned Team workspace. Streams with size/version/integrity checks; sources retained and existing destinations never overwritten. | Download to employee workspace | chat |
 | <code>agents conversation download-local</code> | <code>CONVERSATION --entry-id ID --attachment-id ID --path ABSOLUTE_FILE [--overwrite]</code> | User/Secretary: stream a published private/group/channel file or image to an explicitly chosen Mac/Core-host file path. No implicit overwrite and no large renderer Blob. | Save attachment to chosen Mac path | chat |
 | <code>agents conversation download-status</code> | <code>ID [--cancel]</code> | Read your attachment copy progress, final path or failure; cancel affects only your copy. Restart never blindly replays interrupted downloads. | Attachment copy progress | chat |
 | <code>agents channel post-trigger-list</code> | <code>CHANNEL_ID</code> | Read per-Agent post-count rules and progress. Owner/Admin sees all; Members see their own rule. Independent of Plan and static timed notices. | Channel post-count rules | chat |
@@ -3801,9 +3801,9 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents view select</code> | <code>company&#124;messages&#124;plan [--team-view ID] [--team-tab engineering&#124;research&#124;characters&#124;board&#124;workers] [--engineering ID] [--mission-tab plan] [--toggle-navigation]</code> | Select a presentation mode; Team has Engineering, Research, Characters, Board and Workers; Mission shows database layouts directly; Messages resumes the last conversation | Shared views / group conversations | operator |
 | <code>agents chat list</code> | <code>—</code> | List groups for the current authenticated member | Shared views / group conversations | chat |
 | <code>agents chat create</code> | <code>--name NAME [--team TEAM] [--members JSON] [--owner-id ID] [--storage JSON] [--client-request-id ID]</code> | Create a group with an Agent Owner. User/Secretary can choose local or registered-host storage, create a custom named folder or bind an existing folder; employees keep their Team cwd. Stable clientRequestId retries the same caller-owned creation | Shared views / group conversations | chat |
-| <code>agents chat update</code> | <code>ID --patch JSON</code> | Conversation Owner/Admin: edit group name and membership; Company role does not confer access | Shared views / group conversations | chat |
+| <code>agents chat update</code> | <code>ID --patch JSON</code> | Conversation Owner/Admin: edit group name and membership; Aexus role does not confer access | Shared views / group conversations | chat |
 | <code>agents chat delete</code> | <code>ID</code> | Conversation Owner (or the human user) removes a group; Admin cannot dissolve it; employees and private history are retained | Shared views / group conversations | chat |
-| <code>agents chat mute</code> | <code>ID --member EMPLOYEE_ID&#124;all [--for SECONDS &#124; --off]</code> | Conversation Owner/Admin: mute visible posts; Company rank grants no moderation; reading and work remain available | Group member moderation | chat |
+| <code>agents chat mute</code> | <code>ID --member EMPLOYEE_ID&#124;all [--for SECONDS &#124; --off]</code> | Conversation Owner/Admin: mute visible posts; Aexus rank grants no moderation; reading and work remain available | Group member moderation | chat |
 | <code>agents chat get</code> | <code>ID</code> | Read group metadata and member identities | Shared views / group conversations | chat |
 | <code>agents chat history</code> | <code>ID [--before SEQUENCE &#124; --around MESSAGE_ID] [--topic-id ID --limit 50]</code> | Read published group messages with pagination | Shared views / group conversations | chat |
 | <code>agents chat retry</code> | <code>ID --message MESSAGE_ID [--members JSON]</code> | User/Secretary: retry only failed undelivered original recipients; no republishing, no completed/started task replay. Original content and sender remain; retry actor is reauthorized at dispatch | Message delivery recovery | operator |
@@ -3811,7 +3811,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents chat context</code> | <code>ID [--message ID]</code> | Read published group context and concise reporting policy | Shared views / group conversations | chat |
 | <code>agents chat send</code> | <code>ID [--text TEXT] [--images JSON] [--files JSON] [--mentions JSON&#124;all] [--client-message-id ID] [--view ID] [--reply-to ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only]</code> | Deliver to current members; mentions and user replies select work, other recipients receive context | Shared views / group conversations | chat |
 | <code>agents chat edit</code> | <code>ID --message MESSAGE_ID --text TEXT [--file PATH] --expected-revision N</code> | User or Secretary: correct user-authored published group text or caption without changing accepted tasks or receipts | Group message editing | operator |
-| <code>agents chat post</code> | <code>ID [--text TEXT] [--images JSON] [--files JSON] [--kind summary&#124;decision&#124;blocker&#124;question&#124;result&#124;message] [--reply-to ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only] [--client-message-id ID]</code> | Explicitly publish a group message; ordinary native output stays only in Company; private replies require direct.post | Shared views / group conversations | chat |
+| <code>agents chat post</code> | <code>ID [--text TEXT] [--images JSON] [--files JSON] [--kind summary&#124;decision&#124;blocker&#124;question&#124;result&#124;message] [--reply-to ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only] [--client-message-id ID]</code> | Explicitly publish a group message; ordinary native output stays only in Team; private replies require direct.post | Shared views / group conversations | chat |
 | <code>agents chat acknowledge</code> | <code>ID [--message ID &#124; --message-ids JSON] [--topic-id ID --exact]</code> | User or Secretary: explicitly mark a topic or exact message set read; private and employee work receipts remain separate | Shared views / group conversations | operator |
 | <code>agents system info</code> | <code>—</code> | Read Core host OS, architecture and deployment capabilities | 后端信息 | identity |
 | <code>agents system directories</code> | <code>[--path PATH]</code> | Browse directories on the Core host (user or Secretary) | 后端目录选择 | operator |
@@ -3872,19 +3872,19 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents transfer cancel</code> | <code>ID</code> | Cancel a queued or running copy; preserve source files | 取消传输 | operator |
 | <code>agents schedule schema</code> | <code>—</code> | Describe the host scheduling contract | CLI 调度基础，供插件复用 | schedule |
 | <code>agents schedule status</code> | <code>—</code> | Read scheduler health and active runs | CLI 调度基础，供插件复用 | schedule |
-| <code>agents schedule list</code> | <code>[--employee ID --source NAMESPACE]</code> | Read raw saved schedules, including orphan records for application administrators; prefer plan.query for people, times and capabilities | Plan database | schedule |
-| <code>agents schedule get</code> | <code>ID</code> | Read the exact saved configuration and revision, even when its employee was removed; discover IDs through plan.query | Plan task editor | schedule |
-| <code>agents schedule create</code> | <code>--spec @file.json &#124; --name NAME --employee ID&#124;self --prompt TEXT (--after-seconds N &#124; --at ISO &#124; --time HH:mm &#124; --every-seconds N &#124; --on-event EVENT) [--enabled true&#124;false&#124;on&#124;off &#124; --paused] [--view VIEW_ID --days 7 --timezone IANA --month-day last --max-occurrences N --client-request-id KEY --duration-minutes N --channel ID --event-channel ID --event-conversation REF --event-employee ID --monitor-id ID --cooldown-seconds N]</code> | Schedule an existing employee or yourself; enabled by default; --paused or --enabled false disables automatic runs; Governor requires --view; retry-safe clientRequestId | Plan task editor | schedule |
-| <code>agents schedule update</code> | <code>ID --patch @file.json [--expected-revision N]</code> | Update an idle schedule; full action/rule replacement, optional revision; retains execution count | Plan task editor | schedule |
-| <code>agents schedule pause</code> | <code>ID [--expected-revision N]</code> | Pause future triggers without stopping the current run | Plan task editor | schedule |
-| <code>agents schedule resume</code> | <code>ID [--expected-revision N]</code> | Resume future triggers after rechecking the current target and original delegation | Plan task editor | schedule |
-| <code>agents schedule delete</code> | <code>[ID &#124; --ids JSON] [--expected-revision N &#124; --expected-revisions JSON]</code> | Delete selected schedules, including orphaned records for Secretary; preflight all IDs and revisions before any cancellation; retain run history. Self-deletion removes future triggers and returns continuingRunIds while allowing that same current Agent turn to finish; other active runs are cancelled | Plan task editor | schedule |
-| <code>agents schedule preview</code> | <code>[ID [--patch JSON&#124;@file] &#124; --spec @file.json] [--after ISO --count N]</code> | Preview saved or draft occurrences without executing; a saved job retains its consumed quota | Plan preview | schedule |
-| <code>agents schedule run</code> | <code>ID [--expected-revision N]</code> | Run once now; may use a model, does not consume the next occurrence | Plan task editor | schedule |
-| <code>agents schedule history</code> | <code>[ID] [--employee ID --limit N]</code> | Read durable run and job IDs, exact execution times and outcomes; deletion preserves authorized history | Plan execution history | schedule |
-| <code>agents schedule trigger</code> | <code>ID --event-id KEY</code> | Submit a deduplicated signal to an event schedule; current caller and original scheduling authority are checked; native channel events cannot be forged | Plan event rule | schedule |
-| <code>agents schedule cancel</code> | <code>ID</code> | Cancel an active run, preserving its history | Plan task editor | schedule |
-| <code>agents settings get</code> | <code>—</code> | Read independent Company, Messages and Plan appearances, shared controls and default employee models | 应用设置 | operator |
+| <code>agents schedule list</code> | <code>[--employee ID --source NAMESPACE]</code> | Read raw saved schedules, including orphan records for application administrators; prefer plan.query for people, times and capabilities | Mission database | schedule |
+| <code>agents schedule get</code> | <code>ID</code> | Read the exact saved configuration and revision, even when its employee was removed; discover IDs through plan.query | Mission task editor | schedule |
+| <code>agents schedule create</code> | <code>--spec @file.json &#124; --name NAME --employee ID&#124;self --prompt TEXT (--after-seconds N &#124; --at ISO &#124; --time HH:mm &#124; --every-seconds N &#124; --on-event EVENT) [--enabled true&#124;false&#124;on&#124;off &#124; --paused] [--view VIEW_ID --days 7 --timezone IANA --month-day last --max-occurrences N --client-request-id KEY --duration-minutes N --channel ID --event-channel ID --event-conversation REF --event-employee ID --monitor-id ID --cooldown-seconds N]</code> | Schedule an existing employee or yourself; enabled by default; --paused or --enabled false disables automatic runs; Governor requires --view; retry-safe clientRequestId | Mission task editor | schedule |
+| <code>agents schedule update</code> | <code>ID --patch @file.json [--expected-revision N]</code> | Update an idle schedule; full action/rule replacement, optional revision; retains execution count | Mission task editor | schedule |
+| <code>agents schedule pause</code> | <code>ID [--expected-revision N]</code> | Pause future triggers without stopping the current run | Mission task editor | schedule |
+| <code>agents schedule resume</code> | <code>ID [--expected-revision N]</code> | Resume future triggers after rechecking the current target and original delegation | Mission task editor | schedule |
+| <code>agents schedule delete</code> | <code>[ID &#124; --ids JSON] [--expected-revision N &#124; --expected-revisions JSON]</code> | Delete selected schedules, including orphaned records for Secretary; preflight all IDs and revisions before any cancellation; retain run history. Self-deletion removes future triggers and returns continuingRunIds while allowing that same current Agent turn to finish; other active runs are cancelled | Mission task editor | schedule |
+| <code>agents schedule preview</code> | <code>[ID [--patch JSON&#124;@file] &#124; --spec @file.json] [--after ISO --count N]</code> | Preview saved or draft occurrences without executing; a saved job retains its consumed quota | Mission preview | schedule |
+| <code>agents schedule run</code> | <code>ID [--expected-revision N]</code> | Run once now; may use a model, does not consume the next occurrence | Mission task editor | schedule |
+| <code>agents schedule history</code> | <code>[ID] [--employee ID --limit N]</code> | Read durable run and job IDs, exact execution times and outcomes; deletion preserves authorized history | Mission execution history | schedule |
+| <code>agents schedule trigger</code> | <code>ID --event-id KEY</code> | Submit a deduplicated signal to an event schedule; current caller and original scheduling authority are checked; native channel events cannot be forged | Mission event rule | schedule |
+| <code>agents schedule cancel</code> | <code>ID</code> | Cancel an active run, preserving its history | Mission task editor | schedule |
+| <code>agents settings get</code> | <code>—</code> | Read independent Aexus, Messages and Plan appearances, shared controls and default employee models | 应用设置 | operator |
 | <code>agents engine models</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek [--kind worker&#124;cloud-native-worker] [--team NAME]</code> | List available models before employee creation, without inference; Cloud Native reads the selected host | 创建员工和默认模型设置 | operator |
 | <code>agents settings set</code> | <code>[--view company&#124;messages&#124;plan &#124; --view-appearance JSON&#124;@file] [--message-wallpaper JSON&#124;@file] [--language en&#124;zh-CN] [--theme violet&#124;blue&#124;mint&#124;teal&#124;cyan&#124;rose&#124;coral&#124;amber&#124;indigo&#124;graphite&#124;custom&#124;white&#124;light&#124;space&#124;black&#124;midnight&#124;sage] [--theme-color #RRGGBB] [--default-permission default&#124;acceptEdits&#124;bypassPermissions] [--explorer-width N] [--explorer-collapsed on&#124;off] [--explorer-tree-collapsed on&#124;off] [--asset-drawer-width N] [--terminal-height N] [--page-zoom N] [--zoom-sensitivity N] [--pan-sensitivity N] [--sidebar-width N] [--board-max-columns N] [--snap-employees on&#124;off] [--team-overview on&#124;off] [--default-codex-model ID] [--default-claude-model ID] [--default-cline-model ID] [--default-pi-model ID]</code> | Patch independent view appearances and shared settings; legacy theme flags target Messages only | 背景、灵敏度和团队索引 | operator |
 | <code>agents view get</code> | <code>—</code> | Read service-owned navigation, including without a window | 当前面板 | operator |
@@ -3892,7 +3892,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents view close</code> | <code>—</code> | Close the current panel after saving workspace edits; keep engines running | × / Escape / 收起面板 | operator |
 | <code>agents view details</code> | <code>on&#124;off</code> | Show or hide employee details inside a conversation | 员工资料 / 返回会话 | operator |
 | <code>agents status</code> | <code>—</code> | Is the app running, and how many sessions are live | The app window being open | operator |
-| <code>agents session inbox</code> | <code>—</code> | Read bounded direct-message previews for authorized employees; no model calls, terminal startup or read acknowledgements | Messages conversation list | employee.read |
+| <code>agents session inbox</code> | <code>—</code> | Read bounded direct-message previews for authorized employees; no model calls, terminal startup or read acknowledgements | Message conversation list | employee.read |
 | <code>agents session list</code> | <code>[--live] [--summary]</code> | List stored cards (or live sessions with --live) | The company floor | employee.read |
 | <code>agents session new</code> | <code>[--engine claude&#124;codex] [--group NAME] [--model M]</code> | Create a session | “+ Hire employee” | operator |
 | <code>agents session rename</code> | <code>&lt;card-or-session-id&gt; &lt;title&gt;</code> | Rename an employee and its one conversation without moving the folder | 会话名称 / 员工名牌 | operator |

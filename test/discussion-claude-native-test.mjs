@@ -24,11 +24,11 @@ const model=http.createServer(async(req,res)=>{
   let raw='';for await(const chunk of req)raw+=chunk
   if(req.url?.includes('count_tokens')){res.writeHead(200,{'content-type':'application/json'}).end('{"input_tokens":1}');return}
   if(!req.url?.includes('/messages')){res.writeHead(404).end();return}
-  const body=JSON.parse(raw),prompt=[...body.messages].reverse().filter(item=>item.role==='user').map(item=>textOf(item.content)).find(text=>text.includes('ACK_NATIVE_CLAUDE_CASE=')||text.includes('[Agents Company private initialization]'))
+  const body=JSON.parse(raw),prompt=[...body.messages].reverse().filter(item=>item.role==='user').map(item=>textOf(item.content)).find(text=>text.includes('ACK_NATIVE_CLAUDE_CASE=')||text.includes('[Aexus initialization]'))
   assert.ok(prompt,'Only a named isolated test turn may reach the loopback provider')
-  const initializing=prompt.includes('[Agents Company private initialization]'),label=initializing?'initialization':prompt.match(/ACK_NATIVE_CLAUDE_CASE=([a-z-]+)/)?.[1],test=cases.get(label)
+  const initializing=prompt.includes('[Aexus initialization]'),label=initializing?'initialization':prompt.match(/ACK_NATIVE_CLAUDE_CASE=([a-z-]+)/)?.[1],test=cases.get(label)
   assert.ok(test,'Known isolated scenario: '+label)
-  const ackMarker='[Agents Company group acknowledgment]\n',ack=prompt.includes(ackMarker),scope=ack?JSON.parse(prompt.slice(prompt.indexOf(ackMarker)+ackMarker.length).split('\n')[0]):null,entry=scope?.messageId
+  const ackMarker='[Aexus group acknowledgment]\n',ack=prompt.includes(ackMarker),scope=ack?JSON.parse(prompt.slice(prompt.indexOf(ackMarker)+ackMarker.length).split('\n')[0]):null,entry=scope?.messageId
   const received=body.messages.flatMap(message=>Array.isArray(message.content)?message.content.filter(item=>item.type==='tool_result'):[])
   for(const result of received)results.set(result.tool_use_id,result)
   assert.ok(!JSON.stringify(received).includes(privateContents),'Read must not disclose the fixture file')

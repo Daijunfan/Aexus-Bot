@@ -16,7 +16,7 @@ const server=http.createServer(async(req,res)=>{
  let raw='';for await(const part of req)raw+=part
  if(req.method!=='POST'){res.writeHead(200,{'content-type':'application/json'}).end(JSON.stringify({data:[{id:'deepseek-v4-flash'}]}));return}
  const body=JSON.parse(raw),index=body.messages.findLastIndex(message=>message.role==='user'),prompt=text(body.messages[index]?.content),recent=body.messages.slice(index+1),calls=recent.flatMap(message=>message.tool_calls??[]).map(call=>({name:call.function.name,args:JSON.parse(call.function.arguments)})),offered=body.tools.map(tool=>tool.function.name)
- const phase=prompt.includes('[Agents Company private initialization]')?'initialization':/^\[Agents Company (group|channel) acknowledgment\]/.test(prompt)?'acknowledgment':'work'
+ const phase=prompt.includes('[Aexus initialization]')?'initialization':/^\[Aexus (group|channel) acknowledgment\]/.test(prompt)?'acknowledgment':'work'
  const seen=(name,operation)=>calls.some(call=>call.name===name&&(!operation||call.args.operation===operation))
  let tool,input,reply=phase==='initialization'?'OK':'WORK_DONE'
  if(phase==='initialization'){
@@ -25,7 +25,7 @@ const server=http.createServer(async(req,res)=>{
   else if(!seen('agents_company_documentation','index')){tool='agents_company_documentation';input={operation:'index'}}
  }else if(phase==='acknowledgment')reply='READ'
  if(tool)assert.ok(offered.includes(tool),tool+' must be a real registered native tool')
- requests.push({phase,model:body.model,path:req.url,tool:tool??null,...(tool==='agents_company_discussion_post'?{routing:input}:{}),denials:recent.filter(message=>message.role==='tool').map(message=>text(message.content)).filter(value=>/Declined by Agents Company/.test(value)).length})
+ requests.push({phase,model:body.model,path:req.url,tool:tool??null,...(tool==='agents_company_discussion_post'?{routing:input}:{}),denials:recent.filter(message=>message.role==='tool').map(message=>text(message.content)).filter(value=>/Declined by Aexus/.test(value)).length})
  res.writeHead(200,{'content-type':'text/event-stream'})
  const chunk=(delta,finish_reason=null)=>res.write('data: '+JSON.stringify({id:'pi-fixture-'+(++requestId),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n')
  chunk({role:'assistant',reasoning_content:'PRIVATE_PROVIDER_REASONING'})

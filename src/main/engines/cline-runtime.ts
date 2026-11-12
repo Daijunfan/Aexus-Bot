@@ -84,7 +84,7 @@ export async function openCline(context:EngineStart){
       send(text,images,taskId){
         receiptTaskId=taskId;receiptRead=false
         const attachment=client.stageImages(images)
-        const prompt=[launch?.instructions,text,attachment?.marker].filter(Boolean).join('\n\n')
+        const prompt=[text,attachment?.marker].filter(Boolean).join('\n\n')
         state.running=true;state.abort=new AbortController();turnId=randomUUID();textBlock=0;textSeen=false;reasoningSeen=false;toolSeen=false;acceptUpdates=true;rememberMeta(sessionId,{busy:true});emit('session:turn-start',{sessionId})
         state.finished=(async()=>{let error:string|undefined
           try{const result=await client.call('session/prompt',{sessionId:state.sessionId,prompt:[{type:'text',text:prompt}]},0);if(result.stopReason!=='cancelled')attachment?.verify();if(reasoningSeen&&!client.managedReasoning)throw Error('Cline returned reasoning despite Thinking off');if(result.stopReason!=='cancelled'&&!textSeen&&!toolSeen&&!state.acknowledging)throw Error('Cline returned no assistant response');if(result.stopReason==='cancelled')throw Error('Interrupted')}catch(cause){error=client.redact(String((cause as Error).message));if(isOpen(sessionId))emit('session:error',{sessionId,message:error})}

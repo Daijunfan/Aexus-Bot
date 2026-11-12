@@ -6,6 +6,7 @@ import {applicationRoot} from './resources'
 import {listPlugins,pluginFile} from './plugins/registry'
 
 const coreDocuments=[
+ ['core/agent-context','docs/AGENT_CONTEXT.md'],
  ['core/api','API.md'],['core/permissions','PERMISSIONS.md'],['core/plan','PLAN.md'],
  ['core/avatars','docs/AVATARS.md'],['core/missions','docs/MISSIONS_AND_QUESTIONS.md'],
  ['core/engineering','docs/ENGINEERING.md'],
@@ -48,33 +49,19 @@ function materialize(){
  }
  documents.set('index',{file:'README.md',text:[
   '# Aexus Bot API 文档索引','',
-  '按当前任务读取所需文档；初始化只读身份与本索引，不加载整册 API 或所有 schema。所有职位可阅读完整公开文档，实际操作仍由 Core 校验身份、角色、成员与工作区权限。','',
-  '## 三个 Core 视图','',
-  '| 视图 | 负责内容 | API 入口 |',
-  '| --- | --- | --- |',
-   '| Team | 团队、员工、完整原生会话与画布 | `group.*`、`card.*`、`session.*`、`management.*`、`office.*`、`team-view.*` |',
-  '| Message | 私聊、群聊、外部 Worker、新闻频道与讨论 | `bot.*`、`direct.*`、`session.*`、`chat.*`、`question.*`、`channel.*`、`messenger.*`、`conversation.*` |',
-   '| Mission | 员工任务的计划、排期与运行记录 | `mission.*`、`plan.*`、`schedule.*`、`monitor.*` |','',
-  '**Plan 是 Core 视图，不是 MiniNotion 插件。** Core Plan 统一查询授权范围内的持续任务和排期记录；MiniNotion 是独立的笔记/数据库软件，插件命令不能替代 `agents plan` 或 `agents schedule`。','',
-  '`describe` 仅查询 Core 命令，例如 `agents api describe schedule.create --all --json`；不接收插件方法名或文档 ID。`--all` 只扩展公开文档发现，不授予执行权限；实际身份用 `agents auth whoami --json` 查询。','',
-   '群组 Owner / Admin / Member 与 Company 职位独立；先读 `conversation.policy` 查询可用动作。Secretary 可直接管理群组。群通知使用 `conversation.notice-*`，排期使用 `schedule.*`。频道是只读资讯流，没有成员、讨论或群通知；普通员工须获 `channel.access` 阅读授权，Secretary 自动可读。用 `channel.fetch-text/fetch-images/search` 选择数量、来源、时间及关键词。`workspace.catalog` 列出工作区；共享附件使用 `conversation.entry/download/download-status`。外刊/PDF 下载到自己的工作区后，用 `workspace.pdf` 分页读文字、查看原页或导出 PNG；图文混排见 `core/magazine-reading`。见 `core/message-collaboration`。','',
-  '外部 Dot/Grok Worker 委派与授权见 `core/bot-workers`。Grok 可执行原生 X 任务；Dot 可以分多次、长间隔回复。委派前先用 `schedule.*` 保存持续的 message.received 计划，不把确认消息或安静间隔当结束。软件事件与程序监控见 `core/event-tasks`。','',
-  '## 查询与操作','',
-  'Engineering 工程用 engineering.*，先读 core/engineering 与 engineering.context。工程独立绑定 Team 和 Mission，Topology 与 DAG 同屏共享角色。Worker 实际执行后必须 Employee 初验、Manager 复验、Manager 链路确认和 Governor 最终确认；不得直接 mission.complete 绕过工程验收。Secretary 可创建和编辑；职级、归属与实际身份仍由 Core 核验。','',
-  '正式任务可直接使用 `agents_company_api`，参数 `command` 为已有 Core 命令，`args` 为该命令的参数对象。它以当前员工身份调用同一 API，无需 shell；写操作遵循当前 Ask/Full access，原生 planning 模式只读。初始化和静默阅读不可操作。','',
-  '持续目标使用 mission.*，只有显式成功才结束；类型、执行人、秘书和提醒时间见 core/missions。用户给秘书的新私聊已附带自动登记的 Mission ID，先读取再调整，不要重复创建。聊天选择题使用 question.*，保留 Other；有限等待需 fallback，关键决定用 null；question.answer 仅真实用户可调用。先读未处理问题，同一目标的新提醒不能跳过等待。', '',
-  'Plan 先调用 `{"command":"plan.query","args":{}}`：读取真实任务 ID/revision、完整规则、时间、人员职位/Team、target.exists、allowedActions。Secretary 也能看到员工已删除的任务；未知旧身份为 null。分页用 offset/limit。根据任务类型使用 mission.* 或 schedule.*，不要把 mission_ ID 传给 schedule.*。排期删除使用 schedule.delete 的 id 或 ids，带上 expectedRevision 或逐 ID 的 expectedRevisions；随后再查 plan.query 确认。','',
-  '其他工作先用 `{"command":"api.list","args":{"prefix":"schedule."}}` 缩小目录，再用文档工具 describe 查准确参数。`agents api call COMMAND --args JSON --json` 可从 CLI 发送完全相同的请求；这只是参数入口，不增加权限。','',
-  '## Core 参考','',
-  ...coreDocuments.map(([id,file])=>'- `'+id+'` — ['+file+'](core/'+file+')'),'',
-  '按需执行 `agents api docs core/plan` 或 `agents api docs core/api`。默认 `agents api docs` 只返回本索引。','',
+  '初始化只读 identity 和本索引。后续按当前任务选择一个文档或方法，不重复加载整册。身份和权限以 Core 实时校验为准。','',
+  '| 视图 | 内容 | Core API |','| --- | --- | --- |',
+  '| Team | 员工、原生会话、工作区 | `card.*`、`session.*`、`workspace.*` |',
+  '| Message | 私聊、群组、外部 Worker、只读资讯 | `direct.*`、`chat.*`、`bot.*`、`channel.*` |',
+  '| Mission | 持续目标、排期与提醒 | `mission.*`、`plan.*`、`schedule.*` |','',
+  'MiniNotion 等插件独立于 Core 任务。先用 `plugin.resources` 发现本人获授权内容，再查插件方法。','',
+  '查询入口：`api.list {prefix}` 缩小命令范围；`describe` 仅查询 Core 命令 schema，插件方法用 `document`；`document` 按下列 ID 读取。插件用 `plugin/ID/index`，再读 `plugin/ID/command/METHOD`。`--all` 只扩展公开文档，不增加执行权。','',
+  '## Core 文档','',
+  ...coreDocuments.map(([id])=>'- `'+id+'`'),'',
+  '消息来源、回复位置、身份更新与固定规则见 `core/agent-context`；Mission 先用 `plan.query` 获取真实 ID 和 allowedActions；外刊图文与 PDF 页图见 `core/magazine-reading`。','',
   '## 已安装插件','',
-  ...plugins.map(plugin=>'- **'+plugin.name+'** (`'+plugin.id+'`, '+plugin.version+') — [方法索引](plugins/'+plugin.id+'/README.md); `agents api docs plugin/'+plugin.id+'/index`。'),
-  ...(plugins.length?[]:['当前没有已安装插件。']), '',
-  '先读插件 index，再用文档工具 `{"operation":"document","document":"plugin/mininotion/command/page.create"}`（或 `agents api docs plugin/mininotion/command/page.create`）读取单方法；先看准确参数再执行，不能猜。完整参考仍为 `plugin/PLUGIN_ID/api` 或 `plugin/PLUGIN_ID/schema`。','',
-   "执行模板：`agents plugin call mininotion page.create --params '{\"title\":\"...\"}' --json`。员工以真实身份进入插件共享内容范围，由 `plugin.access` 的页面 read/write/create 授权校验；也可用统一工具 `command=plugin.call`、`args={id,method,params}`。",
-   '新团队不绑定插件。省略 `--employee`、`--team`、`--workspace` 使用默认共享内容范围；这些参数仅用于明确指定已有工作区，不授予权限。Secretary 具有用户级插件权限。','',
-  '插件列表来自当前安装包。执行插件仍须使用已授权工作区。远端或隔离环境可通过原生只读文档工具或同一 CLI 按需取正文，不需要复制手册到员工文件夹。',''
+  ...plugins.map(plugin=>'- **'+plugin.name+'** (`'+plugin.id+'`, '+plugin.version+') — `plugin/'+plugin.id+'/index`'),
+  ...(plugins.length?[]:['当前没有已安装插件。']),''
  ].join('\n')})
  for(const {file,text} of documents.values()){
   const target=path.join(root,file)

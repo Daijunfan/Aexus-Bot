@@ -68,7 +68,7 @@ rl.on('line',line=>{
     case 'turn/steer':note('steer',{thread,turn,input:p.input});return result({turnId:turn})
     case 'turn/start':{
       turn=crypto.randomUUID();if(p.environments!==undefined)environments=p.environments
-      const active=++generation,text=(p.input||[]).map(x=>x.text||'').join(''),hidden=text.includes('[Agents Company private initialization]'),ack=/^\[Agents Company (group|channel) acknowledgment\]\n/.test(text)
+      const active=++generation,text=(p.input||[]).map(x=>x.text||'').join(''),hidden=text.includes('[Aexus initialization]'),ack=/^\[Aexus (group|channel) acknowledgment\]\n/.test(text)
       if(!hidden&&!ack&&process.env.AC_NATIVE_WORKER_FIXTURE&&fs.existsSync(path.join(control,employee+'.spawn-tools'))&&!fs.existsSync(path.join(control,employee+'-tools.json'))){
        const {spawn}=require('node:child_process'),file=path.join(control,employee+'-tools.json'),ready=file+'.grandchild-ready'
        const grandchild="const fs=require('node:fs');process.on('SIGTERM',()=>{});fs.writeFileSync(process.argv[1],String(process.pid));setInterval(()=>{},1000)"

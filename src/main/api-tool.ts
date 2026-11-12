@@ -1,5 +1,3 @@
-import {BOT_WORKER_GUIDANCE} from '../shared/bot-workers'
-import {MESSAGE_REPLY_GUIDANCE} from '../shared/message-source'
 import {pluginMethodReadOnly} from './plugins/registry'
 import {randomUUID} from 'node:crypto'
 import {apiFailure,knownApi,validateApiArguments} from './api-contract'
@@ -12,7 +10,7 @@ import type {Live} from './sessions'
 
 export const API_TOOL={
  name:'agents_company_api',
- description:MESSAGE_REPLY_GUIDANCE+' '+BOT_WORKER_GUIDANCE+' Execute a documented Core command as your authenticated employee; ordinary Team replies use native text. Discover with {command:"api.list",args:{prefix:"schedule."}} (paged summaries by default), then {command:"api.describe",args:{command:"schedule.create"}} for the exact schema. Do not invent commands or field names. schedule.create takes {spec:{name,action:{type:"agent",employeeId,prompt},rule},clientRequestId?}; session/direct messages use text, not prompt. session.status returns stable employee id and temporary sessionId; session.activity accepts employee. Large successful responses return api-result-page: the operation already completed; follow nextCall or use api.result path to read the original JSON, never repeat a write to retrieve its output. direct.post is a private reply and does not dispatch work; direct.send is user/Secretary input to another employee (default enqueue). Reuse request IDs only for identical retries. Queries need no approval; writes obey current native permissions/planning and Core role, membership, workspace and version checks. Read core/secretary-api, core/channels, core/channel-filters or plugin/ID/index using the documentation tool only when needed. Channels are read-only feeds; Secretary automatically has reading access. fetch-images returns native image blocks. Core-host paths are not automatically execution-host paths: use workspace.catalog and conversation.entry/download/download-status before editing or publishing attachments. Follow nextCursor with unchanged filters to cover news results.',
+ description:'以当前员工身份执行既有 Core API。先按需 api.list 缩小范围，再 api.describe 查询准确参数；插件先读对应方法文档。参数只用 command 与 args，不传身份或 token。读取文档不增加权限，写入仍受 Core 与原生批准检查。成功结果出现 api-result-page 时按 nextCall 续读，不重复写操作。普通 Team 回复使用原生正文，私聊 direct.post，群聊显式 chat.post。',
  inputSchema:{type:'object',additionalProperties:false,required:['command'],properties:{command:{type:'string',minLength:1,description:'Exact existing Core command, e.g. plan.query, schedule.delete or plugin.call'},args:{type:'object',additionalProperties:true,description:'That command’s API arguments; no token, identity or wrapper. Omit for {}.'}}}
 } as const
 const approvals=new WeakMap<Live,ReturnType<typeof approvalHandler>>()

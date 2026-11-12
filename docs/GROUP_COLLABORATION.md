@@ -1,12 +1,12 @@
 # Group collaboration
 
-A group is a shared collaboration space for existing Aexus employees. It is independent of a Company Team, native Coding Agent session, and Mission. The desktop, browser, CLI and native MCP tool use the same authenticated Core operations. No feature in this document needs a Telegram account, Telegram server, or billed model request to manage its state.
+A group is a shared collaboration space for existing Aexus employees. It is independent of a Aexus Team, native Coding Agent session, and Mission. The desktop, browser, CLI and native MCP tool use the same authenticated Core operations. No feature in this document needs a Telegram account, Telegram server, or billed model request to manage its state.
 
 ## Identity and appearance
 
 Click the group title to open its overview, members and topics. The group portrait remains a mosaic of up to four actual members. An Owner/Admin can set a name, description and one of eight group colors. Content types have distinct visual accents: media, audio, files, links, saved messages and pins. The surrounding Message theme, wallpaper, floating sidebar, rounded header and input remain the user's chosen appearance.
 
-`chat.details` returns the profile, `details.revision`, current authority and counts. `chat.details-update` accepts an atomic patch and that independent revision. Receiving a message or acknowledging it does not invalidate a profile edit. A legacy `chat.update` rename also advances the profile revision. `chat.member-tag` sets a visible local label; labels never appoint an Admin or Company role.
+`chat.details` returns the profile, `details.revision`, current authority and counts. `chat.details-update` accepts an atomic patch and that independent revision. Receiving a message or acknowledging it does not invalidate a profile edit. A legacy `chat.update` rename also advances the profile revision. `chat.member-tag` sets a visible local label; labels never appoint an Admin or Aexus role.
 
 ```sh
 agents chat details GROUP_ID --json
@@ -81,13 +81,13 @@ Auto-delete is configured by `autoDeleteSeconds` (0 disables; otherwise at least
 
 ## Membership, permissions and invitations
 
-Existing `conversation.policy/member/role/mute/silence/audit` remain authoritative. Company rank, a member tag or a group color does not grant a conversation office. Only Owner transfers ownership; the user and Secretary retain application-administration rights. An Owner must be transferred before removal or ban.
+Existing `conversation.policy/member/role/mute/silence/audit` remain authoritative. Aexus rank, a member tag or a group color does not grant a conversation office. Only Owner transfers ownership; the user and Secretary retain application-administration rights. An Owner must be transferred before removal or ban.
 
 `conversation.policy.policyRevision` is independent of normal message/read activity. New clients send `expectedPolicyRevision` with the existing `expectedRevision` on member/role/mute/silence writes. The Core uses the policy version when supplied, preserving strict conflict detection; old clients retain the original revision behavior.
 
 The group profile controls ordinary Member text, media/files, poll/checklist creation, topic creation, invitation creation and pinning. Defaults preserve existing text/media/poll rights; topic creation, invitations and pinning require a grant. Slow mode enforces a minimum Member posting interval; Owner/Admin are exempt. Announcement-only groups use the existing Mute Members control. Read access and private work remain independent of posting restrictions.
 
-Local invitations admit existing authenticated employees. A code does not sign in, create an employee, confer Company rank, change an execution host or appoint an Admin. Invitations support a name, expiry, use limit, revocation and optional approval. Ordinary Members can create invitations only when explicitly permitted, and can see/revoke only their own links. The creator's current authority and Agent credential are rechecked at redemption.
+Local invitations admit existing authenticated employees. A code does not sign in, create an employee, confer Aexus rank, change an execution host or appoint an Admin. Invitations support a name, expiry, use limit, revocation and optional approval. Ordinary Members can create invitations only when explicitly permitted, and can see/revoke only their own links. The creator's current authority and Agent credential are rechecked at redemption.
 
 ```sh
 agents chat invite-create GROUP_ID --name 'Design review' --approval true --use-limit 4 --client-request-id review-invite-1 --json
