@@ -4,7 +4,7 @@
 .titan-pet[data-animate=true][data-character-state=working]{animation:titan-focus 1.8s ease-in-out infinite}
 .titan-pet[data-animate=true][data-character-state=greeting]{animation:titan-greet .85s cubic-bezier(.22,1,.36,1) infinite alternate}
 .titan-pet[data-character-state=resting]{filter:brightness(.97)}
-.message-avatar .mascot.titan-pet{left:0;top:0;width:100%;height:100%;transform:none}
+.message-avatar .mascot.titan-pet{left:var(--avatar-left,0);top:var(--avatar-top,0);width:var(--avatar-width,100%);height:var(--avatar-height,100%);transform:none}
 .message-avatar .mascot.titan-pet[data-animate=true]{animation:titan-breathe 3.6s ease-in-out infinite!important}
 .message-avatar .mascot.titan-pet[data-animate=true][data-character-state=working]{animation:titan-focus 1.8s ease-in-out infinite!important}
 .message-avatar .mascot.titan-pet[data-animate=true][data-character-state=greeting]{animation:titan-greet .85s cubic-bezier(.22,1,.36,1) infinite alternate!important}

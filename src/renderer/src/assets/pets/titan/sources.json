@@ -1,178 +1,521 @@
 {
-  "generatedAt": "2026-11-12T11:37:52.249Z",
+  "generatedAt": "2026-11-13T07:51:18.779Z",
   "kind": "generated fan art",
   "redistributionReview": "pending",
   "characters": [
     {
       "id": "titan-eren-chibi",
       "file": "titan-eren-chibi.webp",
-      "sha256": "197c441908203359522497dbb1fc662529991cc1a8df6b611951e1ffad6fdc9a",
+      "sha256": "01b883ae49bfed04d8caff46fc575f7c122d17162ec3382639451cbcceb5a59b",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Eren Yeager, short tousled dark brown hair, bright teal green eyes, a small brown survey jacket and green hood, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Eren Yeager from Attack on Titan with short tousled dark brown hair, bright teal-green eyes, youthful determined eyebrows, brown Scout jacket and green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "197c441908203359522497dbb1fc662529991cc1a8df6b611951e1ffad6fdc9a",
+      "generatedImageSha256": "494662203ffb86c078c726e21b38c9b2b027c4be081fdda0233fcc4bc13f68bf",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-mikasa-chibi",
       "file": "titan-mikasa-chibi.webp",
-      "sha256": "f37d2b11f346225095191dc3ed31e07623955a4e80a17733a283624bec4d5716",
+      "sha256": "1b1b210b3c5219d12788e18f419915aae5503fd21c0f1f8cddef278312a8c1e6",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Mikasa Ackerman, short black bob hair, calm dark grey eyes, her red scarf and small brown scout jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Mikasa Ackerman from Attack on Titan with short black bob haircut, calm dark grey eyes, red scarf, brown Scout jacket and green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "f37d2b11f346225095191dc3ed31e07623955a4e80a17733a283624bec4d5716",
+      "generatedImageSha256": "4a9f27cdbad92901483a6621f73220f80937e5f311f51dfe1298c57006912c84",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-armin-chibi",
       "file": "titan-armin-chibi.webp",
-      "sha256": "3c2d68c6b731f180567608d5ca48e6a30d88102616bac8704036d165f769457f",
+      "sha256": "6dba704b452a0966ddf51443f55c44c40e15bdac1c4ce749e39506eee7a5f1fe",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Armin Arlert, neat blond bob hair, wide blue eyes and small brown scout jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Armin Arlert from Attack on Titan with neat rounded blond bob haircut, wide blue eyes, gentle thoughtful expression, brown Scout jacket and green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "3c2d68c6b731f180567608d5ca48e6a30d88102616bac8704036d165f769457f",
+      "generatedImageSha256": "a8af60f46383507b9ea16fe80721c94496320c710ca85f505cfdda69d381fcd0",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-levi-chibi",
       "file": "titan-levi-chibi.webp",
-      "sha256": "782df4e90c2b70a27faa436349645578f996714c8c0266e52381335dc3a0c732",
+      "sha256": "9b097b049c3871947527a9252fe4179a021ae2265902cfa50644496074f649b6",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Levi Ackerman, short dark undercut hair, side swept black fringe, narrow grey eyes, white cravat and dark green cape, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Levi Ackerman from Attack on Titan with short black undercut hair with parted side-swept fringe, narrow sharp grey eyes, reserved serious expression, white cravat, brown Scout jacket and dark green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "782df4e90c2b70a27faa436349645578f996714c8c0266e52381335dc3a0c732",
+      "generatedImageSha256": "17f901191b33efa7e68e36f3b61de5dbdbc8198f4a7bc6b20491defa68740a23",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-erwin-chibi",
       "file": "titan-erwin-chibi.webp",
-      "sha256": "9a3d8d9f64f0f63eb5b15c234978f0e2e85df9367aef243fb8d9be1c79fed334",
+      "sha256": "1c44978481fca9e918c6a3e3db76a4e8d2952c88ba9cb8dce15474d2ff177601",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Erwin Smith, neat side parted blond hair, thick blond eyebrows, blue eyes, brown scout jacket and green cape, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: Aexus Bot character artwork replacement, one transparent full-body chibi companion. Input image 1 is the OLD Erwin Smith portrait: preserve only Erwin's recognizable identity, not its drawing style or bust composition. Input images 2 and 3 are the existing Fate Archer and Saber companion artwork: these are the STRICT style and proportion references. Redraw Erwin Smith from Attack on Titan as if the same illustrator who drew these Fate companions drew him for the same collection. Match their expressive rounded chibi head, very small rounded body, approximately 2.3 heads tall, crisp variable dark-brown/black ink contour, hand-drawn fine interior lines, warm gentle cel shading, restrained glossy eyes, subtle cheeks, softly separated anime hair locks, and charming collectible 2D game-sprite finish. Erwin has neat side-parted golden blond hair, characteristic thick blond eyebrows, blue eyes, calm confident small smile, brown Scout jacket, white shirt/cravat, dark green cape fastened at chest, white trousers, brown harness straps, tall dark brown boots. Front facing relaxed neutral standing, arms down, open eyes, all hair and boots visible. Centered single figure on a square TRUE TRANSPARENT alpha canvas, generous clean margin on every side. The head should occupy about 55 percent of the visible figure height, exactly like the Fate references; do not retain the long adult face of the old portrait. No crop, no torso-only portrait, no background, no backdrop, no ground shadow, no rounded square, no circle or frame, no text, no labels, no watermark, no props, no weapons, no giant form, no additional characters. References' white paper background must NOT be copied. Deliver only the isolated completed Erwin character, high quality, clean silhouette that remains clear at 40px.",
+      "previousSha256": "9a3d8d9f64f0f63eb5b15c234978f0e2e85df9367aef243fb8d9be1c79fed334",
+      "generatedImageSha256": "54f1bd4d21d9ab194a77ee1ea85877255283b9602d3c97a9718f2a1040aa1764",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-hange-chibi",
       "file": "titan-hange-chibi.webp",
-      "sha256": "1d51b80d1b31680620b4baacd05633afc85b507fa1bd575d89b6510e318e5ec8",
+      "sha256": "893df3e70f7d24994e932870601169317e9eb7a77dddd68554d874a45715f724",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Hange Zoe, brown ponytail hair, rectangular glasses, lively brown eyes, brown scout jacket and green cape, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Hange Zoe from Attack on Titan with messy brown ponytail, rectangular glasses, lively brown eyes, bright curious expression, brown Scout jacket and green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "1d51b80d1b31680620b4baacd05633afc85b507fa1bd575d89b6510e318e5ec8",
+      "generatedImageSha256": "b92f6c9b9358389a5253a058bbb63c22d9e8fa48cb0f096ac6c904e4be2bfc40",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-jean-chibi",
       "file": "titan-jean-chibi.webp",
-      "sha256": "2c1a5ed4385fa30e718874ef3ea114966a28a384576b7cf2eb1cc2a5a7040475",
+      "sha256": "cee6b18e829585e4c061fd093f8bac47bfb7ad7a83ee395dcc6d27965ed1732e",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Jean Kirstein, short light ash brown hair and dark brown undercut, light brown eyes, scout jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Jean Kirstein from Attack on Titan with short ash-brown hair with darker brown undercut, light brown eyes, confident relaxed expression, brown Scout jacket and green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "2c1a5ed4385fa30e718874ef3ea114966a28a384576b7cf2eb1cc2a5a7040475",
+      "generatedImageSha256": "4d3507fa532a6bef52a5295bda82a0e90efb3398b40abcc3d902f9be36a97cdc",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-sasha-chibi",
       "file": "titan-sasha-chibi.webp",
-      "sha256": "32c1709be30615a020a0b5bbe34b22595ff866dbc11697ecd1d66b4c9b5490d6",
+      "sha256": "c0649c9f83572fcfa72f01d012e0ee17a64480da1aba41f7e8bce5dcf7a10987",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Sasha Blouse, warm auburn brown ponytail, brown eyes, scout jacket, cheerful expression, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Sasha Blouse from Attack on Titan with auburn-brown ponytail with soft bangs, brown eyes, cheerful warm expression, brown Scout jacket and green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "32c1709be30615a020a0b5bbe34b22595ff866dbc11697ecd1d66b4c9b5490d6",
+      "generatedImageSha256": "38dd8bf80c5a006b82b12bec75ace2e37cb475d0f3fc2c982f414263a47c99be",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-connie-chibi",
       "file": "titan-connie-chibi.webp",
-      "sha256": "0f469757bb9992bf18150b6c6d444c7685aa25ebf87c88e0ab0f421447153eb4",
+      "sha256": "ef530442fa7eecd680c061f3d5e5a80522a00ea83ac053cd17ea02e496742466",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Connie Springer, extremely short buzzed light brown hair, big grey eyes and scout jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Connie Springer from Attack on Titan with very short light-brown buzz cut, big grey eyes, playful friendly expression, brown Scout jacket and green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "0f469757bb9992bf18150b6c6d444c7685aa25ebf87c88e0ab0f421447153eb4",
+      "generatedImageSha256": "890c5e8ef6383aab0e8be3f2d73afcf400605d80fa2d2fdd57b6490b4725ae72",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-historia-chibi",
       "file": "titan-historia-chibi.webp",
-      "sha256": "01f26c39637bcac8ec3eb9af63c77fc2c268b0d5fa4526f8c8728bc2a8e9b24c",
+      "sha256": "6ae93531ddb842784e3b8d83c42d50359541be817b55074076af625723244b28",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Historia Reiss, long straight honey blond hair, bright blue eyes, brown scout jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Historia Reiss from Attack on Titan with long straight honey-blond hair, bright blue eyes, gentle smile, brown Scout jacket and green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "01f26c39637bcac8ec3eb9af63c77fc2c268b0d5fa4526f8c8728bc2a8e9b24c",
+      "generatedImageSha256": "d2044aff273f833aa64a3634a99d9593428c20413d0f32ffdbee2e6f8540fc9d",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-reiner-chibi",
       "file": "titan-reiner-chibi.webp",
-      "sha256": "1cebd977464116ae7ccab9454d6c5438de08386ee6b3649442b4600995223033",
+      "sha256": "0f5f491e1a633c391cd390e93e060c60a135ecf85c2ec0ebcc79b70373904db4",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Reiner Braun, short blond crew cut, square eyebrows, golden eyes and scout jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Reiner Braun from Attack on Titan with short blond crew cut, square blond eyebrows, golden-hazel eyes, dependable slightly serious expression, brown Scout jacket and green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "1cebd977464116ae7ccab9454d6c5438de08386ee6b3649442b4600995223033",
+      "generatedImageSha256": "4061ead8ff82477b28884a0f9126ea996b86e7ca41ece5520f25de6484568424",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-annie-chibi",
       "file": "titan-annie-chibi.webp",
-      "sha256": "8455d0ef7c5aa2e56e937d32bf752f55ff9218facbb8acee62a98b5535419783",
+      "sha256": "01ed63b82d81c8a9c5ac7d90ea2fe93c6fcccf65098fd6f9e5feda3705f8ae56",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Annie Leonhart, blonde hair tied in a low bun, long side swept fringe, pale blue eyes and white hoodie under scout jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Annie Leonhart from Attack on Titan with blonde low bun with long side-swept fringe, pale blue eyes, reserved expression, white hoodie underneath brown Scout jacket. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "8455d0ef7c5aa2e56e937d32bf752f55ff9218facbb8acee62a98b5535419783",
+      "generatedImageSha256": "6212d48eb605a1f0ff5e345914528676a6879959ffa9059576976a859d913ac1",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-bertholdt-chibi",
       "file": "titan-bertholdt-chibi.webp",
-      "sha256": "29648ce6808121cee19b62994738fefa2f0a74c4c9c3fcf43240be8767edafe8",
+      "sha256": "1a7e87b4c388def23d0dba631e322094df7124c0b09579ffce41b0602790c2ee",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Bertholdt Hoover, short straight black hair, dark green eyes and scout jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Bertholdt Hoover from Attack on Titan with short straight black hair, dark green eyes, gentle shy expression, brown Scout jacket and green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "29648ce6808121cee19b62994738fefa2f0a74c4c9c3fcf43240be8767edafe8",
+      "generatedImageSha256": "c06c10dda94dc50f23be81796c2394ea4ff7d719e65772291079a0165bb5d320",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-ymir-chibi",
       "file": "titan-ymir-chibi.webp",
-      "sha256": "9bf7245543027861377a80027da738797c2fcdbfed95d974047052fdd3bc4f0f",
+      "sha256": "14588e3ca1312dc64e5e1819f030bc20d3fac8b143b177506447a0e49482f763",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Ymir, dark brown ponytail, freckles across cheeks, grey brown eyes and scout jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Ymir from Attack on Titan with dark brown ponytail, visible freckles across cheeks and nose, grey-brown eyes, subtle wry smile, brown Scout jacket and green cape. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "9bf7245543027861377a80027da738797c2fcdbfed95d974047052fdd3bc4f0f",
+      "generatedImageSha256": "0af5ca3fda51e31df27f5ad407b4024410c05efae0caae7526f4175eaf9a8f19",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-zeke-chibi",
       "file": "titan-zeke-chibi.webp",
-      "sha256": "5dce485fefc2fbf825863304d1d4262fbe51a0ac45a302ed00771a758bdfdfdd",
+      "sha256": "6069b36b1d26789c2f25019665b1ef9f71e5218a6d32e09b4560e0ead806d342",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Zeke Yeager, light blond hair and trimmed beard, round spectacles, grey eyes and beige jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Zeke Yeager from Attack on Titan with light blond slightly wavy hair, short trimmed blond beard, round spectacles, grey eyes, composed expression, beige military jacket and brown trousers. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "5dce485fefc2fbf825863304d1d4262fbe51a0ac45a302ed00771a758bdfdfdd",
+      "generatedImageSha256": "6a99356c87a0c0269eaa0ba663efbbb3d26344b3997b680da61ed374e57b424a",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-pieck-chibi",
       "file": "titan-pieck-chibi.webp",
-      "sha256": "3fba6674464abf4feb1c324d98fb55ed96f682b5ceebe92c30dabb67e8a99748",
+      "sha256": "a7d44294465e5e7f4102723d1c1ec3d8a323c32b7440f291242a051d0fadcbd9",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Pieck Finger, long wavy black hair, relaxed grey eyes, cream blouse, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Pieck Finger from Attack on Titan with long wavy black hair, relaxed grey eyes, small gentle smile, cream blouse, cream military coat and dark brown trousers. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "3fba6674464abf4feb1c324d98fb55ed96f682b5ceebe92c30dabb67e8a99748",
+      "generatedImageSha256": "5e5a36ace06027086aa73c9ac5aa780f05e37910c4fadda6b3e7efc9e24f931e",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-porco-chibi",
       "file": "titan-porco-chibi.webp",
-      "sha256": "1ad299b2a7d4632a5deee50004f91289244b38093c91534acd41ce56246d8058",
+      "sha256": "24fb19e8bfa68af8db39e3565961701c8ff8ff56cfa0fa89f1c9268e97f89562",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Porco Galliard, short blond slicked back undercut hair, amber eyes and cream jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Porco Galliard from Attack on Titan with short blond slicked-back undercut, amber eyes, confident slight smirk, cream military jacket and brown trousers. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "1ad299b2a7d4632a5deee50004f91289244b38093c91534acd41ce56246d8058",
+      "generatedImageSha256": "c8c20e6b7ce6b4d4143e86f427e07323428c6dc3e3ed965d35ea64935d7ef121",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-gabi-chibi",
       "file": "titan-gabi-chibi.webp",
-      "sha256": "b1f6ae2741e150af3bf9aee2c09c69e8e149df099293bfb4f1119d2be491a49b",
+      "sha256": "dd4f9fd211fabce5ce1aa231cd541847250f1bebd7de15c6875bf49977271fc5",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Gabi Braun, dark brown ponytail, bright brown eyes and cream cadet jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Gabi Braun from Attack on Titan with dark brown high ponytail with wispy bangs, bright brown eyes, energetic confident smile, cream cadet jacket and brown trousers. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "b1f6ae2741e150af3bf9aee2c09c69e8e149df099293bfb4f1119d2be491a49b",
+      "generatedImageSha256": "161d321ce6f1574716b1553e633a343bbeebd0695a940d13537527b9cb0f4b11",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     },
     {
       "id": "titan-falco-chibi",
       "file": "titan-falco-chibi.webp",
-      "sha256": "d5c85e3897d50b41dff985344a62a129d0512eef5c604c25a23f9fe0641f272a",
+      "sha256": "c849f62d64dfd4bd9340fe1fc04970fe0dafb128fa79ed8b9fc22425a8a564c8",
       "width": 512,
       "height": 512,
       "tool": "image_gen",
-      "prompt": "Use case: stylized-concept. Asset type: transparent character portrait for Aexus Bot. Create one original cute chibi anime fan-art portrait of Falco Grice, short fluffy sandy blond hair, gentle hazel eyes and cream cadet jacket, from Attack on Titan. Friendly polished hand-drawn 2D anime illustration with clean ink lines and soft cel shading, big expressive eyes and large head, only head and small upper torso, hands below crop. Front facing, eyes open, quiet friendly smile. Centered square composition, complete hair silhouette, generous 8 percent transparent margin around the head, lower torso fades cleanly at waist. Must read beautifully at 40px. Absolutely transparent background, no circle, no frame, no text, no lettering, no logo, no watermark, no extra characters, no props, no gradients behind character."
+      "prompt": "Use case: style-transfer. Asset type: replacement character artwork for the existing Aexus Bot chibi companion collection. The first reference is Fate Archer and the second is Fate Saber. They are STRICT STYLE AND PROPORTION references, not characters to include. Draw ONE Falco Grice from Attack on Titan with short fluffy sandy-blond hair, gentle hazel eyes, friendly earnest smile, cream cadet jacket and brown trousers. Redraw from scratch as if drawn by the same illustrator as the Fate references: the same rounded expressive chibi face, restrained shiny anime eyes, short round chin, crisp dark-brown/black variable ink contour, fine hand-drawn interior lines, warm gentle cel shading, softly separated hair locks, and polished charming 2D game-sprite finish. Avoid the old long adult face/big flat head style. Full-body front-facing neutral relaxed standing pose, open eyes, arms down, about 2.3 heads tall, head about 55 percent of figure height, tiny rounded shoulders/body/hands/boots. For Scout clothing include white trousers, brown harness straps and tall dark brown boots; if a cream uniform is specified retain that character's distinct clothing. Center a SINGLE complete figure on a square TRUE TRANSPARENT alpha canvas, clean margin on all sides, every hair strand and both boots inside the canvas. Match the Fate references' character scale and quiet friendly collectible feel. No bust-only crop, no head-only image, no realistic adult proportions, no 3D or vector-flat clipart, no props or weapons, no giant form, no other people, no backdrop or ground shadow, no white plate/circle/rounded square/frame, no text, labels, logo or watermark. References' white background must not be copied. This asset must read clearly at 40px and belong visually to the Fate reference collection.",
+      "previousSha256": "d5c85e3897d50b41dff985344a62a129d0512eef5c604c25a23f9fe0641f272a",
+      "generatedImageSha256": "b2f2a51c4cc561e1d29840feeda373da11dd522858673a65da1b7cd94080af17",
+      "referenceStyle": "fate-chibi",
+      "references": [
+        {
+          "asset": "../fate/fate-archer-chibi.webp",
+          "sha256": "dc0bad2deda46d88a6ae789b8703ca5d88acb5eaad7a65b42b8fa893934c2dd4",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        },
+        {
+          "asset": "../fate/fate-saber-chibi.webp",
+          "sha256": "6e8d5217bce381eb8b3e29adc78ead00003061b5f95aef408905ad8a49ed02cf",
+          "frame": 0,
+          "preparation": "First frame composited on white for style guidance; output retains true transparency."
+        }
+      ],
+      "composition": "Transparent complete chibi figure; shared Fate head-and-shoulders portrait crop"
     }
-  ]
+  ],
+  "rework": "Fate chibi style redraw; stable catalog IDs and existing animation retained"
 }
