@@ -12,9 +12,9 @@ Aexus Bot 是一款自托管的私人 AI 情报工作台。你可以把关注的
 
 [开始使用](#开始使用) · [部署指南](docs/DEPLOYMENT.md) · [CLI / API](API.md) · [权限说明](PERMISSIONS.md)
 
-![外刊阅读：让 AI 情报团队下载到工作区、逐页阅读，并将原页图片与讲解穿插在同一条消息中；功能示意](docs/images/foreign-press-reading.png)
+![Aexus Bot 资讯看板：维护者提供的原始应用截图](docs/images/intelligence-channels.png)
 
-<p align="center"><sub>把 PDF 交给团队，让原文、原页与解读一起回到你的会话。</sub></p>
+<p align="center"><sub>资讯来源与会话，集中在同一工作台中查看。</sub></p>
 
 ## 为什么是私人 AI 情报团队
 
@@ -61,8 +61,6 @@ Message 汇集资讯频道、私聊和群组，让阅读与讨论在一个地方
 - **资料与交付**：在一个文件入口中共享、预览、编辑与管理资料，在 Margin Reader 中阅读 PDF，保留相关消息、版本冲突保护和可恢复删除。
 
 资料、权限、订阅与配置采用一致的工作面，复杂设置按用途分区，草稿和操作结果可以继续跟进。[了解 Message 工作台](docs/MESSAGE_EXPERIENCE.md)。
-
-![Message 资讯看板：按来源浏览与筛选信息](docs/images/intelligence-channels.png)
 
 Dot、Grok 等外部 Worker 也可以参与会话，保留各自的原生身份和历史。完整 Bot 与原生群组目录直接呈现在 Message 中，可以搜索、打开会话并进入对应设置。统一管理器支持新增、编辑和删除 Bot／原生群组，管理 Grok 群成员及各平台支持的运行控制；界面与 CLI 共用接口，员工授权单独设置。在 macOS 上，安装并登录两个官方应用后，Aexus 会自动接入它们的本机执行通道，使用 Web 时也不必同时打开官方主应用；沿用已有登录、Mac 标识与执行权限。[了解原生接入](docs/BOT_WORKERS.md)。
 

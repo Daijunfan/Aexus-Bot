@@ -12,9 +12,9 @@ You choose the sources, responsibilities, and standards for accepting a result. 
 
 [Get started](#getting-started) · [Deployment](docs/DEPLOYMENT.md) · [CLI / API](API.md) · [Permissions](PERMISSIONS.md)
 
-![Foreign-press reading: a PDF moves into an employee workspace, original pages and explanations return in one rich message; feature illustration](docs/images/foreign-press-reading.png)
+![Aexus Bot information board: an original application screenshot provided by the maintainer](docs/images/intelligence-channels.png)
 
-<p align="center"><sub>Bring the PDF, original pages, and explanations back into your conversation.</sub></p>
+<p align="center"><sub>Browse sources and conversations in one workspace.</sub></p>
 
 ## Why a private AI intelligence team?
 
@@ -59,8 +59,6 @@ Message brings news channels, private conversations, and groups into one workspa
 - **Information channels:** browse Telegram, X, YouTube, and other sources with source, keyword, and time filters. Members read and search through authorized interfaces.
 - **Private and group conversations:** delegate directly or discuss topics with quotes, threads, polls, and collaborative checklists.
 - **Material and deliveries:** share files, preview images and documents, read PDFs in Margin Reader, and retain related messages and file records.
-
-![Message information board with source browsing and filtering](docs/images/intelligence-channels.png)
 
 External Workers such as Dot and Grok can also participate in conversations while keeping their native identities and histories. With the official apps installed and signed in on macOS, Aexus automatically connects their native local executors, including for Web clients, without opening either main app. Existing Mac identities and execution permissions are retained. [Native integration details](docs/BOT_WORKERS.md).
 
