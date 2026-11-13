@@ -4,6 +4,10 @@ Mission directly displays this database and its ten layouts. There is no parent 
 
 The Plan toolbar keeps search, a compact View control, global filters, retention and task counts. View controls expose per-view filters, sorting, direction, density and table property visibility without placing every setting on the browsing surface. Save the current configuration as a view, or update an existing saved view, to reuse it. Per-view and global filters use the same controls for task kind, repetition, archive, employee, Team, multiple states, priorities and exact tags. Global filters support multiple states and priorities, exact tags and familiar-task hiding; they intersect saved-view conditions instead of overwriting them.
 
+Mission uses one page heading, directly accessible layout tabs, status shortcuts and a shared search/action bar. Table columns reserve space for their visible properties; titles may wrap, icons keep their intrinsic size, and horizontal scrolling stays inside the database. Narrow workspaces scroll columns together so pinned actions cannot cover an employee or task. Board columns share one scroll area, with stable gaps, full-height drop targets and sticky headings.
+
+Responsive layout follows the workspace's actual width, including Web page zoom. Task panels, expanded editors and calendar dialogs fit their containing overlay instead of unscaled viewport units. View options share the same anchored Mission surface as filters and property editing. None of these presentation choices changes task identity, reminders, authority or saved filters.
+
 Table selection supports batch pause/resume of compatible schedules and archive/restore of schedules or missions. Selection is scoped to the visible page and clears when search, sorting, layout or pagination changes. Every mutation uses its original record revision and current Core authorization. A partial failure names the rejected records and preserves successful changes; changing visibility never marks a mission successful or stops its reminders. There is no second batch executor.
 
 ## Scope and reference

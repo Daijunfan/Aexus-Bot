@@ -1,72 +1,77 @@
 /* Mission is a working document: one hierarchy, a quiet database and contextual tools. */
-.mission-workspace{--mission-paper:var(--bg-elev);--mission-line:color-mix(in srgb,var(--fg) 9%,transparent);--mission-hover:color-mix(in srgb,var(--accent) 4%,var(--bg-elev));background:var(--bg);color:var(--fg);min-width:0;min-height:0}
-.mission-workspace .plan-view{padding:24px 34px 12px;gap:0;background:var(--bg);font-size:13px}
-.mission-workspace .plan-heading{display:flex;align-items:center;min-height:86px;gap:24px;padding:0 0 16px;border:0;background:transparent;box-shadow:none;flex:none}
+.mission-workspace{--mission-paper:var(--bg-elev);--mission-line:color-mix(in srgb,var(--fg) 10%,transparent);--mission-hover:color-mix(in srgb,var(--accent) 4%,var(--bg-elev));container:mission / inline-size;background:var(--bg);color:var(--fg);min-width:0;min-height:0}
+.mission-workspace .plan-view{padding:22px 30px 12px;gap:0;background:var(--bg);font-size:14px;overflow:hidden}
+.mission-workspace .plan-heading{display:flex;align-items:center;min-height:76px;gap:24px;padding:0 0 18px;border:0;background:transparent;box-shadow:none;flex:none}
 .mission-workspace .plan-heading-copy{display:block;flex:1;min-width:0}
+.mission-title-row{display:flex;align-items:center;gap:10px;min-width:0}
+.mission-runtime{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
 .mission-eyebrow{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--fg-dim);margin-bottom:7px}
-.mission-workspace .plan-page-icon{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:7px;background:color-mix(in srgb,var(--accent) 10%,var(--bg-elev));color:var(--accent)}
-.mission-workspace .plan-page-icon>.codicon{font-size:15px}
-.mission-connection{display:inline-flex;align-items:center;gap:5px;margin-left:7px;font-size:10px;color:var(--fg-dim)}
+.mission-workspace .plan-page-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;border:0;border-radius:11px;background:color-mix(in srgb,var(--accent) 9%,var(--bg-elev));color:var(--accent)}
+.mission-workspace .plan-page-icon>.codicon{font-size:20px}
+.mission-connection{display:inline-flex;align-items:center;gap:6px;margin:0;font-size:11px;line-height:1.5;color:var(--fg-dim);white-space:nowrap}
 .mission-connection>i{width:5px;height:5px;border-radius:50%;background:var(--fg-faint)}
 .mission-connection.online>i{background:#4e9c80}
-.mission-workspace .plan-heading h1{display:flex;align-items:center;gap:12px;margin:0;font-size:31px;line-height:1.2;font-weight:700;letter-spacing:-1.2px}
+.mission-workspace .plan-heading h1{display:flex;align-items:center;gap:10px;margin:0;font-size:28px;line-height:1.25;font-weight:700;letter-spacing:-.8px}
 .mission-total{font-size:12px;letter-spacing:0;font-weight:500;color:var(--fg-dim);background:var(--bg-alt);padding:4px 7px;border-radius:7px}
-.mission-workspace .plan-heading-copy>p{margin:8px 0 0;color:var(--fg-dim);font-size:12px;line-height:1.6}
+.mission-workspace .plan-heading-copy>p{margin:7px 0 0 44px;color:var(--fg-dim);font-size:12px;line-height:1.6}
 .mission-workspace .plan-view-modified{font-size:10px;letter-spacing:0;margin-left:10px;color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--bg-elev));border:0;border-radius:5px;padding:3px 6px}
-.mission-workspace .plan-heading-actions{display:flex;flex-direction:column;align-items:flex-end;gap:9px;flex:none}
-.mission-workspace .plan-new{display:flex;align-items:center;gap:7px;min-height:35px;padding:7px 14px;border:0;border-radius:9px;font-size:12px;font-weight:600;background:var(--accent);color:var(--button-ink,#fff);box-shadow:0 2px 6px color-mix(in srgb,var(--accent) 14%,transparent)}
-.mission-timezone{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--fg-dim)}
+.mission-workspace .plan-heading-actions{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;gap:18px;flex:none;width:auto}
+.mission-workspace .plan-new{display:flex;align-items:center;gap:7px;min-height:38px;padding:8px 15px;border:1px solid var(--accent);border-radius:10px;font-size:13px;font-weight:600;background:var(--accent);color:var(--button-ink,#fff);box-shadow:0 2px 6px color-mix(in srgb,var(--accent) 12%,transparent)}
+.mission-timezone{display:flex;align-items:center;gap:5px;font-size:11px;line-height:1.5;color:var(--fg-dim);white-space:nowrap}
 .mission-timezone>.codicon{font-size:12px}
-.mission-status-filters{display:flex;align-items:center;gap:5px;flex:none;overflow:auto;scrollbar-width:none;padding:0 0 17px;margin:0}
+.mission-status-filters{display:flex;align-items:center;gap:5px;flex:none;overflow:auto;scrollbar-width:none;padding:12px 0 2px;margin:0}
 .mission-status-filters::-webkit-scrollbar{display:none}
-.mission-status-filters>button{display:flex;align-items:center;gap:7px;flex:none;min-height:30px;padding:5px 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--fg-dim);font:inherit;font-size:11px;white-space:nowrap;cursor:pointer}
+.mission-status-filters>button{display:flex;align-items:center;gap:7px;flex:none;min-height:32px;padding:6px 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--fg-dim);font:inherit;font-size:12px;white-space:nowrap;cursor:pointer}
 .mission-status-filters>button[aria-pressed=true]{color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--bg-elev));border-color:color-mix(in srgb,var(--accent) 14%,transparent)}
-.mission-status-filters>button>b{font-size:10px;font-weight:500;font-variant-numeric:tabular-nums;opacity:.8;padding:1px 3px}
+.mission-status-filters>button>b{font-size:11px;font-weight:550;font-variant-numeric:tabular-nums;padding:1px 4px;border-radius:4px;background:color-mix(in srgb,var(--fg) 4%,transparent)}
 .mission-status-filters>button>i{display:block;width:6px;height:6px;border-radius:50%;background:#8a91a1}
 .mission-status-filters .state-scheduled{background:#8a78bc}.mission-status-filters .state-running{background:#42a58c}.mission-status-filters .state-attention{background:#d59a44}.mission-status-filters .state-completed{background:#719c6a}
 .mission-workspace .plan-database{border:0;border-radius:0;box-shadow:none;min-height:0;background:transparent}
-.mission-workspace .plan-view-tabs{display:flex;align-items:center;gap:3px;flex:none;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;min-height:40px;padding:0;border:0;border-bottom:1px solid var(--mission-line);border-radius:0;background:transparent}
-.mission-workspace .plan-view-tabs>button{position:relative;z-index:1;display:flex;align-items:center;gap:6px;flex:none;min-height:36px;margin:0;padding:8px 10px;border:0;border-radius:7px 7px 0 0;background:transparent;color:var(--fg-dim);font:inherit;font-size:12px;font-weight:500;white-space:nowrap;cursor:pointer;box-shadow:none}
+.mission-workspace .plan-view-tabs{display:flex;align-items:center;gap:2px;flex:none;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;min-height:42px;padding:0;border:0;border-bottom:1px solid var(--mission-line);border-radius:0;background:transparent;margin:0;scroll-padding-inline:12px}
+.mission-workspace .plan-view-tabs>button{position:relative;z-index:1;display:flex;align-items:center;gap:7px;flex:none;min-height:40px;margin:0;padding:9px 12px;border:0;border-radius:8px 8px 0 0;background:transparent;color:var(--fg-dim);font:inherit;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer;box-shadow:none}
 .mission-workspace .plan-view-tabs>button[aria-selected=true]{color:var(--accent);background:transparent;box-shadow:none}
 .mission-workspace .plan-view-tabs>.message-selection-glider{border-radius:7px 7px 0 0;border-bottom:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .mission-workspace .plan-view-tabs>button>.codicon{font-size:14px}
-.mission-workspace .plan-filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:48px;padding:7px 0;border:0;background:transparent}
-.mission-workspace .plan-search{display:flex;align-items:center;gap:8px;flex:1 1 160px;max-width:270px;min-width:100px;min-height:31px;padding:0 8px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--fg-dim)}
+.mission-workspace .plan-filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:54px;padding:8px 0 12px;border:0;background:transparent}
+.mission-workspace .plan-search{display:flex;align-items:center;gap:8px;flex:1 1 220px;max-width:320px;min-width:150px;min-height:34px;padding:0 10px;border:1px solid var(--mission-line);border-radius:8px;background:var(--mission-paper);color:var(--fg-dim);margin-right:auto;box-sizing:border-box}
 .mission-workspace .plan-search:focus-within{border-color:color-mix(in srgb,var(--accent) 35%,transparent);background:var(--bg-elev);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 8%,transparent)}
-.mission-workspace .plan-search input{width:100%;min-width:0;padding:6px 0;border:0;background:transparent;color:var(--fg);outline:0;font:inherit;font-size:12px}
+.mission-workspace .plan-search input{width:100%;min-width:0;padding:7px 0;border:0;background:transparent;color:var(--fg);outline:0;font:inherit;font-size:13px}
 .mission-workspace .plan-search kbd{font:11px ui-monospace,monospace;color:var(--fg-faint);padding:1px 4px;border:1px solid var(--mission-line);border-radius:4px}
-.mission-workspace .plan-filter-bar>button,.mission-workspace .plan-options-trigger,.mission-workspace .plan-global-toolbar>button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:30px;padding:5px 9px;border:0;border-radius:7px;background:transparent;color:var(--fg-dim);font:inherit;font-size:11px;box-shadow:none;cursor:pointer}
+.mission-workspace .plan-filter-bar>button,.mission-workspace .plan-options-trigger,.mission-workspace .plan-global-toolbar>button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:7px 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--fg-dim);font:inherit;font-size:12px;box-shadow:none;cursor:pointer;white-space:nowrap}
 .mission-workspace .plan-global-controls{flex:0 0 auto;position:relative;min-width:0}
 .mission-workspace .plan-global-toolbar{display:flex;align-items:center;gap:3px;flex-wrap:nowrap}
-.mission-workspace .plan-global-toolbar small,.mission-workspace .mission-cleanup-label,.mission-workspace .plan-global-filter-note{display:none}
+.mission-workspace .plan-global-toolbar small,.mission-workspace .plan-global-filter-note{display:none}
+.mission-workspace .mission-cleanup-label{display:inline}
 .mission-workspace .plan-global-toolbar>button.is-active{color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
 .mission-workspace .plan-global-toolbar b,.mission-workspace .plan-options-trigger b{font-size:10px;font-weight:500}
-.mission-workspace .plan-board-grouping{display:flex;align-items:center;gap:7px;margin:0;font-size:11px;max-width:230px;color:var(--fg-dim)}
+.mission-workspace .plan-board-grouping{display:flex;align-items:center;gap:7px;margin:0;font-size:12px;max-width:230px;color:var(--fg-dim)}
 .mission-workspace .plan-board-grouping>.app-select{width:130px;min-width:0}
 .mission-workspace .plan-board-grouping .app-select-trigger{min-height:30px;padding:5px 9px;font-size:11px;border-radius:7px}
-.mission-workspace .plan-task-count{margin-left:auto;font-size:11px;color:var(--fg-dim);white-space:nowrap;padding-inline:7px}
+.mission-workspace .plan-task-count{margin-left:4px;font-size:12px;color:var(--fg-dim);white-space:nowrap;padding-inline:7px}
 .mission-workspace .plan-database-content{flex:1;min-height:0;min-width:0;overflow:auto;border:0;border-radius:0;background:transparent;overscroll-behavior:contain;scrollbar-gutter:stable}
-.mission-workspace .plan-table{width:100%;min-width:800px;border-collapse:separate;border-spacing:0;background:var(--mission-paper);font-size:12px}
-.mission-workspace .plan-table :is(th,td){border:0;border-bottom:1px solid var(--mission-line);padding:10px 12px;background:transparent;vertical-align:middle;box-shadow:none}
-.mission-workspace .plan-table thead th{position:sticky;top:0;z-index:3;background:var(--bg);color:var(--fg-dim);height:34px;font-size:11px;font-weight:500;white-space:nowrap;padding-block:7px}
+.mission-workspace .plan-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;border:1px solid var(--mission-line);border-radius:12px;background:var(--mission-paper);font-size:13px}
+.mission-workspace .plan-table :is(th,td){border:0;border-bottom:1px solid var(--mission-line);padding:12px;background:var(--mission-paper);vertical-align:middle;box-shadow:none;overflow:hidden;text-overflow:ellipsis}
+.mission-workspace .plan-table thead th{position:sticky;top:0;z-index:3;background:var(--bg);color:var(--fg-dim);height:36px;font-size:12px;font-weight:500;white-space:nowrap;padding-block:9px}
 .mission-workspace .plan-table thead th:first-child{border-radius:0}
-.mission-workspace .plan-table tr{height:56px;cursor:pointer}
+.mission-workspace .plan-table tr{height:64px;cursor:pointer}
 .mission-workspace .plan-table tbody tr:hover>td{background:var(--mission-hover)}
 .mission-workspace .plan-table tr[aria-selected=true]>td{background:color-mix(in srgb,var(--accent) 8%,var(--bg-elev))}
-.mission-workspace .plan-task-cell{display:flex;align-items:center;gap:4px;min-width:240px;max-width:none;width:100%}
-.mission-workspace .plan-table :is(th,td):first-child:not(.plan-selection-cell){width:34%;min-width:330px}
+.mission-workspace .plan-task-cell{display:flex;align-items:center;gap:5px;min-width:0;max-width:none;width:100%}
+.mission-workspace .plan-table :is(th,td):first-child:not(.plan-selection-cell){width:auto;min-width:0;max-width:none}
 .mission-workspace .plan-task-name{display:flex;align-items:center;gap:9px;flex:1;min-width:0;max-width:none;padding:0;border:0;background:transparent;text-align:left;color:var(--fg);font:inherit;font-size:14px;line-height:1.5;font-weight:550}
-.mission-workspace .plan-task-name>span{display:block;min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;-webkit-line-clamp:unset}
-.mission-workspace .plan-task-name>span>small{display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;line-height:1.4;font-weight:400;color:var(--fg-dim)}
+.mission-workspace .plan-task-name>.plan-task-copy{display:block;min-width:0;flex:1}
+.mission-workspace .plan-task-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal;overflow-wrap:anywhere}
+.mission-workspace .plan-task-name>.codicon{flex:none}
+.mission-workspace .plan-task-name>span>small{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:1.5;font-weight:400;color:var(--fg-dim)}
 .mission-workspace .plan-task-name>.codicon:first-child{display:grid;place-items:center;flex:none;width:25px;height:25px;border-radius:7px;font-size:14px;color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,transparent)}
 .mission-workspace .plan-task-name>.codicon:last-child{font-size:12px;color:var(--fg-faint);opacity:0}
 .mission-workspace .plan-task-cell:hover .plan-task-name>.codicon:last-child,.mission-workspace .plan-task-cell:focus-within .plan-task-name>.codicon:last-child{opacity:1}
 .mission-workspace .plan-peek{width:21px;height:27px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--fg-faint);flex:none}
-.mission-workspace .plan-person{gap:7px;max-width:200px;min-width:0;font-size:11px}
+.mission-workspace .plan-person{gap:8px;max-width:100%;min-width:0;font-size:12px}
 .mission-workspace .plan-person>.plan-assignee-avatars .employee-portrait{width:28px;height:28px;min-width:28px}
 .mission-workspace .plan-person>span:last-child{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .mission-workspace .plan-person small{font-size:9px;line-height:1.5;color:var(--fg-dim)}
-.mission-workspace .plan-status{display:inline-flex;align-items:center;gap:5px;min-height:23px;padding:3px 7px;border:0;border-radius:6px;font-size:10px;font-weight:550;line-height:1.4;white-space:nowrap}
+.mission-workspace .plan-status{display:inline-flex;align-items:center;gap:6px;min-height:25px;padding:4px 8px;border:0;border-radius:6px;font-size:11px;font-weight:550;line-height:1.4;white-space:nowrap}
 .mission-workspace .plan-status.state-scheduled{background:color-mix(in srgb,#8d70bd 13%,var(--bg-elev));color:color-mix(in srgb,#8d70bd 78%,var(--fg))}
 .mission-workspace .plan-status.state-running{background:color-mix(in srgb,#459d85 13%,var(--bg-elev));color:color-mix(in srgb,#459d85 65%,var(--fg))}
 .mission-workspace .plan-status.state-attention{background:color-mix(in srgb,#c18c37 14%,var(--bg-elev));color:color-mix(in srgb,#b77c25 65%,var(--fg))}
@@ -91,29 +96,29 @@
 .mission-workspace .plan-task-preview h3{font-size:12px}.mission-workspace .plan-task-preview p{font-size:12px;line-height:1.75}
 .mission-workspace .plan-pagination{min-height:33px;padding:7px 10px;border-top:1px solid var(--mission-line);color:var(--fg-dim);font-size:10px;background:transparent}
 .mission-workspace .plan-pagination button{min-height:25px;padding:4px 9px;font-size:10px;border-radius:6px}
-.mission-workspace .plan-board{display:grid;grid-template-columns:repeat(var(--mission-columns,5),minmax(232px,1fr));min-width:calc(var(--mission-columns,5)*246px);gap:14px;padding:4px 1px 20px;align-items:start;background:transparent}
-.mission-workspace .plan-board-column{min-width:0;padding:10px;border:0;border-radius:12px;background:color-mix(in srgb,var(--fg) 2.5%,var(--bg));box-shadow:none}
+.mission-workspace .plan-board{display:grid;grid-template-columns:repeat(var(--mission-columns,5),minmax(240px,1fr));min-width:calc(var(--mission-columns,5)*256px);min-height:100%;gap:16px;padding:2px 2px 20px;align-items:stretch;background:transparent}
+.mission-workspace .plan-board-column{min-width:0;width:auto;max-height:none;overflow:visible;align-self:stretch;padding:10px;border:0;border-radius:12px;background:color-mix(in srgb,var(--fg) 2.5%,var(--bg));box-shadow:none}
 .mission-workspace .plan-board-column[data-plan-column=scheduled]{--column-tone:#8a78bc}.mission-workspace .plan-board-column[data-plan-column=running]{--column-tone:#449c8a}.mission-workspace .plan-board-column[data-plan-column=paused]{--column-tone:#8c98ac}.mission-workspace .plan-board-column[data-plan-column=completed]{--column-tone:#7ba063}.mission-workspace .plan-board-column[data-plan-column=attention]{--column-tone:#bb8c41}
 .mission-workspace .plan-board-column[data-plan-column=high]{--column-tone:#bb8c41}.mission-workspace .plan-board-column[data-plan-column=urgent]{--column-tone:#c2667c}.mission-workspace .plan-board-column[data-plan-column=low]{--column-tone:#8c98ac}
 .mission-workspace .plan-board-column{background:color-mix(in srgb,var(--column-tone,var(--accent)) 4%,var(--bg))}
-.mission-workspace .plan-board-column>header{gap:7px;min-height:32px;padding:2px 4px 10px;border:0;font-size:12px}
+.mission-workspace .plan-board-column>header{position:sticky;top:0;z-index:2;gap:7px;min-height:36px;padding:5px 4px 11px;border:0;border-radius:8px;font-size:12px;background:color-mix(in srgb,var(--column-tone,var(--accent)) 4%,var(--bg))}
 .mission-workspace .plan-board-column>header>b{margin-left:auto;padding:2px 5px;background:color-mix(in srgb,var(--fg) 5%,transparent);border-radius:5px;font-size:10px;font-weight:500}
-.mission-workspace .plan-board-card{display:flex;flex-direction:column;gap:9px;width:100%;padding:13px;margin-bottom:10px;border:1px solid var(--mission-line);border-radius:10px;background:var(--bg-elev);box-shadow:0 1px 3px #25304706;text-align:left;color:var(--fg)}
+.mission-workspace .plan-board-card{display:flex;flex-direction:column;gap:10px;width:100%;padding:15px;margin-bottom:10px;border:1px solid var(--mission-line);border-radius:12px;background:var(--bg-elev);box-shadow:0 1px 3px #25304706;text-align:left;color:var(--fg)}
 .mission-workspace .plan-board-card:hover{border-color:color-mix(in srgb,var(--accent) 35%,var(--mission-line));box-shadow:0 5px 15px color-mix(in srgb,var(--accent) 8%,transparent);transform:translateY(-2px)}
 .mission-workspace .plan-board-card[draggable=true]{cursor:grab}
 .mission-workspace .plan-board-column[data-drop-target=true]{outline:2px solid var(--accent);outline-offset:-2px;background:color-mix(in srgb,var(--accent) 7%,var(--bg))}
 .mission-workspace .mission-board-add{display:flex;align-items:center;gap:7px;width:100%;padding:8px 5px;border:0;border-radius:7px;background:transparent;color:var(--fg-dim);font:inherit;font-size:11px;text-align:left;cursor:pointer}
-.mission-workspace .plan-board-card>strong{font-size:13px;line-height:1.5;font-weight:600}
-.mission-workspace .plan-board-card>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;margin:0;font-size:11px;line-height:1.65;color:var(--fg-dim)}
+.mission-workspace .plan-board-card>strong{font-size:14px;line-height:1.6;font-weight:600;overflow-wrap:anywhere}
+.mission-workspace .plan-board-card>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;margin:0;font-size:12px;line-height:1.7;color:var(--fg-dim)}
 .mission-workspace .plan-card-due{gap:7px;border:0;background:none;padding:0;font-size:11px}
 .mission-workspace .plan-card-due small{font-size:9px;color:var(--fg-dim)}
 .mission-workspace .plan-board-card>small{font-size:10px;line-height:1.5;color:var(--fg-dim)}
 .mission-workspace .plan-column-empty{font-size:11px;min-height:45px;padding:18px 5px;color:var(--fg-faint)}
 .mission-workspace .plan-task-list{border:0;background:transparent}
-.mission-workspace .plan-task-list>button{min-width:870px;grid-template-columns:27px minmax(170px,1.4fr) minmax(140px,1fr) 130px 95px 140px 18px;gap:13px;min-height:68px;padding:12px 10px;border:0;border-bottom:1px solid var(--mission-line);border-radius:0;background:transparent}
+.mission-workspace .plan-task-list>button{min-width:0;grid-template-columns:27px minmax(180px,1.5fr) minmax(140px,1fr) 140px 105px 155px 18px;gap:14px;min-height:76px;padding:14px 12px;border:0;border-bottom:1px solid var(--mission-line);border-radius:0;background:transparent}
 .mission-workspace .plan-task-list>button:hover{background:var(--mission-hover)}
 .mission-workspace .plan-list-main>strong{font-size:13px}.mission-workspace .plan-task-list p{font-size:10px;line-height:1.55}.mission-workspace .plan-list-check{width:24px;height:24px;border-radius:6px;color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,transparent)}
-.mission-workspace .plan-gallery{grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px;padding:4px 1px 20px}
+.mission-workspace .plan-gallery{grid-template-columns:repeat(auto-fill,minmax(min(285px,100%),1fr));gap:16px;padding:2px 2px 20px}
 .mission-workspace .plan-gallery-card{border:1px solid var(--mission-line);border-radius:13px;box-shadow:0 2px 8px #25304705;overflow:hidden;background:var(--bg-elev)}
 .mission-workspace .plan-gallery-cover{min-height:82px;padding:17px;background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 7%,var(--bg-elev)),var(--bg-elev))}
 .mission-workspace .plan-gallery-cover>.employee-portrait{width:44px;height:44px}
@@ -150,6 +155,8 @@
 .mission-workspace .plan-empty .primary{padding:9px 13px;border-radius:8px;font-size:12px}
 /* Forms and property editing use the same anchored, keyboard-accessible surface. */
 .mission-popover-overlay{position:fixed;inset:0;z-index:10060}
+.plan-day-agenda{box-sizing:border-box;width:min(700px,calc(100% - 32px));max-height:calc(100% - 32px)}
+.plan-move-confirm{box-sizing:border-box;width:min(480px,calc(100% - 32px))}
 .mission-popover-backdrop{position:absolute;inset:0;background:transparent}
 .mission-popover{position:fixed;display:flex;flex-direction:column;box-sizing:border-box;width:380px;min-width:0;overflow:hidden;padding:0;border:1px solid var(--border);border-radius:14px;background:var(--bg-elev);color:var(--fg);box-shadow:0 16px 55px #1f294b20,0 3px 12px #1f294b0a;font-size:12px}
 .mission-popover>header{display:flex;align-items:center;gap:12px;justify-content:space-between;flex:none;padding:16px 18px 13px;border-bottom:1px solid var(--border-soft)}
@@ -176,8 +183,8 @@
 /* A task opens beside its database, preserving the reader's place and all draft guards. */
 .mission-drawer-overlay{display:flex;justify-content:flex-end;align-items:stretch;padding:12px;box-sizing:border-box;background:transparent}
 .mission-drawer-overlay>.plan-editor-backdrop{background:color-mix(in srgb,var(--bg) 42%,transparent);backdrop-filter:blur(2px)}
-.mission-drawer-overlay>.mission-task-sheet{position:relative;display:flex;flex-direction:column;width:min(740px,calc(100vw - 24px));max-width:calc(100vw - 24px);height:100%;max-height:100%;margin:0;border:1px solid var(--border);border-radius:18px;background:var(--bg-elev);box-shadow:0 16px 64px #1f294b20;overflow:hidden}
-.mission-drawer-overlay>.mission-task-sheet[data-expanded=true]{width:calc(100vw - 24px)}
+.mission-drawer-overlay>.mission-task-sheet{position:relative;display:flex;flex-direction:column;flex:0 1 740px;min-width:0;width:740px;max-width:100%;height:100%;max-height:100%;margin:0;border:1px solid var(--border);border-radius:18px;background:var(--bg-elev);box-shadow:0 16px 64px #1f294b20;overflow:hidden;container:mission-sheet / inline-size}
+.mission-drawer-overlay>.mission-task-sheet[data-expanded=true]{flex-basis:100%;width:100%;max-width:100%}
 .mission-task-sheet>header{display:flex;align-items:center;gap:10px;min-height:56px;padding:12px 19px;border-bottom:1px solid var(--border-soft);background:transparent;flex:none}
 .mission-task-sheet>header>div{flex:1;min-width:0}.mission-task-sheet>header h2{font-size:13px;font-weight:600;line-height:1.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0}
 .mission-task-sheet>header small{font-size:10px;color:var(--fg-dim)}
@@ -213,7 +220,7 @@
 .mission-task-sheet .plan-safety-note{font-size:10px;line-height:1.7;padding:10px 12px;border:0;border-radius:8px;background:var(--bg-alt);color:var(--fg-dim)}
 .mission-task-sheet>footer{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:13px 19px;border-top:1px solid var(--border-soft);background:var(--bg-elev);flex:none}
 .mission-task-sheet>footer>.mission-form-guidance{flex:0 0 100%;font-size:10px;line-height:1.5;color:var(--fg-dim);padding-bottom:3px}
-.mission-task-sheet>footer>button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:33px;padding:6px 11px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--fg-dim);font:inherit;font-size:11px;font-weight:500;box-shadow:none}
+.mission-task-sheet>footer>button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:33px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--fg-dim);font:inherit;font-size:12px;font-weight:500;box-shadow:none}
 .mission-task-sheet>footer>span{flex:1}
 .mission-task-sheet>footer>button.primary{color:var(--button-ink,#fff);background:var(--accent);border-color:var(--accent)}
 .mission-task-sheet>footer>button.mission-complete-action{background:color-mix(in srgb,#459d85 12%,var(--bg-elev));color:color-mix(in srgb,#459d85 65%,var(--fg));border-color:color-mix(in srgb,#459d85 32%,var(--border))}
@@ -234,12 +241,62 @@
 .mission-workspace .primary:enabled:hover,.mission-task-sheet .primary:enabled:hover{color:var(--button-ink,#fff);filter:none;box-shadow:0 3px 10px color-mix(in srgb,var(--accent) 18%,transparent)}
 .mission-workspace button:enabled:active,.mission-task-sheet button:enabled:active,.mission-popover button:enabled:active{transform:scale(.97)}
 :is(.mission-workspace,.mission-task-sheet,.mission-popover) :is(button,input,textarea):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media(max-width:1000px){.mission-workspace .plan-view{padding:20px 20px 10px}.mission-workspace .plan-heading{min-height:84px}.mission-connection{margin-left:0}.mission-workspace .plan-filter-bar{gap:5px}.mission-workspace .plan-view-tabs>button{padding-inline:9px;font-size:11px}.mission-workspace .plan-search{max-width:220px}}
-@media(max-width:600px){.mission-workspace .plan-view{padding:14px 12px 8px}.mission-workspace .plan-heading{gap:12px;padding-bottom:13px}.mission-workspace .plan-heading h1{font-size:27px}.mission-workspace .plan-heading-copy>p{font-size:11px;max-width:220px}.mission-eyebrow{font-size:10px;flex-wrap:wrap;gap:5px}.mission-connection{display:none}.mission-timezone{font-size:9px}.mission-workspace .plan-new{padding:7px 10px;font-size:11px;min-height:33px}.mission-status-filters{padding-bottom:11px;gap:3px}.mission-status-filters>button{padding:4px 8px;font-size:10px}.mission-workspace .plan-filter-bar{min-height:42px}.mission-workspace .plan-search{flex:1 1 110px;max-width:none}.mission-workspace .plan-search kbd{display:none}.mission-workspace .plan-filter-bar>button,.mission-workspace .plan-options-trigger,.mission-workspace .plan-global-toolbar>button{font-size:10px;padding-inline:6px}.mission-workspace .plan-task-count{display:none}.mission-workspace .plan-calendar>header{flex-wrap:wrap}.mission-workspace .plan-calendar>header>h2{font-size:18px;flex:1}.mission-workspace .plan-calendar>header>.app-select{max-width:none;order:3;width:100%}.mission-drawer-overlay{padding:6px}.mission-drawer-overlay>.mission-task-sheet,.mission-drawer-overlay>.mission-task-sheet[data-expanded=true]{width:calc(100vw - 12px);max-width:calc(100vw - 12px);border-radius:13px}.mission-task-sheet>header{padding:10px 13px}.mission-task-sheet .plan-editor-scroll{padding-inline:18px}.mission-task-sheet>footer{padding:11px 13px;gap:6px}.mission-task-sheet>footer>button{padding-inline:8px;min-height:34px;font-size:10px}.mission-task-sheet .plan-field-row{gap:11px}.mission-templates>div{grid-template-columns:minmax(0,1fr)}.mission-templates button{display:grid;grid-template-columns:27px 1fr;column-gap:10px;padding:10px}.mission-templates button>.codicon:first-child{grid-row:span 2}.mission-templates small{grid-column:2}.mission-templates button>.codicon:last-child{display:none}.mission-task-sheet .plan-editor-section{padding:18px 0}.mission-task-sheet .plan-editor-section input[name=plan-name],.mission-task-sheet .plan-editor-section input[name=mission-name]{font-size:23px!important}.mission-popover.plan-global-panel{width:490px}.mission-popover>footer{gap:5px;padding:10px}.mission-popover>footer>button{font-size:10px;padding:6px 8px}}
+@media(max-width:600px){.mission-drawer-overlay{padding:6px}.mission-drawer-overlay>.mission-task-sheet,.mission-drawer-overlay>.mission-task-sheet[data-expanded=true]{width:100%;max-width:100%;flex-basis:100%;border-radius:13px}.mission-task-sheet>header{padding:10px 13px}.mission-task-sheet .plan-editor-scroll{padding-inline:18px}.mission-task-sheet>footer{padding:11px 13px;gap:6px}.mission-task-sheet>footer>button{padding-inline:8px;min-height:34px;font-size:10px}.mission-task-sheet .plan-field-row{gap:11px}.mission-templates>div{grid-template-columns:minmax(0,1fr)}.mission-templates button{display:grid;grid-template-columns:27px 1fr;column-gap:10px;padding:10px}.mission-templates button>.codicon:first-child{grid-row:span 2}.mission-templates small{grid-column:2}.mission-templates button>.codicon:last-child{display:none}.mission-task-sheet .plan-editor-section{padding:18px 0}.mission-task-sheet .plan-editor-section input[name=plan-name],.mission-task-sheet .plan-editor-section input[name=mission-name]{font-size:23px!important}.mission-popover.plan-global-panel{width:490px}.mission-popover>footer{gap:5px;padding:10px}.mission-popover>footer>button{font-size:10px;padding:6px 8px}}
 @media(prefers-reduced-motion:reduce){.mission-workspace *,.mission-task-sheet *,.mission-popover *{transition:none!important;animation:none!important}.mission-workspace .plan-board-card:hover,.mission-templates button:hover{transform:none}}
 /* A non-auto standard width disables WebKit thumb styles. Keep the shared activity gate. */
 @supports selector(::-webkit-scrollbar){
  :is(.mission-workspace,.mission-task-sheet,.mission-popover) :is(.plan-editor-scroll,.plan-database-content,.plan-calendar-events,.plan-timeline-scroll,.plan-planner-scroll,.plan-view-options-body,.plan-global-panel-body){scrollbar-width:auto}
  :is(.mission-workspace,.mission-task-sheet,.mission-popover) :is(.plan-editor-scroll,.plan-database-content,.plan-calendar-events,.plan-timeline-scroll,.plan-planner-scroll,.plan-view-options-body,.plan-global-panel-body)::-webkit-scrollbar{width:8px;height:8px}
 }
-@media(max-width:600px){.mission-workspace .plan-heading{flex-wrap:nowrap}.mission-workspace .plan-heading-copy{width:auto}.mission-workspace .plan-heading-actions{width:auto;flex:none}}
+
+/* Layout responds to the actual workspace, including Web page zoom. */
+@container mission (max-width:1150px){
+ .mission-workspace .plan-task-list>button{grid-template-columns:28px minmax(0,1fr) auto;gap:9px 12px}
+ .mission-workspace .plan-task-list>button>.plan-list-main{grid-column:2;grid-row:1}
+ .mission-workspace .plan-task-list>button>.plan-list-context{grid-column:2/-1;grid-row:2}
+ .mission-workspace .plan-task-list>button>.plan-person{grid-column:2;grid-row:3}
+ .mission-workspace .plan-task-list>button>.plan-status{grid-column:3;grid-row:1}
+ .mission-workspace .plan-task-list>button>time{grid-column:2/-1;grid-row:4}
+ .mission-workspace .plan-task-list>button>.codicon:last-child{grid-column:3;grid-row:3}
+}
+@container mission (max-width:900px){
+ .mission-workspace .plan-view{padding:18px 20px 10px}
+ .mission-workspace .plan-heading{gap:16px}
+ .mission-workspace .plan-heading-actions{gap:12px}
+ .mission-workspace .plan-table :is(th,td):is(:first-child,:last-child){left:auto;right:auto}
+ .mission-workspace .plan-table tbody td:is(:first-child,:last-child){position:static}
+ .mission-workspace .plan-search{flex-basis:100%;max-width:none}
+ .mission-workspace .plan-task-count{margin-left:auto}
+}
+@container mission (max-width:600px){
+ .mission-workspace .plan-view{padding:14px 12px 8px}
+ .mission-workspace .plan-heading{min-height:64px;padding-bottom:13px;gap:10px}
+ .mission-workspace .plan-heading h1{font-size:24px}
+ .mission-workspace .plan-page-icon{width:30px;height:30px;border-radius:9px}
+ .mission-workspace .plan-heading-copy>p{margin-left:0;font-size:11px}
+ .mission-workspace .plan-heading-actions{gap:8px;align-self:flex-start;padding-top:1px}
+ .mission-runtime{display:none}
+ .mission-workspace .plan-new{min-height:36px;padding:7px 11px;font-size:12px}
+ .mission-workspace .plan-view-tabs>button{font-size:12px;padding-inline:10px}
+ .mission-status-filters{padding-top:9px}
+ .mission-status-filters>button{font-size:11px;padding-inline:8px}
+ .mission-workspace .plan-filter-bar{gap:5px;padding-bottom:9px}
+ .mission-workspace .plan-filter-bar>button,.mission-workspace .plan-options-trigger,.mission-workspace .plan-global-toolbar>button{font-size:11px;padding-inline:7px}
+ .mission-workspace .plan-task-count{display:none}
+ .mission-workspace .plan-board-grouping{flex-basis:100%;max-width:none}
+ .mission-workspace .plan-gallery{grid-template-columns:minmax(0,1fr)}
+ .mission-workspace .plan-calendar>header{flex-wrap:wrap}
+ .mission-workspace .plan-calendar>header>h2{font-size:18px;flex:1}
+ .mission-workspace .plan-calendar>header>.app-select{max-width:none;flex-basis:100%;order:3}
+ .mission-workspace .plan-form-view{grid-template-columns:minmax(0,1fr)}
+ .mission-workspace .plan-inline-form .plan-editor-scroll{display:flex;flex-direction:column}
+ .mission-workspace .plan-inline-form .plan-field-row{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+}
+@container mission-sheet (max-width:520px){
+ .mission-task-sheet .plan-editor-scroll{padding:5px 20px 20px}
+ .mission-task-sheet .plan-field-row{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+ .mission-task-sheet .plan-field-row>label{width:100%;min-width:0}
+ .mission-task-sheet>footer{padding:11px 14px;gap:7px}
+ .mission-task-sheet>footer>button{min-height:36px;padding:7px 10px;font-size:11px}
+ .mission-templates>div{grid-template-columns:minmax(0,1fr)}
+}
