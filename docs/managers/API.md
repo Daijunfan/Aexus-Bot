@@ -3435,11 +3435,16 @@ Legacy unsaved local content is moved to Linux and its complete row/image hashes
 verified before removing the old local copies and derived disk index. A server
 outage produces an explicit error; it does not create a disk fallback.
 
-Telegram magazine publications carry only document metadata:
+By default, Telegram magazine publications carry only document metadata:
 `{id,name,mimeType,bytes,deferred:true}` until the file is fetched; SHA-256 is
 optional only for deferred documents. No full-file fetch or generated PDF preview
-occurs while collecting/listing. An explicit user `channel.file-download` first
-requests Linux retrieval, then uses the existing SSH transfer to the channel
+occurs during default collection or listing. The separate collector can opt a
+Telegram target into `options.prefetch_documents: true`: new originals download
+on Linux during collection, and existing archive files are backfilled newest
+first. This does not create Mac copies, bookmarks or protected pins. Pending
+background work resumes after restart; failed downloads retry after a cooldown.
+An explicit user `channel.file-download` reuses the verified Linux cache or
+requests retrieval, then uses the existing SSH transfer to the channel
 workspace, validating exact size and SHA-256. Status reports
 `phase:server|transfer` and queued/running/completed/failed. Repeated clicks reuse
 the requested server cache and completed local copy. Existing filenames are
