@@ -303,8 +303,15 @@ capacity pressure; explicit saves and requested documents remain protected. The 
 row/image hashes before erasing legacy unsaved local copies. A server outage
 never creates a local disk fallback.
 
-Telegram documents are metadata-only during collection/listing, including no
-automatically generated full-file previews. Click Download to retrieve the
+By default, Telegram documents are metadata-only during collection/listing, including no
+automatically generated full-file previews. A Telegram target may opt into server
+background prefetch with `options.prefetch_documents: true` in the separate collector
+configuration. Its originals then download automatically on the configured Linux
+storage host during collection, before publication to the Mac; existing records
+are backfilled newest first, and pending requests resume after restart. Only one
+background transfer is queued at a time, leaving capacity for explicit user
+requests. Auto caching does not create Mac copies, bookmarks or protected pins.
+A later download reuses the verified server file. Click Download to retrieve the
 original on Linux, then transfer it to the Mac channel workspace with exact
 size/SHA-256 checks. Progress distinguishes server retrieval and Mac transfer.
 The server retains that requested copy; repeat downloads reuse it. The Mac file
