@@ -5631,7 +5631,7 @@
   {
     "name": "bot.sync",
     "args": "",
-    "summary": "User/Secretary: import existing native Dot and Grok bots/groups without changing their prompts, history or permissions. Refreshes account connectivity.",
+    "summary": "User/Secretary: import the primary Dot and the complete Grok account bot/group directory, including team agents and all native room enum forms. Preserve explicitly disconnected entries, native prompts, history and permissions. Refreshes account connectivity.",
     "gui": "Connect bots",
     "inputSchema": {
       "type": "object",

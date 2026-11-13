@@ -26,8 +26,8 @@ export async function remoteBots(provider:BotProvider):Promise<RemoteBot[]>{
  if(fixtureUrl())return fixture('list',{provider})
  if(provider==='dots')return [{id:await dots.getPrimaryRoom({force:true}),name:'Dot',provider,kind:'private'}]
  grok.invalidateUsage()
- const result=await grok.rpc('ListGrokBotAgents',{})
- return (result.agents??[]).map((a:any)=>({id:a.agentId||a.legacyAgentId,name:a.name||'Grok Bot',provider,kind:a.kind==='GROK_BOT_AGENT_KIND_ROOM'?'group':'private',participantIds:a.memberAgentIds??[],grokShape:a.avatarShape??'blob',grokColor:a.avatarColor??'black'}))
+ const result=await grok.rpc('ListGrokBotAgents',{includeTeamAgents:true})
+ return (result.agents??[]).map((a:any)=>({id:a.agentId||a.legacyAgentId,name:a.name||'Grok Bot',provider,kind:a.kind===2||a.kind==='ROOM'||a.kind==='GROK_BOT_AGENT_KIND_ROOM'?'group':'private',participantIds:a.memberAgentIds??[],grokShape:a.avatarShape??'blob',grokColor:a.avatarColor??'black'}))
 }
 export async function remoteCreate(name:string,description:string,id:string,members?:string[]):Promise<RemoteBot>{
  if(fixtureUrl())return fixture('create',{name,description,id,members})

@@ -2,6 +2,17 @@
 import {engineeringZh} from './engineering.ts'
 import {botManagementZh} from './bot-management'
 export const zhCN:Record<string,string> = {
+  "{0} group": "{0} 个群组",
+  "{0} bot": "{0} 个 Bot",
+  "{0} native bot member": "{0} 位原生 Bot 成员",
+  "Native bot settings": "原生 Bot 设置",
+  "Connect native bots": "连接原生 Bot",
+  "The selected native object is unavailable. Refresh the directory.": "此原生对象当前不可用，请刷新目录。",
+  "{0} native groups": "{0} 个原生群组",
+  "Manage native {0}": "管理原生对象 {0}",
+  "Open native conversation {0}": "打开原生会话 {0}",
+  "Available bots and groups": "可直接打开的 Bot 与群组",
+  "Manage native bots and groups": "管理 Bot 与原生群组",
   "Upload files": "上传文件",
   "Employees use their assigned Team workspace. Group files remain shared; authorized channel access is read-only. Joining does not create another employee folder.": "员工使用分配好的团队工作区；群文件始终共享，获授权的频道访问只读。加入会话不会创建额外员工文件夹。",
   "Save or cancel the file changes before leaving.": "请先保存或取消文件修改，再离开。",

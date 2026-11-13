@@ -11,7 +11,7 @@ import {build} from 'esbuild'
 const root=path.resolve(import.meta.dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'aexus-bot-wire-')),require=createRequire(import.meta.url),calls=[],checks=[]
 process.env.AGENTS_COMPANY_HOME=path.join(temp,'state');delete process.env.AGENTS_COMPANY_TEST_BOTS_URL
 fs.symlinkSync(path.join(root,'node_modules'),path.join(temp,'node_modules'),'dir')
-const bots=Array.from({length:53},(_,i)=>({agentId:'grok-'+i,name:'Grok '+i,description:'Instructions '+i,title:'Analyst',kind:'GROK_BOT_AGENT_KIND_AGENT',avatarShape:'cloud',avatarColor:'blue',viewerIsOwner:true})),rooms=Array.from({length:3},(_,i)=>({agentId:'room-'+i,name:'Room '+i,kind:i===0?2:'GROK_BOT_AGENT_KIND_ROOM',description:'Group goal',memberAgentIds:['grok-0','grok-1'],viewerCanManage:true})),grokItems=[...bots,...rooms]
+const bots=Array.from({length:53},(_,i)=>({agentId:'grok-'+i,name:'Grok '+i,description:'Instructions '+i,title:'Analyst',kind:'GROK_BOT_AGENT_KIND_AGENT',avatarShape:'cloud',avatarColor:'blue',viewerIsOwner:true})),rooms=Array.from({length:3},(_,i)=>({agentId:'room-'+i,name:'Room '+i,kind:i===0?2:i===1?'ROOM':'GROK_BOT_AGENT_KIND_ROOM',description:'Group goal',memberAgentIds:['grok-0','grok-1'],viewerCanManage:true})),grokItems=[...bots,...rooms]
 const dots=Array.from({length:29},(_,i)=>({id:'dot-'+i,display_name:'Dot '+i,description:'Native Dot instructions',messaging_room_id:i===28?undefined:'dot-room-'+i,is_primary:i===0,is_paused:false,active_root_thread_id:'thread-'+i}))
 let truncated=false,repeatedCursor=false
 const server=http.createServer(async(req,res)=>{
@@ -53,7 +53,8 @@ const server=http.createServer(async(req,res)=>{
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 try{
  const transport=path.join(root,'src/main/bot-bridge/http.ts'),origin='http://127.0.0.1:'+server.address().port,entry=path.join(temp,'catalog.cjs')
- await build({entryPoints:[path.join(root,'src/main/bot-bridge/catalog.ts')],outfile:entry,bundle:true,platform:'node',format:'cjs',packages:'external',logLevel:'silent',plugins:[{name:'isolated-native-management-wire',setup(b){
+ const fixtureEntry=path.join(temp,'entry.ts');fs.writeFileSync(fixtureEntry,'export * from '+JSON.stringify(path.join(root,'src/main/bot-bridge/catalog.ts'))+';export {remoteBots} from '+JSON.stringify(path.join(root,'src/main/bot-bridge/client.ts'))+';')
+ await build({entryPoints:[fixtureEntry],outfile:entry,bundle:true,platform:'node',format:'cjs',packages:'external',logLevel:'silent',plugins:[{name:'isolated-native-management-wire',setup(b){
   b.onResolve({filter:/^\.\/credentials$/},args=>args.importer.includes('/bot-bridge/')?{path:'credentials',namespace:'fixture'}:undefined)
   b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:`export class CredentialError extends Error{};export const getChatGptAuth=()=>({accountId:'fixture-dot',userId:'fixture-user',accessToken:'not-a-credential',expired:false});export const getGrokAuth=()=>({accountId:'fixture-grok',userId:'fixture-user',accessToken:'not-a-credential',expired:false});export const getGrokComputerKeys=()=>{throw Error('No native computers in this fixture')};export const decodeJwt=()=>null`,loader:'js'}))
   b.onResolve({filter:/^\.\/http$/},args=>/bot-bridge\/(dots|grok|client)\.ts$/.test(args.importer)?{path:'http',namespace:'wire'}:undefined)
@@ -61,7 +62,8 @@ try{
  }}]})
  const native=require(entry),pass=message=>{checks.push(message);console.log('PASS '+message)}
  const g=await native.readNativeCatalog('grok'),d=await native.readNativeCatalog('dots');assert.equal(g.items.filter(item=>item.kind==='private').length,53);assert.equal(g.items.filter(item=>item.kind==='group').length,3);assert.equal(d.items.length,29);assert.equal(d.items.at(-1).messagingId,undefined);assert.equal(calls.filter(call=>call.route==='/dots/tbo').length,2);assert.ok(!calls.some(call=>/messages|Transcript|Send/.test(call.route)))
- pass('Native wire lists 53 Grok bots, three rooms including numeric enums, and every Dot page without opening any conversations')
+ const imported=await native.remoteBots('grok');assert.equal(imported.length,56);assert.deepEqual(imported.filter(item=>item.kind==='group').map(item=>item.id).sort(),rooms.map(item=>item.agentId).sort())
+ pass('Native wire lists 53 Grok bots, three rooms including numeric and short enums, consistent with legacy sync, and every Dot page without opening any conversations')
  truncated=true;assert.equal((await native.readNativeCatalog('grok')).complete,false);truncated=false;repeatedCursor=true;await assert.rejects(()=>native.readNativeCatalog('dots'),/repeated directory cursor/);repeatedCursor=false
  pass('Native truncation remains explicit and a repeated Dot cursor stops instead of looping or claiming complete counts')
  await native.configureNative(g.items[0],{name:'Renamed',grokColor:'violet'});assert.equal(bots[0].name,'Renamed');assert.equal(bots[0].description,'Instructions 0');assert.deepEqual(calls.at(-1).body,{id:'grok-0',partialUpdate:true,name:'Renamed',avatarColor:'violet'})
