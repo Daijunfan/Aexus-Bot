@@ -44,7 +44,7 @@ export function MessageActions({text,onReply,onEdit,onPrivate,onThread,onRemove,
       <button role="menuitem" onClick={()=>change({saved:!preferences.saved})}><Icon name="bookmark"/>{preferences.saved?uiText("Remove from saved"):uiText("Save message")}</button>
       <button role="menuitem" onClick={()=>change({pinned:!pinned})}><Icon name="pinned"/>{pinned?uiText("Unpin message"):uiText("Pin message")}</button>
       {conversation&&id&&<button role="menuitem" onClick={()=>{messenger?.setSelection({conversation,ids:[id]});setMenu(null)}}><Icon name="checklist"/>{uiText("Select message")}</button>}
-      {onRemove&&<button role="menuitem" className="danger" onClick={()=>{setMenu(null);onRemove()}}><Icon name="trash"/>{uiText("Remove for everyone")}</button>}
+      {onRemove&&<button role="menuitem" onClick={()=>{setMenu(null);onRemove()}}><Icon name="discard"/>{uiText("Withdraw message")}</button>}
       <hr/><button role="menuitem" onClick={()=>change({hidden:true})}><Icon name="eye-closed"/>{uiText("Hide for me")}</button>
     </MessageMenu>}
   </>
