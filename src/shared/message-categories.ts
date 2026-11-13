@@ -4,8 +4,8 @@ export const CATEGORY_INCLUDES=['outsource','private','groups','channels','teleg
 export type CategoryInclude=typeof CATEGORY_INCLUDES[number]
 export type CategoryEntry={key:string;kind:'employee'|'group'|'channel'|'source';platform?:string;enabled?:boolean;channelId?:string;sourceCount?:number;botKind?:'private'|'group'}
 export type CategorySelection={conversations:readonly string[];include?:CategoryInclude;excluded?:readonly string[]}
-/** One-to-one conversations: an employee DM, or a bot worker's own private chat (Dot, Grok). */
-export const isPrivateConversation=(entry:CategoryEntry)=>entry.kind==='employee'||(entry.kind==='group'&&entry.botKind==='private')
+/** Personal inbox: employee DMs and all native Bot endpoints, including Grok rooms. */
+export const isPrivateConversation=(entry:CategoryEntry)=>entry.kind==='employee'||(entry.kind==='group'&&!!entry.botKind)
 export const matchesCategory=(include:CategoryInclude|undefined,entry:CategoryEntry)=>(include==='youtube'||include==='x'||include==='telegram')?entry.kind==='channel'&&entry.platform===include:include==='outsource'?!!entry.botKind:include==='channels'?entry.kind==='channel':include==='private'?isPrivateConversation(entry):include==='groups'?(entry.kind==='group'&&!entry.botKind):!!include&&entry.kind==='source'&&entry.platform===include&&entry.enabled!==false
 export const inCategory=(folder:CategorySelection,entry:CategoryEntry)=>folder.conversations.includes(entry.key)||matchesCategory(folder.include,entry)&&!folder.excluded?.includes(entry.key)
 export type SocialElement={id:string;key:string;channelId:string;platform:'telegram'|'x'|'youtube';name:string;locator:string;enabled:boolean;createdAt:number;unreadCount:number;postCount:number;firstUnread?:{id:string;kind:'news'};lastPost?:{id:string;title:string;publishedAt:number;sourceName:string};avatar?:{sourceId:string;sha256:string}}

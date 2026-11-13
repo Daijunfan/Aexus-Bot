@@ -366,6 +366,8 @@ MiniNotion 只暴露获授权页面，数据库包含记录且记录可单独覆
 
 ## 外部 Worker 与监控程序
 
+Private 默认收录员工私聊、Grok／Dot Bot 与 Grok 原生群组；这只是分类投影，不改原生群组身份、成员、消息协议或授权。
+
 完整原生目录与原生管理（`bot.catalog/profile/connect/configure/members/native-create/control/native-delete`）仅用户与 Secretary 可调用。普通员工的 `bot.access` 只授予既有会话的消息与文件能力，不授予账户目录或管理权。原生对象还要检查平台所有者/管理权限，不由 Aexus 身份替代。原生群组成员使用原生 Bot ID，与 Aexus 员工授权独立。
 
 未知操作结果的核验继续绑定原调用主体、原生账户、请求 ID 与参数指纹；只读取并核验已知原生身份，不重新派发创建或删除。删除回执仅保留归档所需的原生身份字段，不存放凭据。确认变更后的目录同步失败不会扩大权限，也不会触发另一次原生写入。

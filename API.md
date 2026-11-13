@@ -377,7 +377,7 @@ agents messenger directory --type x --json
 agents messenger directory --folder CATEGORY_ID --archived include --offset 0 --limit 100 --json
 ```
 
-Types: `all`, `private` (employees and management roles), `outsource` (Dot/Grok bots
+Types: `all`, `private` (employees, management roles and all native Bot endpoints, including Grok rooms), `outsource` (Dot/Grok bots
 and native Grok rooms), `groups` (ordinary groups), `channels` (parent channel containers), and
 `telegram`, `x`, `youtube` (one aggregate channel per platform).
 Search matches names, Team/role/engine labels, group member names or platform/accounts.
