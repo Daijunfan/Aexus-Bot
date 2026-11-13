@@ -11,7 +11,7 @@ import {useCatalog} from './useCatalog'
 import {EmployeeProfile} from './EmployeeProfile'
 import {affectsInbox} from '../../../shared/store-changes'
 import {useSortableList} from '../chat/useSortableList'
-import {mergeOrder,orderedKeys} from '../../../shared/messenger-order'
+import {mergeOrder,orderedKeys,pinnedFirst} from '../../../shared/messenger-order'
 import {MessageWallpaper} from '../chat/MessageWallpaper'
 import {translate as uiText,useI18n,interfaceLocale} from '../i18n'
 import {ForwardMessageDialog} from './ForwardMessageDialog'
@@ -65,7 +65,7 @@ export function MessageView({store,sessions,selectedId,groupId,groups,onGroup,ch
   const [folderEditor,setFolderEditor]=useState<ConversationFolder|'new'|null>(null),[listMenu,setListMenu]=useState<{x:number;y:number}|null>(null),[selecting,setSelecting]=useState(false),[selected,setSelected]=useState<string[]>([]),[context,setContext]=useState<{key:string;x:number;y:number}|null>(null)
   const preferences=(key:string)=>messenger.state.conversations[key]??{}
   const toggle=(key:string)=>setSelected(previous=>previous.includes(key)?previous.filter(id=>id!==key):[...previous,key])
-  const update=(keys:string[],patch:import('../../../shared/messenger').ConversationPreferences)=>{void messenger.conversations(keys,patch).then(ok=>{if(ok){setContext(null);setSelected([]);setSelecting(false)}})}
+  const update=(keys:string[],patch:import('../../../shared/messenger').ConversationPreferences)=>{void messenger.conversations(keys,patch).then(ok=>{if(ok){setContext(null);setSelected([]);setSelecting(false);if(patch.pinned===true)requestAnimationFrame(()=>contacts.current?.scrollTo({top:0,behavior:'instant'}))}})}
   const [newGroup,setNewGroup]=useState(false),[channelManager,setChannelManager]=useState(false),[profileOpen,setProfileOpen]=useState(false),[botsOpen,setBotsOpen]=useState(false)
   const [employeesOpen,setEmployeesOpen]=useState(false),[deleteEmployee,setDeleteEmployee]=useState<StoredSession|null>(null),[editingGroup,setEditingGroup]=useState<ChatGroupView|null>(null),[botAction,setBotAction]=useState<{bot:ChatGroupView;mode:'edit'|'remove'}|null>(null)
   const [error,setError]=useState('')
@@ -83,7 +83,7 @@ export function MessageView({store,sessions,selectedId,groupId,groups,onGroup,ch
   const archived=catalog.filter(entry=>preferences(entry.key).archived)
   useEffect(()=>{if(messenger.ready&&!loading&&scope==='archive'&&!archived.length)patchDirectory({scope:'all'})},[scope,archived.length])
   const orderingScope=activeFolder?.id??scope,savedOrder=messenger.state.orders?.[orderingScope]??[],byKey=new Map(catalog.map(entry=>[entry.key,entry]))
-  const orderingKeys=orderedKeys(catalog.filter(entry=>(scope==='archive'?preferences(entry.key).archived:scope==='favorites'?!preferences(entry.key).archived&&preferences(entry.key).favorite:activeFolder?true:!preferences(entry.key).archived)&&(!activeFolder||inCategory(activeFolder,entry))).map(entry=>entry.key),savedOrder)
+  const orderingKeys=pinnedFirst(orderedKeys(catalog.filter(entry=>(scope==='archive'?preferences(entry.key).archived:scope==='favorites'?!preferences(entry.key).archived&&preferences(entry.key).favorite:activeFolder?true:!preferences(entry.key).archived)&&(!activeFolder||inCategory(activeFolder,entry))).map(entry=>entry.key),savedOrder),key=>!!preferences(key).pinned)
   const scopeKeys=orderingKeys
   const conversations=uniqueConversations(scopeKeys.map(key=>byKey.get(key)!).filter(entry=>((entry.kind==='channel'||entry.kind==='source')?[entry.channel.name,entry.channel.lastPost?.title,entry.channel.lastPost?.sourceName,entry.channel.lastMessage?.text,entry.channel.lastMessage?.authorName,...(entry.kind==='source'?[entry.source.locator,entry.source.platform]:[])].join(' '):entry.kind==='group'?[entry.group.name,...entry.group.members.map(member=>member.title)].join(' '):[entry.card.title,entry.card.group,entry.card.role,entry.card.engine,previews.get(entry.card.id)?.text].join(' ')).toLocaleLowerCase().includes(needle)))
   const nativeCandidates=scope==='all'?(native.catalog?.items??[]).filter(item=>!groups.some(group=>group.bot?.provider===item.provider&&(group.bot.nativeId===item.nativeId||group.bot.remoteId===item.messagingId))&&(!activeFolder||inCategory(activeFolder,{key:'native:'+nativeBotKey(item),kind:'group',botKind:item.kind}))):[]
@@ -100,7 +100,7 @@ export function MessageView({store,sessions,selectedId,groupId,groups,onGroup,ch
   }
   const chooseCategory=(id?:string)=>{nativeEpoch.current++;patchDirectory({categoryId:id,scope:'all',query:''});setContext(null);setListMenu(null);setSelecting(false);setSelected([])}
   const chooseScope=(value:'all'|'favorites'|'archive')=>{nativeEpoch.current++;patchDirectory({query:'',scope:value,categoryId:undefined});setListMenu(null);setSelecting(false);setSelected([]);if(value==='all'){void refreshInbox();void refreshSocial();onRefresh?.()}}
-  const sorting=useSortableList({keys:conversations.map(entry=>entry.key),identity:orderingScope+'\n'+(categoryId??'')+'\n'+needle,axis:'y',disabled:!messenger.ready||selecting||!!context||!!listMenu||!!folderEditor||newGroup||channelManager,label:key=>{const entry=byKey.get(key);return entry?.kind==='channel'||entry?.kind==='source'?entry.channel.name:entry?.kind==='group'?entry.group.name:entry?.card.title??key},save:order=>messenger.reorder(orderingScope,mergeOrder(orderingKeys,order),savedOrder)}),contacts=sorting.root
+  const sorting=useSortableList({keys:conversations.map(entry=>entry.key),identity:orderingScope+'\n'+(categoryId??'')+'\n'+needle+'\n'+orderingKeys.filter(key=>preferences(key).pinned).join('\n'),axis:'y',disabled:!messenger.ready||selecting||!!context||!!listMenu||!!folderEditor||newGroup||channelManager,label:key=>{const entry=byKey.get(key);return entry?.kind==='channel'||entry?.kind==='source'?entry.channel.name:entry?.kind==='group'?entry.group.name:entry?.card.title??key},save:order=>messenger.reorder(orderingScope,pinnedFirst(mergeOrder(orderingKeys,order),key=>!!preferences(key).pinned),savedOrder)}),contacts=sorting.root
   const resetOrder=(key:string)=>{setListMenu(null);void messenger.reorder(key,null,messenger.state.orders?.[key]??[])}
   const animatedAvatars=useMessageAvatarMotion()
   const contextEntry=context?byKey.get(context.key):undefined
@@ -120,7 +120,7 @@ export function MessageView({store,sessions,selectedId,groupId,groups,onGroup,ch
       {selecting&&<div className="message-bulk-actions" role="toolbar" aria-label={uiText("Selected conversation actions")}><span>{uiText('{0} selected',[selected.length])}</span><button disabled={!selected.length} onClick={()=>update(selected,{pinned:true})} aria-label={uiText("Pin selected conversations")}><Icon name="pinned"/></button>{archiveAvailable&&<button disabled={!selected.length} onClick={()=>update(selected,{archived:scope!=='archive'})} aria-label={scope==='archive'?uiText("Restore selected conversations"):uiText("Archive selected conversations")}><Icon name="archive"/></button>}<button disabled={!selected.length} onClick={()=>update(selected,{unread:true})} aria-label={uiText("Mark selected conversations unread")}><Icon name="mail"/></button><button onClick={()=>{setSelecting(false);setSelected([])}} aria-label={uiText("Cancel conversation selection")}><Icon name="close"/></button></div>}
       <span className="message-sort-status" role="status" aria-live="polite">{sorting.announcement}</span>
       <CanvasMotion.Provider value={animatedAvatars}><div ref={contacts} {...sorting.bindings} className="message-contacts message-sortable" aria-label={uiText("Conversations")} aria-busy={sorting.phase==='saving'} role="list">
-        {sorting.keys.map(key=>byKey.get(key)!).map(entry=>{
+        {pinnedFirst(sorting.keys,key=>!!preferences(key).pinned).map(key=>byKey.get(key)!).map(entry=>{
           const source=entry.kind==='source'?entry.source:undefined,channel=(entry.kind==='channel'||entry.kind==='source')?entry.channel:undefined,group=entry.kind==='group'?entry.group:undefined,card=entry.kind==='employee'?entry.card:undefined,session=card?live.get(card.id):undefined,preview=card?previews.get(card.id):undefined,prefs=preferences(entry.key)
           const timestamp=channel?Math.max(channel.lastPost?.publishedAt??0,channel.lastMessage?.createdAt??0)||null:group?.lastMessage?.createdAt??preview?.updatedAt??null
           const title=channel?.name??group?.name??card!.title,current=channel?channelId===channel.id&&(source?sourceId===source.id:!sourceId):group?groupId===group.id:selectedId===card!.id,unreadCount=channel?.unreadCount??0,unread=!!prefs.unread||(channel?unreadCount>0:group?group.unread:!!preview?.unread),draft=(card?drafts[card.id]:undefined)??messenger.state.drafts[entry.key]?.text

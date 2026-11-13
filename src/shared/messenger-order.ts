@@ -5,6 +5,12 @@ export function orderedKeys(keys:readonly string[],order:readonly string[]=[]):s
  for(const key of order)if(remaining.delete(key))result.push(key)
  return [...result,...remaining]
 }
+/** Pins outrank manual positions while relative order within each group stays intact. */
+export function pinnedFirst(keys:readonly string[],pinned:(key:string)=>boolean):string[]{
+ const first:string[]=[],rest:string[]=[]
+ for(const key of keys)(pinned(key)?first:rest).push(key)
+ return [...first,...rest]
+}
 /** Reorder a visible subset in its existing slots; filtered/archived items keep their positions. */
 export function mergeOrder(previous:readonly string[],next:readonly string[]):string[]{
  const selected=new Set(next);let index=0

@@ -23,7 +23,7 @@ import {randomUUID} from 'node:crypto'
 import {APP_HOME} from '../shared/protocol'
 import {EMPTY_MESSENGER,MESSAGE_REACTIONS,conversationKey,workDraftKey,groupDraftKey,messageKey,hasDraftContent,type MessengerState,type MessengerMessage,type ConversationPreferences,type MessagePreferences} from '../shared/messenger'
 import {messageTime} from '../shared/messages'
-import {mergeOrder,sameOrder,orderScope,validOrder} from '../shared/messenger-order'
+import {mergeOrder,sameOrder,orderScope,validOrder,pinnedFirst} from '../shared/messenger-order'
 import {messageSourceView} from '../shared/message-source'
 import {atomicJson,readJson} from './atomic-file'
 import {authorize,requestContext,visibleEmployees,requireAppAdministrator} from './authorization'
@@ -157,7 +157,7 @@ export async function messengerRequest(command:string,args:Record<string,any>={}
     if(scope==='categories'){if(key!=='all'&&!state.categories?.some(value=>value.id===key))throw Error('Unknown conversation category')}
     else {const entry=listIdentity(key);if(folder&&!inCategory(folder,entry as import('../shared/message-categories').CategoryEntry))throw Error('Conversation is not in this category')}
    }
-   const current=state.orders?.[scope]??[],next=args.order===null?[]:mergeOrder(current,args.order)
+   const current=state.orders?.[scope]??[],merged=args.order===null?[]:mergeOrder(current,args.order),next=scope==='categories'?merged:pinnedFirst(merged,key=>!!state.conversations[key]?.pinned)
    if(next.length>10000)throw Error('Choose up to 10000 conversation positions')
    if(sameOrder(current,next))return state
    if(args.expectedOrder!==undefined&&!sameOrder(current,args.expectedOrder))throw Error('Order changed in another window. Try dragging again.')

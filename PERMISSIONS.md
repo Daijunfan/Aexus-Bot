@@ -236,7 +236,7 @@ All 右侧固定显示外包、私聊、群组、频道四个类别筛选；不�
 
 ### Message 拖动排序
 
-`messenger.reorder` 允许用户或 Secretary 整理 category 与混合会话顺序，沿用个人 Messenger 状态和既有授权。Core 验证 scope、当前会话/分类引用及分类成员；每个 scope 可独立比较 expectedOrder，避免覆盖其他窗口。拖动只保存位置，不读取历史、标记已读、触发员工或改变公司/群组/频道权限。手动顺序不修改置顶/收藏/归档标记；恢复自动排序只删除指定 scope 的位置记录。
+`messenger.reorder` 允许用户或 Secretary 整理 category 与混合会话顺序，沿用个人 Messenger 状态和既有授权。Core 验证 scope、当前会话/分类引用及分类成员；每个 scope 可独立比较 expectedOrder，避免覆盖其他窗口。拖动只保存位置，不读取历史、标记已读、触发员工或改变公司/群组/频道权限。置顶会话始终排在普通会话前，手动顺序只作用于各自分组内部，不修改置顶/收藏/归档标记；恢复自动排序只删除指定 scope 的位置记录。
 
 ## Plan 调度的独立下行边界
 

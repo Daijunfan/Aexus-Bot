@@ -5,7 +5,7 @@ import path from 'node:path'
 import assert from 'node:assert/strict'
 import {build} from 'esbuild'
 import {fixtureCore} from './fixtures/headless-core.mjs'
-import {orderedKeys,mergeOrder} from '../src/shared/messenger-order.ts'
+import {orderedKeys,mergeOrder,pinnedFirst} from '../src/shared/messenger-order.ts'
 const root=path.resolve(import.meta.dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'ac-message-order-')),entry=path.join(temp,'daemon.cjs'),out=path.join(root,'artifacts/message-order')
 fs.symlinkSync(path.join(root,'node_modules'),path.join(temp,'node_modules'),'dir')
 let f
@@ -27,21 +27,22 @@ try{
  const version=state.revision;state=await rpc('messenger.reorder',{scope:'all',order:rowOrder,expectedOrder:[]});assert.equal(state.revision,version,'lost-response retries do not write again')
  await rpc('messenger.draft',{conversation:refs[0],text:'Do not lose this draft',clientMessageId:'protected-draft'})
  await rpc('messenger.conversation',{conversations:[refs[0],refs[1]],patch:{pinned:true,unread:true,favorite:true,archived:true}})
- const protectedState=await rpc('messenger.state'),subset=[refs[3],refs[4]],merged=mergeOrder(rowOrder,subset)
+ const protectedState=await rpc('messenger.state'),subset=[refs[3],refs[4]],merged=pinnedFirst(mergeOrder(rowOrder,subset),key=>!!protectedState.conversations[key]?.pinned)
  state=await rpc('messenger.reorder',{scope:'all',order:subset,expectedOrder:rowOrder});assert.deepEqual(state.orders.all,merged)
  assert.deepEqual(state.drafts,protectedState.drafts);assert.deepEqual(state.conversations,protectedState.conversations);assert.deepEqual(state.messages,protectedState.messages)
  checks.push('Mixed channel/group/employee positions persist, hidden slots survive, unchanged retries are idempotent and unrelated draft/preference changes do not conflict')
  await reject({scope:'all',order:[...rowOrder].reverse(),expectedOrder:rowOrder})
  for(const args of [{scope:'all',order:['employee:missing']},{scope:'categories',order:['missing']},{scope:'all',order:[refs[0],refs[0]]},{scope:'all',order:['__proto__']},{scope:'__proto__',order:[]},{scope:'all',order:{}},{scope:'all',order:null,extra:true},{scope:'all',order:rowOrder,expectedOrder:null},{scope:other.id,order:[refs[0]]}])await reject(args)
  await reject({scope:'all',order:refs},token)
- state=await rpc('messenger.reorder',{scope:folder.id,order:[...refs].reverse(),expectedOrder:[]},secretaryToken);assert.deepEqual(state.orders[folder.id],[...refs].reverse());assert.deepEqual(state.orders.all,merged)
+ state=await rpc('messenger.reorder',{scope:folder.id,order:[...refs].reverse(),expectedOrder:[]},secretaryToken);assert.deepEqual(state.orders[folder.id],pinnedFirst([...refs].reverse(),key=>!!state.conversations[key]?.pinned));assert.deepEqual(state.orders.all,merged)
  await rpc('messenger.reorder',{scope:'archive',order:refs.slice(0,2),expectedOrder:[]});await rpc('messenger.reorder',{scope:'favorites',order:refs.slice(0,2).reverse(),expectedOrder:[]})
  checks.push('Scoped optimistic conflicts and invalid/foreign references reject atomically; operator/Secretary organization permissions remain enforced; categories and list scopes are independent')
  const saved=await rpc('messenger.state');await f.stop();await f.start();assert.deepEqual(await rpc('messenger.state'),saved)
- const ordered=await f.cli('messenger','reorder','all','--order','null','--expected-order',JSON.stringify(merged));assert.equal(ordered.orders.all,undefined);assert.deepEqual(ordered.orders[folder.id],[...refs].reverse());assert.deepEqual(ordered.drafts,saved.drafts)
+ const ordered=await f.cli('messenger','reorder','all','--order','null','--expected-order',JSON.stringify(merged));assert.equal(ordered.orders.all,undefined);assert.deepEqual(ordered.orders[folder.id],pinnedFirst([...refs].reverse(),key=>!!ordered.conversations[key]?.pinned));assert.deepEqual(ordered.drafts,saved.drafts)
  const resetVersion=ordered.revision;assert.equal((await rpc('messenger.reorder',{scope:'all',order:null})).revision,resetVersion)
  state=await rpc('messenger.folder-delete',{id:folder.id,expectedRevision:folder.revision});assert.equal(state.orders[folder.id],undefined);assert.deepEqual(state.orders.categories,[other.id,'all']);assert.deepEqual(state.conversations,saved.conversations)
  checks.push('Restart and CLI null reset preserve unrelated state; deleting a category cleans only its own ordering references')
+ assert.deepEqual(pinnedFirst(['a','b','c','d'],key=>key==='b'||key==='d'),['b','d','a','c'])
  assert.deepEqual(orderedKeys(['new','b','a'],['gone','a','b']),['a','b','new']);assert.deepEqual(mergeOrder(['a','hidden','b','c'],['c','a','b']),['c','hidden','a','b'])
  for(const employee of [a,secretary])assert.deepEqual((await rpc('session.transcript',{employee:employee.id})).items,[])
  assert.deepEqual(await rpc('terminal.list'),[])

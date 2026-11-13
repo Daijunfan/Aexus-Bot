@@ -22,6 +22,7 @@ export function MessageImageViewer({items:initialItems,initialIndex,initialSrc,h
  const [zoom,setZoom]=useState(1),[offset,setOffset]=useState<Point>({x:0,y:0}),[swipe,setSwipe]=useState<Point>({x:0,y:0}),[dragging,setDragging]=useState(false),[dimensions,setDimensions]=useState(''),[attempt,setAttempt]=useState(0)
  const cache=useRef(new Map<string,Promise<string>>(initialSrc?[[galleryKey(initialItems[initialIndex]),Promise.resolve(initialSrc)]]:[])),[images,setImages]=useState<Record<string,string>>(initialSrc?{[galleryKey(initialItems[initialIndex])]:initialSrc}:{}),[errors,setErrors]=useState<Record<string,boolean>>({})
  const wheelLast=useRef(0),pointers=useRef(new Map<number,Point>()),gesture=useRef<Gesture|null>(null)
+ const backdropPress=useRef<{id:number;start:Point;blank:boolean}|null>(null)
  const item=items[index],key=galleryKey(item),src=images[key],name=item.name??item.path.split(/[\\/]/).at(-1)??'Photo',first=Math.max(0,Math.min(index-3,items.length-7)),nearby=items.slice(first,first+7).map((item,offset)=>({item,index:first+offset}))
  useDialogFocus('.message-image-overlay:not([data-message-image-exit]) .message-image-dialog',true,()=>origin(items[index]))
  const play=(el:Element,frames:Keyframe[],duration:number,done?:()=>void)=>{let animation:Animation|undefined;animation=playMessageMotion(el,frames,duration,()=>{if(animation)animations.current.delete(animation);done?.()});if(animation)animations.current.add(animation)}
@@ -97,7 +98,21 @@ export function MessageImageViewer({items:initialItems,initialIndex,initialSrc,h
   if(!cancel&&start?.kind==='swipe'&&Date.now()-start.time<900){const x=event.clientX-start.start.x,y=event.clientY-start.start.y;if(Math.abs(x)>48&&Math.abs(x)>Math.abs(y)*1.2)navigate(x<0?'next':'previous');else if(Math.abs(y)>110&&Math.abs(y)>Math.abs(x)*1.4)close()}
  }
  const retry=()=>{cache.current.delete(key);setErrors(previous=>({...previous,[key]:false}));setAttempt(value=>value+1)}
- return createPortal(<div ref={overlay} className="message-image-overlay" onClick={()=>close()}>
+ const blankTarget=(target:EventTarget|null)=>target===overlay.current||target===viewport.current||target instanceof HTMLElement&&target.matches('.message-image-dialog,.message-image-dialog>header,.message-image-dialog>footer')
+ return createPortal(<div ref={overlay} className="message-image-overlay" onPointerDownCapture={event=>{
+  if(event.button!==0){backdropPress.current=null;return}
+  if(!event.isPrimary){if(backdropPress.current)backdropPress.current.blank=false;return}
+  backdropPress.current={id:event.pointerId,start:{x:event.clientX,y:event.clientY},blank:blankTarget(event.target)}
+ }} onPointerMoveCapture={event=>{
+  const press=backdropPress.current
+  if(press&&event.pointerId===press.id&&Math.hypot(event.clientX-press.start.x,event.clientY-press.start.y)>5)press.blank=false
+ }} onPointerCancelCapture={()=>{backdropPress.current=null}} onClickCapture={event=>{
+  const press=backdropPress.current;backdropPress.current=null
+  if(!press?.blank||!blankTarget(event.target))return
+  const rect=photo.current?.getBoundingClientRect()
+  if(event.target===viewport.current&&rect&&event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<=rect.bottom)return
+  event.stopPropagation();void close()
+ }}>
   <section className="message-image-dialog" role="dialog" aria-modal="true" aria-label={uiText('Image preview')} onClick={event=>event.stopPropagation()}>
    <header><span className="message-image-file"><Icon name="file-media"/><span><strong>{name}</strong><small>{dimensions||uiText(errors[key]?'Preview unavailable':'Loading image…')}{item.conversationTitle&&' · '+item.conversationTitle}</small></span></span>{(history||items.length>1)&&<output className="message-gallery-count" aria-live="polite" aria-label={uiText('Image position')}>{gallery.ready?uiText('Image {0} of {1}',[gallery.page.offset+index+1,gallery.page.total]):uiText(gallery.loading?'Loading gallery…':'Loaded images')}</output>}<a className="message-image-download" href={src&&!errors[key]?src:undefined} download={name} aria-disabled={!src||!!errors[key]} tabIndex={!src||errors[key]?-1:0} aria-label={uiText('Download image')} title={uiText('Download image')}><Icon name="desktop-download"/></a>{onReveal&&item.messageId&&<button aria-label={uiText('Go to image message')} title={uiText('Go to image message')} onClick={()=>close(()=>onReveal(item))}><Icon name="go-to-file"/></button>}<button aria-label={uiText('Close image preview')} title={uiText('Close image preview')} onClick={()=>close()}><Icon name="close"/></button></header>
    <div ref={viewport} className={`message-image-viewport ${zoom>1?'zoomed':''} ${dragging?'dragging':''}`} onDoubleClick={event=>{if(!(event.target as HTMLElement).closest('button'))changeZoom(zoom>1?1:2)}} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={event=>pointerEnd(event)} onPointerCancel={event=>pointerEnd(event,true)}>

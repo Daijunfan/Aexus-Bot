@@ -1622,9 +1622,10 @@ must belong to that folder. A partial order replaces those keys in their existin
 slots, preserving hidden/filtered positions. Unranked new items follow saved items.
 
 The UI previews moves locally and commits once on release. Each category has its
-own conversation order, independent of All, Favorites and Archive. Manual positions
-take precedence over the automatic pinned/recent sort without changing pin, unread,
-archive or favorite flags. New activity does not move manually arranged rows.
+own conversation order, independent of All, Favorites and Archive. Pinned
+conversations always precede ordinary conversations. Manual positions apply within
+each group without changing pin, unread, archive or favorite flags. New activity
+does not move manually arranged rows within those groups.
 `order:null` restores the original automatic ordering for that scope. The menu can
 also restore the default category order. Desktop supports dragging and Alt+arrow
 keys; touch uses hold-then-drag. Escape, lost focus and outside drops cancel.

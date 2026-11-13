@@ -4,7 +4,7 @@ import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} 
 import {onPluginFlush} from '../plugins'
 import {api} from '../api'
 import {createRefreshQueue} from '../snapshot'
-import {mergeOrder,sameOrder} from '../../../shared/messenger-order'
+import {mergeOrder,sameOrder,pinnedFirst} from '../../../shared/messenger-order'
 import {EMPTY_MESSENGER,hasDraftContent,draftStorageArgs,type MessengerState,type ConversationPreferences,type MessagePreferences,type MessageDraft,type ForwardDraftInput} from '../../../shared/messenger'
 
 export type MessageTarget={conversation:string;id:string;quote?:MessageQuote}
@@ -48,7 +48,7 @@ export function useMessengerState(enabled:boolean){
  const message=useCallback((conversation:string,id:string,patch:MessagePreferences)=>mutate('messenger.message',{conversation,id,patch}),[mutate])
  const reorder=useCallback(async(scope:string,order:string[]|null,expectedOrder:string[])=>{
   try{accept(await api.call<MessengerState>('messenger.reorder',{scope,order,expectedOrder}));setError('');return true}
-  catch(cause){const message=(cause as Error).message;try{const current=await api.call<MessengerState>('messenger.state');accept(current);const saved=current.orders?.[scope]??[];if(order===null?!saved.length:sameOrder(mergeOrder(saved,order),saved)){setError('');return true}}catch{}setError(message);return false}
+  catch(cause){const message=(cause as Error).message;try{const current=await api.call<MessengerState>('messenger.state');accept(current);const saved=current.orders?.[scope]??[];if(order===null?!saved.length:sameOrder(scope==='categories'?mergeOrder(saved,order):pinnedFirst(mergeOrder(saved,order),key=>!!current.conversations[key]?.pinned),saved)){setError('');return true}}catch{}setError(message);return false}
  },[accept])
  const saveFolder=useCallback(async(values:{id:string;name:string;conversations:string[];expectedRevision:number;include?:import('../../../shared/message-categories').CategoryInclude|null;excluded?:string[]})=>{const next=await api.call<MessengerState>('messenger.folder-save',values);accept(next);setError('');return next},[accept])
  const deleteFolder=useCallback(async(id:string,expectedRevision:number)=>{const next=await api.call<MessengerState>('messenger.folder-delete',{id,expectedRevision});accept(next);setError('');return next},[accept])
