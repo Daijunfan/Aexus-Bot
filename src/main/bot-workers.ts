@@ -47,7 +47,7 @@ function importBot(remote:RemoteBot){
 }
 export function listBots(includeRemoved=false){if(includeRemoved)requireAppAdministrator();return [...catalog().groups.filter(g=>g.bot&&(isAppAdministrator()||g.memberIds.includes(callerEmployee()!.id))),...(includeRemoved?Object.values(removedBots()).map(r=>({...r.group,removed:true})):[])].map(g=>({...g,bot:{...g.bot!,localComputer:localBotHosts.status(g.bot!.provider)},conversation:'group:'+g.id,directEmployeeId:g.bot!.kind==='private'?g.id:undefined,workerRole:'worker',automaticRoles:['secretary']}))}
 const connectLocalComputers=()=>localBotHosts.ensure([...new Set(catalog().groups.flatMap(g=>g.bot?[g.bot.provider]:[]))])
-function matchesNative(group:ChatGroup,profile:NativeBotProfile){return group.bot?.provider===profile.provider&&(group.bot.nativeId===profile.nativeId||group.bot.remoteId===profile.messagingId)}
+function matchesNative(group:ChatGroup,profile:Pick<NativeBotProfile,'provider'|'nativeId'|'messagingId'>){return group.bot?.provider===profile.provider&&(group.bot.nativeId===profile.nativeId||group.bot.remoteId===profile.messagingId)}
 const asRemote=(profile:NativeBotProfile,messagingId=profile.messagingId):RemoteBot=>({id:messagingId!,nativeId:profile.nativeId,name:profile.name,provider:profile.provider,kind:profile.kind,participantIds:profile.members,grokShape:profile.grokShape,grokColor:profile.grokColor})
 async function connectManagedBot(profile:NativeBotProfile){
  requireAppAdministrator()

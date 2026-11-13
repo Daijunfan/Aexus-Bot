@@ -2,7 +2,7 @@ import {objectSchema,nonemptySchema} from './api-schema.ts'
 import type {BotProvider} from './bot-workers'
 
 export type NativeBotAction='rename'|'configure'|'members'|'pause'|'resume'|'primary'|'interrupt'|'new-conversation'|'duplicate'|'delete'
-export type NativeBotProfile={provider:BotProvider;nativeId:string;messagingId?:string;name:string;description:string;kind:'private'|'group';title?:string;members:string[];grokShape?:string;grokColor?:string;paused?:boolean;primary?:boolean;shared?:boolean;canManage:boolean;actions:NativeBotAction[];version:string;threadId?:string}
+export type NativeBotProfile={provider:BotProvider;nativeId:string;messagingId?:string;name:string;description:string;kind:'private'|'group';title?:string;members:string[];grokShape?:string;grokColor?:string;paused?:boolean;primary?:boolean;shared?:boolean;canManage:boolean;actions:NativeBotAction[];version:string;threadId?:string;directorySyncPending?:boolean}
 export type NativeBotSummary=Omit<NativeBotProfile,'description'|'threadId'>&{descriptionPreview:string;connectionId?:string;localName?:string;removed?:boolean}
 export type BotCatalogProvider={provider:BotProvider;available:boolean;stale:boolean;complete:boolean;checkedAt?:number;error?:string;bots?:number;groups?:number;canCreateBot:boolean;canCreateGroup:boolean}
 export type BotCatalog={providers:BotCatalogProvider[];items:NativeBotSummary[];totals:{bots:number;groups:number;connected:number;complete:boolean}}

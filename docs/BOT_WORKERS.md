@@ -8,6 +8,22 @@ Message 主列表直接展示完整原生目录，包括尚未打开的 Bot 和�
 
 ## 原生账户管理
 
+管理器顶部提供 **新增 Bot** 和 **新增群组** 两个入口。选中对象后可直接修改原生资料并保存；群组的成员分区支持搜索、多选后一次保存。对象标题旁的垃圾桶删除的是原生账户中的 Bot／群组，需要明确确认；“断开 Aexus”只移除本项目的接入，两者不会混用。
+
+界面和 CLI 共用同一 Core 操作：
+
+| 操作 | CLI |
+| --- | --- |
+| 列出完整目录 | `agents bot catalog --json` |
+| 新增 Bot | `agents bot native-create --provider grok --kind private --name NAME --client-request-id UUID --json` |
+| 新增原生群组 | `agents bot native-create --provider grok --kind group --name NAME --members '["NATIVE_BOT_ID"]' --client-request-id UUID --json` |
+| 读取当前资料与版本 | `agents bot profile --provider grok --native-id ID --json` |
+| 编辑 Bot／群组资料 | `agents bot configure --provider grok --native-id ID --expected-version VERSION --patch '{"name":"NAME","description":"GOAL"}' --json` |
+| 编辑群成员 | `agents bot members --provider grok --native-id GROUP_ID --expected-version VERSION --members '["NATIVE_BOT_ID"]' --json` |
+| 删除原生 Bot／群组 | `agents bot native-delete --provider grok --native-id ID --expected-version VERSION --confirm-native-id ID --client-request-id UUID --json` |
+
+Dot 的增删和名称编辑使用相同命令，将 `--provider` 改成 `dots`；说明保持原生协议的只读限制，原生群组由 Grok 提供。版本来自 `bot profile`；一次操作的 UUID 应在重试时保持不变，新操作再生成新的 UUID。
+
 `bot.catalog` 只读取原生资料，不批量导入历史、订阅会话或发送消息。Grok 查询包含账户团队对象；Dot 遍历全部分页。平台返回不完整列表时明确标注；离线时只显示同一账户的上次同步结果和错误，不把读取失败当作零个 Bot。选择“打开会话”才用 `bot.connect` 接入这一对象，原生 ID、已有 Aexus ID 和历史保持稳定。
 
 | 管理操作 | Grok Bot / 原生群组 | OpenAI Dot |
@@ -36,7 +52,7 @@ agents bot native-delete --provider grok --native-id NATIVE_ID --expected-versio
 
 `nativeId` 来自原生目录，与 `bot.list` 返回的 Aexus 会话 ID 不同。保存设置和成员前重新核验 `version`，使用局部更新并读回结果。官方应用发生并发修改时保留草稿，用户合并或明确重新加载后再保存；在对象之间切换也保留草稿。原生接口没有跨客户端原子版本写入时，本软件不会宣称具备服务端事务隔离。
 
-创建、复制、重置、删除使用持久化 `clientRequestId`。相同请求重试返回原结果；身份被不同参数复用会拒绝。远端可能已接受但响应丢失时，不盲目再创建或删除一次，先刷新目录确认。开始新会话和原生删除还要求准确的 `confirmNativeId`。原生删除会归档关联的 Aexus 会话，保留已接收的文字记录与工作区；原生远端文件之后可能不可用。
+创建、复制、重置、删除使用持久化 `clientRequestId`。相同请求重试返回原结果；身份被不同参数复用会拒绝。远端可能已接受但响应丢失时，不盲目再执行一次：Grok 创建／复制按原请求 UUID 核验既有对象，原生删除核验完整目录中的目标缺失后完成本地归档。并行的同一请求等待同一结果。Dot 创建的原生 ID 由平台分配，未知结果不能按名称猜测或自动重发，必须先检查目录。已经确认的创建／编辑不会因为后续目录刷新失败被误报为失败；此时返回 `directorySyncPending:true`，界面保留已保存对象并提示同步待恢复。开始新会话和原生删除还要求准确的 `confirmNativeId`。原生删除会归档关联的 Aexus 会话，保留已接收的文字记录与工作区；原生远端文件之后可能不可用。
 
 Aexus 显示别名、员工访问授权、断开连接与原生设置分别管理。`bot.update` 只改本地别名；`bot.delete` 只断开本地连接，不删除原生 Bot。重新连接恢复原 Aexus 身份与历史，不恢复旧员工授权。原有 `bot.sync` 批量导入主 Dot 与完整 Grok 目录（含团队 Bot 和原生群组），兼容数字、简写和完整枚举的群组类型，且不会自动恢复已断开的项目；管理器使用元数据目录和按需连接，避免同时拉取整个账户的消息。
 

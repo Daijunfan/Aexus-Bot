@@ -64,7 +64,7 @@ Message 汇集资讯频道、私聊和群组，让阅读与讨论在一个地方
 
 ![Message 资讯看板：按来源浏览与筛选信息](docs/images/intelligence-channels.png)
 
-Dot、Grok 等外部 Worker 也可以参与会话，保留各自的原生身份和历史。完整 Bot 与原生群组目录直接呈现在 Message 中，可以搜索、打开会话并进入对应设置。统一管理器提供原生资料、Grok 群成员及各平台支持的运行控制；员工授权单独设置。在 macOS 上，安装并登录两个官方应用后，Aexus 会自动接入它们的本机执行通道，使用 Web 时也不必同时打开官方主应用；沿用已有登录、Mac 标识与执行权限。[了解原生接入](docs/BOT_WORKERS.md)。
+Dot、Grok 等外部 Worker 也可以参与会话，保留各自的原生身份和历史。完整 Bot 与原生群组目录直接呈现在 Message 中，可以搜索、打开会话并进入对应设置。统一管理器支持新增、编辑和删除 Bot／原生群组，管理 Grok 群成员及各平台支持的运行控制；界面与 CLI 共用接口，员工授权单独设置。在 macOS 上，安装并登录两个官方应用后，Aexus 会自动接入它们的本机执行通道，使用 Web 时也不必同时打开官方主应用；沿用已有登录、Mac 标识与执行权限。[了解原生接入](docs/BOT_WORKERS.md)。
 
 ![群组中的多成员讨论，每位成员保留独立身份与回复](docs/images/group-discussion.png)
 

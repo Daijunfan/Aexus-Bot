@@ -19,6 +19,10 @@ Mission 现在同时展示原有 `schedule.*` 排期和 `mission.*` 持续任务
 
 `plan.preferences` 保存所有 Mission 视图共用的筛选、隐藏列表和成功/失败保留策略，使用 `expectedRevision`。默认保留；可设置自动归档或删除。未成功的持续任务永不自动删除，仍有后续发生时间或活跃轮次的排期不会被自动清理。显示过滤不影响执行。完整参数和 CLI 示例见 [持续任务与聊天选择题](docs/MISSIONS_AND_QUESTIONS.md)。
 
+## Native bot and group CRUD
+
+`bot.native-create`, `bot.configure`, `bot.members` and `bot.native-delete` operate on native platform objects through the same authenticated Core for UI and CLI. Confirmed writes may return `directorySyncPending:true` if only the subsequent catalog refresh is unavailable. Stable request retries reconcile known Grok creation/duplicate IDs and confirmed native deletion without replaying the native mutation; unknown Dot creation is never inferred from a name. See [native Bot management](docs/BOT_WORKERS.md).
+
 ## Published group files
 
 `conversation.files {conversation:"group:ID",state?:"active"|"trash",query?,author?,sort?,offset?,limit?}`

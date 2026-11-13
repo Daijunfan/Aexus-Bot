@@ -17,3 +17,8 @@
 .native-bot-manager>header .native-manager-header-actions .codicon{font-size:16px;letter-spacing:0;color:inherit}
 
 .native-bot-group-avatar[data-member-count="1"]{display:block}.native-bot-group-avatar[data-member-count="2"]{grid-template-rows:1fr;align-items:center}.native-bot-group-avatar[data-member-count="2"]>.bot-avatar{height:auto;aspect-ratio:1}
+
+.native-bot-manager>header .native-manager-header-actions>.native-manager-new-group{background:var(--bg-alt);color:var(--fg);border-color:var(--border)}.native-delete-shortcut{flex:none;padding:9px;min-width:36px;min-height:36px}.native-delete-shortcut>.codicon{font-size:16px}
+@media(max-width:760px){.native-bot-manager>.message-workspace-header{flex-wrap:wrap}.native-bot-manager>.message-workspace-header>.message-workspace-actions{flex-basis:100%;justify-content:flex-end}.native-bot-manager .native-manager-header-actions{flex-wrap:wrap;justify-content:flex-end}}
+
+.native-management-confirm .native-confirm-error{color:var(--fg);background:var(--bg-alt);padding:10px 12px;border:1px solid var(--border);border-radius:10px;text-align:left}

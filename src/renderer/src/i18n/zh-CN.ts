@@ -2,6 +2,9 @@
 import {engineeringZh} from './engineering.ts'
 import {botManagementZh} from './bot-management'
 export const zhCN:Record<string,string> = {
+  "Verify result": "核验结果",
+  "New bot": "新增 Bot",
+  "Native object created; directory synchronization is pending.": "原生对象已创建，目录同步仍在等待恢复。",
   "{0} group": "{0} 个群组",
   "{0} bot": "{0} 个 Bot",
   "{0} native bot member": "{0} 位原生 Bot 成员",
