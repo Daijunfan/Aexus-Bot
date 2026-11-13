@@ -4,10 +4,12 @@ import type { TeamSettings } from './types'
 export type ViewState = {
   kind: 'home' | 'team' | 'employee' | 'workspace' | 'conversation' | 'initialization' | 'settings' | 'plugin' | 'clone' | 'messages' | 'plan'
   revision: number
+  /** Deprecated selector aliases; Team always renders its shared Board directly. */
   teamTab?: 'engineering' | 'research' | 'characters' | 'board' | 'workers'
   engineeringId?:string
   /** Legacy alias: Mission now opens its database directly. */
   missionTab?: 'plan'
+  /** Deprecated disclosure state; always false. */
   teamNavigationOpen?: boolean
   /** Legacy compatibility fields; Mission layouts are always visible. */
   missionNavigationOpen?: boolean

@@ -256,34 +256,51 @@ bundled runtime. Installation never changes global PATH or replaces existing nat
 credentials. Native validation uses loopback model fixtures; real-provider verification
 is a separate explicitly authorized `engine.probe` call.
 
-## Team: Characters, Board and Workers
+## Team: one shared work board
 
-Team contains three isolated presentation subviews: **Characters** keeps the illustrated teams
-on a finite, expandable employee-seat grid at a fixed scale per breakpoint, with
-compact readable identity cards and scroll bounds that grow with Team movement in all four directions. There is no free canvas zoom. Existing employee identities, native sessions and workspaces are retained. Legacy geometry is converted into numbered seating.
-**Board** shows employees' complete native work conversations side by side, with
-independent inputs, tool/thought output, approvals, model controls, queues and scrolling.
-Board uses `session.*` with `sourceView:company`; it does not publish private/group messages.
-Opening Board reads visible existing state/history without starting engines. Sending uses
-the existing atomic queue and a stable clientMessageId: idle employees start immediately,
-busy employees queue, and an unchanged retry confirms the same request. Employee work drafts are saved by Core, separately from Message drafts, and survive
-subview switches, filtering, full conversations and restart. Load errors
-never clear send errors. Search and Team filtering affect display only.
+Team opens one board of employees and native Workers, with a shared directory, search,
+categories and column controls. Each member keeps its own complete conversation,
+settings, permissions, files and queue. There is no secondary page selector.
+
+A Worker is a Team member kind in presentation, not a management-authority role.
+It remains a native `worker.*` record and never passes through employee onboarding,
+role instructions or the Company message wrapper. Only explicit Worker input enters
+its own native conversation; native user configuration and its own history remain.
+Existing Worker IDs, workspaces and native sessions are not migrated or replaced.
 
 ```sh
-agents view select company --team-tab characters --json
-agents view select company --team-tab board --json
-agents view open home --team-tab board --json
+agents view select company --json
+agents view open home --json
 agents worker create --engine codex --cwd /path/to/existing/project --title Worker --json
 ```
 
-`view.get.teamTab` is `characters|board|workers`, remembered per client across navigation
-and restart. The top-level Team button returns to the last selected Team subview with the selector collapsed. Clicking Team again reveals its horizontal selector; the chevron changes from right to down. `view.navigation {section:"team",expanded:true|false}` controls this client-only disclosure without leaving the current editor.
-The existing `teamViewId` controls saved employee team groupings for Characters/Board. Workers uses its independent native catalog.
-Selecting a tab without teamViewId retains the current grouping; selecting the main
-Team mode without either argument returns to All Team, preserving the remembered tab.
+Team directly displays its shared board, without Characters/Workers or
+Engineering/Research page selectors, a secondary navigation bar, or a disclosure arrow.
+Selecting an already active Team is idempotent. Returning from another primary mode
+preserves the saved Team grouping and uses the ordinary exit guard.
+`teamViewId` selects a saved grouping of teams, not a separate page; omitting it retains
+the current grouping. Employee workbenches, native sessions, worker records, workspaces
+and the authenticated `worker.*` API remain unchanged.
 
-Team uses `view.select {id:"company",toggleNavigation:true}` (`agents view select company --toggle-navigation --json`) to toggle its active selector or resume its remembered child. This intent cannot be combined with explicit child-selection parameters. Presentation writes are ordered per client in both the shared UI transport and Core, so rapid navigation and a following Settings/file-detail action cannot overtake one another. Reads and draft saves remain available during an exit guard; blocked navigation does not block later requests or another client.
+`view.get.teamTab` is the deprecated compatibility value `board`, and
+`teamNavigationOpen` is always false. Recognized legacy `teamTab` values still parse,
+but resolve to the direct Team workspace. The old `team-navigation.json` is not read,
+migrated or rewritten. `toggleNavigation:true` is an idempotent compatibility input;
+it cannot be combined with explicit legacy child-selection parameters.
+`view.navigation {section:"team"|"mission"|"plan",expanded:true|false}` is a
+compatibility no-op within the matching primary view.
+
+`worker.create --team TEAM` optionally places a Worker in a display Team. It does not
+change its owner, workspace, execution host or native prompt. An ordinary employee
+can only select its own Team; user/Secretary administration remains unchanged.
+Existing owned Workers without this metadata use their owner's current Team for
+presentation; independent legacy Workers stay unassigned. Categories accept
+`workerIds` / `--workers JSON` alongside employee IDs, with the same authorization,
+revision checks and atomic save. Membership grants no Worker access.
+
+Presentation writes remain ordered per client in both UI transport and Core. Rapid
+navigation and a following Settings/file-detail action cannot overtake one another;
+reads, draft saves and other clients remain available during an exit guard.
 
 Mission displays its ten database layouts and saved views directly. It has no Plan/Engineering/Research parent selector or collapse state. Selecting an already active Mission is idempotent, preserving the selected layout, filters and unsaved form. Leaving Mission still runs the ordinary exit guard. The legacy primary API ID/kind `plan`, `plan.*` database operations and existing saved-view IDs remain unchanged. Old persisted Engineering/Research selections resolve to Mission while retaining `planViewId`; new requests for those removed destinations fail explicitly. `missionTab:"plan"` remains a deprecated compatibility alias. Legacy `view.navigation` sections `mission` and `plan` are no-ops when Mission is open; their returned disclosure fields stay false. Team's disclosure behavior is unchanged.
 
@@ -309,13 +326,13 @@ for an independent Worker; only user/Secretary may control it. A Secretary omitt
 both employee and cwd retains the existing self-owned Worker shorthand. Supplying `employee`
 keeps the existing direct-owner and workspace/host boundaries. Employees who omit
 `employee` still own their Workers; this never grants control of independent Workers.
-Workers appear only in Team → **Workers**, with their own search and native terminal cards. Characters and employee Board contain no Worker cards or shortcuts. Starting, interrupting,
+Workers appear alongside role-based employees in the single Team board, sharing search, categories and display counts. Each keeps its own native conversation card. Starting, interrupting,
 stopping and removing them use the existing `worker.*` APIs. Creation does not run
 inference, assign a Aexus identity or inject role prompts/tools. Removal preserves
 work files and native configuration/auth/history. A running indicator describes the
 native process; native task progress and approvals remain in its own interface.
 
-Characters and Board apply the same saved Team grouping. Native Workers stay in their own subview and are not filtered by employee Board categories. The current grouping is labeled
+Team applies its saved grouping to both member kinds. Worker categories use explicit worker IDs; Team metadata or the existing direct owner determines display grouping without changing authority. The current grouping is labeled
 and can be cleared with **Show all teams**. Browser tabs have separate client
 identities even when duplicated; reload retains that tab's route and grouping.
 After an event-stream reconnect, the UI refreshes current catalogs and histories
@@ -2316,9 +2333,9 @@ Team creation has three mutually exclusive choices: Local project (`build`), Clo
 
 ## Team views
 
-Team 顶部提供 Characters / Board 两个子视图，并记住当前客户端选择。已有 `team-view.*` 分组接口及数据继续保留；All Team 默认包含全部团队，不可编辑或删除。自定义分组的增减勾选只影响展示，不删除团队、员工或工作目录；保存仍调用 `team-view.update`。
+Team 直接展示统一工作看板，不再提供子视图选择；角色员工和 Worker 共用成员目录、搜索与分类。已有 `team-view.*` 分组接口及数据继续保留；All Team 默认包含全部团队，不可编辑或删除。自定义分组的增减勾选只影响展示，不删除团队、员工或工作目录；保存仍调用 `team-view.update`。
 
-在画布新增员工时，所属 Team 只列出当前视图内仍存在的团队；All Team 列出全部团队。团队被删除或移出当前视图后，已打开表单会清除失效选择，必须重新选择后才能保存。删除团队也会清除上次创建员工模板中的对应团队引用，保留其他形象和引擎偏好。视图筛选不改变 CLI/API 的职级权限。
+新增角色员工时，所属 Team 只列出当前分组内仍存在的团队；All Team 列出全部团队。团队被删除或移出当前视图后，已打开表单会清除失效选择，必须重新选择后才能保存。删除团队也会清除上次创建员工模板中的对应团队引用，保留其他形象和引擎偏好。视图筛选不改变 CLI/API 的职级权限。
 
 The built-in `All Team` view always contains every Team and cannot be edited or
 deleted. Custom views contain selected existing Teams. Legacy camera values remain
@@ -3446,9 +3463,9 @@ Socket 与原生 Codex JSONL 按 LF 分帧，保留 UTF-8 文本中的 Unicode �
 
 ## Worker：原生 Coding Agent
 
-Team 的 **Workers** 是独立的原生会话界面，与 Characters、员工 Board 分离。Codex 使用原生 app-server，Claude 使用原生 SDK，Cline/OpenCode/Kilo/DeepSeek Harness 使用 ACP，Pi 使用原生 RPC。界面直接展示回复、思考、工具调用、原生授权与问题、任务队列；不使用 PTY/TUI 或模拟按键提交任务。
+**Worker** 是 Team 统一看板中的一种员工类型，没有单独页面，但保留独立原生会话。Codex 使用原生 app-server，Claude 使用原生 SDK，Cline/OpenCode/Kilo/DeepSeek Harness 使用 ACP，Pi 使用原生 RPC。界面直接展示回复、思考、工具调用、原生授权与问题、任务队列；不使用 PTY/TUI 或模拟按键提交任务。
 
-Worker 不是 Aexus 员工，不执行员工初始化，不注入 Aexus 身份、工具、员工令牌或任务提示。保留原生引擎配置、项目指令与会话历史。引擎、直属归属、主机与工作目录身份固定。用户/Secretary 可用已有本地目录创建独立 Worker；其他职位只可创建、控制自己直属的 Worker。CWD 必须留在直属员工的实际工作范围内，主机变化、严格隔离或不支持的远端协议明确拒绝，不回退本机。远端原生会话目前支持 Codex/Claude，其余 GUI 协议要求 Core 本地目录。
+Worker 不转换成角色员工身份，不执行角色初始化，不注入 Aexus 身份、工具、员工令牌或任务提示。保留原生引擎配置、项目指令与会话历史。引擎、直属归属、主机与工作目录身份固定。用户/Secretary 可用已有本地目录创建独立 Worker；其他职位只可创建、控制自己直属的 Worker。CWD 必须留在直属员工的实际工作范围内，主机变化、严格隔离或不支持的远端协议明确拒绝，不回退本机。远端原生会话目前支持 Codex/Claude，其余 GUI 协议要求 Core 本地目录。
 
 ```sh
 agents worker create --engine codex --cwd /path/to/existing/project --title Builder --client-request-id create-builder --json
@@ -3540,7 +3557,7 @@ Worker Web sends and native commands with `clientMessageId` use the Core durable
 
 ## Engineering 工程协作
 
-Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏展示管理 Topology 和执行 DAG。Research 仅保留入口，Characters、Board、Workers 的原有能力保留。创建、文本/图形编排、原生 Worker 执行、两级验收、链路复验与最终确认都由同一认证 Core 提供。完整参数与 Mermaid、提示词、返工和恢复约定见 [Engineering](docs/ENGINEERING.md)，员工可通过 `agents api docs core/engineering` 读取。
+Engineering / Research 不再作为 Team 子页面。已有工程记录、关联 Team 与 Mission 及 `engineering.*` CLI/API 保留，未迁移、删除或改变原生执行身份。创建、文本/图形编排、原生 Worker 执行、两级验收、链路复验与最终确认都由同一认证 Core 提供。完整参数与 Mermaid、提示词、返工和恢复约定见 [Engineering](docs/ENGINEERING.md)，员工可通过 `agents api docs core/engineering` 读取。
 
 后台创建工程使用 `team-view.create --select false` 建立 Governor 任务范围，不切换用户当前视图。先调用 `engineering.create --spec @file --client-request-id KEY`，再读取 `engineering.context --id ID`。使用 graph key 选择节点，Employee ID 用于真实身份绑定，两者不能混用。Worker 原生完成不代表验收成功：必须 `engineering.employee-review`、`engineering.manager-review`、`engineering.manager-complete`，最后 `engineering.complete`。关联 Mission 不能用普通完成接口跳过这些步骤。上级与秘书的任务、原生执行和权限边界保持现有 Core 策略。
 
@@ -3596,7 +3613,7 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents plan preferences</code> | <code>[--patch JSON --expected-revision N]</code> | User/Secretary: read or update Mission-wide display filters, hidden task IDs and automatic retention. Display filtering does not pause work. Failed unresolved missions may be archived but never automatically deleted. | Mission / global filter and retention | operator |
 | <code>agents plan archive</code> | <code>--id ID --archived true&#124;false --expected-revision N</code> | Archive or restore an authorized saved schedule or mission. Archiving is a display action and never stops reminders or scheduled work. | Mission / global filter and retention | schedule |
 | <code>agents board categories</code> | <code>—</code> | User or Secretary: list saved Board categories without starting sessions or acknowledging messages | Board categories | operator |
-| <code>agents board category-save</code> | <code>ID --name NAME --employees JSON --expected-revision N</code> | Create or replace a Board category with an explicit multi-selection. expectedRevision=0 creates; unchanged retries are idempotent. | Create/edit Board category | operator |
+| <code>agents board category-save</code> | <code>ID --name NAME --employees JSON [--workers JSON] --expected-revision N</code> | Create or replace a Board category with an explicit multi-selection. expectedRevision=0 creates; unchanged retries are idempotent. | Create/edit Board category | operator |
 | <code>agents board category-delete</code> | <code>ID --expected-revision N</code> | Delete a Board category; retain employees, Workers, tasks and histories | Delete Board category | operator |
 | <code>agents board category-order</code> | <code>--order JSON --expected-order JSON</code> | Reorder category tabs with optimistic concurrency; never reorder employees or Team geometry | Reorder Board categories | operator |
 | <code>agents plan schema</code> | <code>—</code> | Discover all ten layouts, fields, policies, authorized targets and mutation APIs | Plan database | schedule |
@@ -3624,8 +3641,8 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents worker upload-begin</code> | <code>ID --name NAME --bytes N</code> | Begin a client-owned chunked attachment upload inside this Worker workspace. Upload alone never sends a task. | Worker attachments | operator |
 | <code>agents worker terminal</code> | <code>ID --operation list&#124;open&#124;read&#124;input&#124;resize&#124;close [--terminal ID --data TEXT --cursor N --cols N --rows N]</code> | User/Secretary: operate an optional human shell scoped to this Worker directory and owner. It is separate from the graphical Coding Agent protocol and stops on Worker removal. | Worker workspace terminal | operator |
 | <code>agents worker engines</code> | <code>—</code> | List native CLI availability on the Core host without starting adapters, authentication or model requests; remote hosts are checked at Worker start. | Add Worker engine availability | worker |
-| <code>agents worker create</code> | <code>[--employee ID] --engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek [--title NAME --cwd PATH --client-request-id ID]</code> | Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Aexus tools. | Team / Add Worker | worker |
-| <code>agents worker list</code> | <code>[--employee ID]</code> | List directly owned native Workers (user/Secretary may administer all); user and Secretary may list all | Workers | worker |
+| <code>agents worker create</code> | <code>[--employee ID] --engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek [--title NAME --team TEAM --cwd PATH --client-request-id ID]</code> | Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Aexus tools. | Team / Add employee / Worker | worker |
+| <code>agents worker list</code> | <code>[--employee ID]</code> | List directly owned native Workers (user/Secretary may administer all); user and Secretary may list all | Team members | worker |
 | <code>agents worker start</code> | <code>ID</code> | Connect the native structured engine without a model turn; resume only this Worker’s saved native session and retain native configuration | Open native Worker | worker |
 | <code>agents worker read</code> | <code>ID [--cursor N --wait-ms N]</code> | Read rendered conversation snapshots with a revision cursor and reset flag; optional wait up to 15000ms | Native terminal | worker |
 | <code>agents worker input</code> | <code>ID --data TEXT&#124;--file PATH [--enter --terminal ID]</code> | Compatibility text-task input. Raw terminal IDs and terminal escape sequences are rejected; use worker.send for idempotent graphical conversation input. | Native terminal input | worker |
@@ -3816,8 +3833,8 @@ Team 的 Engineering 为每个工程绑定独立 Team 与一个 Mission，同屏
 | <code>agents channel post-trigger-batch</code> | <code>CHANNEL_ID --batch-id ID [--offset N --limit N]</code> | Read the exact counted batch with paged complete posts and explicit unavailable entries; no approximate latest-N window, model call or user-read acknowledgment | Batch source posts | chat |
 | <code>agents card profile</code> | <code>ID [--offset N] [--limit N]</code> | Read employee identity, authorized memberships, named workspaces and paged Plan tasks without opening an engine or changing read receipts | Employee profile | employee.read |
 | <code>agents view list</code> | <code>—</code> | List application views and their shared data contracts | Shared views / group conversations | operator |
-| <code>agents view navigation</code> | <code>team&#124;mission&#124;plan [--expanded true&#124;false]</code> | Set or toggle Team navigation. Legacy mission/plan sections are no-ops because Mission layouts are always visible. | Primary navigation chevrons | operator |
-| <code>agents view select</code> | <code>company&#124;messages&#124;plan [--team-view ID] [--team-tab engineering&#124;research&#124;characters&#124;board&#124;workers] [--engineering ID] [--mission-tab plan] [--toggle-navigation]</code> | Select a presentation mode; Team has Engineering, Research, Characters, Board and Workers; Mission shows database layouts directly; Messages resumes the last conversation | Shared views / group conversations | operator |
+| <code>agents view navigation</code> | <code>team&#124;mission&#124;plan [--expanded true&#124;false]</code> | Legacy navigation compatibility. Team and Mission open directly; disclosure requests leave the current view unchanged. | Primary navigation compatibility | operator |
+| <code>agents view select</code> | <code>company&#124;messages&#124;plan [--team-view ID]</code> | Open the unified Team board or Mission directly, select a saved Team grouping, or resume the last Messages conversation. Legacy Team selectors resolve to the single Team board. | Shared views / group conversations | operator |
 | <code>agents chat list</code> | <code>—</code> | List groups for the current authenticated member | Shared views / group conversations | chat |
 | <code>agents chat create</code> | <code>--name NAME [--team TEAM] [--members JSON] [--owner-id ID] [--storage JSON] [--client-request-id ID]</code> | Create a group with an Agent Owner. User/Secretary can choose local or registered-host storage, create a custom named folder or bind an existing folder; employees keep their Team cwd. Stable clientRequestId retries the same caller-owned creation | Shared views / group conversations | chat |
 | <code>agents chat update</code> | <code>ID --patch JSON</code> | Conversation Owner/Admin: edit group name and membership; Aexus role does not confer access | Shared views / group conversations | chat |

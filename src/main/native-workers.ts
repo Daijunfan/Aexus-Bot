@@ -68,18 +68,19 @@ export function listWorkers(employee?:string){
  return records().filter(w=>employee?w.employee===employee:isAppAdministrator(principal)||principal.kind==='agent'&&w.employee===principal.employeeId).map(present)
 }
 export function workerEngines():NativeWorkerEngine[]{return Object.keys(ENGINE_DEFINITIONS).map(engine=>{const id=engine as NativeWorkerEngine['engine'],executable=engineExecutable(id,false),resolved=path.isAbsolute(executable)?executable:resolveBinary(executable);return {engine:id,label:ENGINE_DEFINITIONS[id].label,installed:path.isAbsolute(resolved)&&fs.existsSync(resolved)}})}
-export function createWorker(args:{employee?:string;engine:string;title?:string;cwd?:string;clientRequestId?:string}){
+export function createWorker(args:{employee?:string;team?:string;engine:string;title?:string;cwd?:string;clientRequestId?:string}){
  if(!isEngine(args.engine))throw Error('Unsupported native Coding Agent engine')
  const principal=requestContext().principal
  const owned=args.employee||!isAppAdministrator(principal)||principal.kind==='agent'&&!args.cwd?owner(args.employee):undefined
  if(!owned&&!args.cwd?.trim())throw Error('Choose an existing Worker workspace')
+ if(args.team!==undefined){if(!readStore().groups.includes(args.team))throw Error('Unknown Worker Team');if(!isAppAdministrator(principal)&&args.team!==owned?.card.group)throw Error('Forbidden: Worker Team must match its owner')}
  const effective=owned?executionEmployee(owned.store,owned.card):undefined
  if(effective?.remote&&!['codex','claude'].includes(args.engine))throw Error('This engine’s graphical Worker requires a Core-local folder; the host will not be changed.')
  const paths=effective?.remote?.os==='windows'?path.win32:effective?.remote?path.posix:path
- const value:WorkerRecord={id:randomUUID(),...(owned?{employee:owned.card.id}:{}),title:args.title?.trim()||ENGINE_DEFINITIONS[args.engine].label+' Worker',engine:args.engine,cwd:paths.resolve(owned?.card.cwd??process.cwd(),args.cwd??'.'),host:effective?.remote?.host,createdAt:new Date().toISOString()}
+ const value:WorkerRecord={id:randomUUID(),...(args.team?{team:args.team}:{}),...(owned?{employee:owned.card.id}:{}),title:args.title?.trim()||ENGINE_DEFINITIONS[args.engine].label+' Worker',engine:args.engine,cwd:paths.resolve(owned?.card.cwd??process.cwd(),args.cwd??'.'),host:effective?.remote?.host,createdAt:new Date().toISOString()}
  if(args.clientRequestId!==undefined){
   const key=args.clientRequestId;if(typeof key!=='string'||!key.trim()||key.length>160)throw Error('clientRequestId must be 1–160 characters')
-  const fingerprint=createHash('sha256').update(JSON.stringify([value.employee??null,value.title,value.engine,value.cwd,value.host??null])).digest('hex'),previous=records().find(worker=>worker.clientRequestId===key&&JSON.stringify(worker.createdBy)===JSON.stringify(principal))
+  const fingerprint=createHash('sha256').update(JSON.stringify([value.employee??null,value.title,value.engine,value.cwd,value.host??null,...(value.team?[value.team]:[])])).digest('hex'),previous=records().find(worker=>worker.clientRequestId===key&&JSON.stringify(worker.createdBy)===JSON.stringify(principal))
   if(previous){authorizeWorker(previous);if(previous.requestFingerprint!==fingerprint)throw Error('clientRequestId already used with different Worker settings');return present(previous)}
   value.createdBy=principal;value.clientRequestId=key;value.requestFingerprint=fingerprint
  }

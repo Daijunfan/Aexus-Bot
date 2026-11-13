@@ -1,14 +1,14 @@
-import {onPluginFlush,flushPlugins} from '../plugins'
-import {useBeforeUnloadGuard} from './useBeforeUnloadGuard'
-import {WorkersView} from './WorkersView'
-import {EngineeringView} from './EngineeringView'
-import '../styles/team-navigation.css'
 import {AgentBoard,type BoardDrafts} from './AgentBoard'
 import {NativeWorkerDialog} from './NativeWorkerDialog'
 import {useCatalog} from './useCatalog'
+import type {NativeWorker} from '../../../shared/native-worker'
+import {nativeWorkerTeam} from '../../../shared/native-worker'
+import {MessageMenu} from './MessageMenu'
+import {onPluginFlush,flushPlugins} from '../plugins'
+import {useBeforeUnloadGuard} from './useBeforeUnloadGuard'
+import '../styles/team-navigation.css'
 import {Icon} from './Icon'
 import {EngineMark} from './EngineMark'
-import type {NativeWorker} from '../../../shared/native-worker'
 import {translate as uiText,useI18n,interfaceLocale,interfaceLanguage} from '../i18n'
 import {retainEqual} from '../snapshot'
 import type {ManagementInteraction} from '../../../shared/management'
@@ -25,7 +25,6 @@ import {SettingsPanel} from './SettingsPanel'
 import {mergePreferences,presentationForView} from '../../../shared/preferences'
 import {ApplicationLauncher} from './ApplicationLauncher'
 import { initialBounds, planOffice, DEFAULT_VIEW, type Point, type Viewport } from '../../../shared/canvas'
-import { OfficeCanvas } from '../office/OfficeCanvas'
 import { useDialogFocus } from '../office/useDialogFocus'
 import { EmployeeForm, TeamForm } from '../office/OfficeForms'
 import { SharedDrawer } from './SharedDrawer'
@@ -38,18 +37,16 @@ type Action = (cmd: string, args?: Record<string, unknown>, propagateError?:bool
 type HostHealth=RemoteHealth&{checkedAt?:number;error?:string}
 export const HomeView=memo(function HomeView({ groupUnread=0, store, view, sessions=[], busyIds,disconnectedIds,activities,interactions, onOpen, act, assetWidth, onAssetResize, children,underHeader }: {groupUnread?:number;children?:ReactNode;underHeader?:ReactNode;interactions:ManagementInteraction[];activities:Record<string,ActivityPreview>;store:Store;view:ViewState;sessions?:Session[];busyIds:Set<string>;disconnectedIds:Set<string>;onOpen:(card:StoredSession)=>void;act:Action;assetWidth:number;onAssetResize:(width:number|undefined)=>void}) {
   useI18n()
+  const [boardDrafts,setBoardDrafts]=useState<BoardDrafts>({}),[creatingWorker,setCreatingWorker]=useState(false),[focusWorker,setFocusWorker]=useState<string>(),[memberMenu,setMemberMenu]=useState<{x:number;y:number}|null>(null)
+  const workers=useCatalog<NativeWorker>('worker.list',presentationForView(view)==='company',event=>event.channel==='workers:changed'||event.channel==='client:connected')
 
-  const teamTab=view.teamTab??'characters',primaryTab=teamTab==='board'||teamTab==='workers'?'characters':teamTab,[boardDrafts,setBoardDrafts]=useState<BoardDrafts>({}),[workerDrafts,setWorkerDrafts]=useState<BoardDrafts>({})
   const creationAttempt=useRef({panel:'',signature:'',id:crypto.randomUUID()});const formIdentity=JSON.stringify([view.kind,view.employee,view.name]);if(creationAttempt.current.panel!==formIdentity)creationAttempt.current={panel:formIdentity,signature:'',id:crypto.randomUUID()}
-  const [creatingWorker,setCreatingWorker]=useState(false),[focusWorker,setFocusWorker]=useState<string>()
-  const workers=useCatalog<NativeWorker>('worker.list',presentationForView(view)==='company',event=>event.channel==='workers:changed'||event.channel==='terminal:changed'||event.channel==='store:changed')
   const panel: {kind:'employee';card?:StoredSession}|{kind:'team';name?:string;settings?:TeamSettings}|null=view.kind==='team'?{kind:'team' as const,name:view.name,settings:view.settings}:view.kind==='employee'?{kind:'employee' as const,card:store.sessions.find(c=>c.id===view.employee)}:null
   const editablePanel=!!panel&&!(panel.kind==='employee'&&panel.card),formExit=useRef({dirty:false,saving:false,done:false}),panelActive=useRef(editablePanel);panelActive.current=editablePanel
   const [discardForm,setDiscardForm]=useState(false)
   useBeforeUnloadGuard(()=>panelActive.current&&!formExit.current.done&&(formExit.current.dirty||formExit.current.saving))
   useEffect(()=>{if(!editablePanel){formExit.current={dirty:false,saving:false,done:false};setDiscardForm(false)}},[editablePanel])
   useEffect(()=>onPluginFlush(async()=>{if(!panelActive.current||formExit.current.done)return;if(formExit.current.saving)throw Error('Wait for this form to finish saving.');if(formExit.current.dirty){setDiscardForm(true);throw Error('Save or discard this form before leaving.')}}),[])
-  const addWorker=()=>void act('view.select',{id:'company',teamTab:'workers'}).then(value=>{if(value)setCreatingWorker(true)})
   const initializing=view.kind==='initialization'?store.sessions.find(card=>card.id===view.employee):undefined
   const cloning=view.kind==='clone'?store.sessions.find(c=>c.id===view.employee):undefined
   const workspace=view.kind==='workspace'?view.name??null:null
@@ -58,7 +55,7 @@ export const HomeView=memo(function HomeView({ groupUnread=0, store, view, sessi
   const pluginId=view.pluginId??null
   const selectedView=store.teamViews?.find(item=>item.id===store.activeTeamViewId)
   const visibleGroups=selectedView?store.groups.filter(name=>selectedView.teams.includes(name)):store.groups
-  const teamEmployees=selectedView?store.sessions.filter(card=>visibleGroups.includes(card.group)):store.sessions,teamStore=selectedView?{...store,groups:visibleGroups,sessions:teamEmployees}:store
+  const teamStore=selectedView?{...store,groups:visibleGroups,sessions:store.sessions.filter(card=>visibleGroups.includes(card.group))}:store
   const [editMode,setEditMode]=useState<'employee'|'team'|null>(null),[selected,setSelected]=useState<string[]>([])
   const [removal,setRemoval]=useState<{employees:StoredSession[];teams?:string[]}|null>(null)
   const selectionKey=JSON.stringify([store.activeTeamViewId,visibleGroups])
@@ -109,49 +106,22 @@ export const HomeView=memo(function HomeView({ groupUnread=0, store, view, sessi
   const lastTeam=store.groups.at(-1)
   return <div className="home office-home">
     <header className="company-header">
-      <ApplicationLauncher settingsOpen={view.kind==='settings'} canvasTools={!children&&teamTab==='characters'} editing={editMode!==null} overview={store.preferences?.showTeamOverview??false} onToggleEdit={()=>chooseMode(editMode?null:'employee')} checkingHosts={checkingHosts} onRefreshHosts={()=>void refreshHosts()} plugins={plugins} active={pluginId} sharedOpen={!!view.shared} onOpen={id=>void act('plugin.open',{id})} onHome={()=>void act('view.open',{kind:'home'})} onSettings={()=>void act('view.open',{kind:'settings'})} act={act}/>
+      <ApplicationLauncher settingsOpen={view.kind==='settings'} canvasTools={false} editing={editMode!==null} overview={store.preferences?.showTeamOverview??false} onToggleEdit={()=>chooseMode(editMode?null:'employee')} checkingHosts={checkingHosts} onRefreshHosts={()=>void refreshHosts()} plugins={plugins} active={pluginId} sharedOpen={!!view.shared} onOpen={id=>void act('plugin.open',{id})} onHome={()=>void act('view.open',{kind:'home'})} onSettings={()=>void act('view.open',{kind:'settings'})} act={act}/>
       <TeamViews store={store} view={view} act={act} groupUnread={groupUnread}/>
-      {presentationForView(view)==='company'&&<div className="company-actions"><button className="add-team" aria-label={uiText("Add Team")} title={uiText("Add Team")} onClick={()=>void showPanel({kind:'team'})}><Icon name="organization"/> {uiText("Add Team")}</button><button className="add-employee" aria-label={uiText("Add Employee")} title={uiText("Add Employee")} onClick={()=>void showPanel({kind:'employee'})}><Icon name="person-add"/> {uiText("Add Employee")}</button><button className="add-worker" aria-label={uiText('Add Worker')} title={uiText('Add Worker')} onClick={addWorker}><Icon name="terminal"/> {uiText('Add Worker')}</button></div>}
+      {presentationForView(view)==='company'&&<div className="company-actions"><button className="add-team" aria-label={uiText("Add Team")} title={uiText("Add Team")} onClick={()=>void showPanel({kind:'team'})}><Icon name="organization"/> {uiText("Add Team")}</button><div className="team-add-member"><button className="add-employee" aria-label={uiText("Add Employee")} title={uiText("Add Employee")} onClick={()=>void showPanel({kind:'employee'})}><Icon name="person-add"/> {uiText("Add Employee")}</button><button type="button" className="employee-type-menu" aria-label={uiText('Choose employee type')} aria-haspopup="menu" aria-expanded={!!memberMenu} title={uiText('Choose employee type')} onClick={event=>{const box=event.currentTarget.getBoundingClientRect();setMemberMenu({x:box.right-210,y:box.bottom+6})}}><Icon name="chevron-down"/></button></div></div>}
     </header>
     {underHeader}
     <div className={'office-layout '+(view.shared?'shared-open':'')}>
       {view.shared&&<SharedDrawer width={assetWidth} onResize={onAssetResize} onClose={()=>void act('view.shared',{enabled:false})}/>}
       {children??<div className="team-content">
-        {view.teamNavigationOpen&&<nav className="team-subviews team-primary-nav" id="team-subview-navigation" aria-label={uiText('Team views')}>
-          <div className="team-nav-left">
-            {selectedView&&['characters','board'].includes(teamTab)&&<div className="team-scope-pill"><span title={selectedView.name}>{selectedView.name}</span><button type="button" aria-label={uiText('Show all teams')} title={uiText('Show all teams')} onClick={()=>void act('view.select',{id:'company',teamViewId:'all',teamTab})}><Icon name="close"/></button></div>}
-          </div>
-          <div role="tablist" aria-label={uiText('Team subviews')}>
-            {(['engineering','research','characters'] as const).map(tab=><button key={tab} type="button" role="tab" id={'team-tab-'+tab} aria-controls="team-subview-panel" tabIndex={primaryTab===tab?0:-1} aria-selected={primaryTab===tab} onKeyDown={event=>{
-              if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return
-              event.preventDefault()
-              const tabs=['engineering','research','characters'] as const
-              const next=tabs[event.key==='Home'?0:event.key==='End'?2:(tabs.indexOf(tab)+(event.key==='ArrowRight'?1:2))%3]
-              chooseMode(null);void act('view.select',{id:'company',teamTab:next})
-              document.getElementById('team-tab-'+next)?.focus()
-            }} onClick={()=>{chooseMode(null);void act('view.select',{id:'company',teamTab:tab})}}>
-              <Icon name={tab==='engineering'?'git-merge':tab==='research'?'beaker':'organization'}/>{tab==='engineering'?'Engineering':tab==='research'?'Research':'Characters'}
-            </button>)}
-          </div>
-          <div className="team-nav-right">
-            {primaryTab==='characters'&&<div role="tablist" aria-label="Characters workspaces"><button type="button" role="tab" aria-selected={teamTab==='board'} onClick={()=>{chooseMode(null);void act('view.select',{id:'company',teamTab:'board'})}}><Icon name="layout"/> Board</button><button type="button" role="tab" aria-selected={teamTab==='workers'} onClick={()=>{chooseMode(null);void act('view.select',{id:'company',teamTab:'workers'})}}><Icon name="terminal"/> Workers</button></div>}
-            <span>{teamTab==='workers'?workers.value.length+' Workers':teamEmployees.filter(card=>!card.deleting).length+' Agents'}</span>
-          </div>
-        </nav>}
-        <div className="team-subview-panel" id="team-subview-panel" role="tabpanel" aria-label={'Team / '+teamTab} aria-labelledby={view.teamNavigationOpen?'team-tab-'+primaryTab:undefined}>
-          {teamTab==='engineering'?<EngineeringView store={store} view={view} act={act}/>:teamTab==='research'?<section className="engineering-research-empty" aria-label="Research"><Icon name="beaker"/><h2>Research</h2><p>{uiText('Research is reserved for a future workspace.')}</p></section>:teamTab==='board'?<AgentBoard catalogStore={store} store={teamStore} sessions={sessions} obscured={view.kind!=='home'||creatingWorker||!!removal} drafts={boardDrafts} setDrafts={setBoardDrafts} onOpen={open}/>:
-           teamTab==='workers'?<WorkersView store={store} workers={workers.value} obscured={view.kind!=='home'||creatingWorker||!!removal} drafts={workerDrafts} setDrafts={setWorkerDrafts} focusWorker={focusWorker} onAdd={addWorker} refresh={workers.refresh} error={workers.error} loading={workers.loading}/>:
-           <OfficeCanvas obscured={view.kind!=='home'||creatingWorker||!!removal} selection={editMode?{mode:editMode,ids:new Set(selectedIds),toggle:toggleSelection}:undefined} interactions={interactions} key={JSON.stringify([store.activeTeamViewId??ALL_TEAM_VIEW,selectedView?.teams])} activities={activities} cloudStatus={cloudStatus} plugins={plugins} store={store} busyIds={busyIds} disconnectedIds={disconnectedIds} act={act} onOpen={open} onEdit={edit} onView={onView}/>}
-        </div>
+        <section className="team-subview-panel" aria-label="Team">
+          <AgentBoard catalogStore={store} store={teamStore} sessions={sessions} obscured={view.kind!=='home'||creatingWorker||!!removal} drafts={boardDrafts} setDrafts={setBoardDrafts} onOpen={open} workers={workers.value} workersLoading={workers.loading} workersError={workers.error} refreshWorkers={workers.refresh} focusWorker={focusWorker} onWorkerFocused={()=>setFocusWorker(undefined)}/>
+        </section>
       </div>}
     </div>
-    {editMode&&!children&&teamTab==='characters'&&<aside className="canvas-edit-toolbar" role="toolbar" aria-label={uiText("Canvas editing")}>
-      <div className="canvas-edit-modes"><button aria-pressed={editMode==='employee'} onClick={()=>chooseMode('employee')}>{uiText("Select employees")}</button><button aria-pressed={editMode==='team'} onClick={()=>chooseMode('team')}>{uiText("Select teams")}</button></div>
-      <p>{uiText("Click on the canvas to select")}{editMode==='employee'?uiText("employee"):uiText("Team")}{uiText("for multiple selection.")}</p>
-      <div className="canvas-edit-selection"><span role="status">{uiText("selected")} {selectedIds.length} {editMode==='employee'?uiText("employees"):uiText("team")}</span><button disabled={!selectedIds.length} onClick={()=>setSelected([])}>{uiText("Clear selection")}</button></div>
-      <footer><button className="delete-selected" disabled={!selectedIds.length} onClick={deleteSelection}>{uiText("Delete selected")}</button><button onClick={()=>chooseMode(null)}>{uiText("Exit editing")}</button></footer>
-    </aside>}
-    {creatingWorker&&<NativeWorkerDialog store={store} onClose={()=>setCreatingWorker(false)} onCreated={worker=>{setFocusWorker(worker.id);setCreatingWorker(false);void workers.refresh();void act('view.select',{id:'company',teamTab:'workers'})}}/>}
+
+    {memberMenu&&<MessageMenu anchor={memberMenu} label={uiText('Choose employee type')} onClose={()=>setMemberMenu(null)}><button role="menuitem" onClick={()=>{setMemberMenu(null);void showPanel({kind:'employee'})}}><Icon name="person"/>{uiText('Role-based employee')}</button><button role="menuitem" onClick={()=>{setMemberMenu(null);setCreatingWorker(true)}}><Icon name="terminal"/>{uiText('Worker')}</button></MessageMenu>}
+    {creatingWorker&&<NativeWorkerDialog store={store} initialTeam={selectedView?.teams.length===1?selectedView.teams[0]:undefined} onClose={()=>setCreatingWorker(false)} onCreated={worker=>{setCreatingWorker(false);setFocusWorker(worker.id);void workers.refresh();if(selectedView&&!selectedView.teams.includes(nativeWorkerTeam(worker,store)??''))void act('view.select',{id:'company',teamViewId:'all'})}}/>}
     {removal&&<EmployeeDeleteDialog employees={removal.employees} teams={removal.teams} onCancel={()=>setRemoval(null)} onRemove={async deleteWorkspace=>{
       await api.call(removal.teams?'group.remove':'card.remove',{...(removal.teams?{names:removal.teams}:{ids:removal.employees.map(card=>card.id)}),deleteWorkspace})
       setRemoval(null);setSelected([])

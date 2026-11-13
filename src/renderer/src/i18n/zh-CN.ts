@@ -2,6 +2,11 @@
 import {engineeringZh} from './engineering.ts'
 import {botManagementZh} from './bot-management'
 export const zhCN:Record<string,string> = {
+  'Choose employee type':'选择员工类型',
+  'Role-based employee':'角色员工',
+  'Worker Team':'Worker 所属团队',
+  'Worker · native conversation without a role prompt':'Worker · 原生会话，不注入角色提示词',
+  'Return to Team':'返回 Team',
   "Verify result": "核验结果",
   "New bot": "新增 Bot",
   "Native object created; directory synchronization is pending.": "原生对象已创建，目录同步仍在等待恢复。",

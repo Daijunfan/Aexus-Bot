@@ -503,22 +503,22 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
 
     case 'view.list': return {views:APP_VIEWS,current:getView(),company:teamViewList(),shared:{employees:'session.list',conversations:'session.transcript',inbox:'session.inbox',readReceipts:'session.acknowledge',groups:'chat.list',bindings:'management.topology',schedules:'schedule.list',plans:'plan.query',planViews:'plan.views'}}
     case 'view.navigation': {
-      validateApiArguments(req.cmd,a);const view=getView(),section=s(a.section),company=!['messages','plan'].includes(view.kind)&&view.returnTo?.kind!=='messages'&&view.returnTo?.kind!=='plan';if(section==='team'?!company:view.kind!=='plan')throw Error('Open the matching primary view before expanding its navigation');if(section!=='team')return view;return setView({...view,teamNavigationOpen:a.expanded??!view.teamNavigationOpen})
+      validateApiArguments(req.cmd,a);const view=getView(),section=s(a.section),company=!['messages','plan'].includes(view.kind)&&view.returnTo?.kind!=='messages'&&view.returnTo?.kind!=='plan';if(section==='team'?!company:view.kind!=='plan')throw Error('Open the matching primary view before expanding its navigation');return view
     }
     case 'view.select': {
       validateApiArguments(req.cmd,a)
       if(a.engineeringId!==undefined){if(a.id!=='company'||a.teamTab!=='engineering')throw Error('Engineering projects belong to Team / Engineering');await engineeringRequest('get',{id:s(a.engineeringId)},(cmd,args)=>handleRequest({cmd,args}))}
       const mode=appView(a.id);if(!mode)throw Error('Unknown application view')
       if(a.toggleNavigation&&(a.teamTab!==undefined||a.teamViewId!==undefined||a.missionTab!==undefined))throw Error('Primary activation cannot set a child view')
-      const current=getView(),root=mode.id==='company'&&current.kind==='home'&&!current.pluginId
-      if(a.toggleNavigation&&root)return setView({...current,teamNavigationOpen:!current.teamNavigationOpen})
+      const current=getView()
+      if(mode.id==='company'&&current.kind==='home'&&!current.pluginId&&a.teamViewId===undefined)return current
       if(a.teamTab!==undefined&&(mode.id!=='company'||!['engineering','research','characters','board','workers'].includes(a.teamTab)))throw Error('Choose Engineering, Research, Characters, Board or Workers within Team')
       if(mode.id!=='company'&&a.teamViewId!==undefined)throw Error('Only Company selects a Team subview')
       if(mode.id==='company'&&a.teamViewId!==undefined&&!teamViewList().views.some(item=>item.id===a.teamViewId))throw Error('Unknown Company subview')
       if(a.missionTab!==undefined&&(mode.id!=='plan'||a.missionTab!=='plan'))throw Error('Mission opens its layouts directly; child destinations were removed')
       if(mode.id==='plan'&&current.kind==='plan')return current
       const nextMissionTab='plan';await beforeViewChange(mode.id==='company'?'home':mode.id,mode.id==='plan'?nextMissionTab:undefined)
-      if(mode.id==='company')selectTeamView(a.teamViewId??(a.teamTab||a.toggleNavigation?teamViewList().activeId:'all'))
+      if(mode.id==='company')selectTeamView(a.teamViewId??teamViewList().activeId)
       if(mode.id==='messages'){
         const saved={...getMessagesView(),shared:getView().shared}
         try{
@@ -599,7 +599,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       return checkRemote(employee?executionEmployee(readStore(),employee).remote:a.team?teamSettings(readStore(),a.team).remote:a.remote)
     }
     case 'worker.upload-begin': {if(!isAppAdministrator())throw Error('Only the user or Secretary may upload client files');validateApiArguments(req.cmd,a);const directory='.agents-attachments';if(!(await workerFile(s(a.id),'info',{path:directory})).exists)await workerFile(s(a.id),'mkdir',{path:directory});return beginUpload({worker:s(a.id),path:directory},workerFileEndpoint(s(a.id),directory),s(a.name),Number(a.bytes),true)}
-    case 'worker.create': return createWorker({employee:a.employee,engine:s(a.engine),title:a.title,cwd:a.cwd,clientRequestId:a.clientRequestId})
+    case 'worker.create': return createWorker({employee:a.employee,team:a.team,engine:s(a.engine),title:a.title,cwd:a.cwd,clientRequestId:a.clientRequestId})
     case 'worker.list': return listWorkers(a.employee)
     case 'worker.engines': return workerEngines()
     case 'worker.snapshot': return workerSnapshot(s(a.id))

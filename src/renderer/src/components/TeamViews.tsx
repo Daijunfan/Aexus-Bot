@@ -15,10 +15,10 @@ export function TeamViews({store,view,act,groupUnread=0}:{store:Store;view:ViewS
   const activeMode=presentationForView(view)
   const {value:inbox}=useCatalog<InboxEntry>('session.inbox',true,event=>event.channel==='direct:changed'||event.channel==='store:changed'&&affectsInbox(event.payload),80)
   const unread=inbox.filter(entry=>entry.unread&&store.sessions.some(card=>card.id===entry.employeeId&&!card.deleting)).length+groupUnread
-  const select=(id:string)=>void act('view.select',{id,...(id==='company'?{toggleNavigation:true}:{})})
+  const select=(id:string)=>void act('view.select',{id})
   return <nav className="company-navigation" aria-label={uiText("Main views")}>
-    <button className={`app-view-button company-view-trigger ${activeMode==='company'?'active':''}`} title={'Team'} aria-label={'Team'} aria-pressed={activeMode==='company'} aria-expanded={activeMode==='company'&&!!view.teamNavigationOpen} aria-controls="team-subview-navigation" onClick={()=>select('company')}>
-      <Icon name={APP_VIEWS[0].icon}/><span>{'Team'}</span><Icon className="primary-nav-chevron" name={activeMode==='company'&&view.teamNavigationOpen?'chevron-down':'chevron-right'}/>
+    <button className={`app-view-button company-view-trigger ${activeMode==='company'?'active':''}`} title={'Team'} aria-label={'Team'} aria-pressed={activeMode==='company'} onClick={()=>select('company')}>
+      <Icon name={APP_VIEWS[0].icon}/><span>{'Team'}</span>
     </button>
     {APP_VIEWS.filter(mode=>mode.id!=='company').map(mode=>{
       const text=mode.label

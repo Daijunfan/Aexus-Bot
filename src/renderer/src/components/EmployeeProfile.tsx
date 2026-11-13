@@ -24,9 +24,9 @@ import {BackButton} from './BackButton'
 import {Icon} from './Icon'
 import {MessageWorkspace,MessageWorkspaceNav} from './MessageWorkspace'
 
-type ProfileView='company'|'messages'|'plan'|'workers'
+type ProfileView='company'|'messages'|'plan'
 type Section=ProfileView|'edit'
-const tabs=[['company','Team','organization'],['messages','Message','comment-discussion'],['plan','Mission','calendar'],['workers','Workers','terminal']] as const
+const tabs=[['company','Team','organization'],['messages','Message','comment-discussion'],['plan','Mission','calendar']] as const
 const date=(value:string|null,zone?:string)=>value?new Date(value).toLocaleString(interfaceLocale(),{timeZone:zone,month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):uiText('No upcoming run')
 
 /** Shared employee profile in Company and Messages. Discovery never starts an engine. */
@@ -71,7 +71,6 @@ export function EmployeeProfile({employee,store,onBack,onWorkspace,backLabel='Ba
    <div className="profile-scroll" role="tabpanel" id={tabId+'-panel'} aria-labelledby={tabId+'-'+section} tabIndex={0} aria-busy={loading}>
     {!data&&!error&&<Empty icon="loading" text="Loading employee profile…"/>}
     {data&&<>
-     {section==='workers'&&<div className="profile-empty"><p>{uiText('Workers are managed in the dedicated Team / Workers view.')}</p><button onClick={()=>void api.call('view.open',{kind:'home',teamTab:'workers'})}>{uiText('Open Workers')}</button></div>}
      {section==='company'&&<>
       <section className="profile-section"><header><h2>{uiText('Team identity')}</h2><span>{uiText(data.company.location==='remote'?'Cloud workspace':'Local workspace')}</span></header><div className="profile-card"><div className="profile-company-identity"><span className="profile-row-icon company"><Icon name="organization"/></span><div><strong>{data.company.team||uiText('Unassigned')}</strong><small>{uiText(rolePolicy(person.managementRole).label)} · {uiText(data.company.mode==='work'?'Plugin workspace':data.company.mode==='cloud'?'Cloud Team':'Project Team')}</small></div></div><p className="profile-role-description">{uiText(rolePolicy(person.managementRole).description)}</p><dl className="profile-facts"><div><dt>{uiText('Role')}</dt><dd>{uiText(rolePolicy(person.managementRole).label)}<Icon name="lock"/></dd></div><div><dt>{uiText('Coding agent')}</dt><dd>{ENGINE_DEFINITIONS[person.engine].label}<Icon name="lock"/></dd></div><div><dt>{uiText('Model')}</dt><dd>{person.model||uiText('Configured default')}</dd></div><div><dt>{uiText('Execution location')}</dt><dd>{uiText(person.kind==='cloud-native-worker'?'Cloud Native Worker':'Core host')}{data.company.host&&<small>{data.company.host}</small>}</dd></div></dl></div></section>
       <section className="profile-section"><header><h2>{uiText('Team workspace')}</h2></header><div className="profile-card"><button type="button" className="profile-row" onClick={onWorkspace}><span className="profile-row-icon company"><Icon name="files"/></span><span className="profile-row-copy"><strong>{uiText('Personal workspace')}</strong><code>{data.company.workspace}</code><small>{uiText(data.company.location==='remote'?'On the employee’s cloud host':'On the Core host')}</small></span><Icon name="chevron-right"/></button>{data.company.teamRoot&&<div className="profile-folder-note"><small>{uiText('Team directory')}</small><code>{data.company.teamRoot}</code></div>}</div></section>

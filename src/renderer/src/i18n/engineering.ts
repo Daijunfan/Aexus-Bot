@@ -49,7 +49,7 @@ export const engineeringZh:Record<string,string>={
  'Wakeup history':'唤醒记录','Wake this role':'立即唤醒此角色','Engineering native Worker':'工程原生 Worker','Close engineering Worker':'关闭工程 Worker',
  'This Worker was removed. Its recorded delivery and native session reference remain in the run history.':'此 Worker 已移除，其交付记录和原生会话引用仍保留在工程历史中。',
  'Engineering Mission':'工程任务','Engineering · two-stage acceptance':'Engineering · 两级验收','nodes passed Employee and Manager acceptance':'个节点已通过 Employee 初验与 Manager 复验','Verified result':'验收结果',
- 'Final success requires every Manager confirmation and Governor acceptance. Open Engineering to review deliverables or request rework.':'所有 Manager 确认链路完成，并由 Governor 完成最终验收后，工程才会成功。请打开 Engineering 查看交付或要求返工。','Open Engineering':'打开 Engineering',
+  'Final success requires every Manager confirmation and Governor acceptance.':'最终成功仍须所有 Manager 确认，并通过 Governor 验收。',
  'governor':'Governor','manager':'Manager','employee':'Employee','worker':'Worker','draft':'草稿','preparing':'准备中','setup failed':'初始化失败','running':'运行中','paused':'已暂停','blocked':'已阻塞','completed':'已完成','ready':'就绪','pending':'等待中','working':'执行中','employee review':'待 Employee 初验','manager review':'待 Manager 复验','rework':'待返工','waiting':'等待中','busy elsewhere':'正在处理其他任务','queued':'已排队','interrupted':'已中断','failed':'失败',
  'node ready':'节点可执行','worker delivered':'Worker 已交付','worker failed':'Worker 执行失败','periodic check':'周期检查','employee accepted':'Employee 初验通过','node accepted':'节点复验通过','chain ready':'链路待确认','manager completed':'Manager 已确认链路','governor rework':'Governor 要求返工','acceptance rejected':'验收退回','project started':'工程已启动','chain started':'链路已启动','project resumed':'工程已恢复','manual check':'主动唤醒','role needs attention':'角色执行需要跟进'
 }

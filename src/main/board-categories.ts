@@ -1,5 +1,6 @@
 import {requireAppAdministrator} from './authorization'
 import {readStore,writeStore} from './store'
+import {listWorkers} from './native-workers'
 import type {BoardCategoryInput} from '../shared/board-categories'
 export function boardCategories(){requireAppAdministrator();return readStore().boardCategories??[]}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b)
@@ -11,8 +12,7 @@ export function saveBoardCategory(input:BoardCategoryInput){
  if(!Number.isInteger(input.expectedRevision)||input.expectedRevision<0)throw Error('Choose the current category revision')
  if(categories.some(value=>value.id!==input.id&&value.name.toLocaleLowerCase()===name.toLocaleLowerCase()))throw Error('A Board category with this name already exists')
  const members=(values:unknown,known:Set<string>)=>{if(!Array.isArray(values)||values.some(id=>typeof id!=='string'||!known.has(id)))throw Error('Some selected members are no longer available. Reload the selection.');return [...new Set(values as string[])].sort()}
- const employeeIds=members(input.employeeIds,new Set(store.sessions.filter(card=>!card.deleting).map(card=>card.id))),workerIds=current?.workerIds??[],value={id:input.id,name,employeeIds,workerIds}
- if(input.workerIds!==undefined&&(!Array.isArray(input.workerIds)||!equal([...new Set(input.workerIds)].sort(),[...workerIds].sort())))throw Error('Workers belong to the Workers view, not Board categories')
+ const employeeIds=members(input.employeeIds,new Set(store.sessions.filter(card=>!card.deleting).map(card=>card.id))),workerIds=input.workerIds===undefined?current?.workerIds??[]:members(input.workerIds,new Set(listWorkers().map(worker=>worker.id))),value={id:input.id,name,employeeIds,workerIds}
  if(current&&equal({...current,revision:0},{...value,revision:0}))return current
  if((current?.revision??0)!==input.expectedRevision)throw Error('Board category changed. Load the latest version before saving.')
  const saved={...value,revision:(current?.revision??0)+1};store.boardCategories=current?categories.map(category=>category.id===saved.id?saved:category):[...categories,saved];writeStore(store);return saved

@@ -43,3 +43,10 @@
 @media(prefers-reduced-motion:reduce){.board-sidebar .board-category-bar button{transition:none}}
 
 .board-sidebar .board-roster-status[data-attention=true]{background:var(--amber);animation:none}.board-sidebar .board-roster-status[data-error=true]{background:var(--red);animation:none}
+
+/* Native Workers use the same member list without another avatar plate or page. */
+.board-sidebar .board-roster-row>.board-worker-avatar,.board-member-choice>.board-worker-avatar{background:transparent;border:0;box-shadow:none}
+.team-add-member{display:flex;align-items:center;gap:1px}
+.company-actions .team-add-member>.add-employee{border-radius:8px 0 0 8px}
+.company-actions .team-add-member>.employee-type-menu{width:30px;min-width:30px;padding-inline:4px;border-radius:0 8px 8px 0}
+.worker-title .board-member-kind{font-weight:600;color:var(--accent)}

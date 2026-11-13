@@ -2373,7 +2373,7 @@
   },
   {
     "name": "board.category-save",
-    "args": "ID --name NAME --employees JSON --expected-revision N",
+    "args": "ID --name NAME --employees JSON [--workers JSON] --expected-revision N",
     "summary": "Create or replace a Board category with an explicit multi-selection. expectedRevision=0 creates; unchanged retries are idempotent.",
     "gui": "Create/edit Board category",
     "inputSchema": {
@@ -2404,7 +2404,7 @@
             "minLength": 1
           },
           "maxItems": 5000,
-          "description": "Archived legacy membership only. Workers are isolated in Team / Workers."
+          "description": "Native Worker members in the same Team board. Category membership never grants Worker access."
         },
         "expectedRevision": {
           "type": "integer",
@@ -4762,9 +4762,9 @@
   },
   {
     "name": "worker.create",
-    "args": "[--employee ID] --engine codex|claude|cline|pi|opencode|kilo|deepseek [--title NAME --cwd PATH --client-request-id ID]",
+    "args": "[--employee ID] --engine codex|claude|cline|pi|opencode|kilo|deepseek [--title NAME --team TEAM --cwd PATH --client-request-id ID]",
     "summary": "Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Aexus tools.",
-    "gui": "Team / Add Worker",
+    "gui": "Team / Add employee / Worker",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4772,6 +4772,11 @@
         "employee": {
           "type": "string",
           "minLength": 1
+        },
+        "team": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Presentation Team only; it does not supply a role prompt, tools or execution authority."
         },
         "engine": {
           "enum": [
@@ -4810,7 +4815,7 @@
     "name": "worker.list",
     "args": "[--employee ID]",
     "summary": "List directly owned native Workers (user/Secretary may administer all); user and Secretary may list all",
-    "gui": "Workers",
+    "gui": "Team members",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -13252,8 +13257,8 @@
   {
     "name": "view.navigation",
     "args": "team|mission|plan [--expanded true|false]",
-    "summary": "Set or toggle Team navigation. Legacy mission/plan sections are no-ops because Mission layouts are always visible.",
-    "gui": "Primary navigation chevrons",
+    "summary": "Legacy navigation compatibility. Team and Mission open directly; disclosure requests leave the current view unchanged.",
+    "gui": "Primary navigation compatibility",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -13267,7 +13272,7 @@
         },
         "expanded": {
           "type": "boolean",
-          "description": "Team only: set explicitly or omit to toggle. Mission always displays its layouts."
+          "description": "Deprecated compatibility input; Team and Mission have no expandable navigation."
         }
       },
       "required": [
@@ -13280,8 +13285,8 @@
   },
   {
     "name": "view.select",
-    "args": "company|messages|plan [--team-view ID] [--team-tab engineering|research|characters|board|workers] [--engineering ID] [--mission-tab plan] [--toggle-navigation]",
-    "summary": "Select a presentation mode; Team has Engineering, Research, Characters, Board and Workers; Mission shows database layouts directly; Messages resumes the last conversation",
+    "args": "company|messages|plan [--team-view ID]",
+    "summary": "Open the unified Team board or Mission directly, select a saved Team grouping, or resume the last Messages conversation. Legacy Team selectors resolve to the single Team board.",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -13301,7 +13306,8 @@
         },
         "engineeringId": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Legacy project navigation metadata; does not open a Team child page."
         },
         "teamTab": {
           "enum": [
@@ -13310,7 +13316,8 @@
             "characters",
             "board",
             "workers"
-          ]
+          ],
+          "description": "Deprecated compatibility aliases; every value resolves to Team and is returned as board."
         },
         "missionTab": {
           "enum": [
@@ -13320,7 +13327,7 @@
         },
         "toggleNavigation": {
           "type": "boolean",
-          "description": "Team primary intent: toggle the active Team selector or resume its remembered child. Mission selection is idempotent and always shows its layouts. Cannot be combined with explicit child selection."
+          "description": "Deprecated compatibility intent. Team and Mission selections are idempotent and never expand navigation. Cannot be combined with explicit legacy child selection."
         }
       },
       "required": [

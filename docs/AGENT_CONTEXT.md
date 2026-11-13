@@ -51,3 +51,9 @@
 | 插件内容操作 | `plugin/ID/index`，再读对应 `plugin/ID/command/METHOD` |
 
 本次改动不改写已有原生历史，不切换执行主机或扩大权限。独立 Worker 与外部 Bot 继续使用干净的原生上下文，不注入员工身份或本应用规则。
+
+## Worker 与角色员工共用看板
+
+Worker 在 Team 中作为员工类型展示，仍使用独立的 `worker.*` 执行通道，不转换成角色员工会话。成员分类、Team 显示归属及所属负责人都不生成角色提示、入职轮次、Team 合约或其他成员的聊天上下文，也不向原生 Worker 注入 Aexus 工具或员工令牌。只有明确提交的 Worker 输入进入它自己的原生会话；原生用户配置、项目指令、工作文件与自身历史照常保留。
+
+角色员工通过原有 `session.*` 工作台发送；Worker 通过 `worker.send/steer/command` 发送。两类草稿、队列、原生 ID 和权限各自保留，分类成员关系不能授予 Worker 访问权。`test/team-worker-core-test.mjs` 使用七种引擎的确定性协议记录验证连接不产生初始化轮次、实际输入无额外包裹、直属 Worker 同样隔离，以及重启后身份和历史不变。

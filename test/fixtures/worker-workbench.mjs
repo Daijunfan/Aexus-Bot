@@ -12,6 +12,6 @@ export async function workerWorkbenchFixture(extra={}){
  const f=await fixtureCore({HOME:native,USERPROFILE:native,AC_NATIVE_WORKER_FIXTURE:'1',AC_WORKER_PARITY:'1',CLINE_BIN:adapter,PI_BIN:adapter,OPENCODE_BIN:acp,KILO_BIN:acp,DEEPSEEK_BIN:acp,DEEPSEEK_API_KEY:'fixture-only-not-real',XDG_CONFIG_HOME:path.join(native,'config'),XDG_DATA_HOME:path.join(native,'data'),XDG_STATE_HOME:path.join(native,'state'),OPENCODE_CONFIG_CONTENT:content,KILO_CONFIG_CONTENT:content,...extra})
  const core=async(cmd,args={})=>{const value=await f.request(null,cmd,args);assert.ok(value.ok,cmd+': '+value.error);return value.data}
  writeNativeProfiles(f.env,{engines:['cline','pi']});await core('engine.configure',{engine:'claude',patch:{sdkPath:path.join(root,'test/fixtures/discussion-claude-sdk.mjs')}})
- const create=async engine=>{const cwd=path.join(f.temp,'workbench-'+engine);fs.mkdirSync(cwd,{recursive:true});fs.writeFileSync(path.join(cwd,'notes.md'),'# Keep my work\n');fs.writeFileSync(path.join(cwd,'image.png'),tinyPng);return core('worker.create',{engine,cwd,title:engine+' Workbench'})}
+ const create=async(engine,extra={})=>{const cwd=path.join(f.temp,'workbench-'+engine);fs.mkdirSync(cwd,{recursive:true});fs.writeFileSync(path.join(cwd,'notes.md'),'# Keep my work\n');fs.writeFileSync(path.join(cwd,'image.png'),tinyPng);return core('worker.create',{engine,cwd,title:engine+' Workbench',...extra})}
  return {...f,core,createWorker:create,close:async()=>{await f.close();fs.rmSync(native,{recursive:true,force:true})}}
 }
