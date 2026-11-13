@@ -27,7 +27,7 @@
 .message-conversation .private-message-row>.turn{flex:0 1 auto;width:fit-content;min-width:0;max-width:calc(100% - var(--private-avatar-size) - 12px);margin:0}
 .message-conversation .private-message-row>.turn.assistant{max-width:min(700px,calc(100% - var(--private-avatar-size) - 12px))}
 .message-conversation .private-message-row>.turn.user>.bubble{max-width:100%;margin:0}
-.message-conversation .private-message-row.is-incoming>.turn.user>.bubble{--bubble-fill:var(--message-paper);background:var(--bubble-fill)}
+.message-conversation .private-message-row.is-incoming>.turn.user>.bubble{--bubble-fill:var(--message-paper);--bubble-edge:var(--border);background:var(--bubble-fill)}
 .private-message-row:is([data-bubble-group=first],[data-bubble-group=middle]){margin-bottom:4px}
 .private-message-row .message-row-heading{font-size:11px;line-height:1.5}
 .message-profile-actions{flex-wrap:wrap}

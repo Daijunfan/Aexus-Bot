@@ -9,9 +9,11 @@
 .group-message-row>.group-message>.group-message-heading{gap:7px;min-width:0}
 .group-message-row .group-kind{flex:none}
 .group-typing-row{animation:group-typing-enter .2s ease-out}
+.group-thinking-members{align-self:stretch;min-width:0}
 .group-typing-row .message-list-avatar,.group-typing-row .message-list-avatar>.message-avatar{width:100%;height:100%;border-radius:inherit}
 .message-view .group-message-row>.group-typing-bubble{min-width:94px;padding:12px 18px 14px}
-.group-typing-bubble>.group-message-heading{margin-bottom:5px}
+.group-typing-bubble>.group-message-heading{margin-bottom:5px;padding-right:0}
+.group-typing-bubble>.group-message-heading>strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .group-typing-dots{display:flex;align-items:center;gap:6px;height:23px;padding:2px 1px}
 .group-typing-dots>i{display:block;width:6px;height:6px;border-radius:50%;background:var(--fg-dim);animation:group-typing-dot 1.2s cubic-bezier(.45,.05,.55,.95) infinite;will-change:transform,opacity}
 .group-typing-dots>i:nth-child(2){animation-delay:.16s}

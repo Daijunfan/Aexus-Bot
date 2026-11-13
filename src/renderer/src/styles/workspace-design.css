@@ -40,7 +40,7 @@
 .message-thread-actions{gap:5px}
 .message-thread-header button{border-radius:7px}
 .message-stage .transcript,.message-stage .group-transcript{padding:20px max(24px,calc((100% - var(--thread-width))/2)) 20px}
-.message-conversation .turn.assistant,.message-conversation .turn.user .bubble,.message-stage .group-message{border-radius:9px;box-shadow:0 1px 2px #00000003}
+.message-conversation .turn.assistant,.message-conversation .turn.user .bubble,.message-stage .group-message{border-radius:16px;box-shadow:0 1px 2px #00000003}
 .message-stage .message-date time{background:none;border:0;box-shadow:none;color:var(--fg-dim);font-size:10px;font-weight:550}
 .message-conversation .composer-box,.group-compose-box{border-radius:20px;box-shadow:none}
 .message-conversation .composer-box.task-composer{border-radius:20px}

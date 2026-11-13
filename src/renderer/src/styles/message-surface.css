@@ -14,19 +14,21 @@
 .message-conversation .turn,.group-message{margin:0 0 12px;flex-shrink:0}
 .message-conversation .turn:last-child,.group-message:last-child{margin-bottom:0}
 .message-conversation .turn.user{width:100%}
-.message-conversation .turn.assistant,.message-conversation .turn.user .bubble,.group-message{--bubble-fill:var(--message-paper);box-sizing:border-box;position:relative;max-width:min(90%,700px);width:fit-content;min-width:100px;border:1px solid var(--border);border-radius:10px;background:var(--bubble-fill);padding:12px 15px 9px;color:var(--fg);font-size:14px;line-height:1.7;box-shadow:0 1px 4px #17233b05;gap:6px;overflow-wrap:anywhere}
-.message-conversation .turn.user .bubble,.group-message.from-user{--bubble-fill:var(--message-outgoing);background:var(--bubble-fill);margin-left:auto;border-color:color-mix(in srgb,var(--accent) 24%,var(--border))}
+.message-conversation .turn.assistant,.message-conversation .turn.user .bubble,.group-message{--bubble-fill:var(--message-paper);--bubble-edge:var(--border);box-sizing:border-box;position:relative;max-width:min(90%,700px);width:fit-content;min-width:100px;border:1px solid var(--bubble-edge);border-radius:16px;background:var(--bubble-fill);padding:12px 15px 9px;color:var(--fg);font-size:14px;line-height:1.7;box-shadow:0 1px 4px #17233b05;gap:6px;overflow-wrap:anywhere}
+.message-conversation .turn.user .bubble,.group-message.from-user{--bubble-fill:var(--message-outgoing);--bubble-edge:color-mix(in srgb,var(--accent) 24%,var(--border));background:var(--bubble-fill);margin-left:auto;border-color:var(--bubble-edge)}
 .group-message.from-user{align-self:flex-end}
-
-
-
-
+.private-message-row,.group-message-row{--bubble-top-radius:16px;--bubble-bottom-radius:3px}
+.private-message-row:is([data-bubble-group=first],[data-bubble-group=middle]),.group-message-row:is([data-bubble-group=first],[data-bubble-group=middle]){--bubble-bottom-radius:5px}
+.private-message-row:is([data-bubble-group=middle],[data-bubble-group=last]),.group-message-row:is([data-bubble-group=middle],[data-bubble-group=last]){--bubble-top-radius:5px}
+.message-view .message-stage .private-message-row.is-incoming :is(.turn.assistant,.bubble),.message-view .message-stage .group-message-row.is-incoming>.group-message{border-start-start-radius:var(--bubble-top-radius);border-end-start-radius:var(--bubble-bottom-radius)}
+.message-view .message-stage .private-message-row.is-outgoing .bubble,.message-view .message-stage .group-message-row.is-outgoing>.group-message{border-start-end-radius:var(--bubble-top-radius);border-end-end-radius:var(--bubble-bottom-radius)}
+.message-bubble-tail{position:absolute;left:-11px;bottom:-1px;width:12px;height:16px;overflow:visible;fill:var(--bubble-fill);stroke:var(--bubble-edge);stroke-width:1;pointer-events:none;transition:opacity .12s ease-out}
+.message-bubble-tail path{vector-effect:non-scaling-stroke}
+.private-message-row.is-outgoing .message-bubble-tail,.group-message-row.is-outgoing .message-bubble-tail{left:auto;right:-11px;transform:scaleX(-1)}
+:is(.turn,.group-message):is([data-bubble-group=first],[data-bubble-group=middle]) .message-bubble-tail{opacity:0}
+:is(.turn,.group-message):is([data-emoji-count],[data-sticker=true]) .message-bubble-tail{display:none}
 .message-conversation .turn:is([data-bubble-group=first],[data-bubble-group=middle]),.group-message:is([data-bubble-group=first],[data-bubble-group=middle]){margin-bottom:3px}
 
-
-
-
-.message-conversation .turn:is([data-bubble-group=first],[data-bubble-group=middle])::before,.message-conversation .turn.user:is([data-bubble-group=first],[data-bubble-group=middle]) .bubble::before,.group-message:is([data-bubble-group=first],[data-bubble-group=middle])::before{display:none}
 .message-conversation .turn .markdown,.group-message .markdown{white-space:normal;overflow-wrap:anywhere;font-size:14px;line-height:1.7;word-break:break-word}
 .message-conversation .turn .markdown p,.group-message .markdown p{margin:0 0 .7em}
 .message-conversation .turn .markdown>:first-child,.group-message .markdown>:first-child{margin-top:0}
@@ -87,6 +89,7 @@
   .message-conversation .composer-box,.group-compose-box{border-radius:17px}
 }
 @media (prefers-reduced-motion:reduce) {
+  .message-bubble-tail{transition:none}
   .messenger-menu,.message-image-dialog,.message-library,.message-profile,.group-replying,.draft-attachments{animation:none}
   .message-stage *{transition:none!important;animation:none!important}
 }
@@ -423,7 +426,6 @@
 .message-stage [data-emoji-count="2"]{--message-emoji-size:44px}
 .message-stage [data-emoji-count="3"]{--message-emoji-size:38px}
 .message-conversation .turn.assistant[data-emoji-count],.message-conversation .turn.user[data-emoji-count] .bubble,.group-message[data-emoji-count]{--bubble-fill:transparent;background:transparent;box-shadow:none;border:0;padding:7px 8px 3px}
-.message-conversation .turn[data-emoji-count]::before,.message-conversation .turn.user[data-emoji-count] .bubble::before,.group-message[data-emoji-count]::before{display:none}
 .message-conversation .turn[data-emoji-count] .markdown,.group-message[data-emoji-count] .markdown{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:var(--message-emoji-size);line-height:1.3;letter-spacing:2px}
 .message-receipt[data-receipt-state=failed]{gap:5px;padding-inline:7px;background:color-mix(in srgb,var(--red) 8%,var(--bg-elev));color:color-mix(in srgb,var(--red) 72%,var(--fg))}
 .message-receipt[data-receipt-state=queued]{color:var(--fg-dim)}
