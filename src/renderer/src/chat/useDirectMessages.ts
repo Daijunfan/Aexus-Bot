@@ -13,11 +13,12 @@ function merge(current:Item[],incoming:Item[],older=false){
 const reason=(cause:unknown)=>cause instanceof Error?cause.message:String((cause as {message?:unknown})?.message??cause)
 
 /** Explicit published private history only; refresh merges by ID and paging stays in memory. */
-export function useDirectMessages(employeeId:string|undefined,enabled:boolean,around?:string){
+export function useDirectMessages(employeeId:string|undefined,enabled:boolean,around?:string,initialAround?:string){
  const [items,setItems]=useState<Item[]>([]),[ready,setReady]=useState(false),[error,setError]=useState('')
+ const [owner,setOwner]=useState(employeeId)
  const [latestIncoming,setLatestIncoming]=useState<DirectHistory['latestIncoming']>()
  const [readSequence,setReadSequence]=useState(0),[nextBefore,setNextBefore]=useState<number|null>(null)
- const scope=useRef(employeeId),loaded=useRef<Item[]>([]),before=useRef<number|null>(null),anchor=useRef(around),request=useRef(0),older=useRef(false),active=useRef(employeeId)
+ const loaded=useRef<Item[]>([]),before=useRef<number|null>(null),anchor=useRef(around??initialAround),request=useRef(0),older=useRef(false),active=useRef(employeeId)
  active.current=employeeId
  const load=useCallback(async(mode:'initial'|'refresh'|'older'|'latest')=>{
   if(!employeeId)return
@@ -30,12 +31,16 @@ export function useDirectMessages(employeeId:string|undefined,enabled:boolean,ar
   if(mode==='older')args.before=cursor
   else if(aroundId)args.around=aroundId
   try{
-   const history=await api.call<DirectHistory>('direct.history',args)
+   let history:DirectHistory
+   try{history=await api.call<DirectHistory>('direct.history',args)}catch(cause){
+    if(mode!=='initial'||!aroundId||reason(cause)!=='Private message is unavailable'||token!==request.current||active.current!==id)throw cause
+    anchor.current=undefined;delete args.around;history=await api.call<DirectHistory>('direct.history',args)
+   }
    if(token!==request.current||active.current!==id)return
-   const replace=mode==='older'?false:mode==='initial'||mode==='latest'||!!jump
+   const replace=mode==='initial'||mode==='latest'
    const next=replace?history.items.slice(-MAX_ITEMS):merge(loaded.current,history.items,mode==='older')
-   loaded.current=next;scope.current=id;before.current=next.length&&order(next[0])>1?order(next[0]):null;if(mode==='older')anchor.current=next[0]?.id
-   setItems(next);setNextBefore(before.current);setLatestIncoming(history.latestIncoming);setReadSequence(history.readSequence);setReady(true);setError('')
+   loaded.current=next;before.current=next.length&&order(next[0])>1?order(next[0]):null;if(mode==='older')anchor.current=next[0]?.id
+   setOwner(id);setItems(next);setNextBefore(before.current);setLatestIncoming(history.latestIncoming);setReadSequence(history.readSequence);setReady(true);setError('')
   }catch(cause){if(token===request.current&&active.current===id)setError(reason(cause))}
   finally{if(mode==='older')older.current=false}
  },[employeeId])
@@ -43,7 +48,7 @@ export function useDirectMessages(employeeId:string|undefined,enabled:boolean,ar
  const loadOlder=useCallback(()=>void load('older'),[load])
  const loadLatest=useCallback(()=>{if(!anchor.current)return;anchor.current=undefined;void load('latest')},[load])
  useEffect(()=>{
-  request.current++;scope.current=employeeId;loaded.current=[];before.current=null;anchor.current=around
+  request.current++;loaded.current=[];before.current=null;anchor.current=around??initialAround
   setItems([]);setNextBefore(null);setLatestIncoming(undefined);setReadSequence(0);setReady(false);setError('')
   if(!employeeId||!enabled)return
   void load('initial')
@@ -56,5 +61,5 @@ export function useDirectMessages(employeeId:string|undefined,enabled:boolean,ar
   return()=>{clearTimeout(timer);off();request.current++}
  },[employeeId,enabled,load])
  useEffect(()=>{if(enabled&&around&&!loaded.current.some(item=>item.id===around)){anchor.current=around;void load('initial')}},[around,employeeId,enabled,load])
- const current=enabled&&scope.current===employeeId;return {items:current?items:[],ready:current&&ready,error:current?error:'',latestIncoming:current?latestIncoming:undefined,readSequence:current?readSequence:0,nextBefore:current?nextBefore:null,refresh,loadOlder,loadLatest}
+ const current=enabled&&owner===employeeId;return {items:current?items:[],ready:current&&ready,error:current?error:'',latestIncoming:current?latestIncoming:undefined,readSequence:current?readSequence:0,nextBefore:current?nextBefore:null,refresh,loadOlder,loadLatest}
 }

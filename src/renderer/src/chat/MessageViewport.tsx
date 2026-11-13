@@ -4,7 +4,8 @@ import '../styles/message-viewport.css'
 
 export type MessageViewportHandle={
  readonly managed:boolean
- scrollToMessage:(id:string,options?:{block?:'start'|'center'|'end'|'nearest';signal?:AbortSignal})=>Promise<HTMLElement|null>
+ cancelNavigation:()=>void
+ scrollToMessage:(id:string,options?:{block?:'start'|'center'|'end'|'nearest';offset?:number;signal?:AbortSignal})=>Promise<HTMLElement|null>
  scrollToEnd:()=>void
 }
 type OwnerContext={handle:MessageViewportHandle;pin:(id:string)=>()=>void;state:Map<string,Map<string,unknown>>}
@@ -34,6 +35,7 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
  const rowRefs=useRef(new Map<string,(node:HTMLDivElement|null)=>void>())
  const userScrolled=useRef(false),writtenTop=useRef<number|null>(null)
  const markUserScroll=()=>{userScrolled.current=true}
+ const cancelNavigation=useCallback(()=>{pendingEnd.current=false;navigation.current?.cancel();userScrolled.current=true},[])
  const [ownerVersion,setOwnerVersion]=useState(0),[activeOwners,setActiveOwners]=useState<string[]>([]),[margin,setMargin]=useState(0),[scrollElement,setScrollElement]=useState<HTMLDivElement|null>(null)
  const callbacks=useRef({following,onProgrammaticScroll});callbacks.current={following,onProgrammaticScroll}
  const indices=useMemo(()=>new Map(items.map((item,index)=>[item.id,index])),[items]),currentIndices=useRef(indices);currentIndices.current=indices
@@ -82,7 +84,7 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
   const owner=(node:Node|null)=>{const element=node instanceof Element?node:node?.parentElement;return element&&scroll.contains(element)?element.closest<HTMLElement>('[data-message-owner]')?.dataset.messageOwner:undefined}
   const update=()=>{if(!alive.current)return;const selection=getSelection(),ids=[owner(document.activeElement),...(!selection?.isCollapsed?[owner(selection?.anchorNode??null),owner(selection?.focusNode??null)]:[])],next=[...new Set(ids.filter((id):id is string=>!!id))];setActiveOwners(previous=>previous.length===next.length&&previous.every((id,index)=>id===next[index])?previous:next)}
   const blur=()=>queueMicrotask(update)
-  const cancel=()=>{pendingEnd.current=false;navigation.current?.cancel();markUserScroll()}
+  const cancel=cancelNavigation
   const manual=()=>{if(writtenTop.current===null||Math.abs(scroll.scrollTop-writtenTop.current)>1)markUserScroll()}
   const key=(event:KeyboardEvent)=>{if(['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(event.key)&&!(event.target as Element)?.closest('input,textarea,[contenteditable=true]'))cancel()}
   const toggle=(event:Event)=>{const details=event.target;if(!(details instanceof HTMLDetailsElement))return;const row=details.closest<HTMLElement>('[data-message-owner]'),id=row?.dataset.messageOwner;if(row&&id)rememberDetails(id,details,Array.from(row.querySelectorAll('details')).indexOf(details))}
@@ -92,8 +94,9 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
  },[enabled,scrollRef,scrollElement,rememberDetails])
  const handle=useMemo<MessageViewportHandle>(()=>({
   managed:enabled,
+  cancelNavigation,
   scrollToEnd(){userScrolled.current=false;navigation.current?.cancel();if(enabled){pendingEnd.current=!virtual.scrollElement;if(!pendingEnd.current)virtual.scrollToEnd()}else if(scrollRef.current){scrollRef.current.scrollTop=scrollRef.current.scrollHeight;callbacks.current.onProgrammaticScroll(scrollRef.current.scrollTop)}},
-  scrollToMessage(id,{block='center',signal}={}){
+  scrollToMessage(id,{block='center',offset,signal}={}){
    pendingEnd.current=false;userScrolled.current=false
    navigation.current?.cancel()
    if(signal?.aborted||!currentIndices.current.has(id)||!scrollRef.current)return Promise.resolve(null)
@@ -112,10 +115,11 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
      const message=wrapper?.matches('[data-chat-item]')?wrapper:wrapper?.querySelector<HTMLElement>('[data-chat-item]')
      if(wrapper&&!message){finish(null);return}
      if(wrapper&&message){
-      const rect=wrapper.getBoundingClientRect(),box=scroll.getBoundingClientRect(),scale=box.height/parseFloat(getComputedStyle(scroll).height)||1,top=box.top+scroll.clientTop*scale,bottom=top+scroll.clientHeight*scale,position=[rect.top,rect.height,scroll.scrollTop]
+      const rect=(offset===undefined?wrapper:message).getBoundingClientRect(),box=scroll.getBoundingClientRect(),scale=box.height/parseFloat(getComputedStyle(scroll).height)||1,top=box.top+scroll.clientTop*scale,bottom=top+scroll.clientHeight*scale,position=[rect.top,rect.height,scroll.scrollTop]
       stable=last&&position.every((value,index)=>Math.abs(value-last![index])<.5)?stable+1:0;last=position
       if(stable>=2){
-       const delta=block==='start'?rect.top-top:block==='end'?rect.bottom-bottom:block==='center'?(rect.top+rect.bottom-top-bottom)/2:rect.top<top&&rect.bottom>bottom?0:rect.top<top?rect.top-top:rect.bottom>bottom?rect.bottom-bottom:0
+       const inset=offset===undefined?0:Math.max(-Math.max(0,rect.height/scale-24),Math.min(offset,(bottom-top)/scale-24))*scale
+       const delta=block==='start'?rect.top-top-inset:block==='end'?rect.bottom-bottom:block==='center'?(rect.top+rect.bottom-top-bottom)/2:rect.top<top&&rect.bottom>bottom?0:rect.top<top?rect.top-top:rect.bottom>bottom?rect.bottom-bottom:0
        const target=Math.max(0,Math.min(scroll.scrollHeight-scroll.clientHeight,scroll.scrollTop+delta/scale))
        // Consume pending anchor corrections before handing the row to quote/highlight navigation.
        if(Math.abs(target-scroll.scrollTop)>1){if(enabled)virtual.scrollToOffset(target);else{scroll.scrollTop=target;callbacks.current.onProgrammaticScroll(scroll.scrollTop)}stable=0;last=undefined}
@@ -127,7 +131,7 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
     frame=requestAnimationFrame(step)
    })
   }
- }),[enabled,pin,scrollRef,virtual])
+ }),[enabled,pin,scrollRef,virtual,cancelNavigation])
  // Stable owner refs keep receipt-only updates from detaching and remeasuring every row.
  const refFor=(id:string)=>{
   let attach=rowRefs.current.get(id)
