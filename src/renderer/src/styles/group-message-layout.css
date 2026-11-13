@@ -5,7 +5,7 @@
 .message-viewport-row[data-message-last]>.group-message-row{margin-bottom:0}
 .group-message-row>.message-author-avatar{position:sticky;bottom:6px;width:var(--group-portrait-size);height:var(--group-portrait-size);border-radius:14px;margin-bottom:1px;box-shadow:0 1px 4px color-mix(in srgb,var(--fg) 8%,transparent),0 0 0 1px color-mix(in srgb,var(--bg-elev) 82%,transparent)}
 .group-message-row>.message-author-avatar>.message-former-avatar{width:100%;height:100%;border-radius:inherit}
-.message-view .group-message-row>.group-message{flex:0 1 auto;margin:0;max-width:min(660px,calc(100% - var(--group-portrait-size) - var(--group-portrait-gap) - 20px))}
+.message-view .group-message-row>.group-message{flex:0 1 auto;margin:0;max-width:min(880px,calc(100% - var(--group-portrait-size) - var(--group-portrait-gap) - 20px))}
 .group-message-row>.group-message>.group-message-heading{gap:7px;min-width:0}
 .group-message-row .group-kind{flex:none}
 .group-typing-row{animation:group-typing-enter .2s ease-out}

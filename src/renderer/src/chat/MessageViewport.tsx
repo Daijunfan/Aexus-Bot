@@ -32,6 +32,8 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
 }){
  const root=useRef<HTMLDivElement>(null),rows=useRef(new Map<string,HTMLDivElement>()),owners=useRef(new Map<string,number>()),rowState=useRef(new Map<string,Map<string,unknown>>()),detailsDefaults=useRef(new WeakMap<HTMLDetailsElement,boolean>()),alive=useRef(true),pendingEnd=useRef(false),navigation=useRef<{cancel:()=>void}|null>(null)
  const rowRefs=useRef(new Map<string,(node:HTMLDivElement|null)=>void>())
+ const userScrolled=useRef(false),writtenTop=useRef<number|null>(null)
+ const markUserScroll=()=>{userScrolled.current=true}
  const [ownerVersion,setOwnerVersion]=useState(0),[activeOwners,setActiveOwners]=useState<string[]>([]),[margin,setMargin]=useState(0),[scrollElement,setScrollElement]=useState<HTMLDivElement|null>(null)
  const callbacks=useRef({following,onProgrammaticScroll});callbacks.current={following,onProgrammaticScroll}
  const indices=useMemo(()=>new Map(items.map((item,index)=>[item.id,index])),[items]),currentIndices=useRef(indices);currentIndices.current=indices
@@ -58,7 +60,13 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
  const virtual=useVirtualizer<HTMLDivElement,HTMLDivElement>({
   count:items.length,getScrollElement:()=>scrollElement,getItemKey:useCallback((index:number)=>items[index].id,[items]),estimateSize:()=>180,
   enabled,overscan:8,rangeExtractor,scrollMargin:margin,anchorTo:'end',followOnAppend:callbacks.current.following(),useFlushSync:false,
-  scrollToFn:(offset,options,instance)=>{elementScroll(offset,options,instance);if(scrollRef.current)callbacks.current.onProgrammaticScroll(scrollRef.current.scrollTop)}
+  scrollToFn:(offset,options,instance)=>{
+   // A previous scrollToEnd may still reconcile measurements after a real gesture.
+   // Rebase that command before it can pull them back; ordinary anchor corrections
+   // (behavior undefined) keep their measured offset.
+   if(userScrolled.current&&options.behavior!==undefined&&!navigation.current&&!callbacks.current.following()&&scrollRef.current){userScrolled.current=false;instance.scrollToOffset(scrollRef.current.scrollTop);return}
+   elementScroll(offset,options,instance);if(scrollRef.current){writtenTop.current=scrollRef.current.scrollTop;callbacks.current.onProgrammaticScroll(scrollRef.current.scrollTop)}
+  }
  })
  useLayoutEffect(()=>{if(!enabled)pendingEnd.current=false;else if(scrollElement&&pendingEnd.current){pendingEnd.current=false;virtual.scrollToEnd()}},[enabled,scrollElement,virtual])
  useLayoutEffect(()=>{
@@ -74,18 +82,19 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
   const owner=(node:Node|null)=>{const element=node instanceof Element?node:node?.parentElement;return element&&scroll.contains(element)?element.closest<HTMLElement>('[data-message-owner]')?.dataset.messageOwner:undefined}
   const update=()=>{if(!alive.current)return;const selection=getSelection(),ids=[owner(document.activeElement),...(!selection?.isCollapsed?[owner(selection?.anchorNode??null),owner(selection?.focusNode??null)]:[])],next=[...new Set(ids.filter((id):id is string=>!!id))];setActiveOwners(previous=>previous.length===next.length&&previous.every((id,index)=>id===next[index])?previous:next)}
   const blur=()=>queueMicrotask(update)
-  const cancel=()=>{pendingEnd.current=false;navigation.current?.cancel()}
+  const cancel=()=>{pendingEnd.current=false;navigation.current?.cancel();markUserScroll()}
+  const manual=()=>{if(writtenTop.current===null||Math.abs(scroll.scrollTop-writtenTop.current)>1)markUserScroll()}
   const key=(event:KeyboardEvent)=>{if(['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(event.key)&&!(event.target as Element)?.closest('input,textarea,[contenteditable=true]'))cancel()}
   const toggle=(event:Event)=>{const details=event.target;if(!(details instanceof HTMLDetailsElement))return;const row=details.closest<HTMLElement>('[data-message-owner]'),id=row?.dataset.messageOwner;if(row&&id)rememberDetails(id,details,Array.from(row.querySelectorAll('details')).indexOf(details))}
   scroll.addEventListener('focusin',update);scroll.addEventListener('focusout',blur);document.addEventListener('selectionchange',update)
-  scroll.addEventListener('wheel',cancel,{passive:true});scroll.addEventListener('touchstart',cancel,{passive:true});scroll.addEventListener('pointerdown',cancel);scroll.addEventListener('keydown',key);scroll.addEventListener('toggle',toggle,true)
-  return()=>{scroll.removeEventListener('focusin',update);scroll.removeEventListener('focusout',blur);document.removeEventListener('selectionchange',update);scroll.removeEventListener('wheel',cancel);scroll.removeEventListener('touchstart',cancel);scroll.removeEventListener('pointerdown',cancel);scroll.removeEventListener('keydown',key);scroll.removeEventListener('toggle',toggle,true)}
+  scroll.addEventListener('wheel',cancel,{passive:true});scroll.addEventListener('touchstart',cancel,{passive:true});scroll.addEventListener('pointerdown',cancel);scroll.addEventListener('scroll',manual,{passive:true});scroll.addEventListener('keydown',key);scroll.addEventListener('toggle',toggle,true)
+  return()=>{scroll.removeEventListener('focusin',update);scroll.removeEventListener('focusout',blur);document.removeEventListener('selectionchange',update);scroll.removeEventListener('wheel',cancel);scroll.removeEventListener('touchstart',cancel);scroll.removeEventListener('pointerdown',cancel);scroll.removeEventListener('scroll',manual);scroll.removeEventListener('keydown',key);scroll.removeEventListener('toggle',toggle,true);userScrolled.current=false}
  },[enabled,scrollRef,scrollElement,rememberDetails])
  const handle=useMemo<MessageViewportHandle>(()=>({
   managed:enabled,
-  scrollToEnd(){navigation.current?.cancel();if(enabled){pendingEnd.current=!virtual.scrollElement;if(!pendingEnd.current)virtual.scrollToEnd()}else if(scrollRef.current){scrollRef.current.scrollTop=scrollRef.current.scrollHeight;callbacks.current.onProgrammaticScroll(scrollRef.current.scrollTop)}},
+  scrollToEnd(){userScrolled.current=false;navigation.current?.cancel();if(enabled){pendingEnd.current=!virtual.scrollElement;if(!pendingEnd.current)virtual.scrollToEnd()}else if(scrollRef.current){scrollRef.current.scrollTop=scrollRef.current.scrollHeight;callbacks.current.onProgrammaticScroll(scrollRef.current.scrollTop)}},
   scrollToMessage(id,{block='center',signal}={}){
-   pendingEnd.current=false
+   pendingEnd.current=false;userScrolled.current=false
    navigation.current?.cancel()
    if(signal?.aborted||!currentIndices.current.has(id)||!scrollRef.current)return Promise.resolve(null)
    return new Promise(resolve=>{

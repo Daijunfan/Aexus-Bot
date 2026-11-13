@@ -1,3 +1,4 @@
+import '../styles/message-send.css'
 import {GroupAvatar} from './GroupAvatar'
 import {NativeBotDirectoryContext,NativeBotManageContext,NativeBotRows,nativeBotKey,useNativeBotDirectory} from './BotDirectory'
 import type {NativeBotSummary} from '../../../shared/bot-management'

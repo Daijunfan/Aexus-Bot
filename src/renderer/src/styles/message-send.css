@@ -1,0 +1,51 @@
+/* One reading measure for text and illustrated reports, independent of image size. */
+.message-view .message-stage{--thread-width:1100px;--message-reading-width:880px}
+.message-view .group-message-row>.group-message[data-message-layout=reading]{width:calc(100% - var(--group-portrait-size) - var(--group-portrait-gap));max-width:var(--message-reading-width,880px);min-width:0}
+.message-view .message-conversation .turn.assistant[data-message-layout=reading],.message-view .message-conversation .turn.user[data-message-layout=reading]>.bubble{width:100%;max-width:var(--message-reading-width,880px);min-width:0}
+.message-view .message-conversation .private-message-row>.turn[data-message-layout=reading]{width:calc(100% - var(--private-avatar-size) - 12px);max-width:var(--message-reading-width,880px)}
+.message-view [data-message-layout=reading] .markdown{min-width:0;max-width:100%}
+.message-view [data-message-layout=reading] :is(.message-inline-photo,.message-single-photo){width:100%;max-width:100%}
+.message-view [data-message-layout=reading] :is(.message-photo,.message-album){max-width:100%}
+.message-view [data-message-layout=reading] .markdown>:first-child{margin-top:0}
+.message-view [data-message-layout=reading] .markdown>:last-child{margin-bottom:0}
+
+/* Shared paper, spacing and interaction states across private, group and channel inputs. */
+.message-view :is(.message-conversation .composer,.group-composer){padding-top:10px;padding-bottom:14px}
+.message-view :is(.message-conversation .composer-box.task-composer,.group-compose-box){box-sizing:border-box;min-height:64px;border:1px solid color-mix(in srgb,var(--message-accent) 16%,var(--bg-elev));border-radius:25px;background:var(--bg-elev);box-shadow:0 4px 18px color-mix(in srgb,var(--message-accent) 8%,transparent);transition:border-color 160ms ease,box-shadow 160ms ease}
+.message-view .message-conversation .composer-box.task-composer{padding:10px 12px 8px;gap:4px}
+.message-view .group-compose-box{padding:9px 10px 9px 12px;gap:8px}
+.message-view :is(.composer-box.task-composer,.group-compose-box):focus-within{border-color:color-mix(in srgb,var(--message-accent) 55%,var(--border));box-shadow:0 0 0 3px color-mix(in srgb,var(--message-accent) 8%,transparent),0 6px 22px color-mix(in srgb,var(--message-accent) 9%,transparent)}
+.message-view :is(.composer-box.task-composer,.group-compose-box)>textarea{box-sizing:border-box;min-width:0;min-height:42px;max-height:180px;margin:0;padding:9px 5px;font-size:15px;line-height:24px;resize:none;outline:none;background:transparent;overflow-x:hidden}
+.message-view .message-conversation .composer-box.task-composer>textarea{padding:4px 7px;min-height:34px}
+.message-view .composer-box.task-composer .composer-bar{align-items:center;gap:8px;min-height:40px}
+.message-view :is(.message-attach,.voice-record){align-self:flex-end;flex:none;width:40px;min-width:40px;height:42px;min-height:42px;padding:0;border:0;border-radius:13px;background:transparent;color:var(--message-accent);display:grid;place-items:center;cursor:pointer;transition:background-color 140ms ease,transform 140ms ease}
+.message-view :is(.message-attach,.voice-record):hover:enabled{background:color-mix(in srgb,var(--message-accent) 8%,transparent)}
+.message-view :is(.message-attach,.voice-record):active:enabled{transform:scale(.95)}
+.message-view :is(.message-attach,.voice-record)>.codicon{font-size:22px}
+.message-view .composer-actions{align-items:center;gap:6px}
+.message-view .composer-actions .send-btn{min-height:40px;border-radius:13px;gap:6px;padding:0 12px;font-size:12px;line-height:1;box-shadow:none;white-space:nowrap}
+.message-view .composer-actions .send-btn.send>span:not(.codicon):not(.spinner){display:none}
+.message-view .composer-actions .send-btn.enqueue{min-height:44px;background:var(--message-accent);border-color:transparent;color:var(--button-ink,#fff);box-shadow:0 3px 9px color-mix(in srgb,var(--message-accent) 18%,transparent)}
+.message-view .composer-actions .send-btn.steer{color:var(--message-accent);background:color-mix(in srgb,var(--message-accent) 7%,var(--bg-elev));border-color:color-mix(in srgb,var(--message-accent) 16%,var(--border))}
+.message-view .composer-actions .send-btn.stop{background:transparent;border-color:color-mix(in srgb,var(--red) 22%,var(--border))}
+.message-view :is(.group-send,.composer-actions .send-btn.send){flex:none;display:grid;place-items:center;width:44px;min-width:44px;height:44px;min-height:44px;padding:0;border:1px solid transparent;border-radius:15px;background:var(--message-accent);color:var(--button-ink,#fff);box-shadow:0 3px 9px color-mix(in srgb,var(--message-accent) 18%,transparent);cursor:pointer;transition:background-color 140ms ease,box-shadow 140ms ease,transform 140ms cubic-bezier(.22,1,.36,1)}
+.message-view :is(.group-send,.composer-actions .send-btn.send):hover:enabled{background:color-mix(in srgb,var(--message-accent) 90%,var(--fg));box-shadow:0 4px 12px color-mix(in srgb,var(--message-accent) 24%,transparent);transform:translateY(-1px)}
+.message-view :is(.group-send,.composer-actions .send-btn):active:enabled{transform:scale(.95)}
+.message-view :is(.group-send,.composer-actions .send-btn.send):disabled:not([aria-busy=true]){background:color-mix(in srgb,var(--message-accent) 10%,var(--bg-elev));color:color-mix(in srgb,var(--message-accent) 68%,var(--fg-dim));box-shadow:none;cursor:default;opacity:1}
+.message-view :is(.group-send,.composer-actions .send-btn)[aria-busy=true]{cursor:progress}
+.message-view :is(.group-send,.composer-actions .send-btn)>.codicon{font-size:22px;animation:message-send-icon-in 140ms cubic-bezier(.22,1,.36,1)}
+.message-view :is(.group-send,.send-btn,.message-attach,.voice-record):focus-visible{outline:2px solid var(--message-accent);outline-offset:3px}
+.message-view .group-composer>footer{gap:7px;min-height:32px;padding:6px 4px 0;color:var(--fg-dim);flex-wrap:wrap}
+.message-view .group-composer>footer>span:last-child{min-width:0;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.message-view .group-composer>footer button{border-radius:7px;transition:background-color 140ms ease,color 140ms ease}
+.message-view .group-composer>footer button:hover:enabled{background:color-mix(in srgb,var(--message-accent) 8%,transparent)}
+@keyframes message-send-icon-in{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media(max-width:760px){.message-view :is(.message-conversation .composer,.group-composer){padding-inline:12px}.message-view .group-compose-box{border-radius:22px;padding-inline:8px;gap:4px}.message-view :is(.message-attach,.voice-record){width:34px;min-width:34px}.message-view .composer-actions .send-btn{padding-inline:9px}}
+@media(prefers-reduced-motion:reduce){.message-view :is(.composer-box,.group-compose-box,.group-send,.send-btn,.message-attach,.voice-record){transition:none!important}.message-view :is(.group-send,.send-btn)>.codicon{animation:none!important}}
+
+/* Thread replies use the same input proportions inside their own work surface. */
+.group-thread-panel .group-thread-compose>div:not(.draft-files):not(.attachment-transfers){border-radius:22px;padding:9px;gap:7px;background:var(--bg-elev);transition:border-color 160ms ease,box-shadow 160ms ease}
+.group-thread-panel .group-thread-compose>div:focus-within{border-color:var(--message-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--message-accent) 8%,transparent)}
+.group-thread-panel .group-thread-compose textarea{box-sizing:border-box;min-height:42px;padding:9px 4px;line-height:24px;max-height:180px}
+.group-thread-panel .group-thread-compose .group-thread-send{width:42px;height:42px;border-radius:14px}
+@media(prefers-reduced-motion:reduce){.group-thread-panel .group-thread-compose>div{transition:none!important}}

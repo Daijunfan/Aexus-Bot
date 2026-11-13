@@ -159,12 +159,18 @@ export default function App() {
   const active:Session|undefined=liveActive??(employee?{id:employee.id,cardId:employee.id,engine:employee.engine,title:employee.title,group:employee.group,cwd:employee.remote?.directory??employee.cwd,createdAt:employee.createdAt,model:employee.model,effort:employee.effort,permissionMode:employee.permissionMode??'default',thinking:employee.thinking??false,thinkingSupported:employee.engine==='claude',busy:false,items:savedItems,commands:[],models:[]}:undefined)
   const visibleItems=messageMode?privateMessages.items:active?.items??[]
   useLayoutEffect(()=>{const id=active?.cardId??active?.id;if(transcriptScroll.current.employee!==id){transcriptScroll.current={employee:id,follow:true};privatePositioned.current=false}},[active?.cardId,active?.id])
+  const restorePrivateDraft=(id:string,saved:ReturnType<typeof messenger.getDraft>)=>{
+    drafts.current[id]=saved?.text??'';imageDrafts.current[id]=saved?.images??[];fileDrafts.current[id]=saved?.files??[];replyDrafts.current[id]=saved?.replyTo;setReplyTo(saved?.replyTo);quoteDrafts.current[id]=saved?.replyQuote;setReplyQuote(saved?.replyQuote);originDrafts.current[id]={conversation:saved?.replyConversation,textOnly:saved?.replyTextOnly};setReplyOrigin(originDrafts.current[id])
+    setInput(saved?.text??'');setImages(saved?.images??[]);setFiles(saved?.files??[])
+  }
   useEffect(()=>{
     if(!messenger.ready||!employee||(!messageMode&&view.kind!=='conversation'))return
-    const saved=messenger.getDraft(privateDraftKey(employee.id))
-    drafts.current[employee.id]=saved?.text??'';imageDrafts.current[employee.id]=saved?.images??[];fileDrafts.current[employee.id]=saved?.files??[];replyDrafts.current[employee.id]=saved?.replyTo;setReplyTo(saved?.replyTo);quoteDrafts.current[employee.id]=saved?.replyQuote;setReplyQuote(saved?.replyQuote);originDrafts.current[employee.id]={conversation:saved?.replyConversation,textOnly:saved?.replyTextOnly};setReplyOrigin(originDrafts.current[employee.id])
-    setInput(saved?.text??'');setImages(saved?.images??[]);setFiles(saved?.files??[])
+    restorePrivateDraft(employee.id,messenger.getDraft(privateDraftKey(employee.id)))
   },[messenger.ready,employee?.id,inputSource])
+  useEffect(()=>{
+    if(!messageMode||!employee||input!==''||images.length||files.length||replyTo)return
+    const saved=messenger.getDraft(privateDraftKey(employee.id));if(saved)restorePrivateDraft(employee.id,saved)
+  },[messenger.state.drafts,employee?.id,messageMode,input,images.length,files.length,replyTo])
   useEffect(()=>{const intent=messenger.replyIntent;if(!messageMode||!employee||intent?.conversation!==conversationKey('employee',employee.id))return
     replyDrafts.current[employee.id]=intent.source.id;quoteDrafts.current[employee.id]=intent.source.quote;originDrafts.current[employee.id]={conversation:intent.source.conversation,textOnly:intent.textOnly};setReplyTo(intent.source.id);setReplyQuote(intent.source.quote);setReplyOrigin(originDrafts.current[employee.id]);messenger.setReplyIntent(null)
   },[messenger.replyIntent,employee?.id])
@@ -209,7 +215,7 @@ export default function App() {
   const cancelReply=useCallback(()=>{const id=currentEmployee.current;if(!id)return;replyDrafts.current[id]=undefined;setReplyTo(undefined);quoteDrafts.current[id]=undefined;setReplyQuote(undefined);originDrafts.current[id]={};setReplyOrigin({});schedulePrivateDraft(id,{text:drafts.current[id]??'',images:imageDrafts.current[id]??[],files:fileDrafts.current[id]??[]});composer.current?.focus()},[schedulePrivateDraft])
   const replySource=visibleItems.find(item=>item.id===replyTo),localReply=useMemo(()=>{try{return replySource?messageReply(replySource,replyQuote):null}catch{return null}},[replySource,replyQuote]),selectedReply=replyOrigin.conversation?crossReference.reply:localReply
   const authorNames=useMemo(()=>Object.fromEntries(store.sessions.map(card=>[card.id,card.title])),[store.sessions])
-  useComposerHeight(composer,input,true,view.kind+':'+(active?.id??''))
+  useComposerHeight(composer,input,true,view.kind+':'+(active?.id??''),messageMode)
   const displayItems=visibleItems
   const searchItems=useMemo(()=>displayItems.filter(item=>item.role!=='notice').map(item=>({id:item.id,images:item.role==='user'?[...item.images??[],...(item.files??[]).map(file=>file.path)]:[],text:item.role==='assistant'?item.blocks.filter(block=>block.kind==='text').map(block=>block.text).join('\n'):item.text})),[displayItems])
   const galleryImages=useMemo(()=>displayItems.flatMap(item=>item.role!=='notice'&&employee&&!messenger.state.messages[messageKey(conversationKey('employee',employee.id),item.id)]?.hidden?messageGalleryItems({employee:employee.id,messageId:item.id},item.images??[],item.role==='user'?item.text:item.blocks.filter(b=>b.kind==='text').map(b=>b.text).join('\n')):[]),[displayItems,employee?.id,messenger.state.messages])
@@ -314,6 +320,7 @@ export default function App() {
     if(snapshot&&!slash&&employee?.managementRole==='governor')snapshot.viewId??=store.activeTeamViewId??'all'
     if(id&&snapshot){drafts.current[id]=snapshot.text;imageDrafts.current[id]=snapshot.images??[];fileDrafts.current[id]=snapshot.files??[];replyDrafts.current[id]=snapshot.replyTo;quoteDrafts.current[id]=snapshot.replyQuote;originDrafts.current[id]={conversation:snapshot.replyConversation,textOnly:snapshot.replyTextOnly}}
     sending.current.add(requestKey);setSendPending(previous=>({...previous,[requestKey]:steering?'steer':'send'}));setError('');setSendRecovery(null)
+    if(messageMode)privatePositioned.current=true
     transcriptScroll.current.follow=true;scrollToLatest();if(messageMode)void privateBottomError.acknowledge();setAwayFromLatest(false)
     let cancelMotion:(()=>void)|undefined
     try{
@@ -325,13 +332,15 @@ export default function App() {
       if(!sent||sent.sent===false){cancelMotion?.();setError(uiText('The request was not accepted. Your draft is retained.'));return}
       cancelMotion=undefined
       const retained=slash&&id&&(images.length||files.length)?privateDraftFor(id,{text:'',images,files}):undefined
-      const cleared=!persistent||await messenger.draft(conversation!,retained??{text:''},snapshot!.clientMessageId)
-      if(!cleared)setError(uiText('Message was sent, but its draft could not be cleared.'))
+      const clearing=!persistent?Promise.resolve(true):retained?messenger.draft(conversation!,retained,snapshot!.clientMessageId):messenger.clearDraft(conversation!,snapshot!.clientMessageId)
+      const cleared=messageMode?undefined:await clearing
+      if(cleared===false)setError(uiText('Message was sent, but its draft could not be cleared.'))
       const remaining=persistent?messenger.getDraft(conversation!):retained
-      if(cleared&&id&&snapshot&&privateDraftContent(localPrivateDraft(id))===privateDraftContent(snapshot)){
+      if((messageMode||cleared)&&id&&snapshot&&privateDraftContent(localPrivateDraft(id))===privateDraftContent(snapshot)){
         drafts.current[id]=remaining?.text??'';imageDrafts.current[id]=remaining?.images??[];fileDrafts.current[id]=remaining?.files??[];replyDrafts.current[id]=remaining?.replyTo;quoteDrafts.current[id]=remaining?.replyQuote;originDrafts.current[id]={conversation:remaining?.replyConversation,textOnly:remaining?.replyTextOnly}
-        if(currentEmployee.current===id&&currentSurface.current===inputSource){transcriptScroll.current.follow=true;setAwayFromLatest(false);setInput(drafts.current[id]);setImages(imageDrafts.current[id]);setFiles(fileDrafts.current[id]);setReplyTo(remaining?.replyTo);setReplyQuote(remaining?.replyQuote);setReplyOrigin(originDrafts.current[id]);setReturnToMessage(undefined);if(text==='/model')setMenu('model');if(text==='/effort')setMenu('effort');if(['/permissions','/approvals'].includes(text))setMenu('perm')}
+        if(currentEmployee.current===id&&currentSurface.current===inputSource){if(!messageMode)transcriptScroll.current.follow=true;if(transcriptScroll.current.follow)setAwayFromLatest(false);setInput(drafts.current[id]);setImages(imageDrafts.current[id]);setFiles(fileDrafts.current[id]);setReplyTo(remaining?.replyTo);setReplyQuote(remaining?.replyQuote);setReplyOrigin(originDrafts.current[id]);setReturnToMessage(undefined);if(text==='/model')setMenu('model');if(text==='/effort')setMenu('effort');if(['/permissions','/approvals'].includes(text))setMenu('perm')}
       }
+      if(messageMode&&!await clearing)setError(uiText('Message was sent, but its draft could not be cleared.'))
       // A refresh failure cannot turn an accepted send into an apparent transport failure.
       await refresh(true,true).catch(cause=>setError((cause as Error).message??String(cause)))
     }catch(cause){
@@ -432,7 +441,7 @@ export default function App() {
           <TaskQueue key={active.id} messages={active.pendingMessages} replyLabel={message=>{const source=active.items.find(item=>item.id===message.replyTo),reference=message.crossReply??(source?messageReply(source):null);return reference?uiText('Replying to {0}',[replyAuthor(reference,employee?.title??uiText('Teammate'),authorNames)]):uiText('Reply attached')}} onRemove={async messageId=>{try{await api.call('session.dequeue',{id:active.id,messageId})}finally{await refresh(true,true)}}}/>
           <SlashCommandMenu commands={commands} index={cmdIndex} onChoose={c=>{if(['model','effort','permissions'].includes(c.name)||!c.argumentHint)void send('/'+c.name);else setInput('/'+c.name+' ');composer.current?.focus()}}/>
           <div className={`composer-box task-composer${active.busy?' is-busy':''}`}><textarea ref={composer} disabled={!liveActive} value={input} rows={1} placeholder={liveActive?uiText("Message {0}…",[active.title]):wording('Connect to the workspace to send a message','连接工作目录后即可发送消息')} onChange={event=>changeInput(event.target.value)} onPaste={event=>{const files=Array.from(event.clipboardData.items).filter(item=>item.kind==='file').map(item=>item.getAsFile()).filter((file):file is File=>!!file);if(files.length){event.preventDefault();void pasteImages(files)}}} onKeyDown={(e) => {
-            if(e.nativeEvent.isComposing)return
+            if(e.nativeEvent.isComposing||e.keyCode===229)return
             if(e.key==='Escape'&&commands.length){e.preventDefault();e.stopPropagation();setInput('');return}
             if (commands.length && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter'].includes(e.key) && !e.shiftKey) {
               e.preventDefault()

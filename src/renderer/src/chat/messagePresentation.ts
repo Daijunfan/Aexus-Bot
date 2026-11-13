@@ -19,64 +19,61 @@ export function messageGroups(items:Groupable[]):Map<string,BubbleGroup>{
   }))
 }
 
+/** Long text and illustrated reports share one reading measure; brief replies stay compact. */
+export const messageLayout=(text:string)=>text.trim().length>160||text.includes('\n')?'reading':'compact'
+
 type MotionMessage={id:string;outgoing:boolean;text?:string}
 type SendOrigin={box:DOMRect;text:string;time:number}
 
-/** Animate actual appends, never initial history, pagination, streaming updates or restores. */
+/** Only new, visible appends enter. Streaming, history loads and restores never replay. */
 export function useMessageMotion({conversation,ready,items,transcript,composer,following}:{conversation?:string;ready:boolean;items:MotionMessage[];transcript:RefObject<HTMLDivElement|null>;composer:RefObject<HTMLTextAreaElement|null>;following:()=>boolean}){
-  const previous=useRef<{conversation?:string;ids:string[]}|null>(null)
-  const origin=useRef<SendOrigin|null>(null),running=useRef(new Set<Animation>())
-  const reduced=useRef(false)
-  const cancel=()=>{for(const animation of running.current)animation.cancel();running.current.clear()}
-  useEffect(()=>{
-    const media=matchMedia('(prefers-reduced-motion: reduce)')
-    const update=()=>{reduced.current=media.matches;if(reduced.current)cancel()}
-    const visibility=()=>{if(document.hidden){origin.current=null;cancel()}}
-    update();media.addEventListener('change',update);document.addEventListener('visibilitychange',visibility)
-    return()=>{cancel();media.removeEventListener('change',update);document.removeEventListener('visibilitychange',visibility)}
-  },[])
-  useLayoutEffect(()=>{
-    const last=previous.current,ids=items.map(item=>item.id)
-    previous.current=ready?{conversation,ids}:null
-    if(!ready||!conversation||last?.conversation!==conversation){origin.current=null;cancel();return}
-    const oldEnd=last.ids.at(-1),position=oldEnd?ids.indexOf(oldEnd):-1
-    // An empty, loaded conversation can receive its first message. A replaced snapshot cannot.
-    if(oldEnd&&position<0)return
-    const seen=new Set(last.ids),added=items.slice(position+1).filter(item=>!seen.has(item.id))
-    const el=transcript.current
-    if(!el||!added.length)return
-    if(document.hidden||reduced.current||!following()){origin.current=null;return}
-    const bounds=el.getBoundingClientRect(),nodes=new Map([...el.querySelectorAll<HTMLElement>('[data-chat-item]')].map(node=>[node.dataset.chatItem,node]))
-    const play=(node:Element,frames:Keyframe[],duration:number)=>{
-      const animation=node.animate(frames,{duration,easing:'cubic-bezier(.22,1,.36,1)'})
-      running.current.add(animation)
-      const cleanup=()=>running.current.delete(animation)
-      animation.addEventListener('finish',cleanup,{once:true});animation.addEventListener('cancel',cleanup,{once:true})
-    }
-    let sent=false
-    for(const item of added.slice(-6)){
-      const row=nodes.get(item.id),bubble=row?.querySelector<HTMLElement>(':scope > .bubble')??row
-      if(!bubble||row?.classList.contains('message-hidden'))continue
-      const rect=bubble.getBoundingClientRect()
-      if(rect.bottom<=bounds.top||rect.top>=bounds.bottom)continue
-      const from=origin.current,isSend=item.outgoing&&from&&Date.now()-from.time<3000&&item.text?.trim()===from.text
-      if(isSend){
-        origin.current=null;sent=true
-        const x=from.box.right-rect.right,y=from.box.bottom-rect.bottom
-        play(bubble,[{transform:`translate(${x}px,${y}px) scale(${Math.min(from.box.width/rect.width,1.35)},${Math.max(.65,Math.min(from.box.height/rect.height,1))})`,opacity:.35,transformOrigin:'bottom right'},{transform:'none',opacity:1,transformOrigin:'bottom right'}],380)
-        row!.dataset.messageArrival='send'
-      }else{
-        play(bubble,[{transform:`translateY(12px) scale(.985)`,opacity:0,transformOrigin:item.outgoing?'bottom right':'bottom left'},{transform:'none',opacity:1}],260)
-        row!.dataset.messageArrival='incoming'
-      }
-    }
-    // One finite compositor-only wallpaper movement per accepted outgoing message.
-    if(sent){const mesh=el.closest('.message-stage')?.querySelector('.message-wallpaper-mesh');if(mesh){for(const animation of mesh.getAnimations())animation.cancel();play(mesh,[{transform:'translate3d(-2%,-1%,0) rotate(-3deg) scale(1.08)'},{transform:'translate3d(2%,1%,0) rotate(3deg) scale(1.08)',offset:.55},{transform:'none'}],1100)}}
-  },[conversation,ready,items])
-  return (text:string)=>{
-    const box=composer.current?.closest('.composer-box,.group-compose-box')?.getBoundingClientRect()
-    const pending=box?{box,text:text.trim(),time:Date.now()}:null
-    origin.current=pending
-    return()=>{if(origin.current===pending)origin.current=null}
+ const previous=useRef<{conversation?:string;ids:string[]}|null>(null),origin=useRef<SendOrigin|null>(null)
+ const running=useRef(new Set<Animation>()),pending=useRef(new Map<string,MotionMessage>()),frame=useRef(0),reduced=useRef(false)
+ const current=useRef({following,transcript});current.current={following,transcript}
+ const cancel=()=>{cancelAnimationFrame(frame.current);frame.current=0;pending.current.clear();for(const animation of running.current)animation.cancel();running.current.clear()}
+ useEffect(()=>{
+  const media=matchMedia('(prefers-reduced-motion: reduce)'),update=()=>{reduced.current=media.matches;if(reduced.current||document.hidden){origin.current=null;cancel()}}
+  update();media.addEventListener('change',update);document.addEventListener('visibilitychange',update)
+  return()=>{cancel();media.removeEventListener('change',update);document.removeEventListener('visibilitychange',update)}
+ },[])
+ useLayoutEffect(()=>{
+  const last=previous.current
+  if(ready&&last&&last.conversation===conversation&&last.ids.length===items.length&&last.ids.at(-1)===items.at(-1)?.id)return
+  const ids=items.map(item=>item.id);previous.current=ready?{conversation,ids}:null
+  if(!ready||!conversation||last?.conversation!==conversation){origin.current=null;cancel();return}
+  const oldEnd=last.ids.at(-1),position=oldEnd?ids.indexOf(oldEnd):-1
+  if(oldEnd&&position<0)return
+  const seen=new Set(last.ids),added=items.slice(position+1).filter(item=>!seen.has(item.id))
+  if(!added.length)return
+  if(document.hidden||reduced.current||!following()){origin.current=null;return}
+  for(const item of added.slice(-6))pending.current.set(item.id,item)
+  if(frame.current)return
+  let attempts=0
+  const enter=()=>{
+   frame.current=0
+   const el=current.current.transcript.current
+   if(!el||document.hidden||reduced.current||!current.current.following()){cancel();return}
+   const bounds=el.getBoundingClientRect(),nodes=new Map([...el.querySelectorAll<HTMLElement>('[data-chat-item]')].map(node=>[node.dataset.chatItem,node]))
+   for(const [id,item] of pending.current){
+    const row=nodes.get(id),bubble=row?.querySelector<HTMLElement>(':scope > .bubble')??row
+    if(!bubble)continue
+    if(row?.classList.contains('message-hidden')||row?.classList.contains('group-message-withdrawn')){pending.current.delete(id);continue}
+    const rect=bubble.getBoundingClientRect();if(rect.bottom<=bounds.top||rect.top>=bounds.bottom)continue
+    pending.current.delete(id)
+    const from=origin.current,isSend=!!(item.outgoing&&from&&Date.now()-from.time<3000&&item.text?.trim()===from.text),short=rect.height<240
+    if(isSend)origin.current=null
+    const x=isSend&&short?Math.max(-12,Math.min(12,from!.box.right-rect.right)):0,y=isSend&&short?Math.max(10,Math.min(32,from!.box.bottom-rect.bottom)):10
+    const animation=bubble.animate([{transform:`translate3d(${x}px,${y}px,0)${short?' scale(.985)':''}`,opacity:.25,transformOrigin:item.outgoing?'bottom right':'bottom left'},{transform:'none',opacity:1}],{duration:isSend?260:220,easing:'cubic-bezier(.22,1,.36,1)'})
+    running.current.add(animation);const cleanup=()=>running.current.delete(animation);animation.addEventListener('finish',cleanup,{once:true});animation.addEventListener('cancel',cleanup,{once:true})
+    row!.dataset.messageArrival=isSend?'send':'incoming'
+   }
+   // Virtual rows may mount a frame after their parent commits and follows the append.
+   if(pending.current.size&&++attempts<6)frame.current=requestAnimationFrame(enter);else pending.current.clear()
   }
+  frame.current=requestAnimationFrame(enter)
+ },[conversation,ready,items])
+ return (text:string)=>{
+  const box=composer.current?.closest('.composer-box,.group-compose-box')?.getBoundingClientRect(),ticket=box?{box,text:text.trim(),time:Date.now()}:null
+  origin.current=ticket;return()=>{if(origin.current===ticket)origin.current=null}
+ }
 }
