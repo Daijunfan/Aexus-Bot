@@ -22,25 +22,20 @@
 .message-view :is(.message-attach,.voice-record):hover:enabled{background:color-mix(in srgb,var(--message-accent) 8%,transparent)}
 .message-view :is(.message-attach,.voice-record):active:enabled{transform:scale(.95)}
 .message-view :is(.message-attach,.voice-record)>.codicon{font-size:22px}
-.message-view .composer-actions{align-items:center;gap:6px}
-.message-view .composer-actions .send-btn{min-height:40px;border-radius:13px;gap:6px;padding:0 12px;font-size:12px;line-height:1;box-shadow:none;white-space:nowrap}
-.message-view .composer-actions .send-btn.send>span:not(.codicon):not(.spinner){display:none}
-.message-view .composer-actions .send-btn.enqueue{min-height:44px;background:var(--message-accent);border-color:transparent;color:var(--button-ink,#fff);box-shadow:0 3px 9px color-mix(in srgb,var(--message-accent) 18%,transparent)}
-.message-view .composer-actions .send-btn.steer{color:var(--message-accent);background:color-mix(in srgb,var(--message-accent) 7%,var(--bg-elev));border-color:color-mix(in srgb,var(--message-accent) 16%,var(--border))}
-.message-view .composer-actions .send-btn.stop{background:transparent;border-color:color-mix(in srgb,var(--red) 22%,var(--border))}
-.message-view :is(.group-send,.composer-actions .send-btn.send){flex:none;display:grid;place-items:center;width:44px;min-width:44px;height:44px;min-height:44px;padding:0;border:1px solid transparent;border-radius:15px;background:var(--message-accent);color:var(--button-ink,#fff);box-shadow:0 3px 9px color-mix(in srgb,var(--message-accent) 18%,transparent);cursor:pointer;transition:background-color 140ms ease,box-shadow 140ms ease,transform 140ms cubic-bezier(.22,1,.36,1)}
-.message-view :is(.group-send,.composer-actions .send-btn.send):hover:enabled{background:color-mix(in srgb,var(--message-accent) 90%,var(--fg));box-shadow:0 4px 12px color-mix(in srgb,var(--message-accent) 24%,transparent);transform:translateY(-1px)}
-.message-view :is(.group-send,.composer-actions .send-btn):active:enabled{transform:scale(.95)}
-.message-view :is(.group-send,.composer-actions .send-btn.send):disabled:not([aria-busy=true]){background:color-mix(in srgb,var(--message-accent) 10%,var(--bg-elev));color:color-mix(in srgb,var(--message-accent) 68%,var(--fg-dim));box-shadow:none;cursor:default;opacity:1}
-.message-view :is(.group-send,.composer-actions .send-btn)[aria-busy=true]{cursor:progress}
-.message-view :is(.group-send,.composer-actions .send-btn)>.codicon{font-size:22px;animation:message-send-icon-in 140ms cubic-bezier(.22,1,.36,1)}
+.message-view .composer-actions{--composer-accent:var(--message-accent);--composer-control-size:36px}
+.message-view .group-send{flex:none;display:grid;place-items:center;width:44px;min-width:44px;height:44px;min-height:44px;padding:0;border:1px solid transparent;border-radius:15px;background:var(--message-accent);color:var(--button-ink,#fff);box-shadow:0 3px 9px color-mix(in srgb,var(--message-accent) 18%,transparent);cursor:pointer;transition:background-color 140ms ease,box-shadow 140ms ease,transform 140ms cubic-bezier(.22,1,.36,1)}
+.message-view .group-send:hover:enabled{background:color-mix(in srgb,var(--message-accent) 90%,var(--fg));box-shadow:0 4px 12px color-mix(in srgb,var(--message-accent) 24%,transparent);transform:translateY(-1px)}
+.message-view .group-send:active:enabled{transform:scale(.95)}
+.message-view .group-send:disabled:not([aria-busy=true]){background:color-mix(in srgb,var(--message-accent) 10%,var(--bg-elev));color:color-mix(in srgb,var(--message-accent) 68%,var(--fg-dim));box-shadow:none;cursor:default;opacity:1}
+.message-view .group-send[aria-busy=true]{cursor:progress}
+.message-view .group-send>.codicon{font-size:22px;animation:message-send-icon-in 140ms cubic-bezier(.22,1,.36,1)}
 .message-view :is(.group-send,.send-btn,.message-attach,.voice-record):focus-visible{outline:2px solid var(--message-accent);outline-offset:3px}
 .message-view .group-composer>footer{gap:7px;min-height:32px;padding:6px 4px 0;color:var(--fg-dim);flex-wrap:wrap}
 .message-view .group-composer>footer>span:last-child{min-width:0;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .message-view .group-composer>footer button{border-radius:7px;transition:background-color 140ms ease,color 140ms ease}
 .message-view .group-composer>footer button:hover:enabled{background:color-mix(in srgb,var(--message-accent) 8%,transparent)}
 @keyframes message-send-icon-in{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:none}}
-@media(max-width:760px){.message-view :is(.message-conversation .composer,.group-composer){padding-inline:12px}.message-view .group-compose-box{border-radius:22px;padding-inline:8px;gap:4px}.message-view :is(.message-attach,.voice-record){width:34px;min-width:34px}.message-view .composer-actions .send-btn{padding-inline:9px}}
+@media(max-width:760px){.message-view :is(.message-conversation .composer,.group-composer){padding-inline:12px}.message-view .group-compose-box{border-radius:22px;padding-inline:8px;gap:4px}.message-view :is(.message-attach,.voice-record){width:34px;min-width:34px}}
 @media(prefers-reduced-motion:reduce){.message-view :is(.composer-box,.group-compose-box,.group-send,.send-btn,.message-attach,.voice-record){transition:none!important}.message-view :is(.group-send,.send-btn)>.codicon{animation:none!important}}
 
 /* Thread replies use the same input proportions inside their own work surface. */
