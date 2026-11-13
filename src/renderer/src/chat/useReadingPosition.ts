@@ -23,8 +23,8 @@ export function useReadingPosition({identity,initial,ready,items,root,viewport,s
   const el=root.current,current=callbacks.current
   if(!identity||!el||el.dataset.readingKey!==identity||!current.ready||current.restoring)return
   if(el.scrollHeight-el.clientHeight-el.scrollTop<6){save(identity,{following:true});return}
-  const box=el.getBoundingClientRect(),scale=box.height/parseFloat(getComputedStyle(el).height)||1
-  const row=[...el.querySelectorAll<HTMLElement>('[data-chat-item]')].find(node=>{const rect=node.getBoundingClientRect();return rect.bottom>box.top+el.clientTop*scale+1&&rect.top<box.bottom})
+  const box=el.getBoundingClientRect(),style=getComputedStyle(el),scale=box.height/parseFloat(style.height)||1,fade=(parseFloat(style.getPropertyValue('--message-read-inset'))||0)*scale
+  const row=[...el.querySelectorAll<HTMLElement>('[data-chat-item]')].find(node=>{const rect=node.getBoundingClientRect();return rect.bottom>box.top+el.clientTop*scale+fade+1&&rect.top<box.bottom})
   if(row?.dataset.chatItem)save(identity,{following:false,messageId:row.dataset.chatItem,offset:(row.getBoundingClientRect().top-box.top)/scale-el.clientTop})
  },[identity,root])
  const anchorPresent=!!initial?.messageId&&items.some(item=>item.id===initial.messageId)

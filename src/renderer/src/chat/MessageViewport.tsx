@@ -118,7 +118,8 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
       const rect=(offset===undefined?wrapper:message).getBoundingClientRect(),box=scroll.getBoundingClientRect(),scale=box.height/parseFloat(getComputedStyle(scroll).height)||1,top=box.top+scroll.clientTop*scale,bottom=top+scroll.clientHeight*scale,position=[rect.top,rect.height,scroll.scrollTop]
       stable=last&&position.every((value,index)=>Math.abs(value-last![index])<.5)?stable+1:0;last=position
       if(stable>=2){
-       const inset=offset===undefined?0:Math.max(-Math.max(0,rect.height/scale-24),Math.min(offset,(bottom-top)/scale-24))*scale
+       const remembered=offset!==undefined&&offset<=-rect.height/scale?(parseFloat(getComputedStyle(scroll).getPropertyValue('--message-read-inset'))||0):offset
+       const inset=remembered===undefined?0:Math.min(remembered,(bottom-top)/scale-24)*scale
        const delta=block==='start'?rect.top-top-inset:block==='end'?rect.bottom-bottom:block==='center'?(rect.top+rect.bottom-top-bottom)/2:rect.top<top&&rect.bottom>bottom?0:rect.top<top?rect.top-top:rect.bottom>bottom?rect.bottom-bottom:0
        const target=Math.max(0,Math.min(scroll.scrollHeight-scroll.clientHeight,scroll.scrollTop+delta/scale))
        // Consume pending anchor corrections before handing the row to quote/highlight navigation.
