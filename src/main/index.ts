@@ -171,7 +171,7 @@ function createWindow() {
   else void win.loadFile(join(__dirname, '../renderer/index.html'))
 }
 
-let stop: (() => Promise<void>) | undefined
+let stop: ReturnType<typeof startRuntime> | undefined
 app.whenReady().then(() => {
   void session.defaultSession.clearCache()
   if (HEADLESS || HIDDEN) void app.dock?.hide()
@@ -195,18 +195,21 @@ app.whenReady().then(() => {
     }
   })
 })
-app.on('window-all-closed', () => { if (!HEADLESS && process.platform !== 'darwin') app.quit() })
+app.on('window-all-closed', () => { if (!HEADLESS && !preparingQuit && process.platform !== 'darwin') app.quit() })
 app.on('before-quit', event => {
   if(quitting)return
   event.preventDefault()
   if(preparingQuit)return
   preparingQuit=true
+  const visible=BrowserWindow.getAllWindows().filter(window=>window.isVisible())
+  const saved=()=>{for(const window of BrowserWindow.getAllWindows())if(!window.isDestroyed())window.hide()}
   const feedback=(phase:'saving'|'stopping'|'blocked',message?:string)=>{for(const window of BrowserWindow.getAllWindows())if(!window.isDestroyed())window.webContents.send('desktop:quit-state',{phase,message})}
   void (async()=>{
     feedback('saving')
     if(mainWindow&&rendererReady(mainWindow.webContents))await askRenderer('flush',{},12000)
     feedback('stopping')
-    await stop?.();pluginDesktop?.dispose();quitting=true;app.quit()
-  })().catch(error=>{preparingQuit=false;feedback('blocked',error.message);console.error('Could not quit:',error.message)})
+    if(stop)await stop(saved);else saved()
+    pluginDesktop?.dispose();quitting=true;app.quit()
+  })().catch(error=>{preparingQuit=false;for(const window of visible)if(!window.isDestroyed()&&!window.isVisible())window.showInactive();feedback('blocked',error.message);console.error('Could not quit:',error.message)})
 })
 process.on('SIGTERM', () => app.quit())

@@ -782,7 +782,10 @@ windows. `plugin.view` remains the low-level URL-only API for other render clien
 macOS Command+Q is handled before page/editor/terminal shortcuts in every native
 window, including plugin and remote Web shells. It uses the same save-first quit
 transaction as the application menu. Main and plugin saves finish before Core
-shutdown begins. A failed save leaves Core and running tasks available and shows
+shutdown begins. After these saves succeed, windows hide immediately while owned
+process cleanup continues in the background. Service producers are cancelled
+before their drains are awaited, and native process trees are captured before
+their parents can leave inherited pipes open. A failed save leaves Core and running tasks available and shows
 an in-window error; save or discard the pending edit and retry. While saving and
 stopping, input is paused and progress is shown inside existing windows. A stale
 browser unload guard cannot cancel the final native close after saves complete.

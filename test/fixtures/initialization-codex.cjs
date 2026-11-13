@@ -111,7 +111,7 @@ rl.on('line',line=>{
         if(active===generation)timer=setInterval(complete,50)
       },error=>{if(active===generation)event('turn/completed',{threadId:thread,turn:{id:turn,status:'failed',error:{message:(ack?'Fixture acknowledgment failed: ':'Fixture initialization failed: ')+error.message}}})});return
     }
-    case 'turn/interrupt':generation++;clearInterval(timer);result({});return event('turn/completed',{threadId:thread,turn:{id:turn,status:'interrupted'}})
+    case 'turn/interrupt':if(fs.existsSync(path.join(control,employee+'.ignore-interrupt')))return result({});generation++;clearInterval(timer);result({});return event('turn/completed',{threadId:thread,turn:{id:turn,status:'interrupted'}})
     default:return result({})
   }
 })

@@ -126,5 +126,23 @@ export function startRuntime(notify: (channel: string, payload: any) => void = (
   const unwindows=onPluginWindows(windows=>broadcast('plugin:windows',windows))
   const unview = onViewChange((state,clientId) => publishEvent('view:changed',state,clientId))
   startServer(() => {if(channelStorageSettings())void ensureChannelContent().catch(error=>console.error('[Channel storage]',error.message));startInitializations();startScheduler(broadcast);startMissions(broadcast);startEngineering(broadcast);startQuestions(broadcast);startPlanRetention(broadcast);startBotWorkers();startScriptMonitors(notifyScheduleEvent,()=>{reconcileSchedules(false);publishEvent('monitor:changed',{})});startConversationNotices(broadcast);startGroupRetention();startPostTriggers()})
-  return async () => {await closePluginWindows();stopPlanRetention();stopQuestions();await stopEngineering();await stopMissions();await stopBotWorkers();await stopScriptMonitors();await stopPostTriggers();stopConversationNotices();stopGroupRetention();setConversationPolicyEmitter(()=>{});setConversationFilesEmitter(()=>{});await closeChannelIngress();stopExports();closeAllMedia();closeEngineLogins();await closeInstallations();closeConversationDownloads();await closeWorkspacePdfs();await closeUploads();resetManagementActivity(); unwindows(); unsubscribe(); unview(); await stopInitializations(); await stopScheduler(); await closeWorkers();setWorkerEmitter(); await closeAll(); await closeTransfers(); closeRemoteFiles();  await closeTerminals(); stopServer(); setDesktopEvent(()=>{}); await closePlugins();setChatEmitter(()=>{});setPlanEmitter(()=>{});setMessengerEmitter(()=>{});closeChannelStorageTransport();await closeChannels();await closeMessageIndex();await closeAssetPreviews();await assetIndex.close();setChannelsEmitter(()=>{});releaseLock() }
+  return async (saved?:()=>void) => {
+    // Save guards run before teardown. After they pass, cancel every producer
+    // before awaiting drains: those drains may themselves be waiting on an engine.
+    await closePluginWindows()
+    saved?.()
+    stopPlanRetention();stopQuestions();stopConversationNotices();stopGroupRetention();stopExports()
+    setConversationPolicyEmitter(()=>{});setConversationFilesEmitter(()=>{})
+    unwindows();unsubscribe();unview();stopServer()
+    const producers=[stopEngineering(),stopMissions(),stopBotWorkers(),stopScriptMonitors(),stopPostTriggers(),stopInitializations(),stopScheduler()]
+    await Promise.all([...producers,closeWorkers(),closeAll(),closeTerminals()])
+    // A producer already inside a dispatch may have opened a session while the
+    // first close was in flight. No producers remain after the drain above.
+    await Promise.all([closeWorkers(),closeAll(),closeTerminals()])
+    setWorkerEmitter();closeAllMedia();closeEngineLogins();closeConversationDownloads();resetManagementActivity()
+    await Promise.all([closeChannelIngress(),closeInstallations(),closeWorkspacePdfs(),closeUploads(),closeTransfers()])
+    closeRemoteFiles();closeChannelStorageTransport();await closePlugins();await closeChannels()
+    await Promise.all([closeMessageIndex(),closeAssetPreviews()]);await assetIndex.close()
+    setDesktopEvent(()=>{});setChatEmitter(()=>{});setPlanEmitter(()=>{});setMessengerEmitter(()=>{});setChannelsEmitter(()=>{});releaseLock()
+  }
 }

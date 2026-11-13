@@ -1,3 +1,4 @@
+import {closeWorkerProcesses} from './worker-processes'
 import {nativeWorkerEnv} from './native-worker-env'
 import {protocolLines,protocolJson} from './protocol-lines'
 import type {ChildProcess} from 'node:child_process'
@@ -158,7 +159,10 @@ async function connect(binary:string,initial:Args){
   })
   const close=()=>closing??=(async()=>{
     lifetime.abort();const requests=[...incoming.values()];incoming.clear();for(const c of requests)c.abort()
-    child.stdin.end();child.kill('SIGTERM');const timer=setTimeout(()=>child.kill('SIGKILL'),1500);await ended;clearTimeout(timer);lines.close()
+    const finish=async()=>{child.stdin.end();child.kill('SIGTERM');const timer=setTimeout(()=>child.kill('SIGKILL'),1500);try{await ended}finally{clearTimeout(timer);lines.close()}}
+    // Native Workers already enforce their owned tree in closeEntry. Employee
+    // sessions need the same ownership capture before a parent can exit.
+    if(initial.nativeWorker)await finish();else await closeWorkerProcesses([child],finish)
     for(const item of pending.values())clearTimeout(item.timer);pending.clear();await executor?.close()
   })()
   const abortStartup=()=>void close();if(initial.nativeWorker)initial.signal.addEventListener('abort',abortStartup,{once:true})

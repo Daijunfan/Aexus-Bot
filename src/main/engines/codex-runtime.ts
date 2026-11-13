@@ -122,7 +122,7 @@ function createCodexDriver(s:Live,id:string,host:EngineHost):EngineDriver{
         s.running=false;host.rememberMeta(id,{busy:false})
       }
     },
-    async close(){s.queue.length=0;s.abort?.abort();await s.finished;await closeNativeCodexSession(id);await discussion?.close()},
+    async close(){s.queue.length=0;s.abort?.abort();await closeNativeCodexSession(id);await s.finished;await discussion?.close()},
     async whenIdle(){await s.finished},
     async setModel(){},
     async setFast(){},
