@@ -293,6 +293,7 @@ async function main() {
     case 'remote.check': {const p=parse(rest);return out(await call('remote.check',{employee:p.employee,team:p.team,remote:remoteFlags(p)}))}
     case 'worker.snapshot': case 'worker.send': case 'worker.dequeue': case 'worker.respond': case 'worker.configure': case 'worker.create': case 'worker.list': case 'worker.engines': case 'worker.start': case 'worker.read': case 'worker.input': case 'worker.draft': case 'worker.resize': case 'worker.interrupt': case 'worker.stop': case 'worker.remove': {
       const p=parse(rest),a={id:p._[0],employee:p.employee,engine:p.engine,title:p.title,cwd:p.cwd}
+      if(sub==='create'&&p.team!==undefined)a.team=p.team
       for(const key of ['cols','rows','cursor'])if(p[key]!==undefined)a[key]=Number(p[key])
       if(p['wait-ms']!==undefined)a.waitMs=Number(p['wait-ms'])
       if(p['client-request-id']!==undefined)a.clientRequestId=p['client-request-id']

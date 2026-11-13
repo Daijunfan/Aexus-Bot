@@ -461,5 +461,31 @@
         "expectedRevision": 9
       }
     }
+  },
+  {
+    "args": [
+      "worker",
+      "create",
+      "--engine",
+      "codex",
+      "--team",
+      "Studio",
+      "--cwd",
+      "/tmp/project",
+      "--title",
+      "Clean member",
+      "--client-request-id",
+      "member-attempt"
+    ],
+    "expected": {
+      "cmd": "worker.create",
+      "args": {
+        "engine": "codex",
+        "team": "Studio",
+        "cwd": "/tmp/project",
+        "title": "Clean member",
+        "clientRequestId": "member-attempt"
+      }
+    }
   }
 ]
