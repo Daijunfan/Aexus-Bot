@@ -202,7 +202,7 @@ function updateSource(id:unknown,patch:ChannelSourcePatch):ChannelSource{
  if(patch.enabled!==undefined&&typeof patch.enabled!=='boolean')throw fail('enabled must be boolean')
  if(patch.locator!==undefined&&sourceIdentity(row.plugin,text(patch.locator,'source locator',4096))!==sourceIdentity(row.plugin,row.locator))throw fail('An existing source cannot change authors; follow a new source instead','SOURCE_ID_CONFLICT',409)
  if(patch.channelId!==undefined){const target=canonicalChannelId(patch.channelId);channelRow(target);assertExternalChannel(target);patch={...patch,channelId:target}}
- run('UPDATE sources SET name=?,enabled=?,poll_seconds=?,channel_id=?,updated_at=? WHERE id=?',patch.name===undefined?row.name:text(patch.name,'source name'),patch.enabled===undefined?row.enabled:Number(patch.enabled),patch.pollSeconds===undefined?row.poll_seconds:positive(patch.pollSeconds,'poll interval'),patch.channelId??row.channel_id,Date.now(),row.id)
+ run('UPDATE sources SET name=?,locator=?,enabled=?,poll_seconds=?,channel_id=?,updated_at=? WHERE id=?',patch.name===undefined?row.name:text(patch.name,'source name'),patch.locator===undefined?row.locator:text(patch.locator,'source locator',4096),patch.enabled===undefined?row.enabled:Number(patch.enabled),patch.pollSeconds===undefined?row.poll_seconds:positive(patch.pollSeconds,'poll interval'),patch.channelId??row.channel_id,Date.now(),row.id)
  changed('sources',{channelIds:[...new Set([row.channel_id,patch.channelId??row.channel_id])]});return source(sourceRow(row.id))
 }
 export function getChannelPost(id:unknown):ChannelPost{const row=livePost(id);requireChannelReader(row.channel_id);return projected(row)}

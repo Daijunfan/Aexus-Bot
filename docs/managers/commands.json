@@ -7850,7 +7850,7 @@
   {
     "name": "channel.source-update",
     "args": "ID --patch JSON|@file",
-    "summary": "User or Secretary: change source settings or route all retained news, including saved items",
+    "summary": "User or Secretary: save source settings or an equivalent profile URL, preserving source/target identities and retained news",
     "gui": "News subscriptions",
     "inputSchema": {
       "type": "object",

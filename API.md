@@ -3543,6 +3543,8 @@ agents channel source-update SOURCE_ID --patch '{"enabled":false}' --json
 
 `channel.subscription-status [--channel ID]` 仅用户或 Secretary 可读，返回 `{revision, collectors:[{id,name,state,lastSeenAt?,appliedRevision?,appliedAt?}]}`，state 为 `pending|synced|offline`。90 秒没有服务端请求视为未连接；未收到回执不会显示已生效。没有关联采集器时 collectors 为空。
 
+`channel.source-update {id,patch:{locator}}` 保存同一作者的等价账号/主页 URL 写法；不能借此替换作者。修改保留 source ID、原生 target ID、已收藏内容和采集检查点，新的 URL 随同一订阅版本发给服务端。用户与 Secretary 使用相同 CLI/API。
+
 `channel.collector-ack {revision}` 只通过 `/api/channels/collector` 的专属采集器凭据调用；普通 Core 用户/Agent 不能伪造服务端回执。只能确认已向该凭据提供的配置版本，拒绝未提供或未来版本，旧回执不回退应用版本。回执不改变订阅版本、不触发模型、不标记新闻已读。`channel.collector-config` 在采集器尚未取得当前快照时，即使 sinceRevision 相同也重新提供完整快照。Linux 的订阅接收轮询独立于新闻/图片发送，避免发送耗时阻塞管理变更。
 
 ## 外部 Worker 与事件唤醒
@@ -3724,7 +3726,7 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents channel create</code> | <code>--name NAME --engine JSON [--avatar JSON&#124;@file]</code> | User or Secretary: configure an external news collector; channel.access assigns API readers without discussion membership. An issued collector token is returned once in setup | Channel publishing engine | operator |
 | <code>agents channel update</code> | <code>ID [--name NAME] [--engine JSON] [--avatar JSON&#124;null] [--expected-revision N]</code> | Update channel identity or external collector connection; channels have no members or group controls. Null avatar restores the default | Channel settings | operator |
 | <code>agents channel source-add</code> | <code>--data JSON&#124;@file</code> | User or Secretary: follow a source; Telegram, X and YouTube each default to one platform aggregate | News subscriptions | operator |
-| <code>agents channel source-update</code> | <code>ID --patch JSON&#124;@file</code> | User or Secretary: change source settings or route all retained news, including saved items | News subscriptions | operator |
+| <code>agents channel source-update</code> | <code>ID --patch JSON&#124;@file</code> | User or Secretary: save source settings or an equivalent profile URL, preserving source/target identities and retained news | News subscriptions | operator |
 | <code>agents channel source-remove</code> | <code>ID</code> | User or Secretary: unfollow a source while retaining its identity and saved news | News subscriptions | operator |
 | <code>agents channel posts</code> | <code>[--channel ID] [--source ID &#124; --sources JSON] [--saved] [--query TEXT] [--cursor CURSOR] [--limit N] [--order newest&#124;discovery --seed TEXT --snapshot MS --avoid-first ID]</code> | User or Secretary: page current news and permanent saved items with stable item identities | News feed | operator |
 | <code>agents channel post</code> | <code>POST_ID</code> | User or Secretary: read a retained news item with current channel routing | News detail | chat |

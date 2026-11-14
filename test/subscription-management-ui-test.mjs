@@ -5,21 +5,26 @@ import path from 'node:path'
 import net from 'node:net'
 import assert from 'node:assert/strict'
 import {createRequire} from 'node:module'
-import {_electron as electron,expect} from '@playwright/test'
+import {_electron as electron,chromium,expect} from '@playwright/test'
 import {desktopExecutable} from './fixtures/desktop-app.mjs'
+import {fixtureCore} from './fixtures/headless-core.mjs'
 
 const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'aexus-subscriptions-')))
-const env={...process.env,AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_HIDDEN:'1'}
+const env={...process.env,AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_TEST_BOTS_URL:'http://127.0.0.1:1'}
 for(const key of Object.keys(env))if(key.startsWith('AGENTS_COMPANY_TOKEN')||['ELECTRON_RUN_AS_NODE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_URL','AGENTS_COMPANY_PORT','AGENTS_COMPANY_CLIENT'].includes(key))delete env[key]
-const application=process.env.AGENTS_COMPANY_TEST_APP,out=process.env.AGENTS_COMPANY_TEST_ARTIFACTS||path.join(root,'artifacts/subscription-management/ui')
+const web=process.argv.includes('--web'),application=process.env.AGENTS_COMPANY_TEST_APP,out=process.env.AGENTS_COMPANY_TEST_ARTIFACTS||path.join(root,'artifacts/subscription-management',web?'web':'ui')
 fs.mkdirSync(out,{recursive:true})
-const app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env}),page=await app.firstWindow(),checks=[],errors=[]
+let app,browser,fixture,page;const checks=[],errors=[]
+if(web){
+ const server=net.createServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const port=server.address().port;await new Promise(resolve=>server.close(resolve))
+ fixture=await fixtureCore({AGENTS_COMPANY_WEB:'1',AGENTS_COMPANY_WEB_PORT:String(port)});browser=await chromium.launch({headless:true,...(process.platform==='darwin'?{channel:'chrome'}:{})});page=await browser.newPage({viewport:{width:1440,height:1000}});await page.goto('http://127.0.0.1:'+port);await page.locator('.web-login input').fill(fs.readFileSync(path.join(fixture.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim());await page.getByRole('button',{name:'Enter workspace',exact:true}).click()
+}else{app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env});page=await app.firstWindow()}
 page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message))
 const call=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args})
 const deny=async(cmd,args)=>{let error;try{await call(cmd,args)}catch(e){error=e}assert.ok(error,cmd+' must reject')}
 const pass=label=>{checks.push(label);console.log('PASS '+label)}
 try{
- await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.infinite-canvas').waitFor();await call('settings.set',{language:'en',theme:'white'})
+ await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.agent-board').waitFor();await call('settings.set',{language:'en',theme:'white'})
  const probe=net.createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve))
  await call('channel.settings',{patch:{enabled:true,port}})
  const a=await call('channel.source-add',{plugin:'youtube',locator:'@subscriptionalpha',name:'AI Alpha'}),b=await call('channel.source-add',{plugin:'youtube',locator:'@subscriptionbeta',name:'AI Beta'})
@@ -37,7 +42,7 @@ try{
  await expect(dialog.locator('.channel-source-row')).toHaveCount(2);await expect(receipt()).toHaveAttribute('data-sync-state','offline')
  const first=await receive();await expect(receipt()).toHaveAttribute('data-sync-state','pending');await confirm(first);await expect(receipt()).toHaveAttribute('data-sync-state','synced')
  assert.equal((await state()).revision,first.revision,'receipts must not change the subscription version')
- pass('Mac management distinguishes disconnected, delivered-but-pending and server-applied configurations')
+ pass('Management distinguishes disconnected, delivered-but-pending and server-applied configurations')
  await dialog.locator(`[data-source-id="${a.id}"]`).getByRole('button',{name:'Manage author AI Alpha',exact:true}).click();await dialog.getByRole('button',{name:'Unfollow AI Alpha',exact:true}).click()
  await expect(dialog.locator(`[data-source-id="${a.id}"]`)).toHaveCount(0);await expect(receipt()).toHaveAttribute('data-sync-state','pending')
  const rejected=await request('channel.publish',{sourceId:a.id,externalId:'must-not-arrive',publishedAt:Date.now()-1000,title:'Disabled',body:'Rejected after unfollow'});assert.equal(rejected.code,'SOURCE_DISABLED');
@@ -52,16 +57,28 @@ try{
  const added=await receive();assert.equal(added.targets.filter(t=>t.plugin==='youtube'&&t.enabled).length,3);await confirm(added);await expect(receipt()).toHaveAttribute('data-sync-state','synced')
  assert.equal((await call('channel.post',{id:news.id})).saved,true)
  pass('Mac UI restores and adds subscriptions, defaults to followed authors and preserves saved news and stable identities')
- assert.equal((await request('channel.collector-ack',{revision:added.revision+1})).status,409)
- assert.equal((await request('channel.collector-ack',{revision:added.revision},other.token)).status,409)
- assert.equal((await request('channel.collector-ack',{revision:added.revision,collectorId:other.collector.id})).ok,false)
- await deny('channel.collector-ack',{revision:added.revision})
- const stale=await confirm(first);assert.equal(stale.revision,added.revision)
+ for(const [platform,label,locator] of [['telegram','Telegram','@subscription_telegram'],['x','X','@subscription_x']]){
+  await dialog.getByRole('button',{name:'Add subscription',exact:true}).click();await dialog.getByRole('button',{name:'Platform',exact:true}).click();await page.getByRole('option',{name:label,exact:true}).click();await dialog.getByRole('textbox',{name:'Subscription address',exact:true}).fill(locator);await dialog.getByRole('button',{name:platform==='telegram'?'Follow channel':'Follow author',exact:true}).click();await expect(dialog.locator('.channel-source-row')).toHaveCount(1)
+  const config=await receive();assert.equal(config.targets.filter(target=>target.plugin===platform&&target.enabled).length,1);await confirm(config);await expect(receipt()).toHaveAttribute('data-sync-state','synced')
+ }
+ pass('Telegram and X use the same confirmed UI save and scoped server application receipt as YouTube')
+ if(web){
+  let failed=false;const loseResponse=async route=>{const request=route.request().postDataJSON();if(!failed&&request.cmd==='channel.source-add'&&request.args.locator==='@retry_author'){failed=true;await route.fetch();await route.abort('failed')}else await route.continue()}
+  await page.route('**/api/rpc',loseResponse);await dialog.getByRole('button',{name:'Add subscription',exact:true}).click();await dialog.getByRole('textbox',{name:'Subscription address',exact:true}).fill('@retry_author');await dialog.getByRole('button',{name:'Follow author',exact:true}).click();await expect(dialog.getByRole('alert')).toBeVisible();await page.unroute('**/api/rpc',loseResponse);await dialog.getByRole('button',{name:'Follow author',exact:true}).click();await expect(dialog.locator('.channel-source-row')).toHaveCount(2)
+  assert.equal((await call('channel.sources',{plugin:'x',includeDisabled:true})).filter(source=>source.locator==='@retry_author').length,1)
+  pass('An accepted save with a lost response can be retried from the actual form without creating duplicate subscriptions')
+ }
+ const applied=await receive();await confirm(applied)
+ assert.equal((await request('channel.collector-ack',{revision:applied.revision+1})).status,409)
+ assert.equal((await request('channel.collector-ack',{revision:applied.revision},other.token)).status,409)
+ assert.equal((await request('channel.collector-ack',{revision:applied.revision,collectorId:other.collector.id})).ok,false)
+ await deny('channel.collector-ack',{revision:applied.revision})
+ const stale=await confirm(first);assert.equal(stale.revision,applied.revision)
  assert.equal((await request('card.create',{title:'forbidden'})).status,403)
- const unchanged=await request('channel.collector-config',{sinceRevision:added.revision});assert.equal(unchanged.data.changed,false)
- await call('channel.collector-revoke',{id:other.collector.id});assert.equal((await request('channel.collector-ack',{revision:added.revision},other.token)).status,401)
+ const unchanged=await request('channel.collector-config',{sinceRevision:applied.revision});assert.equal(unchanged.data.changed,false)
+ await call('channel.collector-revoke',{id:other.collector.id});assert.equal((await request('channel.collector-ack',{revision:applied.revision},other.token)).status,401)
  pass('Receipts are collector-bound, monotonic and authenticated; operator forgery, future/undelivered revisions, extra fields and revoked credentials are rejected')
  await confirm(await receive());await expect(receipt()).toHaveAttribute('data-sync-state','synced');await page.screenshot({path:path.join(out,'subscriptions-applied.png'),animations:'disabled'});assert.deepEqual(errors,[])
- assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())))
+ if(app)assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())))
  fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({passed:true,checks,errors,providerCalls:0,application:application||'source'},null,2)+'\n')
-}finally{await app.close();fs.rmSync(temp,{recursive:true,force:true})}
+}finally{await app?.close();await browser?.close();await fixture?.close();fs.rmSync(temp,{recursive:true,force:true})}
