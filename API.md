@@ -3380,9 +3380,13 @@ followed sources, including sources with no currently loaded article. Selecting
 a source uses the existing server-paged sourceId filter. Status captions and
 loaded-item banners do not occupy a feed row. Every current/future channel exposes Channel, Board (the previous
 Posts masonry view) and Posts (a vertical timeline).
+The UI uses original publication time: Channel runs oldest to newest and loads
+earlier pages when scrolling upward; Board and Posts run newest first. Arrival
+order and refreshes never shuffle these views. Reading anchors and loaded pages
+remain separate for each view and source filter.
 `channel.posts` accepts `order:newest|discovery`, `seed`, `snapshot` and
 `avoidFirst`; use the same ranking arguments with `nextCursor` for stable pages.
-A new refresh seed and the previous first ID change the top item when at least
+Explicit API discovery requests may use a new refresh seed and the previous first ID to change the top item when at least
 two items are available. No platform engagement counts are invented.
 
 The Mac keeps unsaved channel text, images, native author avatars and drafts in

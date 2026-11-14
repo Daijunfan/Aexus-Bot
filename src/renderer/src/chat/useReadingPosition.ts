@@ -14,7 +14,7 @@ function flush(identity:string){clearTimeout(writes.get(identity));writes.delete
 function save(identity:string,value:ReadingPosition){positions.set(identity,value);clearTimeout(writes.get(identity));writes.set(identity,setTimeout(()=>flush(identity),250))}
 
 /** Reading cameras stay on this client; only message IDs and viewport offsets are retained. */
-export function useReadingPosition({identity,initial,ready,items,root,viewport,skip=false,onRestore}:{identity?:string;initial?:ReadingPosition;ready:boolean;items:readonly{id:string}[];root:RefObject<HTMLDivElement|null>;viewport:RefObject<MessageViewportHandle|null>;skip?:boolean;onRestore:(following:boolean)=>void}){
+export function useReadingPosition({identity,initial,ready,items,root,viewport,skip=false,onRestore}:{identity?:string;initial?:ReadingPosition;ready:boolean;items:readonly{id:string}[];root:RefObject<HTMLDivElement|null>;viewport?:RefObject<MessageViewportHandle|null>;skip?:boolean;onRestore:(following:boolean)=>void}){
  const [status,setStatus]=useState({identity,done:false})
  if(status.identity!==identity)setStatus({identity,done:false})
  const restoring=!!identity&&!!initial&&!skip&&(status.identity!==identity||!status.done)
@@ -35,8 +35,15 @@ export function useReadingPosition({identity,initial,ready,items,root,viewport,s
   const controller=new AbortController()
   callbacks.current.onRestore(initial.following||!anchorPresent)
   const done=()=>{if(!controller.signal.aborted)setStatus({identity,done:true})}
-  if(initial.following||!anchorPresent){viewport.current?.scrollToEnd();done()}
-  else void viewport.current?.scrollToMessage(initial.messageId!,{block:'start',offset:initial.offset,signal:controller.signal}).then(done)
+  if(initial.following||!anchorPresent){if(viewport?.current)viewport.current.scrollToEnd();else if(root.current)root.current.scrollTop=root.current.scrollHeight;done()}
+  else if(viewport?.current)void viewport.current.scrollToMessage(initial.messageId!,{block:'start',offset:initial.offset,signal:controller.signal}).then(done)
+  else requestAnimationFrame(()=>{
+   if(controller.signal.aborted)return
+   // Let the restored unread boundary commit before measuring this non-virtual row.
+   const area=root.current,node=area?.querySelector<HTMLElement>(`[data-chat-item="${CSS.escape(initial.messageId!)}"]`)
+   if(area&&node){const scale=area.getBoundingClientRect().height/area.offsetHeight||1;area.scrollTop+=(node.getBoundingClientRect().top-area.getBoundingClientRect().top)/scale-(initial.offset??0)-area.clientTop}
+   done()
+  })
   return()=>controller.abort()
  },[identity,ready,initial,skip,restoring,anchorPresent,viewport])
  useLayoutEffect(()=>{if(ready&&!restoring)remember()},[identity,ready,restoring,items,remember])
@@ -47,7 +54,7 @@ export function useReadingPosition({identity,initial,ready,items,root,viewport,s
   const key=(event:KeyboardEvent)=>{if(['Enter',' '].includes(event.key)&&!(event.target as Element)?.closest('input,textarea,[contenteditable=true]'))action(event)}
   window.addEventListener('pagehide',leave)
   document.addEventListener('pointerdown',action,true);document.addEventListener('keydown',key,true)
-  return()=>{window.removeEventListener('pagehide',leave);document.removeEventListener('pointerdown',action,true);document.removeEventListener('keydown',key,true);flush(identity)}
+  return()=>{remember();window.removeEventListener('pagehide',leave);document.removeEventListener('pointerdown',action,true);document.removeEventListener('keydown',key,true);flush(identity)}
  },[identity,ready,root,remember])
- return {restoring,remember}
+ return {restoring,remember,cancelRestore:()=>{if(restoring)setStatus({identity,done:true})}}
 }

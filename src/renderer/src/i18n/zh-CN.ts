@@ -3183,6 +3183,7 @@ export const zhCN:Record<string,string> = {
   "Refresh posts": "刷新 Posts",
   "Load more posts": "加载更多动态",
   "You are all caught up. Refresh for a new mix.": "已浏览完当前内容，刷新看看新推荐。",
+  "You are all caught up.": "已浏览完全部内容。",
   "Subscription platform": "订阅平台",
   "Subscription list": "订阅列表",
   "All platforms": "全部平台",
