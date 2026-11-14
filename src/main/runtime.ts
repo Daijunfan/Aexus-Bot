@@ -120,7 +120,7 @@ export function startRuntime(notify: (channel: string, payload: any) => void = (
   }
   setEmitter(broadcast)
   setDirectEmitter(employee=>broadcast('direct:changed',{employee,cardId:employee}))
-  setDirectReplyHandlers((employee,reference)=>{recordDirectReply(employee,reference);notifyScheduleEvent({type:'message.received',id:reference.messageId,conversation:'employee:'+employee,messageId:reference.messageId,sequence:reference.sequence})},acknowledgeDirectReply)
+  setDirectReplyHandlers((employee,reference)=>{recordDirectReply(employee,reference);notifyScheduleEvent({type:'message.received',id:reference.messageId,conversation:'employee:'+employee,messageId:reference.messageId,sequence:reference.sequence},employee)},acknowledgeDirectReply)
   setTerminalEmitter(broadcast)
   const unsubscribe = onStoreChange((store,changes) => { if(changes.authority){reconcileMissions();reconcilePostTriggers();reconcileConversationNotices();reconcileSchedules();revokeInvalidDelegations();pruneManagementActivity()} broadcast('store:changed', {...store,changes}) })
   const unwindows=onPluginWindows(windows=>broadcast('plugin:windows',windows))

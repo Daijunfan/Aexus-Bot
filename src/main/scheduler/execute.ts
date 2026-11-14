@@ -46,7 +46,7 @@ export async function executeTask(action: ScheduledAction, owner: string, signal
       })
       abort = () => { void closeSession(id!).then(() => reject(signal.reason), reject) }
       signal.addEventListener('abort', abort, { once: true })
-      try { signal.throwIfAborted(); void sendMessage(id!, action.prompt, owner,[],delegation,action.viewId).catch(reject) } catch (error) { reject(error) }
+      try { signal.throwIfAborted(); void sendMessage(id!, action.prompt, owner,[],delegation,action.viewId,undefined,undefined,undefined,undefined,[],undefined,'plan').catch(reject) } catch (error) { reject(error) }
     })
   } catch (error) {
     if (id && getLive(id)?.running) await closeSession(id)

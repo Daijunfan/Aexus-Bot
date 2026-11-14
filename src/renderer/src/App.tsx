@@ -27,7 +27,7 @@ import {useComposerHeight} from './chat/useComposerHeight'
 import {translate as uiText,useI18n,interfaceLocale,interfaceLanguage,setInterfaceLanguage} from './i18n'
 import {MessageSelectionBar} from './components/MessageSelectionBar'
 import {ComposerTools} from './components/ComposerTools'
-import {PinnedMessages} from './components/PinnedMessages'
+import {PinnedMessages,SavedMessages} from './components/PinnedMessages'
 import {MessengerContext,useMessengerState} from './components/useMessenger'
 import {conversationKey,workDraftKey,messageKey,type MessageDraft} from '../../shared/messenger'
 import {MissionView} from './components/MissionView'
@@ -158,7 +158,7 @@ export default function App() {
   const privatePositioned=useRef(false)
   // A browser clamp while measuring history is not a user choosing to follow the tail.
   const interruptPrivateEntry=()=>{privatePositioned.current=true;messageViewport.current?.cancelNavigation()}
-  useEffect(()=>{const id=privateUnreadId;setUnreadEntry(previous=>previous.key!==unreadKey?{key:unreadKey,id}:!previous.id&&id?{key:unreadKey,id}:previous)},[unreadKey,privateUnreadId])
+  useEffect(()=>{const id=privateUnreadId;setUnreadEntry(previous=>previous.key!==unreadKey||!id?{key:unreadKey,id}:!previous.id?{key:unreadKey,id}:previous)},[unreadKey,privateUnreadId])
   const active:Session|undefined=liveActive??(employee?{id:employee.id,cardId:employee.id,engine:employee.engine,title:employee.title,group:employee.group,cwd:employee.remote?.directory??employee.cwd,createdAt:employee.createdAt,model:employee.model,effort:employee.effort,permissionMode:employee.permissionMode??'default',thinking:employee.thinking??false,thinkingSupported:employee.engine==='claude',busy:false,items:savedItems,commands:[],models:[]}:undefined)
   const visibleItems=messageMode?privateMessages.items:active?.items??[]
   useLayoutEffect(()=>{const id=messageMode?readingKey:active?.cardId??active?.id;if(transcriptScroll.current.employee!==id){transcriptScroll.current={employee:id,follow:messageMode&&savedReading?savedReading.following:true};privatePositioned.current=messageMode&&!!savedReading}},[active?.cardId,active?.id,readingKey])
@@ -401,6 +401,7 @@ export default function App() {
         </header>}
         {messageMode&&employee&&<MessageSelectionBar conversation={conversationKey('employee',employee.id)} messages={searchItems}/>}
         {messageMode&&employee&&<PinnedMessages conversation={conversationKey('employee',employee.id)}/>}
+        {messageMode&&employee&&<SavedMessages conversation={conversationKey('employee',employee.id)}/>}
         {employee&&deletingEmployee===employee.id&&<EmployeeDeleteDialog employee={employee} onCancel={()=>setDeletingEmployee(null)} onRemove={async deleteWorkspace=>{await api.call('card.remove',{id:employee.id,deleteWorkspace});setDeletingEmployee(null);setSelectedCardId(null);setActiveId(null);await act('view.close')}}/>}
         {!!active.approvals?.length&&<div className="agent-requests">{active.approvals?.map(p=><AgentApproval key={p.id} english={messageMode} compact={messageMode} approval={p} respond={async(decision,answers,form)=>{await api.call('approval.respond',{id:active.id,requestId:p.id,decision,answers,form});await refresh()}}/>)}</div>}
         {view.tools&&liveActive?<EngineTools id={active.id} section={view.tools} onSection={section=>void act('view.tools',{section})} onClose={()=>void act('view.tools',{section:null})}/>:editingEmployee && employee ? <div className="employee-inspector"><EmployeeProfile key={employee.id} employee={employee} store={store} onBack={()=>setEditingEmployee(false)} onWorkspace={()=>setEditingEmployee(false)}/></div> : <ConversationBody messages={messageMode} explorerWidth={store.preferences?.explorerWidth} explorerCollapsed={store.preferences?.explorerCollapsed} explorerTreeCollapsed={store.preferences?.explorerTreeCollapsed} terminalHeight={store.preferences?.terminalHeight} onAttachImage={attachImage} key={'body-'+(employee?.id??active.id)} employee={employee?.id??active.cardId??active.id}>

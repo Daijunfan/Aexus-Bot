@@ -3322,6 +3322,8 @@ See [Conversation files and workspaces](docs/CONVERSATION_WORKSPACES.md) for CLI
 
 Employee work explicitly scheduled in Plan uses the same Core `schedule.*` records for time, recurrence and event rules. Group fixed-text notices use their own API and do not create Plan records. Channel post-count workflows are retired. All roles may schedule themselves; other targets must be strictly lower roles within their existing Team/global management scope. Manager/Governor cannot schedule peers or superiors. Secretary administers all lawful employee plans, including other Secretaries. The user can edit all plans. The complete contract is in PLAN.md and SCHEDULER.md.
 
+Scheduled native inputs declare `sourceView:"plan"` (Mission). Event prompts group shared source fields and retain every event ID, sequence and data; `schedule.history.events` keeps the full original audit. An employee's own published private reply cannot wake that same employee, matching group publication behavior. Legacy queued self-replies are discarded before execution while preserving the schedule and its history.
+
 Legacy `action.channelId` publishing records retain their IDs/history. Channels no
 longer accept employee publication or provide publishing task editors. Employees can
 explicitly use the read-only fetch/search APIs from their own ordinary Plan tasks.

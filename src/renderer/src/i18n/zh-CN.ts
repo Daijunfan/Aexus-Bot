@@ -3440,6 +3440,10 @@ export const zhCN:Record<string,string> = {
   "Private": "私聊",
   "Read silently": "静默阅读",
   "System wrapper prompt": "系统包裹提示词",
+  "Sent input": "实际发送内容",
+  "Task instructions and triggering events": "任务说明与触发消息",
+  "Go to saved message": "跳转到收藏消息",
+  "Show saved messages": "查看收藏消息",
   "Execution instructions": "执行上下文",
   "Unknown source": "未知来源",
 

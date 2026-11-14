@@ -44,7 +44,7 @@ import {Icon} from './Icon'
 import {GroupEditor} from './GroupEditor'
 import {MessageSelectionBar,MessageCheckbox} from './MessageSelectionBar'
 import {ComposerTools} from './ComposerTools'
-import {PinnedMessages} from './PinnedMessages'
+import {PinnedMessages,SavedMessages} from './PinnedMessages'
 import {useMessenger} from './useMessenger'
 import {conversationKey,messageKey,groupDraftKey,type MessengerResults} from '../../../shared/messenger'
 import {GroupAvatar} from './GroupAvatar'
@@ -85,7 +85,8 @@ function GroupConversationBody({group,store,sessions,drafts,onBack,onPrivate,top
  const savedReading=useMemo(()=>readingPosition(draftKey),[draftKey])
  const [stickersOpen,setStickersOpen]=useState(false),[threadId,setThreadId]=useState<string|null>(null),[groupInfoOpen,setGroupInfoOpen]=useState(false),[topics,setTopics]=useState<(GroupTopic&{unread?:boolean})[]>([]),[cardComposer,setCardComposer]=useState<'poll'|'checklist'|null>(null)
  const topicUnavailable=!!topics.find(topic=>topic.id===topicId)?.archived
- const scopeUnread=topicId==='all'?group.unread:(group.topicIncoming?.[topicId]??(topicId==='general'?group.lastIncomingSequence:0))>Math.max(group.readSequence,group.topicRead?.[topicId]??0)
+ const scopeReadSequence=Math.max(group.readSequence,topicId==='all'?0:group.topicRead?.[topicId]??0)
+ const scopeUnread=topicId==='all'?group.unread:(group.topicIncoming?.[topicId]??(topicId==='general'?group.lastIncomingSequence:0))>scopeReadSequence
  const initialAttachments=messenger.getDraft(draftKey)??drafts[draftSlot]
  const [images,setImages]=useState<string[]>(initialAttachments?.images??[]),[files,setFiles]=useState<string[]>(initialAttachments?.files??[]),attachments=useRef({images,files});attachments.current={images,files}
  const attachmentInput=useRef<HTMLInputElement>(null)
@@ -184,7 +185,7 @@ function GroupConversationBody({group,store,sessions,drafts,onBack,onPrivate,top
   })
   return()=>{alive=false;off();clearTimeout(timer);clearTimeout(messageTimer)}
  },[group.id])
- const firstUnread=unreadAfter===null?undefined:history.find(message=>message.sequence>unreadAfter&&message.author.kind==='agent'&&!messenger.state.messages[messageKey(conversation,message.id)]?.hidden)?.id
+ const firstUnread=unreadAfter===null?undefined:history.find(message=>message.sequence>Math.max(unreadAfter,scopeReadSequence)&&message.author.kind==='agent'&&!messenger.state.messages[messageKey(conversation,message.id)]?.hidden)?.id
  useEffect(()=>{if(loadedInitial.current&&unreadAfter===null&&group.unread&&!follow.current)setUnreadAfter(group.readSequence)},[group.unread,group.lastIncomingSequence,group.readSequence,unreadAfter])
  useLayoutEffect(()=>{
   if(loading||positioned.current||!history.length)return
@@ -263,6 +264,7 @@ function GroupConversationBody({group,store,sessions,drafts,onBack,onPrivate,top
   {!botMode&&<PendingQuestions conversation={conversation}/>}
   <MessageSelectionBar conversation={conversation} messages={searchItems}/>
   <PinnedMessages conversation={conversation}/>
+  <SavedMessages conversation={conversation}/>
   {!botMode&&(group.details?.topicsEnabled||topicId!=='all')&&<nav className="group-topic-bar" aria-label={uiText('Group topics')}><button aria-pressed={topicId==='all'} onClick={()=>void selectTopic('all').catch(cause=>setError(cause.message))}><Icon name="list-unordered"/>{uiText('All topics')}</button>{topics.filter(topic=>!topic.archived||topic.id===topicId).map(topic=><button key={topic.id} aria-label={topic.id==='general'&&topic.name==='General'?uiText('General'):topic.name} aria-pressed={topicId===topic.id} style={{'--topic-color':GROUP_COLORS[topic.color]} as CSSProperties} onClick={()=>void selectTopic(topic.id).catch(cause=>setError(cause.message))}><span>{topic.icon}</span>{topic.id==='general'&&topic.name==='General'?uiText('General'):topic.name}{topic.closed&&<Icon name="lock"/>}{topic.unread&&<i aria-label={uiText('Unread')}/>}</button>)}</nav>}
   {topicUnavailable&&<div className="group-context-note"><Icon name="lock"/><span>{uiText('This topic is archived. Reopen it from Group info to reply.')}</span><button onClick={()=>setGroupInfoOpen(true)}>{uiText('Group info')}</button></div>}
   {botMode?<>{bot!.issue&&<BotIssueNotice issue={bot!.issue}/>} {bot!.connection==='error'&&<div className="group-context-note bot-connection-note" role="status"><Icon name="info"/><span>{uiText('Bot connection error. New replies may be delayed.')}</span></div>}</>:null}

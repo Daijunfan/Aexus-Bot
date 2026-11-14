@@ -9,5 +9,9 @@
 .native-input-context-code { margin:3px 0 6px;padding:7px 8px;border:1px solid var(--border-soft);border-radius:6px;background:var(--bg-alt);color:var(--fg);font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;white-space:pre-wrap;word-break:break-word; }
 .native-input-context-prompt>.native-input-context-code:last-child { margin-bottom:0; }
 .native-input-context-label { display:block;margin-top:2px;color:var(--fg-faint);font-size:10px;letter-spacing:.04em;text-transform:uppercase; }
+.native-task-input{min-width:0;max-width:100%;margin-top:5px;font-size:12px;line-height:1.5}
+.native-task-input>summary{width:fit-content;max-width:100%;padding:3px 0;color:var(--fg-dim);font-size:12px;cursor:pointer}
+.native-task-input>summary:hover{color:var(--fg)}
+.native-task-input>summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 
 .direct-delivery{display:block;margin-top:5px;color:var(--fg-dim);font-size:11px}.direct-delivery[data-state=failed],.direct-delivery[data-state=interrupted]{color:var(--danger,#b74545)}.direct-delivery span{display:block;max-width:42ch;overflow-wrap:anywhere}
