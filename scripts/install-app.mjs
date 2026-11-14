@@ -17,7 +17,6 @@ export function installApp({source,target='/Applications/Aexus Bot.app',home=pro
   if(source===target)throw new Error('Source and target must differ')
   const legacyNames=path.basename(target)==='Aexus Bot.app'?['Avalon.app','Anexus.app','Agents Company.app','Aexus.app']:path.basename(target)==='Avalon.app'?['Anexus.app','Agents Company.app']:path.basename(target)==='Anexus.app'?['Agents Company.app']:[]
   const legacies=legacyNames.map(name=>path.join(path.dirname(target),name))
-  const legacy=legacies.find(app=>fs.existsSync(app)&&app!==source)??null
   const replaced=[target,...legacies.filter(app=>app!==source)].filter(app=>fs.existsSync(app))
   const stopped=()=>{if([...new Set([source,target,...replaced])].some(app=>runningApp(app).length))throw new Error('Close Aexus Bot and legacy application versions before installing. Running applications cannot be replaced; no app files were changed.')}
   stopped()
@@ -26,7 +25,7 @@ export function installApp({source,target='/Applications/Aexus Bot.app',home=pro
   if(!html.startsWith('<!doctype html>')||!html.includes('id="root"'))throw new Error('Invalid renderer HTML')
   for(const [,file] of html.matchAll(/(?:src|href)="\.\/([^"?#]+)"/g))if(!asar.extractFile(archive,'out/renderer/'+file).length)throw new Error('Empty renderer asset: '+file)
   const version=plist(source,'CFBundleShortVersionString'),stamp=Date.now().toString(),backups=path.join(home,'backups')
-  const stage=path.join(path.dirname(target),'.Aexus-Bot-'+stamp+'-stage'),moved=[]
+  const work=fs.mkdtempSync(path.join(path.dirname(target),'.Aexus-Bot-install-')),stage=path.join(work,'next'),moved=[]
   fs.mkdirSync(backups,{recursive:true})
   try {
     execFileSync('/usr/bin/ditto',[source,stage])
@@ -34,13 +33,20 @@ export function installApp({source,target='/Applications/Aexus Bot.app',home=pro
     stopped()
     const data=path.join(home,'sessions.json')
     if(fs.existsSync(data))fs.copyFileSync(data,path.join(backups,'before-'+version+'-'+stamp+'.json'))
+    let installed=false
     try{
-      for(const app of replaced){const backup=path.join(backups,path.basename(app,'.app').replaceAll(' ','')+'-before-'+version+'-'+stamp+'.backup');fs.renameSync(app,backup);moved.push({app,backup})}
+      // Old bundles exist only during this transaction, for failed-install rollback.
+      for(const app of replaced){const backup=path.join(work,path.basename(app));fs.renameSync(app,backup);moved.push({app,backup})}
       fs.renameSync(stage,target)
-    }catch(error){for(const {app,backup} of moved.reverse())fs.renameSync(backup,app);throw error}
-    if(path.dirname(target)==='/Applications')execFileSync('/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister',['-f',target])
-    return {version,target,backup:moved.find(item=>item.app===target)?.backup??moved[0]?.backup??null,legacyBackup:moved.find(item=>item.app===legacy)?.backup??null}
-  }finally{fs.rmSync(stage,{recursive:true,force:true})}
+      installed=true
+      if(path.dirname(target)==='/Applications')execFileSync('/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister',['-f',target])
+    }catch(error){if(installed)fs.rmSync(target,{recursive:true,force:true});for(const {app,backup} of moved.reverse())fs.renameSync(backup,app);throw error}
+    for(const {backup} of moved)fs.rmSync(backup,{recursive:true,force:true})
+    return {version,target,backup:null,legacyBackup:null}
+  }finally{
+    fs.rmSync(stage,{recursive:true,force:true})
+    if(!moved.some(({backup})=>fs.existsSync(backup)))fs.rmSync(work,{recursive:true,force:true})
+  }
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   const args=process.argv.slice(2),value=key=>args[args.indexOf(key)+1]

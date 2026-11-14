@@ -37,6 +37,7 @@ Keep changes small and preserve the existing CLI-first boundaries. Read `CONTRIB
 - Preserve existing edits. Never reset the repository, clear credentials, overwrite user documents, or publish a repository/tag/package without explicit permission.
 - Builds do not imply installation. Do not stop or replace another developer's running app automatically. When a user explicitly requests installation, inspect active tasks, back up state and stop the old process before replacing its ASAR.
 - For an authorized macOS installation, use `npm run install:mac -- --source '/path/Aexus Bot.app'`, then verify the installed app in an isolated hidden-window test. Do not hand-roll hot replacement.
+- 安装只保留最新版 App。旧版 App（包括旧产品名）仅可在本次安装事务中临时暂存，失败时回滚；安装成功并校验后必须删除，禁止写入长期备份目录或积累版本副本。此规则不删除用户数据、认证和工作区。
 
 ## Release
 
