@@ -92,7 +92,8 @@
                       "pi",
                       "opencode",
                       "kilo",
-                      "deepseek"
+                      "deepseek",
+                      "antigravity"
                     ]
                   },
                   "model": {
@@ -505,7 +506,8 @@
                       "pi",
                       "opencode",
                       "kilo",
-                      "deepseek"
+                      "deepseek",
+                      "antigravity"
                     ]
                   },
                   "model": {
@@ -1046,7 +1048,8 @@
             "pi",
             "opencode",
             "kilo",
-            "deepseek"
+            "deepseek",
+            "antigravity"
           ]
         },
         "clientRequestId": {
@@ -4762,7 +4765,7 @@
   },
   {
     "name": "worker.create",
-    "args": "[--employee ID] --engine codex|claude|cline|pi|opencode|kilo|deepseek [--title NAME --team TEAM --cwd PATH --client-request-id ID]",
+    "args": "[--employee ID] --engine codex|claude|cline|pi|opencode|kilo|deepseek|antigravity [--title NAME --team TEAM --cwd PATH --client-request-id ID]",
     "summary": "Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Aexus tools.",
     "gui": "Team / Add employee / Worker",
     "inputSchema": {
@@ -4786,7 +4789,8 @@
             "pi",
             "opencode",
             "kilo",
-            "deepseek"
+            "deepseek",
+            "antigravity"
           ]
         },
         "title": {
@@ -13977,7 +13981,7 @@
   },
   {
     "name": "engine.capabilities",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek|antigravity",
     "summary": "Read adapter capabilities, workspace modes and employee kinds before hiring; no credentials or inference",
     "gui": "创建员工能力检查",
     "readOnly": true,
@@ -13986,7 +13990,7 @@
   },
   {
     "name": "engine.providers",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek|antigravity",
     "summary": "Read every native provider/router and saved profile with active model, URLs, credential fingerprints and source files; never returns keys",
     "gui": "Native engine provider catalog",
     "inputSchema": {
@@ -14001,7 +14005,8 @@
             "pi",
             "opencode",
             "kilo",
-            "deepseek"
+            "deepseek",
+            "antigravity"
           ]
         }
       },
@@ -14807,7 +14812,8 @@
                     "pi",
                     "opencode",
                     "kilo",
-                    "deepseek"
+                    "deepseek",
+                    "antigravity"
                   ]
                 },
                 "prompt": {
@@ -15210,7 +15216,8 @@
                     "pi",
                     "opencode",
                     "kilo",
-                    "deepseek"
+                    "deepseek",
+                    "antigravity"
                   ]
                 },
                 "prompt": {
@@ -15702,7 +15709,8 @@
                     "pi",
                     "opencode",
                     "kilo",
-                    "deepseek"
+                    "deepseek",
+                    "antigravity"
                   ]
                 },
                 "prompt": {
@@ -16075,7 +16083,8 @@
                     "pi",
                     "opencode",
                     "kilo",
-                    "deepseek"
+                    "deepseek",
+                    "antigravity"
                   ]
                 },
                 "prompt": {
@@ -16558,7 +16567,7 @@
   },
   {
     "name": "engine.models",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek [--kind worker|cloud-native-worker] [--team NAME]",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek|antigravity [--kind worker|cloud-native-worker] [--team NAME] [--model MODEL]",
     "summary": "List available models before employee creation, without inference; Cloud Native reads the selected host",
     "gui": "创建员工和默认模型设置",
     "inputSchema": {
@@ -16573,7 +16582,8 @@
             "pi",
             "opencode",
             "kilo",
-            "deepseek"
+            "deepseek",
+            "antigravity"
           ]
         },
         "kind": {
@@ -16585,6 +16595,11 @@
         "team": {
           "type": "string",
           "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Native ACP only: inspect the selected model and its current effort choices without inference."
         }
       },
       "required": [
@@ -16954,7 +16969,7 @@
   },
   {
     "name": "session.new",
-    "args": "[--engine claude|codex] [--group NAME] [--model M]",
+    "args": "[--engine claude|codex|cline|pi|opencode|kilo|deepseek|antigravity] [--group NAME] [--model M]",
     "summary": "Create a session",
     "gui": "“+ Hire employee”",
     "readOnly": false,
@@ -18076,7 +18091,8 @@
             "pi",
             "opencode",
             "kilo",
-            "deepseek"
+            "deepseek",
+            "antigravity"
           ]
         },
         "model": {

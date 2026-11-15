@@ -3,7 +3,7 @@ import path from 'node:path'
 import os from 'node:os'
 import {randomUUID} from 'node:crypto'
 import {APP_HOME} from '../../shared/protocol'
-import {nativeSessionRefs,type ModelInfo} from '../../shared/types'
+import {nativeSessionRefs,type ModelInfo,type SlashCommand} from '../../shared/types'
 import {nativeAcpClient} from './acp-client'
 import {codeConfig} from './opencode-config'
 import type {NativeAcpEngine} from '../../shared/engines'
@@ -17,8 +17,11 @@ import type {EngineStart,EngineDriver} from './contract'
 export const normalizeEffort=(value:string)=>value==='extra-high'?'xhigh':value==='off'?'none':value
 const option=(session:any,id:string)=>session.configOptions?.find((o:any)=>o.id===id)
 const choices=(entry:any):any[]=>(entry?.options??[]).flatMap((o:any)=>o.options??[o])
+export const acpEffortId=(engine:NativeAcpEngine)=>engine==='deepseek'?'reasoning_effort':engine==='antigravity'?'thought_level':'effort'
+export const acpBuildMode=(engine:NativeAcpEngine)=>engine==='antigravity'?'default':engine==='kilo'?'code':'build'
 export function acpModels(engine:NativeAcpEngine,session:any,fresh=false):ModelInfo[]{
  const current=option(session,'model')?.currentValue
+ if(engine==='antigravity'){const thought=option(session,acpEffortId(engine)),efforts=choices(thought).map(entry=>normalizeEffort(entry.value));return choices(option(session,'model')).map(model=>({value:model.value,displayName:model.name??model.value,description:'Google Antigravity · Native configuration',inputModalities:['text','image'],isDefault:model.value===current,supportsEffort:model.value===current&&efforts.length>0,supportedEffortLevels:model.value===current?efforts:[],...(fresh&&model.value===current?{defaultEffort:normalizeEffort(thought?.currentValue??'')}:{}),supportsAdaptiveThinking:false,supportsFastMode:false}))}
  if(engine==='deepseek'){const efforts=choices(option(session,'reasoning_effort')).map(entry=>normalizeEffort(entry.value)).filter(Boolean);return choices(option(session,'model')).map(model=>({value:deepseekModel(model.value),displayName:model.name??deepseekModel(model.value),description:'DeepSeek Harness · Native configuration',inputModalities:['text'],isDefault:model.value===current,supportsEffort:model.value===current&&efforts.length>0,supportedEffortLevels:model.value===current?efforts:[],...(fresh&&model.value===current?{defaultEffort:normalizeEffort(option(session,'reasoning_effort')?.currentValue??'')}:{}),supportsAdaptiveThinking:false,supportsFastMode:false}))}
  const config=codeConfig(engine)
  return choices(option(session,'model')).map(m=>{
@@ -44,8 +47,8 @@ export async function openNativeAcp(context:EngineStart){
  const engine=context.engine as NativeAcpEngine,{card,args,cardId,sessionId,cwd,host,permissionMode}=context
  if(context.remote||context.nativeRemote)throw Error(engine+' requires a Core-local workspace; remote execution will not fall back to the Mac')
  if(card?.accessMode==='isolated')throw Error(engine+' ACP does not yet support strict process isolation; choose a separately isolated OS account')
- const directory=path.join(APP_HOME,'agent-access',cardId,engine),state=engineState(context,{model:args.model||(engine==='deepseek'?undefined:codeConfig(engine).model)}),bridge=await openDiscussionMcp(state,true),approve=approvalHandler(sessionId,()=>host.emit('session:changed',{sessionId}))
- let client:ReturnType<typeof nativeAcpClient>,settings:any,turnId='',block=0,acceptUpdates=false,textSeen=false,receiptTaskId:string|undefined,receiptRead=false
+ const directory=path.join(APP_HOME,'agent-access',cardId,engine),state=engineState(context,{model:args.model||(engine==='deepseek'||engine==='antigravity'?undefined:codeConfig(engine).model)}),bridge=await openDiscussionMcp(state,true),approve=approvalHandler(sessionId,()=>host.emit('session:changed',{sessionId}))
+ let client:ReturnType<typeof nativeAcpClient>,settings:any,turnId='',block=0,acceptUpdates=false,textSeen=false,receiptTaskId:string|undefined,receiptRead=false,commands:SlashCommand[]=[]
  const tools=new Map<string,{name:string;input:unknown}>()
  const markRead=()=>{if(receiptTaskId&&!receiptRead&&state.running){receiptRead=true;host.emit('session:receipt',{sessionId,taskId:receiptTaskId,stage:'read'})}}
  const createClient=(mode=state.permissionMode)=>nativeAcpClient({engine,cwd,directory,employeeId:cardId,permissionMode:mode,onPermission:async request=>{
@@ -61,7 +64,9 @@ export async function openNativeAcp(context:EngineStart){
   const selected=request.options.find(o=>o.kind===(allow?'allow_once':'reject_once'))
   return {outcome:selected?{outcome:'selected',optionId:selected.optionId}:{outcome:'cancelled'}}
  },onUpdate:update=>{
-  if(update.sessionUpdate==='config_option_update'){settings={...settings,configOptions:update.configOptions};return}
+  if(update.sessionUpdate==='config_option_update'){settings={...settings,configOptions:update.configOptions};if(engine==='antigravity')host.rememberMeta(sessionId,{models:acpModels(engine,settings)});return}
+  if(engine==='antigravity'&&update.sessionUpdate==='available_commands_update'){commands=(update.availableCommands??[]).map((command:any)=>({name:command.name,description:command.description??'',argumentHint:command.input?.hint??''}));host.rememberMeta(sessionId,{commands});return}
+  if(engine==='antigravity'&&update.sessionUpdate==='usage_update'){host.rememberMeta(sessionId,{usage:update});return}
   if(!acceptUpdates||!host.isOpen(sessionId))return
   const emit=(event:unknown)=>host.emit('session:agent',{sessionId,event})
   if(update.sessionUpdate==='agent_message_chunk'&&update.content?.type==='text'){markRead();textSeen=true;emit({kind:'text-delta',id:turnId+'/'+block,text:update.content.text})}
@@ -75,14 +80,15 @@ export async function openNativeAcp(context:EngineStart){
  try{client=createClient()}catch(error){await bridge.close();throw error}
  try{
   const protocol=await client.call('initialize',initialize)
-  if(protocol.protocolVersion!==1||!protocol.agentCapabilities?.mcpCapabilities?.http)throw Error(engine+' requires ACP 1 with HTTP MCP support')
+  // Antigravity 1.5.9 supports HTTP MCP through --process-per-session but omits mcpCapabilities.
+  if(protocol.protocolVersion!==1||engine!=='antigravity'&&!protocol.agentCapabilities?.mcpCapabilities?.http)throw Error(engine+' requires ACP 1 with HTTP MCP support')
   const previous=(card?nativeSessionRefs(card):[]).reverse().find(ref=>ref.engine===engine&&ref.profile===directory)
-  settings=await client.call(previous?engine==='deepseek'?'session/resume':'session/load':'session/new',{...(previous?{sessionId:previous.id}:{}),cwd,mcpServers:[{type:'http',name:'agents-company',url:bridge.url,headers:[]}]})
+  settings=await client.call(previous?engine==='deepseek'||engine==='antigravity'?'session/resume':'session/load':'session/new',{...(previous?{sessionId:previous.id}:{}),cwd,mcpServers:[{type:'http',name:'agents-company',url:bridge.url,headers:[]}]})
   state.sessionId=previous?.id??settings.sessionId
   const configure=async(id:string,value:string)=>{const result=await client.call('session/set_config_option',{sessionId:state.sessionId,configId:id,value:id==='model'?modelValue(engine,settings,value):value});if(result.configOptions)settings={...settings,configOptions:result.configOptions}}
   if(state.model)await configure('model',state.model);state.model=nativeModel(engine,option(settings,'model')?.currentValue)??state.model
-  const effortId=engine==='deepseek'?'reasoning_effort':'effort'
-  const setEffort=async(effort:string|null)=>{const available=choices(option(settings,effortId));let value=effort?available.find(o=>normalizeEffort(o.value)===effort)?.value:available.find(o=>o.value==='default'||o.value==='')?.value??option(settings,effortId)?.currentValue;if(!effort&&engine==='deepseek'){const catalog=await discoverNativeAcp(engine,state.model),nativeDefault=catalog.models.find(model=>model.value===state.model)?.defaultEffort;value=available.find(option=>normalizeEffort(option.value)===nativeDefault)?.value}if(value===undefined)throw Error('This model does not expose the requested native effort');await configure(effortId,value)}
+  const effortId=acpEffortId(engine)
+  const setEffort=async(effort:string|null)=>{const available=choices(option(settings,effortId));let value=effort?available.find(o=>normalizeEffort(o.value)===effort)?.value:available.find(o=>o.value==='default'||o.value==='')?.value??option(settings,effortId)?.currentValue;if(!effort&&(engine==='deepseek'||engine==='antigravity')){const catalog=await discoverNativeAcp(engine,state.model),nativeDefault=catalog.models.find(model=>model.value===state.model)?.defaultEffort;value=available.find(option=>normalizeEffort(option.value)===nativeDefault)?.value}if(value===undefined)throw Error('This model does not expose the requested native effort');await configure(effortId,value)}
   if(args.effort)await setEffort(args.effort)
   state.effort=normalizeEffort(option(settings,effortId)?.currentValue??'') as typeof state.effort
   if(state.planMode){if(engine==='deepseek')throw Error('DeepSeek Harness ACP does not expose plan mode');await configure('mode','plan')}
@@ -101,10 +107,10 @@ export async function openNativeAcp(context:EngineStart){
    },
    steer(){return unsupported('steering; enqueue the next task instead')},
    async interrupt(){if(state.running){state.abort?.abort();client.notify('session/cancel',{sessionId:state.sessionId});await state.finished}},
-   async close(){acceptUpdates=false;state.abort?.abort();try{if(engine==='deepseek'){if(state.running)client.notify('session/cancel',{sessionId:state.sessionId});await client.call('session/close',{sessionId:state.sessionId},10000)}}finally{await client.close();await bridge.close();await state.finished}},
+   async close(){acceptUpdates=false;state.abort?.abort();try{if(engine==='deepseek'||engine==='antigravity'){if(state.running)client.notify('session/cancel',{sessionId:state.sessionId});await client.call('session/close',{sessionId:state.sessionId},10000)}}finally{await client.close();await bridge.close();await state.finished}},
    async whenIdle(){await state.finished},
-   async setModel(model){await configure('model',model??(engine==='deepseek'?nativeModel(engine,option(settings,'model').currentValue):codeConfig(engine).model)??option(settings,'model').currentValue);host.rememberMeta(sessionId,{models:acpModels(engine,settings)})},
-   async setPlan(enabled){if(engine==='deepseek')throw Error('DeepSeek Harness ACP does not expose plan mode');await configure('mode',enabled?'plan':engine==='kilo'?'code':'build')},
+   async setModel(model){await configure('model',model??(engine==='deepseek'||engine==='antigravity'?nativeModel(engine,option(settings,'model').currentValue):codeConfig(engine).model)??option(settings,'model').currentValue);host.rememberMeta(sessionId,{models:acpModels(engine,settings)})},
+   async setPlan(enabled){if(engine==='deepseek')throw Error('DeepSeek Harness ACP does not expose plan mode');await configure('mode',enabled?'plan':acpBuildMode(engine))},
    async setPermission(mode){
     if(mode==='auto'||engine==='deepseek'&&mode==='plan')throw Error('This adapter does not provide the requested permission mode')
     if(engine!=='deepseek')return
@@ -119,7 +125,7 @@ export async function openNativeAcp(context:EngineStart){
    async setFast(enabled){if(enabled)throw Error(engine+' does not expose Fast mode')},
    background(){return unsupported('background process control')}
   } satisfies EngineDriver
-  host.register(sessionId,state);host.rememberMeta(sessionId,{engine,cwd,model:state.model,permissionMode,effort:state.effort,thinking:false,thinkingManaged:true,thinkingSupported:false,planMode:state.planMode,fastMode:false,commands:[],models:acpModels(engine,settings),busy:false})
+  host.register(sessionId,state);host.rememberMeta(sessionId,{engine,cwd,model:state.model,permissionMode,effort:state.effort,thinking:false,thinkingManaged:true,thinkingSupported:false,planMode:state.planMode,fastMode:false,commands,models:acpModels(engine,settings),busy:false})
   return {sessionId,cwd,engine}
  }catch(error){await client.close();await bridge.close();throw error}
 }

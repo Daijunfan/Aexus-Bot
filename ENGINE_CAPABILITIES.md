@@ -101,6 +101,7 @@ Management APIs use the shared transcript/session layer and do not enable native
 | Pi | Active native Pi provider, model and credentials | Inherits native thinking level | Pi RPC | Core-local Build / Work plugins / Cloud Team via MCP Tunnel |
 | OpenCode | Native user provider config (`~/.config/opencode/opencode.json[c]`); models from real native config options | Native effort choices | ACP 1 over stdio with HTTP MCP | Core-local Build / existing Work directories |
 | Kilo Code | Native user provider config (`~/.config/kilo/kilo.json[c]`); Mac global config currently DeepSeek official `deepseek-flash` / `deepseek-v4-pro` | Flash/Low by default; variants none/low/high/max | ACP 1 over stdio with HTTP MCP | Core-local Build / existing Work directories |
+| Google Antigravity | Native `agy` account/configuration; models reported by ACP | Native model-specific `thought_level` | Official Antigravity CLI ACP 1; employee HTTP MCP | Core-local employees / clean Workers / existing Work directories |
 
 Cline and Pi use the existing CLI APIs for text, native resume, tool approvals, interrupt, queues and schedules. Pi supports steering; Cline supports Plan. Unsupported modes fail explicitly. Managers/Governors may use local, Tunnel-cloud or supported native-cloud workspaces; location does not grant or remove their role scope. `engine.capabilities` provides no-inference creation-time discovery to Managers and Governors. Cline/Pi cloud Employees use `kind:worker, workEnvironment:team`; Work/plugin workspaces are supported; native-cloud Cline/Pi processes remain unsupported. Cline Flash accepts pasted/local/cloud images, including native resume; Pi image input remains unsupported by this adapter. No cloud-to-local fallback is permitted. See API.md for install requirements and adapter limits.
 
@@ -122,6 +123,12 @@ Kilo's current Mac global configuration contains only the official DeepSeek `dee
 - Icon: Simple Icons DeepSeek vector, CC0-1.0; source and checksum are in `src/renderer/src/assets/engines/sources.json`. Runtime distribution and trademarks retain their own terms.
 
 Verification is separated into a no-runtime Core contract test, installed-runtime tests against a deterministic loopback provider, hidden desktop/headless browser UI tests, isolated installer checks, and opt-in real-provider verification. Platform results are recorded independently; a macOS result does not certify Windows or Linux.
+
+## Google Antigravity
+
+Engine ID `antigravity` uses official `agy acp`, currently pinned to CLI 1.5.9. Settings, employee creation, Worker creation and CLI/API discovery share the same registry. Text, images, thoughts, native commands, model/thought-level controls, plan mode, approvals, cancellation and saved native session resume are supported. Workers retain clean input and receive no Aexus role or tools. Employee Core/MCP calls retain their real identity and authorization.
+
+It inherits native Google sign-in or an explicitly configured native `GEMINI_API_KEY`. Checks never open a login window or send inference. When no cached sign-in exists, complete `agy acp --login` once on the Core host (use the configured executable path for managed installs). Native account eligibility and quota require a separate explicit real-provider test. Cloud execution, strict outer process isolation, cloning, steering and native background-process controls are currently unsupported by this adapter and do not silently fall back to another engine or host. The managed installer verifies Google's pinned SHA-512 and downloads no additional desktop App.
 
 
 ## Native Worker workbench

@@ -16,8 +16,8 @@ import {invalidateEngine} from './registry'
 import {emitCoreEvent} from '../core-events'
 import {exposeClaudeSdk} from './claude-sdk'
 
-type Recipe={runtime?:'node';nodeVersion?:string;dependencyLock?:string;dependencyLockSha256?:string;engine:EngineId;platform:string;arch:string;libc?:string;package:string;version:string;url:string;integrity:string;executable:string}
-type PackageRecipe=Pick<Recipe,'package'|'version'|'url'|'integrity'|'executable'>
+type Recipe={format?:'binary'|'flat-tar';runtime?:'node';nodeVersion?:string;dependencyLock?:string;dependencyLockSha256?:string;engine:EngineId;platform:string;arch:string;libc?:string;package:string;version:string;url:string;integrity:string;executable:string}
+type PackageRecipe=Pick<Recipe,'package'|'version'|'url'|'integrity'|'executable'|'format'>
 export type InstallJob={id:string;engine:EngineId;state:'running'|'succeeded'|'failed'|'cancelled';startedAt:number;finishedAt?:number;log:string;error?:string;path?:string;downloadedBytes:number}
 const jobs=new Map<string,{job:InstallJob;controller:AbortController;done:Promise<void>}>()
 function recipe(engine:EngineId):Recipe&{sdk?:PackageRecipe}{
@@ -26,7 +26,7 @@ function recipe(engine:EngineId):Recipe&{sdk?:PackageRecipe}{
   if(manifest.schemaVersion!==1)throw Error('Unknown engine download manifest')
   const musl=process.platform==='linux'&&!(process.report.getReport() as any).header?.glibcVersionRuntime
   const candidates=manifest.entries.filter(item=>item.engine===engine&&item.platform===process.platform&&item.arch===process.arch)
-  const found=musl&&engine==='claude'?candidates.find(item=>item.libc==='musl'):candidates.find(item=>!item.libc)
+  const found=musl&&(engine==='claude'||engine==='antigravity')?candidates.find(item=>item.libc==='musl'):candidates.find(item=>!item.libc)
   if(!found)throw Error(`No verified native ${engine} download for ${process.platform}/${process.arch}. Configure an existing executable instead.`)
   validatePackage(found)
   if(engine==='claude'){validatePackage(manifest.claudeSdk);return {...found,sdk:manifest.claudeSdk}}
@@ -34,7 +34,9 @@ function recipe(engine:EngineId):Recipe&{sdk?:PackageRecipe}{
 }
 function validatePackage(found:PackageRecipe){
   const url=new URL(found.url)
-  if(url.protocol!=='https:'||url.hostname!=='registry.npmjs.org'||url.username||url.password||!/^sha512-[A-Za-z0-9+/]+=*$/.test(found.integrity))throw Error('Invalid official download manifest')
+  if(found.format&&!['binary','flat-tar'].includes(found.format))throw Error('Unknown native engine archive format')
+  const official=found.format?found.package==='google-antigravity-cli'&&url.hostname==='storage.googleapis.com'&&url.pathname.startsWith('/antigravity-public/antigravity-cli/'):url.hostname==='registry.npmjs.org'
+  if(url.protocol!=='https:'||!official||url.username||url.password||!/^sha512-[A-Za-z0-9+/]+=*$/.test(found.integrity))throw Error('Invalid official download manifest')
   if(path.isAbsolute(found.executable)||found.executable.split(/[\\/]/).includes('..'))throw Error('Invalid engine executable path')
 }
 
@@ -87,16 +89,16 @@ async function downloadPackage(plan:PackageRecipe,directory:string,controller:Ab
       if(expected.length!==actual.length||!timingSafeEqual(actual,expected))throw Error('Checksum mismatch; the downloaded engine was not installed')
       job.log+='SHA-512 校验通过。解压并检查原生程序…\n';changed()
       controller.signal.throwIfAborted();fs.mkdirSync(directory,{recursive:false,mode:0o700})
-      await unpack({file:archive,cwd:directory,strip:1,strict:true,preservePaths:false,noMtime:true,
+      if(plan.format==='binary')fs.copyFileSync(archive,path.join(directory,plan.executable))
+      else await unpack({file:archive,cwd:directory,strip:plan.format==='flat-tar'?0:1,strict:true,preservePaths:false,noMtime:true,
         filter(name,entry){
           controller.signal.throwIfAborted()
-          if(name.includes('\\')||path.posix.isAbsolute(name)||name.split('/').includes('..')||!/^package(?:\/|$)/.test(name))throw Error('Unsafe path in engine archive')
+          if(name.includes('\\')||path.posix.isAbsolute(name)||name.split('/').includes('..')||(plan.format==='flat-tar'?name!==plan.executable:!/^package(?:\/|$)/.test(name)))throw Error('Unsafe path in engine archive')
           if(!['File','Directory','OldFile','ContiguousFile'].includes('type' in entry?entry.type:''))throw Error('Engine archives cannot contain filesystem links or device files')
           return true
         }})
       controller.signal.throwIfAborted()
-      const metadata=JSON.parse(fs.readFileSync(path.join(directory,'package.json'),'utf8'))
-      if(metadata.name!==plan.package||metadata.version!==plan.version)throw Error('Downloaded engine identity differs from the approved recipe')
+      if(!plan.format){const metadata=JSON.parse(fs.readFileSync(path.join(directory,'package.json'),'utf8'));if(metadata.name!==plan.package||metadata.version!==plan.version)throw Error('Downloaded engine identity differs from the approved recipe')}
       const executable=path.join(directory,plan.executable),actualPath=fs.realpathSync(executable)
       if(!actualPath.startsWith(fs.realpathSync(directory)+path.sep)||!fs.statSync(actualPath).isFile())throw Error('Invalid native engine executable')
       if(process.platform!=='win32')fs.chmodSync(executable,0o755)

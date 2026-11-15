@@ -6,6 +6,7 @@ import deepseekMark from '../assets/engines/deepseek.svg'
 
 // Inline, exhaustive SVG registry: no CSS masks or external image load can hide an engine.
 const marks:Record<Engine,{label:string;viewBox:string;body:ReactNode}>={
+  antigravity:{label:'Google Antigravity',viewBox:'0 0 24 24',body:<><path d="M6 18 12 5l6 13M8 14h8" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 21h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></>},
   deepseek:{label:'DeepSeek Harness',viewBox:'0 0 24 24',body:<image href={deepseekMark} width="24" height="24"/>},
   opencode:{label:'OpenCode',viewBox:'0 0 512 512',body:<image href={opencodeMark} width="512" height="512"/>},
   kilo:{label:'Kilo Code',viewBox:'0 0 512 512',body:<image href={kiloMark} width="512" height="512"/>},

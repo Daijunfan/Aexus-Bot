@@ -81,6 +81,8 @@ Dot、Grok 等外部 Worker 也可以参与会话，保留各自的原生身份�
 
 成员可使用不同的原生引擎与模型，在本机或已登记的远程工作环境中执行任务。
 
+可接入 Codex、Claude Agent、Cline、Pi、OpenCode、Kilo Code、DeepSeek Harness 和 **Google Antigravity**。各引擎沿用自己的原生配置与登录；模型、思考强度和计划模式按实际能力展示，工作位置与权限以所选引擎支持的范围为准。[查看引擎能力](ENGINE_CAPABILITIES.md)。
+
 ### Mission · 把关注变成持续跟进
 
 Mission 管理一次性、重复、事件触发和持续目标，提供日历、看板、时间线等十种布局。

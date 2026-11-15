@@ -42,7 +42,11 @@ export async function checkEngine(engine:EngineId,options:{team?:string;force?:b
         const version=await command(engine,['--version'])
         if(version.code!==0)throw Error(version.stderr||version.stdout||'CLI 不可执行')
         result.installed=true;result.version=(version.stdout||version.stderr).split('\n')[0]
-        if(isNativeAcp(engine)){const discovery=await import('./opencode-runtime').then(m=>m.discoverNativeAcp(engine));result.protocol='compatible';result.authentication=result.hasApiKey?'configured':'unknown';result.ready=result.hasApiKey&&discovery.models.length>0;return result}
+        if(isNativeAcp(engine)){
+          try{const discovery=await import('./opencode-runtime').then(m=>m.discoverNativeAcp(engine));result.protocol='compatible';result.authentication=engine==='antigravity'||result.hasApiKey?'configured':'unknown';result.ready=(engine==='antigravity'||result.hasApiKey)&&discovery.models.length>0}
+          catch(error){if(engine!=='antigravity'||(error as any).code!==-32000||!/authentication required/i.test((error as Error).message))throw error;result.protocol='compatible';result.authentication='not-signed-in';result.error='Google Antigravity requires native sign-in. Run the configured executable with acp --login on the Core host, then check again.'}
+          return result
+        }
         if(engine==='cline'||engine==='pi'){
           const discovery=engine==='cline'?await import('./cline-runtime').then(m=>m.discoverCline()):await import('./pi-runtime').then(m=>m.discoverPi())
           result.version=discovery.version??result.version;result.protocol='compatible';result.authentication=result.hasApiKey?'configured':'not-signed-in';result.ready=result.hasApiKey;return result

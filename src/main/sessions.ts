@@ -299,7 +299,7 @@ export function enqueueMessage(id:string,text:string,images:string[]=[],delegati
   if(!text.trim()&&!images.length&&!filePaths.length)throw new Error('Message cannot be empty')
   delegation??=delegationFor(s.cardId);validateDelegation(delegation,s.cardId)
   const notice=isGroupNotice(delegation,chat,s.cardId)
-  const nativeControl=!chat&&!privateSend?.directMessageId&&(s.engine==='claude'&&text.startsWith('/')||s.engine==='codex'&&/^\/(compact|review)(?:\s|$)/.test(text))
+  const nativeControl=!chat&&!privateSend?.directMessageId&&(s.engine==='claude'&&text.startsWith('/')||s.engine==='codex'&&/^\/(compact|review)(?:\s|$)/.test(text)||s.engine==='antigravity'&&!!sessionInfo(id)?.commands?.some(command=>command.name===text.match(/^\/([^\s]+)/)?.[1]))
   if(!notice&&!privateSend?.directMessageId)authorizeSlash(text,s.cardId,delegation)
   sourceView=messageSourceView(sourceView)
   viewId=notice?undefined:taskViewId(s.cardId,viewId)
@@ -351,7 +351,7 @@ async function runSessionCommand(id:string,text:string,owner?:string,delegation?
   const command=mergeCommands([],s.engine,activeModel(meta.models,s.model)).find(c=>c.name===name||c.aliases?.includes(name))
   if(!command){
     const native=meta.commands.find(c=>c.name===name||c.aliases?.includes(name))
-    if(s.engine==='claude'&&native&&!meta.terminalCommands?.includes(native.name))return false
+    if(native&&(s.engine==='antigravity'||s.engine==='claude'&&!meta.terminalCommands?.includes(native.name)))return false
     throw new Error(`/${name} 当前不可通过此引擎的会话 API 执行。输入 /help 查看可用命令。`)
   }
   let result=''
@@ -406,7 +406,7 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
   delegation??=delegationFor(s.cardId);validateDelegation(delegation,s.cardId)
   const notice=isGroupNotice(delegation,chat,s.cardId)
   if(!notice&&!privateSend?.directMessageId)authorizeSlash(text,s.cardId,delegation)
-  const nativeControl=!chat&&!privateSend?.directMessageId&&(s.engine==='claude'&&text.startsWith('/')||s.engine==='codex'&&/^\/(compact|review)(?:\s|$)/.test(text))
+  const nativeControl=!chat&&!privateSend?.directMessageId&&(s.engine==='claude'&&text.startsWith('/')||s.engine==='codex'&&/^\/(compact|review)(?:\s|$)/.test(text)||s.engine==='antigravity'&&!!sessionInfo(sessionId)?.commands?.some(command=>command.name===text.match(/^\/([^\s]+)/)?.[1]))
   sourceView=messageSourceView(sourceView)
   const store=readStore(), card=executionEmployee(store,store.sessions.find(c=>c.id===s.cardId)!)
   viewId=notice||nativeControl||privateTurns.has(sessionId)?undefined:taskViewId(card.id,viewId,!!owner)

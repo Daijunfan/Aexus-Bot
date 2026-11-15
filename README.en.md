@@ -79,6 +79,8 @@ Assign responsibilities such as source monitoring, document reading, topic analy
 
 Members can use different native engines and models and execute locally or in registered remote environments.
 
+Supported native engines include Codex, Claude Agent, Cline, Pi, OpenCode, Kilo Code, DeepSeek Harness and **Google Antigravity**. Each retains its own native configuration and sign-in. Available model controls and execution environments follow the selected adapter’s actual capabilities. [Engine capabilities](ENGINE_CAPABILITIES.md).
+
 ### Mission · Turn attention into sustained follow-through
 
 Mission manages one-time, recurring, event-triggered, and persistent goals through ten layouts, including calendars, boards, and timelines.

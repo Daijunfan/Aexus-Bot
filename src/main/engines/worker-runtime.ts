@@ -7,13 +7,14 @@ import path from 'node:path'
 import spawn from 'cross-spawn'
 import type {ChildProcess,ChildProcessWithoutNullStreams} from 'node:child_process'
 import type {Engine,ModelInfo} from '../../shared/types'
+import type {NativeAcpEngine} from '../../shared/engines'
 import type {RemoteTarget} from '../../shared/remote'
 import {engineExecutable} from './executable'
 import {runCodexTurn,nativeModel,type SandboxMode} from '../codex'
 import {forkNativeCodexWorker,startNativeCodexSession,nativeCodexRequest,closeNativeCodexSession,hasNativeCodexSession} from '../codex-native'
 import {nativeAcpClient} from './acp-client'
 import {clineClient,type AcpPermission} from './cline-client'
-import {acpModels,modelValue,discoverNativeAcp,normalizeEffort} from './opencode-runtime'
+import {acpModels,modelValue,discoverNativeAcp,normalizeEffort,acpEffortId,acpBuildMode} from './opencode-runtime'
 import {deepseekModel} from './deepseek-config'
 import {piClient} from './pi-client'
 import {loadClaudeSdk} from './claude-sdk'
@@ -70,19 +71,19 @@ async function openAcpWorker(c:Context):Promise<WorkerRuntime>{
   const choice=request.options.find(option=>option.kind===(allow?'allow_once':'reject_once'))??(allow&&c.permissionMode==='bypassPermissions'?request.options.find(option=>option.kind==='allow_always'):undefined)
   return {outcome:choice?{outcome:'selected',optionId:choice.optionId}:{outcome:'cancelled'}}
  }
- const client=c.engine==='cline'?await clineClient({nativeWorker:true,cwd:c.cwd,directory:c.directory,model:c.model,onProcess:c.onProcess,onUpdate:update,onPermission:permission}):nativeAcpClient({nativeWorker:true,engine:c.engine as 'opencode'|'kilo'|'deepseek',cwd:c.cwd,directory:c.directory,permissionMode:c.permissionMode,onProcess:c.onProcess,onUpdate:update,onPermission:permission})
+ const client=c.engine==='cline'?await clineClient({nativeWorker:true,cwd:c.cwd,directory:c.directory,model:c.model,onProcess:c.onProcess,onUpdate:update,onPermission:permission}):nativeAcpClient({nativeWorker:true,engine:c.engine as NativeAcpEngine,cwd:c.cwd,directory:c.directory,permissionMode:c.permissionMode,onProcess:c.onProcess,onUpdate:update,onPermission:permission})
  try{
   const protocol=await client.call('initialize',initialize);if(protocol.protocolVersion!==1)throw Error('Unsupported native ACP version')
-  session=await client.call(c.nativeSessionId?c.engine==='deepseek'?'session/resume':'session/load':'session/new',{...(c.nativeSessionId?{sessionId:c.nativeSessionId}:{}),cwd:c.cwd,mcpServers:[]})
+ session=await client.call(c.nativeSessionId?c.engine==='deepseek'||c.engine==='antigravity'?'session/resume':'session/load':'session/new',{...(c.nativeSessionId?{sessionId:c.nativeSessionId}:{}),cwd:c.cwd,mcpServers:[]})
   const sessionId=session.sessionId??c.nativeSessionId;if(!sessionId)throw Error('Native engine returned no session identity')
   const configure=async(configId:string,value:string)=>{const result=await client.call('session/set_config_option',{sessionId,configId,value});if(result.configOptions)session={...session,configOptions:result.configOptions}}
-  if(c.model)await configure('model',c.engine==='cline'?c.model:modelValue(c.engine as 'opencode'|'kilo'|'deepseek',session,c.model))
+  if(c.model)await configure('model',c.engine==='cline'?c.model:modelValue(c.engine as NativeAcpEngine,session,c.model))
   if(c.planMode){if(c.engine==='deepseek')throw Error('DeepSeek Harness does not expose Plan mode');if(c.engine==='cline')await client.call('session/set_mode',{sessionId,modeId:'plan'});else await configure('mode','plan')}
   for(const [name,value] of Object.entries(c.nativeOptions??{}))await configure(name,value)
-  if(c.effort){const configId=c.engine==='deepseek'?'reasoning_effort':'effort',option=session.configOptions?.find((option:any)=>option.id===configId),choices=(option?.options??[]).flatMap((option:any)=>option.options??[option]),choice=choices.find((option:any)=>normalizeEffort(option.value)===c.effort);if(!choice)throw Error('This native model does not support the selected reasoning effort');await configure(configId,choice.value)}
+  if(c.effort){const configId=acpEffortId(c.engine as NativeAcpEngine),option=session.configOptions?.find((option:any)=>option.id===configId),choices=(option?.options??[]).flatMap((option:any)=>option.options??[option]),choice=choices.find((option:any)=>normalizeEffort(option.value)===c.effort);if(!choice)throw Error('This native model does not support the selected reasoning effort');await configure(configId,choice.value)}
   publish=()=>{
-   const selected=session.configOptions?.find((option:any)=>option.id==='model')?.currentValue,effort=session.configOptions?.find((option:any)=>option.id===(c.engine==='deepseek'?'reasoning_effort':'effort'))?.currentValue
-   const models=c.engine==='cline'?((client as Awaited<ReturnType<typeof clineClient>>).native&&(client as any).models.length?(client as any).models.map((model:any)=>({value:model.id,displayName:model.name??model.id,description:'Native configuration'})):(session.models?.availableModels??[]).map((model:any)=>({value:model.modelId,displayName:model.name??model.modelId,description:'Native configuration'}))):acpModels(c.engine as 'opencode'|'kilo'|'deepseek',session,true)
+   const selected=session.configOptions?.find((option:any)=>option.id==='model')?.currentValue,effort=session.configOptions?.find((option:any)=>option.id===(acpEffortId(c.engine as NativeAcpEngine)))?.currentValue
+   const models=c.engine==='cline'?((client as Awaited<ReturnType<typeof clineClient>>).native&&(client as any).models.length?(client as any).models.map((model:any)=>({value:model.id,displayName:model.name??model.id,description:'Native configuration'})):(session.models?.availableModels??[]).map((model:any)=>({value:model.modelId,displayName:model.name??model.modelId,description:'Native configuration'}))):acpModels(c.engine as NativeAcpEngine,session,true)
    const features=workerFeatures(c.engine);c.info({features,commands,configOptions:acpWorkerOptions(session),planMode:(session.configOptions?.find((option:any)=>option.id==='mode')?.currentValue??session.modes?.currentModeId)==='plan',nativeSessionId:sessionId,models,model:c.model||(c.engine==='deepseek'&&selected?deepseekModel(selected):selected)||(client as any).model,effort:effort===undefined?undefined:normalizeEffort(effort)})
   };publish()
   const cancel=()=>client.notify('session/cancel',{sessionId})
@@ -90,10 +91,10 @@ async function openAcpWorker(c:Context):Promise<WorkerRuntime>{
    const previous=session.configOptions?.map((option:any)=>({id:option.id,value:option.currentValue}))??[],previousMode=session.modes?.currentModeId
    try{
     if(changes.nativeOptions)for(const [name,value] of Object.entries(changes.nativeOptions)){const option=acpWorkerOptions(session).find(option=>option.id===name);if(!option?.options.some(choice=>choice.value===value))throw Error('Choose an advertised native option');await configure(name,value)}
-    if(changes.planMode!==undefined){if(c.engine==='deepseek')throw Error('DeepSeek Harness does not expose Plan mode');if(c.engine==='cline'){const result=await client.call('session/set_mode',{sessionId,modeId:changes.planMode?'plan':'act'});session={...session,...result,modes:{...session.modes,currentModeId:changes.planMode?'plan':'act'}}}else await configure('mode',changes.planMode?'plan':c.engine==='kilo'?'code':'build')}
-    if(changes.model!==undefined){const value=changes.model||previous.find((option:any)=>option.id==='model')?.value;if(value)await configure('model',c.engine==='cline'?value:modelValue(c.engine as 'opencode'|'kilo'|'deepseek',session,value))}
-    if(changes.effort!==undefined){const configId=c.engine==='deepseek'?'reasoning_effort':'effort',option=session.configOptions?.find((option:any)=>option.id===configId),choices=(option?.options??[]).flatMap((option:any)=>option.options??[option]);let value=changes.effort?choices.find((option:any)=>normalizeEffort(option.value)===changes.effort)?.value:choices.find((option:any)=>option.value==='default'||option.value==='')?.value??option?.currentValue
-     if(!changes.effort&&c.engine==='deepseek'){const catalog=await discoverNativeAcp('deepseek',changes.model||c.model),native=catalog.models.find(model=>model.value===(changes.model||c.model))?.defaultEffort;value=choices.find((option:any)=>normalizeEffort(option.value)===native)?.value??value}
+    if(changes.planMode!==undefined){if(c.engine==='deepseek')throw Error('DeepSeek Harness does not expose Plan mode');if(c.engine==='cline'){const result=await client.call('session/set_mode',{sessionId,modeId:changes.planMode?'plan':'act'});session={...session,...result,modes:{...session.modes,currentModeId:changes.planMode?'plan':'act'}}}else await configure('mode',changes.planMode?'plan':acpBuildMode(c.engine as NativeAcpEngine))}
+    if(changes.model!==undefined){const value=changes.model||previous.find((option:any)=>option.id==='model')?.value;if(value)await configure('model',c.engine==='cline'?value:modelValue(c.engine as NativeAcpEngine,session,value))}
+    if(changes.effort!==undefined){const configId=acpEffortId(c.engine as NativeAcpEngine),option=session.configOptions?.find((option:any)=>option.id===configId),choices=(option?.options??[]).flatMap((option:any)=>option.options??[option]);let value=changes.effort?choices.find((option:any)=>normalizeEffort(option.value)===changes.effort)?.value:choices.find((option:any)=>option.value==='default'||option.value==='')?.value??option?.currentValue
+     if(!changes.effort&&(c.engine==='deepseek'||c.engine==='antigravity')){const catalog=await discoverNativeAcp(c.engine,changes.model||c.model),native=catalog.models.find(model=>model.value===(changes.model||c.model))?.defaultEffort;value=choices.find((option:any)=>normalizeEffort(option.value)===native)?.value??value}
      if(value!==undefined)await configure(configId,value);else if(changes.effort)throw Error('This native model does not expose the selected reasoning effort')
     }
     if(changes.model!==undefined)c.model=changes.model||undefined;if(changes.effort!==undefined)c.effort=changes.effort||undefined;publish()

@@ -38,7 +38,7 @@ try{
   }finally{await f.close()}
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'engine-downloads.json'),'utf8'))
   assert.ok(manifest.entries.length>=12)
-  for(const entry of manifest.entries){assert.match(entry.integrity,/^sha512-/);assert.equal(new URL(entry.url).hostname,'registry.npmjs.org');assert.ok(!entry.executable.split(/[\\/]/).includes('..'))}
+  for(const entry of manifest.entries){assert.match(entry.integrity,/^sha512-/);const url=new URL(entry.url);if(entry.engine==='antigravity'){assert.equal(url.hostname,'storage.googleapis.com');assert.ok(url.pathname.startsWith('/antigravity-public/antigravity-cli/'));assert.ok(['binary','flat-tar'].includes(entry.format))}else assert.equal(url.hostname,'registry.npmjs.org');assert.ok(!entry.executable.split(/[\\/]/).includes('..'))}
   pass('all published engine downloads pin official origin, version and SHA-512')
   console.log(`FOUNDATION: ${checks} checks passed`)
 }finally{fs.rmSync(temp,{recursive:true,force:true})}

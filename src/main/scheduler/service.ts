@@ -53,7 +53,7 @@ function validate(input: ScheduleSpec,orphan=false): ScheduleSpec {
   if (a.model !== undefined && (typeof a.model !== 'string' || !a.model.trim())) throw new Error('model must be a nonempty string')
   if (a.effort !== undefined && !['none', 'low', 'medium', 'high', 'xhigh', 'max'].includes(a.effort)) throw new Error('Invalid effort level')
   if(card?.engine==='deepseek'&&a.effort!==undefined&&!['none','low','high','max'].includes(a.effort))throw Error('DeepSeek Harness supports none, low, high or max reasoning effort')
-  if (a.thinking !== undefined && (typeof a.thinking !== 'boolean' || (card?.engine==='codex'||card?.engine==='opencode'||card?.engine==='kilo'||card?.engine==='deepseek') || (card?.engine==='cline'||card?.engine==='pi')&&a.thinking)) throw new Error('thinking must be boolean; Cline/Pi support off only, Codex uses effort')
+  if (a.thinking !== undefined && (typeof a.thinking !== 'boolean' || (card?.engine==='codex'||card?.engine==='opencode'||card?.engine==='kilo'||card?.engine==='deepseek'||card?.engine==='antigravity') || (card?.engine==='cline'||card?.engine==='pi')&&a.thinking)) throw new Error('thinking must be boolean; Cline/Pi support off only, Codex uses effort')
   const channelId=a.channelId??(input.source?.startsWith('channel:')?input.source.slice(8):undefined)
   if(channelId!==undefined&&(typeof channelId!=='string'||!channelId.trim()))throw Error('Use a valid publishing channel ID')
   const rule=validateRule(input.rule)

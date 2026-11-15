@@ -19,7 +19,7 @@ export function processProvider(engine:'cline'|'pi'){
 export function publicEngineConfiguration(engine:EngineId){
  const {secret,...config}=engineConfiguration(engine),inheritNative=usesNativeConfiguration(engine),native=inheritNative?engine==='cline'?nativeClineConnection():engine==='pi'?nativePiConnection():undefined:undefined
  const claude=engine==='claude'&&inheritNative?nativeClaudeSettings():undefined
- const hasApiKey=inheritNative?engine==='deepseek'?deepseekHasCredential():isNativeAcp(engine)?codeHasCredential(engine):engine==='claude'?!!(claude?.env?.ANTHROPIC_AUTH_TOKEN||claude?.env?.ANTHROPIC_API_KEY||claude?.apiKeyHelper):engine==='pi'?!!nativePiConnection()?.credentialConfigured:!!native?.apiKey:!!secret
+ const hasApiKey=inheritNative?engine==='antigravity'?!!process.env.GEMINI_API_KEY:engine==='deepseek'?deepseekHasCredential():isNativeAcp(engine)?codeHasCredential(engine):engine==='claude'?!!(claude?.env?.ANTHROPIC_AUTH_TOKEN||claude?.env?.ANTHROPIC_API_KEY||claude?.apiKeyHelper):engine==='pi'?!!nativePiConnection()?.credentialConfigured:!!native?.apiKey:!!secret
  const {baseUrl,model,...nativeConfig}=config
  return {...nativeConfig,inheritNative,hasApiKey}
 }
@@ -37,7 +37,7 @@ export function configureEngine(engine:EngineId,patch:{inheritNative?:boolean;pa
 export function setManagedEngine(engine:EngineId,executable:string,sdkPath?:string){const data=all();data[engine]={...data[engine],path:undefined,managedPath:executable,...(sdkPath?{sdkPath}:{})};atomicJson(file,data,true)}
 /** Provider credentials never cross engine boundaries. Process adapters use saved keys only. */
 export function engineProcessEnvironment(engine:EngineId,base:NodeJS.ProcessEnv):NodeJS.ProcessEnv{
-  const env={...base},processAdapter=engine==='cline'||engine==='pi'
+  const env={...base},processAdapter=engine==='cline'||engine==='pi'||engine==='antigravity'
   for(const name of Object.keys(env)){
     const claude=/^(ANTHROPIC_|CLAUDE_CODE_USE_|CLAUDE_CONFIG_DIR$|CLAUDE_API_KEY$|CLAUDE_CODE_API_KEY$)/.test(name)
     const openai=name.startsWith('OPENAI_'),processKey=['CLINE_API_KEY','DEEPSEEK_API_KEY','PI_API_KEY'].includes(name)

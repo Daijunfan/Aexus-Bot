@@ -21,7 +21,7 @@ Keep the service on loopback by default. For remote use, use HTTPS with a revers
 
 Preserve the original Host/Origin headers at the reverse proxy and set the configured public origin exactly. Web sessions use HttpOnly/SameSite cookies, CSRF validation and an authenticated event stream. Do not place the operator token in a URL, bookmark, screenshot or log. `agents web token` intentionally prints it only in the local user's terminal.
 
-Installers download fixed native engine releases from the official package registry and verify committed SHA-512 integrity before safe extraction. They do not execute package install scripts, accept arbitrary package URLs, change global PATH, or overwrite running engine programs. Review updates to `engine-downloads.json` as executable supply-chain changes.
+Installers download fixed native engine releases from the official npm registry, or Google's `storage.googleapis.com/antigravity-public/antigravity-cli/` release objects for Antigravity, and verify committed SHA-512 integrity before safe extraction. Google recipes accept only the pinned native executable or a flat archive containing that executable. Installers do not execute package install scripts, accept arbitrary package URLs, change global PATH, or overwrite running engine programs. Review updates to `engine-downloads.json` as executable supply-chain changes.
 
 ## Data and logs
 

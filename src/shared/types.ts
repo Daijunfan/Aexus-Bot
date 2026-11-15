@@ -69,7 +69,8 @@ export const ENGINES: { value: Engine; label: string; hint: string }[] = [
   { value: 'pi', label: 'Pi', hint: 'Pi RPC · DeepSeek Flash' },
   { value: 'opencode', label: 'OpenCode', hint: 'OpenCode ACP · Native configuration' },
   { value: 'kilo', label: 'Kilo Code', hint: 'Kilo Code ACP · Native configuration' },
-  { value: 'deepseek', label: 'DeepSeek Harness', hint: 'DeepSeek Harness ACP · Native configuration' }
+  { value: 'deepseek', label: 'DeepSeek Harness', hint: 'DeepSeek Harness ACP · Native configuration' },
+  { value: 'antigravity', label: 'Google Antigravity', hint: 'Antigravity CLI ACP · Native Google sign-in' }
 ]
 
 /** Undefined on legacy employees: do not run paid onboarding when upgrading. */

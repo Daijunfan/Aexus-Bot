@@ -21,8 +21,8 @@ import type {AcpPermission} from './cline-client'
 export function nativeAcpClient(options:{nativeWorker?:boolean;onProcess?:(child:ChildProcess)=>void;engine:NativeAcpEngine;cwd:string;directory:string;employeeId?:string;permissionMode?:PermissionMode;onUpdate?:(update:any)=>void;onPermission?:(request:AcpPermission)=>Promise<any>}){
  const {engine,directory}=options
  fs.mkdirSync(directory,{recursive:true,mode:0o700})
- const native=engine==='deepseek'?deepseekLaunch(directory,options.cwd,options.permissionMode):undefined
- const config=engine!=='deepseek'?codeConfig(engine):undefined,data=path.join(directory,'data')
+ const native=engine==='deepseek'?deepseekLaunch(directory,options.cwd,options.permissionMode):engine==='antigravity'?{args:['--settings',JSON.stringify({toolPermission:'strict',notifications:false}),'acp',...(options.employeeId?['--process-per-session']:[]),'--disable-telemetry','--log-file',path.join(directory,'antigravity.log')],env:{},secrets:[] as string[]}:undefined
+ const config=engine==='opencode'||engine==='kilo'?codeConfig(engine):undefined,data=path.join(directory,'data')
  let env=engineProcessEnvironment(engine,childEnv(options.cwd)),secrets=native?.secrets??[]
  if(config){
   copyNativeConnection(config.authFile,path.join(data,engine,'auth.json'))
@@ -50,12 +50,19 @@ export function nativeAcpClient(options:{nativeWorker?:boolean;onProcess?:(child
    const reply=message.method==='session/request_permission'&&options.onPermission?options.onPermission(message.params):Promise.resolve({outcome:{outcome:'cancelled'}})
    void reply.then(result=>{if(!closed)send({jsonrpc:'2.0',id:message.id,result})}).catch(error=>{if(!closed)send({jsonrpc:'2.0',id:message.id,error:{code:-32603,message:redact(String(error))}})})
   }else if(message.method==='session/update')options.onUpdate?.(message.params.update)
-  else if(pending.has(message.id)){const item=pending.get(message.id)!;pending.delete(message.id);clearTimeout(item.timer);message.error?item.reject(Error(redact([message.error.message,message.error.data&&JSON.stringify(message.error.data)].filter(Boolean).join(': ')||JSON.stringify(message.error)).slice(0,4096))):item.resolve(message.result)}
+  else if(pending.has(message.id)){const item=pending.get(message.id)!;pending.delete(message.id);clearTimeout(item.timer);message.error?item.reject(Object.assign(Error(redact([message.error.message,message.error.data&&JSON.stringify(message.error.data)].filter(Boolean).join(': ')||JSON.stringify(message.error)).slice(0,4096)),{code:message.error.code})):item.resolve(message.result)}
  }
  child.stdout?.on('data',data=>{buffer+=decoder.write(data);let end:number;while((end=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,end).replace(/\r$/,'');buffer=buffer.slice(end+1);if(line)consume(line)}})
+ const request=(method:string,params:Record<string,unknown>={},timeout=30000):Promise<any>=>new Promise((resolve,reject)=>{const id=++sequence,timer=timeout?setTimeout(()=>{pending.delete(id);reject(Error(engine+' '+method+' timed out'))},timeout):undefined;pending.set(id,{resolve,reject,timer});try{send({jsonrpc:'2.0',id,method,params})}catch(error){pending.delete(id);clearTimeout(timer);reject(error)}})
  return {
   alive:()=>!closed&&child.exitCode==null&&child.signalCode==null,redact,
-  call(method:string,params:Record<string,unknown>={},timeout=30000):Promise<any>{return new Promise((resolve,reject)=>{const id=++sequence,timer=timeout?setTimeout(()=>{pending.delete(id);reject(Error(engine+' '+method+' timed out'))},timeout):undefined;pending.set(id,{resolve,reject,timer});try{send({jsonrpc:'2.0',id,method,params})}catch(error){pending.delete(id);clearTimeout(timer);reject(error)}})},
+  async call(method:string,params:Record<string,unknown>={},timeout=30000):Promise<any>{
+   try{return await request(method,params,timeout)}catch(error){
+    // Only an explicitly configured native API key can authenticate unattended. Never open OAuth during discovery.
+    if(engine!=='antigravity'||!env.GEMINI_API_KEY||!['session/new','session/load','session/resume'].includes(method)||(error as any).code!==-32000||!/authentication required/i.test((error as Error).message))throw error
+    await request('authenticate',{methodId:'gemini-api-key'});return request(method,params,timeout)
+   }
+  },
   notify(method:string,params:Record<string,unknown>={}){send({jsonrpc:'2.0',method,params})},
   async close(){if(closed)return;child.stdin?.end();terminateTree(child);const timer=setTimeout(()=>terminateTree(child,true),2000);try{await exited}finally{clearTimeout(timer)}}
  }

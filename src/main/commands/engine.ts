@@ -27,7 +27,7 @@ export async function engineRequest(command:string,a:Record<string,any>){
     case 'engine.cancel-login': return cancelEngineLogin(s(a.id))
     case 'engine.remote-check': return checkCloudNative(s(a.team),s(a.engine) as 'codex'|'claude',a.directory)
     case 'engine.remote-sessions': return listCloudNativeSessions(s(a.team),s(a.engine) as 'codex'|'claude')
-    case 'engine.models': return engineModels(a.engine,a.kind,a.team)
+    case 'engine.models': return engineModels(a.engine,a.kind,a.team,a.model)
     case 'engine.inspect': return inspectEngine(s(a.id),s(a.section??'capabilities'))
     case 'engine.skill': return {sent:await invokeSkill(s(a.id),s(a.name),s(a.prompt??''))}
  default:throw Error('Unknown engine command')

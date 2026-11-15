@@ -11,7 +11,7 @@ import {Temporal} from '@js-temporal/polyfill'
 import type {ChannelRecord} from '../../../shared/channels'
 import type {ChatGroupView} from '../../../shared/chat-groups'
 import type {ScriptMonitor} from '../../../shared/script-monitors'
-import type {Store} from '../../../shared/types'
+import type {Store,ModelInfo} from '../../../shared/types'
 import type {ScheduledJob,ScheduleRun,ScheduleEvent} from '../../../shared/scheduler'
 import {PLAN_PRIORITIES} from '../../../shared/plan'
 import {api} from '../api'
@@ -61,6 +61,14 @@ export function PlanEditor({job,initial,store,timezone,onClose,onSaved,onMission
  const previewSequence=useRef(0)
  const [previewed,setPreviewed]=useState(false),[preview,setPreview]=useState<string[]>([]),[history,setHistory]=useState<ScheduleRun[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[confirm,setConfirm]=useState<'run'|'delete'|'discard'|'toggle'|null>(null)
  const key=useRef(crypto.randomUUID()),lastPayload=useRef(''),guard=useRef(false),target=store.sessions.find(card=>card.id===employee),working=history.some(run=>run.status==='running')
+ const [nativeEfforts,setNativeEfforts]=useState<string[]>([]),[nativeModelError,setNativeModelError]=useState(''),[nativeModelLoading,setNativeModelLoading]=useState(false)
+ useEffect(()=>{
+  let active=true;setNativeEfforts([]);setNativeModelError('');setNativeModelLoading(target?.engine==='antigravity')
+  if(target?.engine!=='antigravity')return
+  const timer=setTimeout(()=>void api.call<{models:ModelInfo[];defaultModel?:string}>('engine.models',{engine:'antigravity',model:model.trim()||target.model||undefined}).then(catalog=>{if(active)setNativeEfforts(catalog.models.find(value=>value.value===(model.trim()||target.model||catalog.defaultModel))?.supportedEffortLevels??[])}).catch(cause=>{if(active)setNativeModelError((cause as Error).message)}).finally(()=>{if(active)setNativeModelLoading(false)}),250)
+  return()=>{active=false;clearTimeout(timer)}
+ },[target?.id,target?.engine,target?.model,model])
+ const effortOptions=target?.engine==='antigravity'?nativeEfforts:target?.engine==='deepseek'?['none','low','high','max']:['low','medium','high','xhigh','max']
  const draft=JSON.stringify([completion,missionEmployees,missionType,missionSecretary,reminderAmount,reminderUnit,targetView,name,employee,prompt,duration,mode,zone,at,amount,unit,time,weekdays,monthDay,enabled,priority,tags,notes,limit,until,timeout,grace,windowStart,windowEnd,windowDays,windowZone,model,effort,thinking,eventType,eventChannel,eventConversation,eventEmployee,eventMonitor,cooldown]),initialDraft=useRef(draft)
  useEffect(()=>{onDirtyChange?.(draft!==initialDraft.current)},[draft,onDirtyChange])
  useEffect(()=>{onSavingChange?.(busy);return()=>onSavingChange?.(false)},[busy,onSavingChange])
@@ -137,7 +145,8 @@ export function PlanEditor({job,initial,store,timezone,onClose,onSaved,onMission
      <div className="plan-field-row"><label>{uiText("Allowed window starts")}<input name="plan-window-start" type="time" value={windowStart} onChange={e=>setWindowStart(e.target.value)}/></label><label>{uiText("Allowed window ends")}<input name="plan-window-end" type="time" value={windowEnd} onChange={e=>setWindowEnd(e.target.value)}/></label></div>
      {(windowStart||windowEnd)&&<><label>{uiText("Window time zone")}<input value={windowZone} onChange={e=>setWindowZone(e.target.value)}/></label><div className="plan-weekdays" aria-label={uiText("Allowed window days")}>{days.map((day,i)=><button key={day} aria-pressed={windowDays.includes(i+1)} onClick={()=>setWindowDays(prev=>prev.includes(i+1)?prev.filter(d=>d!==i+1):[...prev,i+1])}>{uiText(day)}</button>)}</div><small>{uiText("Overnight windows belong to their starting day. Leave both times empty for no restriction.")}</small></>}
      <label>{uiText("Model override")}<input name="plan-model" value={model} onChange={e=>setModel(e.target.value)} placeholder={uiText("Inherit the employee’s model")}/></label>
-     <div className="plan-field-row"><label>{uiText("Reasoning effort")}<AppSelect name="plan-effort" disabled={target?.engine==='cline'||target?.engine==='pi'} value={effort} onChange={e=>setEffort(e.target.value as typeof effort)}><option value="">{uiText("Inherit")}</option>{(target?.engine==='deepseek'?['none','low','high','max']:['low','medium','high','xhigh','max']).map(value=><option key={value} value={value}>{uiText(value)}</option>)}</AppSelect></label><label>{uiText("Thinking")}<AppSelect name="plan-thinking" disabled={target?.engine==='codex'||target?.engine==='opencode'||target?.engine==='kilo'||target?.engine==='deepseek'} value={thinking} onChange={e=>setThinking(e.target.value)}><option value="inherit">{uiText("Inherit")}</option><option value="off">{uiText("Off")}</option><option value="on" disabled={target?.engine!=='claude'}>{uiText("On")}</option></AppSelect></label></div>
+     <div className="plan-field-row"><label>{uiText("Reasoning effort")}<AppSelect name="plan-effort" aria-busy={nativeModelLoading} disabled={target?.engine==='cline'||target?.engine==='pi'||nativeModelLoading} value={effort} onChange={e=>setEffort(e.target.value as typeof effort)}><option value="">{uiText("Inherit")}</option>{effort&&target?.engine==='antigravity'&&!effortOptions.includes(effort)&&<option value={effort}>{uiText(effort)}</option>}{effortOptions.map(value=><option key={value} value={value}>{uiText(value)}</option>)}</AppSelect></label><label>{uiText("Thinking")}<AppSelect name="plan-thinking" disabled={target?.engine==='codex'||target?.engine==='opencode'||target?.engine==='kilo'||target?.engine==='deepseek'||target?.engine==='antigravity'} value={thinking} onChange={e=>setThinking(e.target.value)}><option value="inherit">{uiText("Inherit")}</option><option value="off">{uiText("Off")}</option><option value="on" disabled={target?.engine!=='claude'}>{uiText("On")}</option></AppSelect></label></div>
+     {target?.engine==='antigravity'&&nativeModelError&&<p className="plan-field-help" role="status">{uiText(nativeModelError)}</p>}
      <p>{uiText("Overrides must be supported by the selected engine and model. They apply to this run only; employee settings and permissions stay unchanged.")}</p>
     </details>
     <label className="plan-enabled"><input name="plan-enabled" type="checkbox" role="switch" checked={enabled} onChange={e=>setEnabled(e.target.checked)}/><span>{uiText("Enable automatic scheduling")}</span></label>

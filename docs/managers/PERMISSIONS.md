@@ -1,5 +1,11 @@
 # Aexus Bot 权限说明
 
+## Google Antigravity
+
+`antigravity` 使用官方 `agy acp`，沿用 Core 的真实员工身份、职位、文件及插件授权。员工连接通过原有认证 HTTP MCP；原生 Worker 不注入员工身份、角色提示、初始化或 Core 工具。原生会话按精确 ID 恢复，不重放已有上下文，不借引擎能力授予权限或改变执行主机。
+
+原生工具请求沿用 Core 批准与撤销；默认要求原生逐项审批，显式工作区写入或完全访问仍由现有权限设置决定。检测不调用 OAuth、不打开登录窗口、不发模型任务；已有 Google 原生登录由 CLI 使用。只有明确配置的原生 `GEMINI_API_KEY` 可在原生认证要求后自动选择对应认证方式；不会借用其他引擎的凭据。CLI/API 的 `engine.models --model` 只发现原生 ACP 模型选项，沿用原有发现权限。云端执行和严格外层隔离暂不支持，不能回退到本机、另一个引擎或更高权限。
+
 ## Engineering
 
 `engineering.*` 以同一 Core/CLI 身份执行。用户/Secretary 配置、创建和编辑工程；读权限限实际参与者与应用管理者。职级与 Team 必须匹配真实员工，每个 Employee 节点只有一位 Manager，Governor 唯一。拓扑与协作线不会改变 Aexus 权限。Employee 只能派发自己直属的原生 Worker 并执行本节点初验，直属 Manager 负责复验及链路确认，工程 Governor 负责返工与最终确认。用户/Secretary 可显式执行这些分离阶段，保留真实署名和证据。

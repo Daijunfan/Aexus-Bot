@@ -427,7 +427,7 @@ async function main() {
       return out(await call('config.effort', { id: rest[0], effort: rest[1] ?? 'default' }))
 
     case 'config.plan': {if(!['on','off'].includes(rest[1]))throw new Error('Use on|off');return out(await call('config.plan',{id:rest[0],enabled:rest[1]==='on'}))}
-    case 'engine.models': {const p=parse(rest);return out(await call('engine.models',{engine:p.engine,kind:p.kind,team:p.team}))}
+    case 'engine.models': {const p=parse(rest);return out(await call('engine.models',{engine:p.engine,kind:p.kind,team:p.team,model:p.model}))}
     case 'engine.skill': return out(await call('engine.skill',{id:rest[0],name:rest[1],prompt:rest.slice(2).join(' ')}))
     case 'session.steer': {const parts=rest.slice(1),source=messageSourceOption(parts);return out(await call('session.steer',{id:rest[0],text:parts.join(' '),...source}))}
     case 'session.background-stop': {const p=parse(rest);return out(await call('session.background-stop',{id:p._[0],processId:p.process}))}

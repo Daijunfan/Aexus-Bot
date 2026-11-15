@@ -228,6 +228,23 @@ existing request keys/revision checks instead of guessing whether a mutation occ
 The full GUI/API comparison and Plan workflow are available as `core/secretary-api`
 (`docs/SECRETARY_API_PARITY.md`).
 
+## Google Antigravity
+
+Stable engine ID `antigravity` uses the official `agy acp` stdio protocol. It is available in Settings, employee/Worker creation and the same authenticated CLI/API. Native model, `thought_level`, default/plan mode, commands, images, approvals, cancellation and resume use the existing ACP adapter. Workers receive no employee prompt, initialization turn or Core MCP tools; employee MCP calls retain the real employee principal. Core-local workspaces are supported; unsupported remote/strict-isolation operations fail explicitly.
+
+```sh
+agents engine check --engine antigravity --json
+agents engine models --engine antigravity --json
+agents engine models --engine antigravity --model NATIVE_MODEL_ID --json
+agents engine providers --engine antigravity --json
+agents engine install-plan --engine antigravity --json
+agents engine install --engine antigravity --confirm --json
+agents card create --title Analyst --group Studio --engine antigravity --json
+agents worker create --engine antigravity --cwd /path/to/project --title Google --json
+```
+
+`engine.models` accepts optional `model` for native ACP engines to inspect the selected model's current reasoning options without inference. Google uses its native sign-in/configuration, not an application URL/key override. If sign-in is missing, run the configured executable with `acp --login` once on the Core host; discovery never launches OAuth. A configured native API key may authenticate through `gemini-api-key`; native credentials are never exposed in responses. CLI 1.5.9 downloads are pinned to Google's official Storage objects and SHA-512. Native account eligibility, provider availability and quota are separate from protocol/configuration checks. See [adapter boundaries](docs/ENGINE_ADAPTERS.md#google-antigravity).
+
 ## DeepSeek Harness
 
 The stable engine ID is `deepseek`; the native executable is `dsh`. The adapter uses
@@ -650,7 +667,7 @@ model are separate concepts. See `docs/ENGINE_ADAPTERS.md` for the driver contra
 
 ## Cline / Pi: cloud workspace creation
 
-`engine.capabilities {engine:"cline"|"pi"|"codex"|"claude"|"opencode"|"kilo"}` is read-only and available to employees, Managers and Governors. It returns `engine`, display/protocol metadata, `capabilities`, `workspaceModes`, `employeeKinds`, and `cloudWorkerTransport`. It does not expose credentials or start inference. OpenCode and Kilo advertise only Core-local workspace modes. `engine.models` retains its existing authorization.
+`engine.capabilities {engine:"cline"|"pi"|"codex"|"claude"|"opencode"|"kilo"|"deepseek"|"antigravity"}` is read-only and available to employees, Managers and Governors. It returns `engine`, display/protocol metadata, `capabilities`, `workspaceModes`, `employeeKinds`, and `cloudWorkerTransport`. It does not expose credentials or start inference. OpenCode and Kilo advertise only Core-local workspace modes. `engine.models` retains its existing authorization.
 
 ```sh
 agents engine capabilities --engine cline --json
@@ -828,7 +845,7 @@ Every employee uses Codex, Claude Code, Cline, Pi, OpenCode, Kilo Code or DeepSe
 ```bash
 agents status
 agents session list [--live]
-agents session new [--engine claude|codex|cline|pi|opencode|kilo] [--group NAME] [--title NAME] \
+agents session new [--engine claude|codex|cline|pi|opencode|kilo|deepseek|antigravity] [--group NAME] [--title NAME] \
   [--cwd /absolute/workspace] [--seat codey] [--model MODEL] \
   [--effort low|medium|high|xhigh|max] [--permission MODE] [--thinking on|off]
 agents session open <cardId>
@@ -2018,7 +2035,7 @@ and scheduled work. No group operation changes employee role authority.
 
 ## Native engine services and client consistency
 
-`engine.providers {engine:"codex"|"claude"|"cline"|"pi"|"opencode"|"kilo"}` returns a public catalog
+`engine.providers {engine:"codex"|"claude"|"cline"|"pi"|"opencode"|"kilo"|"deepseek"|"antigravity"}` returns a public catalog
 of every configured native provider/router, saved CC Switch profile, current model,
 source files and CLI/VS Code sharing status. Keys never leave Core: the catalog
 contains only configured flags and nonreversible fingerprints. Router endpoints
@@ -2035,7 +2052,7 @@ Claude model picker is preserved in full instead of being replaced with two
 DeepSeek entries. No engine borrows a different engine's credentials.
 
 `engine.configure {engine,patch:{inheritNative:true}}` removes retired application
-provider overrides. It preserves native credentials and history. All six engines use
+provider overrides. It preserves native credentials and history. All engines use
 native provider/model configuration; only executable and SDK paths remain editable
 here. Native connection changes are read fresh for new processes/sessions; running
 work is never interrupted to replace credentials.
@@ -3677,7 +3694,7 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents worker upload-begin</code> | <code>ID --name NAME --bytes N</code> | Begin a client-owned chunked attachment upload inside this Worker workspace. Upload alone never sends a task. | Worker attachments | operator |
 | <code>agents worker terminal</code> | <code>ID --operation list&#124;open&#124;read&#124;input&#124;resize&#124;close [--terminal ID --data TEXT --cursor N --cols N --rows N]</code> | User/Secretary: operate an optional human shell scoped to this Worker directory and owner. It is separate from the graphical Coding Agent protocol and stops on Worker removal. | Worker workspace terminal | operator |
 | <code>agents worker engines</code> | <code>—</code> | List native CLI availability on the Core host without starting adapters, authentication or model requests; remote hosts are checked at Worker start. | Add Worker engine availability | worker |
-| <code>agents worker create</code> | <code>[--employee ID] --engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek [--title NAME --team TEAM --cwd PATH --client-request-id ID]</code> | Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Aexus tools. | Team / Add employee / Worker | worker |
+| <code>agents worker create</code> | <code>[--employee ID] --engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek&#124;antigravity [--title NAME --team TEAM --cwd PATH --client-request-id ID]</code> | Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Aexus tools. | Team / Add employee / Worker | worker |
 | <code>agents worker list</code> | <code>[--employee ID]</code> | List directly owned native Workers (user/Secretary may administer all); user and Secretary may list all | Team members | worker |
 | <code>agents worker start</code> | <code>ID</code> | Connect the native structured engine without a model turn; resume only this Worker’s saved native session and retain native configuration | Open native Worker | worker |
 | <code>agents worker read</code> | <code>ID [--cursor N --wait-ms N]</code> | Read rendered conversation snapshots with a revision cursor and reset flag; optional wait up to 15000ms | Native terminal | worker |
@@ -3887,8 +3904,8 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents chat acknowledge</code> | <code>ID [--message ID &#124; --message-ids JSON] [--topic-id ID --exact]</code> | User or Secretary: explicitly mark a topic or exact message set read; private and employee work receipts remain separate | Shared views / group conversations | operator |
 | <code>agents system info</code> | <code>—</code> | Read Core host OS, architecture and deployment capabilities | 后端信息 | identity |
 | <code>agents system directories</code> | <code>[--path PATH]</code> | Browse directories on the Core host (user or Secretary) | 后端目录选择 | operator |
-| <code>agents engine capabilities</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek</code> | Read adapter capabilities, workspace modes and employee kinds before hiring; no credentials or inference | 创建员工能力检查 | identity |
-| <code>agents engine providers</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek</code> | Read every native provider/router and saved profile with active model, URLs, credential fingerprints and source files; never returns keys | Native engine provider catalog | operator |
+| <code>agents engine capabilities</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek&#124;antigravity</code> | Read adapter capabilities, workspace modes and employee kinds before hiring; no credentials or inference | 创建员工能力检查 | identity |
+| <code>agents engine providers</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek&#124;antigravity</code> | Read every native provider/router and saved profile with active model, URLs, credential fingerprints and source files; never returns keys | Native engine provider catalog | operator |
 | <code>agents engine list</code> | <code>—</code> | List registered Coding Agent adapters and public configuration | 引擎管理 | operator |
 | <code>agents engine check</code> | <code>--engine ID [--team NAME] [--force]</code> | Check executable, protocol and authentication without inference | 引擎检测 | operator |
 | <code>agents engine probe</code> | <code>--engine ID --confirm [--model ID]</code> | Explicit, potentially billed OK-only inference on the Core host; temporary workspace and 45s timeout | 引擎测试调用 | operator |
@@ -3957,7 +3974,7 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents schedule trigger</code> | <code>ID --event-id KEY</code> | Submit a deduplicated signal to an event schedule; current caller and original scheduling authority are checked; native channel events cannot be forged | Mission event rule | schedule |
 | <code>agents schedule cancel</code> | <code>ID</code> | Cancel an active run, preserving its history | Mission task editor | schedule |
 | <code>agents settings get</code> | <code>—</code> | Read independent Aexus, Messages and Plan appearances, shared controls and default employee models | 应用设置 | operator |
-| <code>agents engine models</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek [--kind worker&#124;cloud-native-worker] [--team NAME]</code> | List available models before employee creation, without inference; Cloud Native reads the selected host | 创建员工和默认模型设置 | operator |
+| <code>agents engine models</code> | <code>--engine codex&#124;claude&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek&#124;antigravity [--kind worker&#124;cloud-native-worker] [--team NAME] [--model MODEL]</code> | List available models before employee creation, without inference; Cloud Native reads the selected host | 创建员工和默认模型设置 | operator |
 | <code>agents settings set</code> | <code>[--view company&#124;messages&#124;plan &#124; --view-appearance JSON&#124;@file] [--message-wallpaper JSON&#124;@file] [--language en&#124;zh-CN] [--theme violet&#124;blue&#124;mint&#124;teal&#124;cyan&#124;rose&#124;coral&#124;amber&#124;indigo&#124;graphite&#124;custom&#124;white&#124;light&#124;space&#124;black&#124;midnight&#124;sage] [--theme-color #RRGGBB] [--default-permission default&#124;acceptEdits&#124;bypassPermissions] [--explorer-width N] [--explorer-collapsed on&#124;off] [--explorer-tree-collapsed on&#124;off] [--asset-drawer-width N] [--terminal-height N] [--page-zoom N] [--zoom-sensitivity N] [--pan-sensitivity N] [--sidebar-width N] [--board-max-columns N] [--snap-employees on&#124;off] [--team-overview on&#124;off] [--default-codex-model ID] [--default-claude-model ID] [--default-cline-model ID] [--default-pi-model ID]</code> | Patch independent view appearances and shared settings; legacy theme flags target Messages only | 背景、灵敏度和团队索引 | operator |
 | <code>agents view get</code> | <code>—</code> | Read service-owned navigation, including without a window | 当前面板 | operator |
 | <code>agents view open</code> | <code>home&#124;messages&#124;plan&#124;team&#124;employee&#124;workspace&#124;conversation&#124;initialization&#124;plugin&#124;settings [--name NAME] [--employee ID &#124; --chat GROUP_ID &#124; --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab engineering&#124;research&#124;characters&#124;board&#124;workers] [--mission-tab plan]</code> | Open a form, workspace, news channel or employee conversation | 打开资料或会话 | operator |
@@ -3966,7 +3983,7 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents status</code> | <code>—</code> | Is the app running, and how many sessions are live | The app window being open | operator |
 | <code>agents session inbox</code> | <code>—</code> | Read bounded direct-message previews for authorized employees; no model calls, terminal startup or read acknowledgements | Message conversation list | employee.read |
 | <code>agents session list</code> | <code>[--live] [--summary]</code> | List stored cards (or live sessions with --live) | The company floor | employee.read |
-| <code>agents session new</code> | <code>[--engine claude&#124;codex] [--group NAME] [--model M]</code> | Create a session | “+ Hire employee” | operator |
+| <code>agents session new</code> | <code>[--engine claude&#124;codex&#124;cline&#124;pi&#124;opencode&#124;kilo&#124;deepseek&#124;antigravity] [--group NAME] [--model M]</code> | Create a session | “+ Hire employee” | operator |
 | <code>agents session rename</code> | <code>&lt;card-or-session-id&gt; &lt;title&gt;</code> | Rename an employee and its one conversation without moving the folder | 会话名称 / 员工名牌 | operator |
 | <code>agents session open</code> | <code>&lt;cardId&gt;</code> | Open a stored card (resumes its engine context) | Clicking a card | employee.message |
 | <code>agents session send</code> | <code>&lt;id&gt; &lt;text&gt; &#124; --employee ID --text TEXT [--source-view company&#124;messages&#124;plan] [--view VIEW_ID] [--client-message-id ID] [--images JSON] [--files JSON] [--reply-to MESSAGE_ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only]</code> | Send a message to a Worker session | 对话输入框 | employee.message |
