@@ -23,19 +23,19 @@ try{
  await rpc('settings.set',{language:'en',viewAppearance:{messages:{theme:'white'}}});await rpc('group.add',{name:'Research'})
  const secretary=await f.create('Secretary','Research','secretary'),reviewer=await f.create('Reviewer','Research'),author=await f.create('Researcher','Research')
  const group=await rpc('chat.create',{name:'Research delivery',members:[secretary.id,reviewer.id,author.id]})
- await rpc('bot.sync');const bots=await rpc('bot.list'),privateIds=bots.filter(group=>group.bot.kind==='private').map(group=>group.id)
+ await rpc('bot.sync');const bots=await rpc('bot.list'),privateIds=bots.map(group=>group.id);assert.equal(bots.length,remote.length);assert.equal(bots.filter(group=>group.bot.kind==='group').length,1)
  for(const args of [{type:'private'},{folder:'type:private'}])assert.deepEqual((await rpc('messenger.directory',args)).entries.filter(entry=>entry.botKind).map(entry=>entry.id).sort(),[...privateIds].sort())
  if(web){browser=await chromium.launch({headless:true,...(process.platform==='darwin'?{channel:'chrome'}:{})});page=await browser.newPage({viewport:{width:1440,height:1000}});await page.goto('http://127.0.0.1:'+port);await page.locator('.web-login input').fill(fs.readFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim());await page.getByRole('button',{name:'Enter workspace',exact:true}).click()}
  else{await f.stop();const env={...f.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1000'};delete env.ELECTRON_RUN_AS_NODE;const application=process.env.AGENTS_COMPANY_TEST_APP;app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env});page=await app.firstWindow()}
  page.setDefaultTimeout(12000);page.on('pageerror',error=>errors.push(error.message));await page.locator('.company-navigation').waitFor();await page.evaluate(()=>window.agents.call('view.select',{id:'messages'}))
  const choose=async type=>{await page.locator('[id="message-folder-type:'+type+'"]').click()}
  await choose('private')
- for(const bot of bots){const row=page.locator('.message-contact[data-chat="'+bot.id+'"]');if(bot.bot.kind==='private'){await expect(row).toBeVisible();await row.click();await expect(page.locator('.message-thread-header')).toContainText(bot.name)}else await expect(row).toHaveCount(0)}
+ for(const bot of bots){const row=page.locator('.message-contact[data-chat="'+bot.id+'"]');await expect(row).toBeVisible();await row.click();await expect(page.locator('.message-thread-header')).toContainText(bot.name)}
  fs.mkdirSync(out,{recursive:true});await page.screenshot({animations:'disabled',path:path.join(out,'private-conversations.png')});
  await choose('outsource');for(const bot of bots)await expect(page.locator('.message-contact[data-chat="'+bot.id+'"]')).toBeVisible()
  await choose('groups');for(const bot of bots)await expect(page.locator('.message-contact[data-chat="'+bot.id+'"]')).toHaveCount(0)
  await page.locator('.message-contact[data-chat="'+group.id+'"]').click()
- checks.push('Actual synced Dot/Grok private conversations are visible/openable in Private and Outsource; external groups excluded; same native IDs survive desktop restart')
+ checks.push('All three exact synced Dot/Grok endpoints, including the native room, open in Private and Outsource; Groups excludes native endpoints and preserves their raw kind and IDs across restart')
 
  const sid=(await rpc('session.open',{cardId:reviewer.id})).sessionId,hold=path.join(f.control,reviewer.id+'.hold-user');fs.writeFileSync(hold,'')
  const job=await rpc('schedule.create',{spec:{name:'Reservation fixture',enabled:false,afterSeconds:3600,action:{type:'agent',employeeId:reviewer.id,prompt:'SCHEDULE_HOLD'}}});await rpc('schedule.run',{id:job.id})

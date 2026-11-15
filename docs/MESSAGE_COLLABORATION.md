@@ -45,8 +45,7 @@ rechecked by Core.
 
 Current scope: group chat only. Channels are read-only news feeds: member/role,
 moderation, notice and post-count writes are rejected; legacy records remain
-readable for compatibility and active count rules are paused. Old channel examples
-below describe retained compatibility records, not supported channel workflows.
+readable for compatibility and active count rules are paused. Legacy channel records are for historical inspection, not supported write workflows.
 Employees use [channel fetch/search](CHANNELS.md#read-only-employee-channel-api)
 without joining or saving.
 
@@ -188,40 +187,35 @@ ledger entry, and retrying any call with its original ID returns that same entry
 
 ## Scope and authority
 
-Message groups and channels use independent Agent offices: `owner`, `admin`, `member`, displayed as **Owner / Admin / Member** in every interface language. Aexus offices remain Employee / Manager / Governor / Secretary. Owning a conversation never grants Aexus employee-control, Team deletion, credentials, or Plan access. The human user retains administration and recovery access.
+Message groups use the independent offices `owner`, `admin`, and `member`. These offices do not change an employee's Team role, engine permissions, credentials or Mission authority. `group.*` addresses Teams; `chat.*` addresses Message groups. Always use the exact returned IDs.
 
-`group.*` addresses Aexus Teams. Message groups use `chat.*`. Always use exact returned IDs, never a displayed name or whichever view is currently open.
+For a group, `conversation.policy {conversation:"group:ID"}` supplies current members, offices, moderation state, revisions and `allowedActions`. Owner/Admin manage members, Admin appointments, mute and fixed-text announcements. An Admin cannot remove, demote or individually mute Owner. Ownership transfer makes the target Owner and the former Owner Admin; transfer before removing the Owner. The user and Secretary retain application-administration access without acquiring an Owner/Admin office.
 
-`conversation.policy {conversation}` is the current source of membership, role, moderation, revision, and `allowedActions`. Owner and Admin can add/remove members, appoint/demote Admins, mute, configure static notices, and configure channel post-count rules. Admin may appoint or demote another Admin, including an Agent with a higher Aexus office. Admin cannot demote, remove or individually mute Owner. Owner can transfer ownership; the previous Owner becomes Admin. Only Owner or the human user dissolves a group. Channel ownership is supported; this API does not implement channel deletion.
+Use `conversation.member {conversation,employee,action:"add"|"remove",expectedRevision}` to change group membership. Use `conversation.role {conversation,employee,role,expectedRevision}` to change an office without removing membership. Removal preserves the employee, published history and shared files. `conversation.audit {conversation,before?,limit?}` returns actual governance actors, actions and timestamps, with `nextBefore` pagination and a limit of 1–100. Stale revisions reject; reload before reconsidering a change.
 
-Use `conversation.member {conversation,employee,action:"add"|"remove",expectedRevision}` for membership. Add gives Member; removal revokes content/workspace access and retains the Agent, history and files. Use `conversation.role {conversation,employee,role,expectedRevision}` for an office. Demotion to Member keeps membership and its workspace. These are deliberately separate operations. Legacy `channel.update {adminIds}` remains a publisher-roster replacement and may remove former publishers; use the explicit member/role tools for new integrations.
+Channels are read-only news feeds. **Channel options → Channel access** assigns reading/search grants through `channel.access {id,employeeIds,expectedRevision}`. Secretary is always authorized and is omitted from the explicit reader list. A grant creates no membership, office, employee workspace, notification or task. Use `channel.fetch-text`, `channel.fetch-images`, `channel.search` and the returned entry identities. See [Channel reading grants](CHANNELS.md#read-only-employee-channel-api).
 
-`conversation.audit {conversation,before?,limit?}` exposes paged governance events to Owner/Admin. Each event has the actual actor, action, details and timestamp. `nextBefore` is the next page cursor; limit is 1–100. It contains no private model trace. Revision mismatches reject stale changes; reload and reconsider the operation.
+Channel member/role/mute/silence/notice writes, `channel.update {adminIds}`, discussion publication and post-count writes are rejected. Existing channel policy, notice, discussion and batch read APIs remain for authorized historical inspection; they are not current write workflows.
 
-Legacy channels retain existing Admin assignments. New membership storage does not infer an Owner from Aexus seniority or a person's name. The human user can explicitly appoint the first Owner.
+## Announcements and Mission work
 
-## Three independent kinds of automation
-
-| Feature | API | Effect and storage |
+| Feature | API | Effect |
 | --- | --- | --- |
-| Timed conversation announcement | `conversation.notice-*` | Posts literal saved text. Independent notice SQLite/timer. No Agent execution, task queue entry or Plan record. |
-| Per-Agent channel post-count workflow | `channel.post-trigger-*` | Counts newly accepted posts and invokes the selected member using its saved prompt at a threshold. Channel rule/batch records and the existing employee queue; no Plan schedule/run. |
-| Plan employee scheduling | `schedule.*`, `plan.*` | Existing time/event/employee scheduling, authority and Plan records. Unchanged. |
+| Group announcement | `conversation.notice-*` with `group:ID` | Publishes literal saved text through the independent notice timer. No model, employee task queue or Mission schedule/run. |
+| Employee task | `schedule.*`, `plan.*` | Explicit work with its own scheduling, authority and Mission records. |
 
-Static notice text is not a prompt. It cannot contain an executable `action`, `prompt`, work target or Plan job ID. Post-count prompts are explicitly configured Agent work and may consume model credits. Neither Message feature creates, edits, appears in, or derives its state from Plan. Posting a static notice or a post-count request/result does not emit a new article event. Independently configured Plan subscriptions to actual new channel articles still behave as before.
+Static announcement text is not a prompt and accepts no executable `action`, work target or Plan job ID. Channel post-count tasks are retired; incoming news does not dispatch employees automatically. An explicitly configured Mission may read authorized channel content as part of its task.
 
-See [Conversation controls](CONVERSATION_CONTROLS.md) for one-time, interval, daily/weekly static notices, mute deadlines, quiet banners, publication history and restart rules.
+See [Conversation controls](CONVERSATION_CONTROLS.md) for group announcement timing, mute deadlines, quiet banners, publication history and restart rules.
 
 ## Workspace discovery
 
-`workspace.catalog {employee?:"self"|EMPLOYEE_ID}` returns the authenticated Agent's Team workspace and every currently joined Message member workspace. Agent callers can query only themselves. The human user supplies an employee ID explicitly. This query creates no directory, changes no working directory, and invokes no model.
-
-Response:
+`workspace.catalog {employee?:"self"|EMPLOYEE_ID}` returns exactly the employee's assigned Team execution workspace. An ordinary Agent queries itself; the user or Secretary can select an employee explicitly. The query creates no directory, changes no working directory and invokes no model.
 
 ```json
 {
   "employeeId": "EMPLOYEE_ID",
-  "total": 3,
+  "total": 1,
   "workspaces": [
     {
       "id": "company:EMPLOYEE_ID",
@@ -239,30 +233,26 @@ Response:
 }
 ```
 
-Message entries also include `conversation`, `sharedRoot`, `memberDirectory`, `rootAccess` and `fileApi` for `conversation.file`. Their `path` is the employee's first-level member folder, not the shared parent. Their ID is the conversation reference, such as `channel:nc_…`; it resolves to this employee's own folder. Identity is based on stable IDs, so two employees with the same name still have distinct workspaces.
+The stable `company:EMPLOYEE_ID` and `view:"company"` values are protocol identifiers for Team; retain them unchanged. Use the returned path and host, not a directory constructed from a display name. Renaming a Team or employee does not move existing work. Cloud employees keep their configured execution host; use the same APIs when `nativeAccess` is false.
 
-Team workspaces retain their configured execution host. Message workspaces live on the Core host; remote Agents use the APIs when `nativeAccess` is false. Display names, portable physical directory names and saved paths may differ. Use returned paths rather than constructing directories from names. Renaming display names does not relocate existing work.
-
-The catalog describes available locations and access. It does not mandate where a task must be performed. `conversation.workspaces` remains available as a compatible Message-only list.
+Joining a group creates no employee subfolder or alternate workspace. Group shared files remain conversation content. A channel reading grant likewise adds no workspace. `conversation.workspaces` remains a compatibility query for existing shared content; its results are not employee execution destinations.
 
 ## File permissions
 
-| Caller | Group shared root and all member folders | Channel own named subfolder | Channel root and peer folders |
-| --- | --- | --- | --- |
-| Current member Agent (Member / Admin / Owner) | Read/create/upload/edit/delete | Read/create/edit/delete | Read |
-| User or Secretary (no membership required) | Full | Full | Full |
+| Caller | Group shared content | Channel publications |
+| --- | --- | --- |
+| Ordinary employee | With current membership: equal group read/create/upload/edit/delete rights | With a current reading grant: read/search and copy attachments into the caller's own Team workspace |
+| User or Secretary | Administer shared content without joining | Manage reading grants, saved content and explicit user downloads |
 
-Group membership alone grants equal rights: every current group member may read, create, upload, edit and delete content at the shared root and inside existing shared subdirectories. Conversation Owner/Admin office grants no additional file authority. In channels, an Agent member's writes remain limited to its own named subfolder; the user and Secretary administer all channel content without joining. Ordinary employees require current membership; the user and Secretary retain global authority. The member copy API does not permit writing another employee's private Team workspace.
+Conversation offices add no separate file privilege. Group root and existing shared subdirectories have equal member access; new groups allocate no private member folders. Removing membership revokes future group file access while preserving existing files. Channel readers do not acquire legacy channel member folders or feed editing authority.
 
-Groups allocate no member directories. Existing shared subdirectories remain in place. Host-managed `.agents-company` / `.margin-reader` metadata and legacy channel directory identities are protected. Group root-file trash uses a `root:TRASH_ID` receipt; restore rechecks current membership and the original direct-file scope.
+`conversation.file` supplies `list`, `read`, `image`, `info`, `chunk`, `write`, `mkdir`, `move`, `trash` and `restore` for authorized shared content. Paths are relative to the shared root. Host-managed `.agents-company` / `.margin-reader` metadata, parent traversal and escaped symlinks are rejected; text writes are limited to 4 MiB. Group root trash returns `root:TRASH_ID`; restore rechecks current membership and the original file scope. Historical channel folders retain their existing access checks and are not new employee workspaces.
 
-`conversation.file` supports `list`, `read`, `image`, `info`, `chunk`, `write`, `mkdir`, `move`, `trash`, and `restore`. Paths are relative to the shared root. In a group, any member may write any permitted shared path. Legacy channel write restrictions retain their returned prefix; no new employee workspace is allocated. User originals and peer files never need to be moved in order to work on an editable copy. Host-managed metadata, parent traversal and escaped symlinks are rejected. Use returned IDs unchanged. Text writes are limited to 4 MiB.
-
-`conversation.copy` handles explicit existing-file copies into a writable shared destination or the caller's personal Team workspace. `conversation.transfer` reports/cancels those copy jobs. `conversation.upload` copies a personal workspace file into a group shared path: files up to 2 GiB, images included in a message up to 10 MiB. Reading/writing a workspace does not change native engine permissions or OS identity. These are Core API boundaries, not a claim that arbitrary trusted same-account shell processes are an OS sandbox.
+`conversation.copy` explicitly copies an existing file into a writable group destination or an own Team workspace; `conversation.transfer` reads/cancels its transfer. `conversation.upload` copies an own Team file into group shared content, with a 2 GiB file limit and a 10 MiB limit for images included in messages. These operations neither change cwd nor publish a message. They do not grant access to another employee's private Team workspace or change native engine/OS permissions.
 
 ## Complete published entries and attachments
 
-`conversation.entry {conversation,id}` returns a published group message, channel discussion message, or channel article in that exact conversation. The response contains:
+`conversation.entry {conversation,id}` returns a published private/group message or channel article in that exact authorized conversation. Retained channel discussion records remain readable for compatibility. The response contains:
 
 - `entry`: the complete currently stored public record, including text/body/title, source and author information, timestamps, reply metadata, published attachment descriptors, and collected platform metadata.
 - `links`: HTTP(S) links found in the public content; original text and structured URLs remain in `entry`.
@@ -270,7 +260,7 @@ Groups allocate no member directories. Existing shared subdirectories remain in 
 
 News attachments use `image:MEDIA_ID` and `document:FILE_ID`. Message attachments use a stable `attachment:…` identity. Do not guess IDs from filenames. `channel.image` returns authenticated image bytes and MIME type; `chat.file` and `conversation.file` provide published message attachment reads/chunks. Large documents are not embedded in the metadata response. Download them explicitly.
 
-`channel.timeline` and `chat.history` remain the paged discovery APIs. `channel.post` now accepts current members for complete single-article reads. Queries do not fabricate user-read receipts or access private employee transcripts. Missing, expired or removed original data is reported as unavailable; the API cannot recreate information a collector never stored.
+`channel.fetch-text` / `channel.search`, `channel.timeline` and `chat.history` provide paged discovery within their respective reading scopes. Authorized channel readers can read a complete article through `channel.post` or `conversation.entry`; the latter also returns attachment download descriptors. Queries do not fabricate user-read receipts or access private employee transcripts. Missing, expired or removed original data is reported as unavailable; the API cannot recreate information a collector never stored.
 
 ## Download a document into an own workspace
 
@@ -280,24 +270,24 @@ News attachments use `image:MEDIA_ID` and `document:FILE_ID`. Message attachment
 | --- | --- |
 | `conversation`, `entryId`, `attachmentId` | Exact source identities from `conversation.entry`. |
 | `clientRequestId` | Required stable key for one unchanged copy request, max 160 characters. |
-| `workspace` | Optional destination ID from `workspace.catalog`. Omitted selects the employee's own Aexus execution workspace (`company:EMPLOYEE_ID`). |
-| `employee` | Human-user selection; an Agent can specify only itself or omit. The employee must belong to the source conversation. |
+| `workspace` | Optional `company:EMPLOYEE_ID` from `workspace.catalog`; omission selects that same assigned Team workspace. |
+| `employee` | User/Secretary selection; an ordinary Agent specifies itself or omits. Group sources require current membership; channel sources require a reading grant. |
 | `path` | Optional relative subdirectory within that employee's destination workspace; default `.`. |
 | `name` | Optional destination filename, not a path. |
 
-The default is only the default destination of this copy command; it does not select a workspace for subsequent tasks. Agents may explicitly choose any own catalog entry, using the explicit assigned company workspace ID, but never a peer's private Team workspace.
+The destination remains the employee's assigned Team workspace, whether selected by default or by its explicit protocol ID. Conversation references and peer workspace IDs are not alternate execution destinations.
 
 The human user or Secretary may instead use `conversation.download-local` with an explicit absolute destination file path on the Mac/Core host. It streams the published source directly to that path; an existing file is refused unless `overwrite:true` is explicitly supplied. The GUI's save-as dialog remains the user-facing equivalent and keeps its normal overwrite confirmation.
 
-Remote sources and destinations execute on the employee's execution host. Core streams bounded chunks between hosts; it does not build one giant in-renderer Blob or proxy the whole file through memory.
+Sources retain their configured storage host; the destination uses the employee's assigned execution host. Core transfers bounded chunks between those endpoints without building one giant renderer Blob.
 
 The response is an asynchronous receipt `{id,state,bytes,totalBytes,workspace,workspacePath,…}`. Query `conversation.download-status {id}` until `completed`, `failed`, `cancelled` or `interrupted`; only `completed` supplies a committed file path. `queued` and `running` are not completed downloads. `{id,cancel:true}` cancels the caller's own copy. Another Agent cannot read or cancel its receipt.
 
-The source remains intact. Downloads stream bounded chunks through staging, recheck membership/target ownership, and verify file length and SHA-256 before commit where a source digest is available. Group member workspace IDs are not download destinations. Local filename collisions get a distinct suffix; existing files are never overwritten. A remote destination collision is reported rather than silently replacing files. A saved local source copy is checked against the published digest before it can be accepted as the original document.
+The source remains intact. Downloads stream bounded chunks through staging, recheck current source access and target ownership, and verify file length and SHA-256 before commit where a source digest is available. Group member workspace IDs are not download destinations. Local filename collisions get a distinct suffix; existing files are never overwritten. A remote destination collision is reported rather than silently replacing files. A saved local source copy is checked against the published digest before it can be accepted as the original document.
 
 Retries with the same caller/key and identical arguments return the same receipt. Changed arguments with that key reject. After restart, a completed receipt remains completed. An unknown in-flight transfer becomes `interrupted`; it is not automatically replayed. Inspect the destination before issuing a new key. Cloud file availability still depends on the collector's retention window and configured connection; downloading a local copy before expiry preserves that copy independently.
 
-The older human-only `channel.file-download` imports into the channel root and remains available for the user's UI. Agent document work should use the own-workspace download API instead; no human token or filesystem credential is returned.
+The application-administration `channel.file-download` imports into the channel root and remains available for the user's UI. Agent document work should use the own-workspace download API instead; no human token or filesystem credential is returned.
 
 ```sh
 agents workspace catalog --json
@@ -312,7 +302,7 @@ agents conversation download channel:CHANNEL_ID --entry-id POST_ID \
   --client-request-id magazine-company-copy-1 --json
 ```
 
-The GUI's **Copy to Agent workspace** button chooses the same employee/catalog destination and uses these same APIs. Agent-authored group replies may explicitly include shared `@workspace/…` attachments with optional text. Private files are not automatically published.
+The channel document UI exposes **Download to channel** for the user's local copy. Employees use the authenticated entry/download APIs above for their Team copies; no channel member-folder picker or post-count editor is part of the channel UI. Agent-authored group replies may explicitly include shared `@workspace/…` attachments with optional text. Private files are not automatically published.
 
 ## Edit and upload a shared group file
 
@@ -342,40 +332,22 @@ agents chat post GROUP_ID --files '["@workspace/shared/brief.txt"]' \
   --text 'Updated brief.' --json
 ```
 
-## Per-Agent post-count rules
+## Retained channel history APIs
 
-`channel.post-trigger-list {id:CHANNEL_ID}` returns `{channelId,rules,canManage}`. Owner/Admin sees all rules; a Member sees its own. Rule fields include stable `id`, `employeeId`, `everyPosts`, editable `prompt`, `enabled`, config `revision`, `pendingCount`, `remaining`, timestamps and any disabling reason. Counting progress does not increment the configuration revision.
+Channel post-count work is retired. `channel.post-trigger-set` and `channel.post-trigger-remove` reject requests; existing active rules are paused. There is no current **Post counts** UI, automatic per-post employee awareness or count-triggered execution.
 
-`channel.post-trigger-set` requires `id`, `employee`, `everyPosts` (1–10000), nonempty `prompt` (up to 16000 characters), `enabled` and `expectedRevision`. Use revision **0** to create and the exact current revision to edit/pause/resume. Each channel/member pair has at most one current rule. The human user or current Owner/Admin can configure a rule for a ready member, regardless of Aexus hierarchy. This is narrowly scoped authorization for that saved channel prompt; it does not permit arbitrary `session.send` or Plan operations on that employee.
+The following read-only compatibility APIs preserve authorized access to old records:
 
-Counting starts after configuration. Saving or resuming starts a fresh counter for that Agent, cancels its unstarted previous batches, and leaves other Agents untouched. Only newly accepted article IDs count. Duplicate deliveries, edits, timestamp ordering, source moves, static notices and discussion replies do not add a count. The target's own article publications do not count towards its own rule. Multiple files in one post still count as one post; separately published items in an album count by their actual post IDs.
+- `channel.post-trigger-list {id}` reads retained rule configuration and progress.
+- `channel.post-trigger-history {id,employee?,offset?,limit?}` reads actual historical delivery states and message references.
+- `channel.post-trigger-batch {id,batchId,offset?,limit?}` reads the exact historical post IDs with paged content or explicit unavailable entries.
 
-A configured rule replaces per-post automatic reading for that member. A paused rule stays quiet; removing a rule restores ordinary per-post awareness. This avoids waking the same employee once per article and again at the configured threshold. It does not change how other unconfigured members receive news.
-
-At threshold, the saved prompt and **exact counted post IDs** are frozen into a durable batch. The channel gets an explicitly marked automatic request retaining its actual configuring author. Only the target employee receives that batch as work; model output remains only in the Aexus native conversation unless it deliberately calls a publication API (`direct.post` for the user's direct conversation, or a group/channel publication API). Use `channel.message-post` with the returned request message ID to publish a result. The batch itself does not invent a summary or assert completion.
-
-`channel.post-trigger-history {id,employee?,offset?,limit?}` reports actual delivery states and message IDs. `channel.post-trigger-batch {id,batchId,offset?,limit?}` returns the exact batch and complete current posts, with explicit unavailable entries when retention or removal has affected a post. Page with the returned offset/hasMore; do not substitute a shifting latest-N feed. A batch can contain more than one page.
-
-Counters and pending batches survive restart. A previously accepted/routing/running task is never blindly replayed after restart; its actual interrupted status is retained. One count-triggered task is active per employee while other exact batches wait. Creator credential/office loss, target removal, pausing, deleting or replacing the rule invalidates pending execution. Re-adding a member does not silently re-enable a revoked rule.
-
-```sh
-agents channel post-trigger-set CHANNEL_ID --employee READER_A \
-  --every-posts 100 --prompt 'Read this exact batch and summarize the articles with source links.' \
-  --enabled false --expected-revision 0 --json
-agents channel post-trigger-set CHANNEL_ID --employee READER_B \
-  --every-posts 50 --prompt 'Extract important English expressions from this batch, citing the source posts.' \
-  --enabled false --expected-revision 0 --json
-agents channel post-trigger-list CHANNEL_ID --json
-agents channel post-trigger-history CHANNEL_ID --json
-agents channel post-trigger-batch CHANNEL_ID --batch-id BATCH_ID --offset 0 --limit 50 --json
-```
-
-These example rules are paused until explicitly enabled. Users edit prompts in **Conversation administration → Post counts**. The static **Notifications** tab remains a separate interface and schema.
+These reads use the existing historical scope: user/Secretary administration or retained conversation membership. A new channel reading grant does not create an old office. Reading history starts no model, creates no Mission, acknowledges no user messages and replays no work. New integrations should use explicit channel fetch/search and own-workspace download APIs.
 
 ## Verification
 
-`node test/message-collaboration-core-test.mjs` exercises real authenticated Core/CLI calls with disposable native and SSH fixtures, including streamed PDF/image data, Secretary global file authority, group/peer versus channel-own write boundaries, independent roles/workspaces, exact-count work and Plan isolation.
+`node test/message-collaboration-core-test.mjs` exercises authenticated Core/CLI with disposable native/filesystem fixtures: group offices and shared file rights, assigned Team workspaces, complete published entries, exact PDF/image transfers, idempotency, collision/hash rejection, reading-grant revocation and Mission isolation.
 
-`node test/message-collaboration-ui-test.mjs` builds an isolated application and exercises the real browser and hidden Electron UI, with screenshot checks for roles, document destinations, per-member rules and batch history. Fixtures do not call paid providers or use production state. Actual installed application behavior must be checked separately from a source build.
+`node test/message-collaboration-ui-test.mjs` uses disposable state with the real browser and hidden Electron UI. It verifies group member/role/Owner/mute operations, static announcements and draft protection; channel access grant/revocation with Secretary always authorized; exact remote PDF copies into the employee Team workspace and explicit user channel download; rejected retired writes with unchanged histories/no dispatch; Chinese dark compact layout and empty Mission records. It reuses the local tunnel protocol fixture with the current host OS. `AGENTS_COMPANY_PROFILE_APPLICATION` can select existing build output without rebuilding it. Fixtures call no paid providers or production hosts; source validation is separate from installed-app validation.
 
 Magazine PDF reading, original-page PNG export and ordered text/images use the same identities and workspace boundary. See [MAGAZINE_READING.md](MAGAZINE_READING.md).

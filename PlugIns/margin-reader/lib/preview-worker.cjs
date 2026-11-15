@@ -12,10 +12,8 @@ async function result(canvas, title, extra = {}) {
 }
 async function pdfCover(bytes, filename, pageNumber=1, options={}) {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const base = path.dirname(require.resolve('pdfjs-dist/package.json'));
   const task = pdfjs.getDocument({ data: new Uint8Array(bytes), password:options.password, verbosity: 0, isEvalSupported: false,
-    cMapUrl: path.join(base,'cmaps') + path.sep, cMapPacked: true,
-    standardFontDataUrl: path.join(base,'standard_fonts') + path.sep, wasmUrl: path.join(base,'wasm') + path.sep });
+    ...require('./pdf-resources.cjs')() });
   try {
     const pdf = await task.promise, meta = await pdf.getMetadata().catch(() => ({}));
     const title=meta.info?.Title||path.basename(filename),operation=options.pdfOperation||'cover';

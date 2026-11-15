@@ -1,6 +1,6 @@
 ---
 
-持续目标与原有排期不同：`mission.*` 保存需要明确验收成功才结束的目标，支持秘书监督/独立完成、多名执行人和提醒时间；`schedule.*` 保持本文件所述的定时、重复与事件运行语义。原生运行成功不等于目标成功。私聊/群聊中的持久选择题使用 `question.*`，跨布局筛选及清理使用 `plan.preferences`。完整说明可通过 `agents api docs core/missions` 或 [持续任务与聊天选择题](docs/MISSIONS_AND_QUESTIONS.md) 阅读。
+持续目标与原有排期不同：`mission.*` 保存需要明确验收成功才结束的目标，支持秘书监督/独立完成、多名执行人和提醒时间；`schedule.*` 保持本文件所述的定时、重复与事件运行语义。原生运行成功不等于目标成功。私聊/群聊中的持久选择题使用 `question.*`，跨布局筛选及清理使用 `plan.preferences`。完整说明可通过 `agents api docs core/missions` 或 [持续任务与聊天选择题](../../docs/MISSIONS_AND_QUESTIONS.md) 阅读。
 schema: agents-company.cli/v1
 module: host-scheduler
 version: '1'
@@ -201,7 +201,7 @@ Saved-job preview accepts `{id,patch?,after?,count?}`. A patch is temporary and 
 
 ## Plan extension (additive v1)
 
-Plan is now a first-class view over this same scheduler. `afterSeconds`, `employeeId:"self"`, monthly rules, `maxOccurrences`, Plan metadata, creation idempotency and revision checks are documented in [PLAN.md](PLAN.md). All previous job IDs and schedules remain valid. Ordinary Employees may schedule themselves through a self-target-only delegation; scheduling others requires a strictly lower role within the existing Team/global control scope. `schedule:changed` broadcasts saved database changes. The host must remain online and awake.
+Plan is now a first-class view over this same scheduler. `afterSeconds`, `employeeId:"self"`, monthly rules, `maxOccurrences`, Plan metadata, creation idempotency and revision checks are documented in [PLAN.md](../../PLAN.md). All previous job IDs and schedules remain valid. Ordinary Employees may schedule themselves through a self-target-only delegation; scheduling others requires a strictly lower role within the existing Team/global control scope. `schedule:changed` broadcasts saved database changes. The host must remain online and awake.
 
 ## Read-model layout extension
 
@@ -213,7 +213,7 @@ Plan is now a first-class view over this same scheduler. `afterSeconds`, `employ
 
 `schedule.create/update/preview/run/resume/trigger` 等目标操作均受同一权限边界保护。撤权后旧自动授权保持停用；合法调用者显式 update/resume 才重新授权，manual run/signal trigger 使用当前调用者的本次授权，不能借用原作者凭据，manual run 也不会重新启用旧自动委派。后台到期运行复核保存的授权，实际执行和异步准备之后再次复核。新增 `action.channelId` 明确关联员工引擎频道，要求目标持续具有发布成员身份。旧 UI 的 `source:channel:ID` 仅迁移为经过校验的频道引用，不授予权限。移除成员会停用关联任务。
 
-事件规则现支持 `signal`、`channel.posted`、`message.received`、`session.completed`、`monitor.output`、`monitor.exited`。来源分别使用 channelId、conversation、employeeId 或 monitorId，只有对应字段可填写。先保存事件再执行委派/启动监测程序。忙碌、冷却和工作时间窗将事件持久排队，每次最多合并 100 条，其余继续等待；稳定 ID 去重，重启保留队列，已开始后中断的执行不盲目重做。Dot 的首条确认或安静间隔不表示整个任务完成。见 [事件计划与程序监控](docs/EVENT_TASKS.md) 和 [外部 Worker](docs/BOT_WORKERS.md)。
+事件规则现支持 `signal`、`channel.posted`、`message.received`、`session.completed`、`monitor.output`、`monitor.exited`。来源分别使用 channelId、conversation、employeeId 或 monitorId，只有对应字段可填写。先保存事件再执行委派/启动监测程序。忙碌、冷却和工作时间窗将事件持久排队，每次最多合并 100 条，其余继续等待；稳定 ID 去重，重启保留队列，已开始后中断的执行不盲目重做。Dot 的首条确认或安静间隔不表示整个任务完成。见 [事件计划与程序监控](../../docs/EVENT_TASKS.md) 和 [外部 Worker](../../docs/BOT_WORKERS.md)。
 
 事件计划立即出现在 Plan，等待时 nextAt 为 null；预览不虚构日期，日历展示真实执行记录。事件与定时任务共用原有持久化、保留策略、执行器和取消入口，不另建计时器或员工会话。频道表单复用完整 PlanEditor，尚未配置发布计划时明确显示自动发布未配置。详细字段和 CLI 示例见 PLAN.md 的 Unified automation 章节。
 
@@ -236,7 +236,7 @@ also accept `--expected-revision` to guard against a changed task.
 
 ## Conversation notices are separate from Plan
 
-Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Aexus managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Aexus roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Aexus managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Aexus roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](../../docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
 
 
 ## Secretary 应用管理

@@ -7,11 +7,11 @@
     },
     {
       "directory": "mini-notion",
-      "version": "1.26.47"
+      "version": "1.26.48"
     },
     {
       "directory": "margin-reader",
-      "version": "0.11.0"
+      "version": "0.11.1"
     }
   ]
 }

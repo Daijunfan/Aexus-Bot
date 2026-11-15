@@ -14,12 +14,13 @@ if (checked.status !== 0) process.exit(checked.status || 1);
 const pdf = path.dirname(require.resolve('pdfjs-dist/package.json'));
 const vendor = path.join(root, 'ui', 'vendor');
 fs.mkdirSync(vendor, { recursive: true });
-for (const [source, destination] of [['build/pdf.mjs','pdf.mjs'], ['build/pdf.worker.mjs','pdf.worker.mjs'], ['web/pdf_viewer.css','pdf_viewer.css'], ['cmaps','cmaps'], ['standard_fonts','standard_fonts'], ['wasm','wasm'], ['LICENSE','PDFJS-LICENSE']]) {
+for (const [source, destination] of [['build/pdf.mjs','pdf.mjs'], ['build/pdf.worker.mjs','pdf.worker.mjs'], ['web/pdf_viewer.css','pdf_viewer.css'], ['web/images','images'], ['cmaps','cmaps'], ['standard_fonts','standard_fonts'], ['wasm','wasm'], ['LICENSE','PDFJS-LICENSE']]) {
   const from = path.join(pdf, source); if (fs.existsSync(from)) fs.cpSync(from, path.join(vendor, destination), { recursive: true });
 }
 const katex=path.dirname(require.resolve('katex/package.json'));fs.cpSync(path.join(katex,'dist'),path.join(vendor,'katex'),{recursive:true});
 fs.mkdirSync(out, { recursive: true });
 for (const name of ['agents-company.plugin.json','schema.json','runtime.cjs','cli.cjs','API.md','README.md','LOCAL_PARITY.md','AGENT_ACCEPTANCE.md','LICENSE','THIRD_PARTY_NOTICES.md','package.json','package-lock.json','docs','lib','tui','terminal-visuals','ui']) { if (['tui','terminal-visuals'].includes(name) && !fs.existsSync(path.join(root, name))) continue; fs.cpSync(path.join(root, name), path.join(out, name), { recursive: true }); }
+console.log(`PASS ${require('./check-ui-resources.cjs')(path.join(out, 'ui'))} packaged UI resource references.`);
 // Runtime dependencies are carried with the package; the host does not install or supply them.
 fs.cpSync(path.join(root, 'node_modules'), path.join(out, 'node_modules'), { recursive: true, dereference: true, filter: source => path.basename(source) !== '.bin' && path.basename(source) !== '.cache' });
 fs.chmodSync(path.join(out, 'cli.cjs'), 0o755);

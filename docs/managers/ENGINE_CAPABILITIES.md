@@ -2,7 +2,7 @@
 
 核对本机 Codex CLI 0.145.0、Claude Code 2.1.233 及安装的官方 Agent SDK。
 操作共用 Core、Unix socket CLI API 和桌面界面，不通过模拟点击执行业务。
-接口用法见 [API.md](API.md#employee-cloning-and-native-workflow-tools)。
+接口用法见 [API.md](../../API.md#employee-cloning-and-native-workflow-tools)。
 
 | 能力 | Codex | Claude Code | 桌面入口 |
 | --- | --- | --- | --- |

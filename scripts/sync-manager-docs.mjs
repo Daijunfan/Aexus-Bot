@@ -4,6 +4,8 @@ import {compileCliInputs} from '../src/shared/cli-contract.ts'
 
 const root=path.resolve(import.meta.dirname,'..'),destination=path.join(root,'docs/managers'),check=process.argv.includes('--check')
 const read=name=>fs.readFileSync(path.join(root,name),'utf8')
+// These source documents live at the root; their generated copies live two levels below it.
+const managerLinks=text=>text.replace(/(\]\()((?![a-z][\w+.-]*:|#|\/)[^\s)]+)(?=[\s)])/gi,(_match,open,url)=>open+'../../'+url)
 const {COMMANDS:commands,CLI_COMMANDS}=await import('../src/shared/api-registry.ts')
 if(commands.length<100||new Set(commands.map(item=>item.name)).size!==commands.length)throw Error('Could not read the full unique CLI registry')
 const code=value=>'<code>'+value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('|','&#124;')+'</code>'
@@ -25,12 +27,12 @@ const guide=[
   '# Aexus Bot Manager CLI 完整手册','',
   read('docs/managers/INTRO.md').trim(),'',
   '## 根项目 API 全文','',
-  api.replace(/\[`(PlugIns\/[^`]+)`\]\(PlugIns\/[^)]+\)/g,'`$1`').trim(),'',
+  managerLinks(api).trim(),'',
   '## 定时任务完整规范','',
   '以下为宿主调度器全文，包括一次性、间隔和按周任务、时区与工作时段、模型/思考覆盖、运行记录和取消。','',
-  scheduler.trim(),''
+  managerLinks(scheduler).trim(),''
 ].join('\n')
-const files=new Map([['commands.json',JSON.stringify(commands,null,2)+'\n'],['API.md',guide],...['PLAN.md','SCHEDULER.md','PLUGIN_SPEC.md','ENGINE_CAPABILITIES.md','ARCHITECTURE.md','PERMISSIONS.md'].map(name=>[name,read(name)])])
+const files=new Map([['commands.json',JSON.stringify(commands,null,2)+'\n'],['API.md',guide],...['PLAN.md','SCHEDULER.md','PLUGIN_SPEC.md','ENGINE_CAPABILITIES.md','ARCHITECTURE.md','PERMISSIONS.md'].map(name=>[name,managerLinks(read(name))])])
 if(read('docs/managers/AGENTS.md')!==read('docs/managers/CLAUDE.md'))throw Error('Manager agent instructions must match across engines')
 for(const name of files.keys())if(fs.existsSync(path.join(root,'Agents-Managers',name)))throw Error('Manager Team root must not contain documentation: '+name)
 for(const [name,content] of files){const file=path.join(destination,name);if(check){if(!fs.existsSync(file)||fs.readFileSync(file,'utf8')!==content)throw Error('Manager documentation is stale: '+name)}else fs.writeFileSync(file,content)}

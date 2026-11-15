@@ -1,6 +1,6 @@
 {
   "name": "marginreader",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "description": "Standalone local-first CLI and terminal workspace for reading, excerpts, mind maps and FSRS review",
   "license": "MIT",
   "engines": {
@@ -106,13 +106,16 @@
     "pdfkit": "0.17.2",
     "pptxgenjs": "4.0.1",
     "proper-lockfile": "4.1.2",
-    "sanitize-html": "2.17.7",
+    "sanitize-html": "2.18.2",
     "string-width": "7.2.0",
     "svg-to-pdfkit": "0.1.8",
     "ts-fsrs": "5.4.2",
     "word-extractor": "1.0.4"
   },
   "overrides": {
+    "pptxgenjs": {
+      "image-size": "2.0.3"
+    },
     "speech-rule-engine": {
       "@xmldom/xmldom": "0.9.12"
     }

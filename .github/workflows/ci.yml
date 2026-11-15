@@ -17,7 +17,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04, macos-15, windows-2022]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 90
     env:
       CI: 'true'
       AGENTS_COMPANY_TEST: '1'
@@ -37,6 +37,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: npm ci
+      - run: node scripts/check-doc-links.mjs
       - run: npm run setup
       - run: npm run build:plugins:release
       - run: npm run typecheck

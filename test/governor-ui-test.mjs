@@ -1,35 +1,31 @@
-import {localTunnel} from './fixtures/local-tunnel.mjs'
+// Real single Board plus the explicitly retained appointment component; no retired primary navigation.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import {createRequire} from 'node:module'
-import {execFile} from 'node:child_process'
-import {promisify} from 'node:util'
 import assert from 'node:assert/strict'
-const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url),{_electron:electron,expect}=require('@playwright/test'),run=promisify(execFile)
-const temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-governor-ui-'))),control=path.join(temp,'fixture'),remote=path.join(temp,'remote'),bin=path.join(temp,'bin')
-for(const directory of [control,remote,bin])fs.mkdirSync(directory);fs.writeFileSync(path.join(control,'release-all'),'')
-fs.writeFileSync(path.join(bin,'ssh'),'#!/bin/sh\nfor arg in "$@"; do last="$arg"; done\nexec sh -c "$last"\n',{mode:0o755})
-const env={...process.env,AGENTS_COMPANY_TUNNEL_DIR:localTunnel(path.join(temp,'tunnel'),root),PATH:bin+path.delimiter+process.env.PATH,AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_HIDDEN:'1',CODEX_BIN:path.join(root,'test/fixtures/initialization-codex.cjs'),CODEX_HOME:path.join(temp,'codex'),AC_INIT_FIXTURE:control};delete env.ELECTRON_RUN_AS_NODE
-const app=await electron.launch({executablePath:process.env.AGENTS_COMPANY_TEST_APP||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[root],env}),page=await app.firstWindow()
-const cli=async(...args)=>{const response=JSON.parse((await run(process.execPath,[root+'/bin/agents',...args,'--json'],{env,timeout:20000})).stdout);assert.ok(response.ok,response.error);return response.data}
+import {createRequire} from 'node:module'
+import {_electron as electron,expect} from '@playwright/test'
+import {fixtureCore} from './fixtures/headless-core.mjs'
+import {localTunnel} from './fixtures/local-tunnel.mjs'
+import {desktopExecutable} from './fixtures/desktop-app.mjs'
+import {retainedOffice} from './fixtures/retained-office.mjs'
+import {chooseOption} from './fixtures/app-select.mjs'
+const root=process.cwd(),require=createRequire(import.meta.url),output=path.resolve(process.env.AGENTS_COMPANY_TEST_ARTIFACTS||'artifacts/governor-ui'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'aexus-governor-tunnel-')),remote=path.join(temp,'remote');fs.mkdirSync(remote);fs.mkdirSync(output,{recursive:true})
+let f,app,page,component;const errors=[],checks=[],pass=text=>{checks.push(text);console.log('PASS '+text)}
 try{
- await page.locator('.infinite-canvas').waitFor();await cli('group','add','Any Team')
- const host=await cli('host','create','--data',JSON.stringify({name:'Demo',host:'fixture',os:process.platform==='win32'?'windows':process.platform==='darwin'?'macos':'linux',defaultDirectory:remote}));await cli('group','add','Cloud','--mode','cloud','--host-id',host.id,'--remote-dir',remote)
- await page.locator('.add-employee').click();await page.locator('select[name=group]').selectOption('Cloud')
- await expect(page.locator('select[name=managementRole] option')).toHaveCount(4)
- await page.locator('select[name=managementRole]').selectOption('governor');await expect(page.locator('select[name=workEnvironment]')).toHaveValue('local')
- await page.locator('input[name=title]').fill('Governor');await page.locator('select[name=model]').selectOption('gpt-6-luna');await page.locator('.save-employee').click()
- await expect(page.locator('.office-panel')).toHaveCount(0)
- const card=(await cli('session','list')).sessions.find(c=>c.title==='Governor');assert.equal(card.managementRole,'governor');assert.equal(card.workEnvironment,'local');assert.equal(card.remote,null)
- await expect.poll(async()=>(await cli('session','status','--employee',card.id))[0].initialization.status).toBe('ready')
- await expect(page.locator(`[data-card-id="${card.id}"] .employee-management`)).toHaveText('Governor')
- await cli('view','open','employee','--employee',card.id);await expect(page.locator('.management-role-settings select')).toHaveValue('governor');await expect(page.locator('.global-manager')).toHaveCount(0)
- await expect(page.locator('.management-role-settings')).toContainText('across Teams')
- await page.locator('.management-role-settings select').selectOption('manager');await expect.poll(async()=>(await cli('session','list')).sessions.find(c=>c.id===card.id).managementRole).toBe('manager')
- await cli('view','close');await page.locator('.add-employee').click();await page.locator('select[name=kind]').selectOption('cloud-native-worker')
- await expect(page.locator('select[name=managementRole] option[value=governor]')).toHaveJSProperty('disabled',true)
- await expect(page.locator('select[name=managementRole] option[value=manager]')).toHaveJSProperty('disabled',true)
- assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(w=>!w.isVisible())))
- console.log('PASS hidden UI: four employee-owned roles, Governor in arbitrary Cloud Team uses a Mac workspace, initialization and badge, user role changes, no inherited-Team checkbox, cloud-native supervisor choices disabled')
-}finally{await app.close();fs.rmSync(temp,{recursive:true,force:true})}
+ component=await retainedOffice(false);f=await fixtureCore({AGENTS_COMPANY_TUNNEL_DIR:localTunnel(path.join(temp,'tunnel'),root)})
+ const call=async(cmd,args={},auth=null)=>{const reply=await f.request(auth,cmd,args);assert.ok(reply.ok,cmd+': '+reply.error);return reply.data}
+ await call('group.add',{name:'Any Team'});const host=await call('host.create',{name:'Demo',host:'fixture',os:process.platform==='win32'?'windows':process.platform==='darwin'?'macos':'linux',defaultDirectory:remote});await call('group.add',{name:'Cloud',mode:'cloud',hostId:host.id,remoteDir:remote})
+ await f.stop();const env={...f.env,AGENTS_COMPANY_HIDDEN:'1'};delete env.ELECTRON_RUN_AS_NODE;const application=process.env.AGENTS_COMPANY_TEST_APP;app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env});page=await app.firstWindow();page.setDefaultTimeout(15000);page.on('pageerror',error=>errors.push(error.message));await expect(page.locator('.agent-board')).toBeVisible()
+ await page.locator('.add-employee').click();await chooseOption(page,page.locator('select[name=group]'),'Cloud');await expect(page.locator('select[name=managementRole] option')).toHaveCount(4)
+ await page.locator('.employee-advanced-settings summary').click();await chooseOption(page,page.locator('select[name=workEnvironment]'),'local');await expect(page.locator('select[name=managementRole] option[value=governor]')).toHaveJSProperty('disabled',false);await chooseOption(page,page.locator('select[name=managementRole]'),'governor');await page.locator('input[name=title]').fill('Governor');await chooseOption(page,page.locator('select[name=model]'),'gpt-6-luna');await page.locator('.save-employee').click();await expect(page.locator('#root .office-panel')).toHaveCount(0)
+ const card=(await call('session.list')).sessions.find(card=>card.title==='Governor');assert.equal(card.managementRole,'governor');assert.equal(card.workEnvironment,'local');assert.equal(card.remote,null);await f.ready(card.id);await expect(page.locator('#root [data-employee="'+card.id+'"]>header h3')).toHaveText('Governor');assert.ok(card.cwd.startsWith(f.env.AGENTS_COMPANY_PROJECTS));const identity={id:card.id,cwd:card.cwd,engine:card.engine,threadId:(await call('session.list')).sessions.find(item=>item.id===card.id).threadId};fs.writeFileSync(path.join(card.cwd,'keep.txt'),'original workspace')
+ pass('Visible creation dropdowns offer all four roles; explicitly choosing the Core-host folder in a Cloud Team creates and initializes the local Governor without changing its execution host')
+ await call('view.open',{kind:'employee',employee:card.id});await expect(page.locator('.profile-badges')).toContainText('Governor');await expect(page.locator('#root .management-role-settings')).toHaveCount(0);await page.getByRole('button',{name:'Edit profile',exact:true}).click();await expect(page.locator('.profile-fixed-role')).toContainText('Read-only');await expect(page.locator('select[name=managementRole]')).toHaveCount(0);await call('view.close')
+ await component.attach(page);await page.evaluate(id=>window.retainedOfficeFixture.show('management',id),card.id);const management=page.locator('#retained-office-fixture .management-role-settings');await expect(management).toContainText('across Teams');await expect(management.locator('.global-manager')).toHaveCount(0);await chooseOption(page,management.locator('select'),'manager');await expect.poll(async()=>(await call('session.list')).sessions.find(item=>item.id===card.id).managementRole).toBe('manager');await page.evaluate(()=>window.retainedOfficeFixture.hide());await expect(page.locator('#root .agent-board')).toBeVisible();await call('view.open',{kind:'employee',employee:card.id});await expect(page.locator('.profile-badges')).toContainText('Manager');await expect(page.locator('#root .management-role-settings')).toHaveCount(0);await call('view.close')
+ const token=await f.token(card.id),secretary=await call('card.create',{title:'Secretary',group:'Any Team',managementRole:'secretary',engine:'codex',model:'gpt-6-luna'});await f.ready(secretary.id);for(const target of [card.id,secretary.id]){const reply=await f.request(token,'card.management-role',{id:target,role:target===card.id?'secretary':'employee'});assert.equal(reply.ok,false,'Only the user may appoint or demote a Secretary')}
+ pass('The retained real ManagementPanel appoints through the authorized Core operation; the current Board/profile reads back Manager while profile rank stays read-only and Agent Secretary appointment/demotion is denied')
+ await page.locator('.add-employee').click();await chooseOption(page,page.locator('select[name=group]'),'Cloud');const details=page.locator('.employee-advanced-settings');if(!await details.evaluate(node=>node.open))await details.locator('summary').click();await chooseOption(page,page.locator('select[name=kind]'),'cloud-native-worker');await expect(page.locator('select[name=managementRole] option[value=governor]')).toHaveJSProperty('disabled',false);await expect(page.locator('select[name=managementRole] option[value=manager]')).toHaveJSProperty('disabled',false);await expect(page.locator('select[name=managementRole] option[value=secretary]')).toHaveJSProperty('disabled',true);await page.locator('.employee-form').getByRole('button',{name:'Cancel',exact:true}).click();await expect(page.locator('#root .office-panel')).toHaveCount(0)
+ const final=(await call('session.list')).sessions.find(item=>item.id===card.id);assert.deepEqual({id:final.id,cwd:final.cwd,engine:final.engine,threadId:final.threadId},identity);assert.equal(fs.readFileSync(path.join(card.cwd,'keep.txt'),'utf8'),'original workspace');assert.deepEqual(errors,[]);assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())));await page.screenshot({path:path.join(output,'board.png'),animations:'disabled'});pass('Cloud-native Manager/Governor choices follow current role authority and Secretary remains local-only; cancel preserves data and the original native identity, workspace and file remain unchanged')
+ fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:true,checks,scope:'current single Board + isolated retained appointment component',errors,productionDataUsed:false,paidModelCalls:0},null,2)+'\n')
+}catch(error){await page?.screenshot({path:path.join(output,'failure.png')}).catch(()=>{});fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({error:error.stack,checks,errors},null,2)+'\n');throw error}finally{if(page){await page.evaluate(()=>window.retainedOfficeFixture?.unmount()).catch(()=>{});const form=page.locator('#root .employee-form');if(await form.isVisible().catch(()=>false))await form.getByRole('button',{name:'Cancel',exact:true}).click({timeout:3000}).catch(()=>{})}await app?.close();await f?.close();component?.dispose();fs.rmSync(temp,{recursive:true,force:true})}

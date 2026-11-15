@@ -12,7 +12,7 @@
 
 `engineering.*` 以同一 Core/CLI 身份执行。用户/Secretary 配置、创建和编辑工程；读权限限实际参与者与应用管理者。职级与 Team 必须匹配真实员工，每个 Employee 节点只有一位 Manager，Governor 唯一。拓扑与协作线不会改变 Aexus 权限。Employee 只能派发自己直属的原生 Worker 并执行本节点初验，直属 Manager 负责复验及链路确认，工程 Governor 负责返工与最终确认。用户/Secretary 可显式执行这些分离阶段，保留真实署名和证据。
 
-周期与事件唤醒保留原创建者的真实委派身份/凭据，执行前再次检查当前职级、Team、项目轮次和授权。撤权、删除、暂停和返工会使旧通知失效，不能借存储内容缓存权限。工程原生 Worker 保持实际直属员工、执行主机、工作目录和原生工具协议；系统只能停止工程中记录的精确 Worker 回执，不清理其他任务或按进程名杀进程。双重验收、链路完成与最终证据未满足时，关联 Mission 不允许绕过工程直接完成。见 [Engineering 契约](docs/ENGINEERING.md)。
+周期与事件唤醒保留原创建者的真实委派身份/凭据，执行前再次检查当前职级、Team、项目轮次和授权。撤权、删除、暂停和返工会使旧通知失效，不能借存储内容缓存权限。工程原生 Worker 保持实际直属员工、执行主机、工作目录和原生工具协议；系统只能停止工程中记录的精确 Worker 回执，不清理其他任务或按进程名杀进程。双重验收、链路完成与最终证据未满足时，关联 Mission 不允许绕过工程直接完成。见 [Engineering 契约](../../docs/ENGINEERING.md)。
 
 ## 客户端导航
 
@@ -24,7 +24,7 @@
 
 `question.*` 沿用私聊读取或当前群成员权限，提问只能署名真实的员工本人；不能用它给其他人伪造私聊。Secretary 可以管理应用，但不能通过 `question.answer` 冒充用户作答。Other 文本、超时 fallback、不可自动决定的 null 期限均由 Core 保存并检查。等待中的原轮次不能继续 Core 写操作；新到达的独立任务不受这一问题阻塞。回复只恢复原提问人，并检查其凭据、当前身份、群访问和固定 Governor 任务视图。
 
-`plan.preferences` 仅用户/Secretary 可写，控制显示和已结束任务的保留策略。自动清理保留实际配置者的身份，并在执行前核验其当前应用管理权和凭据；不得清除未成功的持续任务，也不终止仍有后续计划的工作。`plan.archive` 按当前任务管理权检查目标，归档只影响显示。详见 [任务与选择题契约](docs/MISSIONS_AND_QUESTIONS.md)。
+`plan.preferences` 仅用户/Secretary 可写，控制显示和已结束任务的保留策略。自动清理保留实际配置者的身份，并在执行前核验其当前应用管理权和凭据；不得清除未成功的持续任务，也不终止仍有后续计划的工作。`plan.archive` 按当前任务管理权检查目标，归档只影响显示。详见 [任务与选择题契约](../../docs/MISSIONS_AND_QUESTIONS.md)。
 
 群文件管理沿用既有“当前群成员共享内容权利相同”的规则：`conversation.files` 只读文件元数据；`conversation.file-trash`、`conversation.file-restore` 校验当前成员资格、已发布路径、文件版本及回收记录。用户/Secretary 可不入群管理，其他 Aexus 职级不授予群内容权限。删除可恢复且影响所有引用同一文件的群消息；原正文、作者、任务和阅读回执保留。版本冲突整批拒绝，恢复不覆盖同名新文件，撤权后不能读取或恢复旧回收记录。原生外部 Bot 文件没有本地删除能力，接口明确拒绝，不借本地工作区假装删除原生数据。
 
@@ -34,7 +34,7 @@
 
 大结果续读 `api.result` 仅能读取同一身份、凭据和客户端已经收到的原生工具响应快照；每次仍认证当前凭据，不允许跨员工、跨凭据或跨客户端借用引用。结果不增加资源权限，不会重新执行原操作；15 分钟、容量淘汰或 Core 重启后失效。此快照与新闻收藏、持久缓存和共享工作区文件无关。参数预检、紧凑目录及公开 schema 不改变角色或原生写入批准规则。
 
-管理权限属于员工的 `managementRole`，与 Team 名称、工作目录、目录标记和视图无关。CLI 与 UI 进入相同的 Core 授权入口。完整命令见 [API.md](API.md)。`management.topology.teams` 从同一授权入口返回逐 Team 的 allowedActions、deleteBlockedReason、governorIds 和 isOwnTeam，避免把少数受保护 Team 误判为全部不可删除。
+管理权限属于员工的 `managementRole`，与 Team 名称、工作目录、目录标记和视图无关。CLI 与 UI 进入相同的 Core 授权入口。完整命令见 [API.md](../../API.md)。`management.topology.teams` 从同一授权入口返回逐 Team 的 allowedActions、deleteBlockedReason、governorIds 和 isOwnTeam，避免把少数受保护 Team 误判为全部不可删除。
 
 ## 群组协作
 
@@ -42,7 +42,7 @@
 
 邀请只允许已认证员工加入当前本地群，不提供 Core 登录身份或 Aexus 职位。审批、撤销、封禁、创建者当前群权限和 Agent 凭据均在执行时复查。旧的 member-add 也不能绕过封禁。消息作者可移除自己的共享内容，Owner/Admin 可移除任意消息；恢复不重放已接受的工作。保留策略仅清理新消息的公开正文，原文件和恢复记录保留。
 
-内容保护限制应用内转发、跨会话引用、导出、下载和群外复制，CLI 同样执行；不声称限制可信操作系统账号、截图或已进入原生上下文的文本。本地贴纸收藏由用户/Secretary 管理，署名和发送仍走既有上传与群消息流程。完整约定见 [群组协作](docs/GROUP_COLLABORATION.md)。
+内容保护限制应用内转发、跨会话引用、导出、下载和群外复制，CLI 同样执行；不声称限制可信操作系统账号、截图或已进入原生上下文的文本。本地贴纸收藏由用户/Secretary 管理，署名和发送仍走既有上传与群消息流程。完整约定见 [群组协作](../../docs/GROUP_COLLABORATION.md)。
 
 ## 四种职位
 
@@ -169,7 +169,7 @@ Message 的右键菜单复用原有 Core 授权；移除悬浮操作条不改变
 
 全员在各自原生会话与 FIFO 中阅读。Core 校验凭据和成员资格后记录接收/已读；awareness 表示知悉，work 随后执行任务。公开发言使用明确的 `chat.post` 或讨论工具；原生会话输出只属于 Team 完整会话，不会自动成为私聊或群聊消息。给用户私聊使用 `direct.post`。发言不改变员工控制权限或工作区范围。
 
-用户对 Team/原生会话、Messages 私聊、群聊和频道的已读按精确 reply/direct message/entry 记录：原生工作台与 Aexus 共用同一 `lastReply` 的精确 `replyId`/`readAt`；Messages 私聊条目使用独立的 `direct.acknowledge`/`readSequence`，与原生 `lastReply` 互不清除。原生工作 turn 中最后一次显式 `chat.post` 到群的 `groupReply` 绑定本轮最终原生 `lastReply`，任一侧已读经同一 Core `session.acknowledge`/`chat.acknowledge` 同步，群读水印覆盖该序号时关联 `lastReply` 同为已读。没有群发布的原生回执只在原生工作台/Aexus 间共通，不会写入 Messages；不同 turn、消息 ID 或群不会仅因文字相同而合并。旧 `replyId` 不清除新回复读态；群先读、turn 稍后结束时新 `lastReply` 继承已读，绑定跨重启保留。关联只同步读态，不向群成员暴露 Aexus 正文。Agent 的 `delivery.readAt` 仍是独立工作回执，普通员工不能代用户确认，用户或 Secretary 可显式调用 API。用户仅可编辑本人发布的消息。删除群组保留可恢复历史、员工、工作区及独立调度。接口参数见 [API.md](API.md)。
+用户对 Team/原生会话、Messages 私聊、群聊和频道的已读按精确 reply/direct message/entry 记录：原生工作台与 Aexus 共用同一 `lastReply` 的精确 `replyId`/`readAt`；Messages 私聊条目使用独立的 `direct.acknowledge`/`readSequence`，与原生 `lastReply` 互不清除。原生工作 turn 中最后一次显式 `chat.post` 到群的 `groupReply` 绑定本轮最终原生 `lastReply`，任一侧已读经同一 Core `session.acknowledge`/`chat.acknowledge` 同步，群读水印覆盖该序号时关联 `lastReply` 同为已读。没有群发布的原生回执只在原生工作台/Aexus 间共通，不会写入 Messages；不同 turn、消息 ID 或群不会仅因文字相同而合并。旧 `replyId` 不清除新回复读态；群先读、turn 稍后结束时新 `lastReply` 继承已读，绑定跨重启保留。关联只同步读态，不向群成员暴露 Aexus 正文。Agent 的 `delivery.readAt` 仍是独立工作回执，普通员工不能代用户确认，用户或 Secretary 可显式调用 API。用户仅可编辑本人发布的消息。删除群组保留可恢复历史、员工、工作区及独立调度。接口参数见 [API.md](../../API.md)。
 
 ## Plan 与自主排期
 
@@ -296,7 +296,7 @@ Secretary 可查询全部 Plan 排期与保留的执行记录，包含目标员�
 
 Current group conversation offices (Owner/Admin/Member) are independent of Aexus managementRole and grant no extra file authority. Ordinary employees need actual conversation Owner/Admin to moderate; the user and Secretary administer all groups without joining, while retaining the actual caller identity. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` retains its own employee scheduling contracts. Channel post-count workflows are retired; employees explicitly use channel.fetch-text, channel.fetch-images or channel.search.
 
-`conversation.entry/download/download-status` provides full stored published content and a verified copy into the caller's own Aexus execution workspace by default (or its explicit company workspace ID), never a peer's private workspace. `conversation.download-local` is limited to the user or Secretary and writes to an explicitly chosen absolute Mac/Core-host path, refusing an existing file unless overwrite is explicit. Group members may then edit the personal copy and use `conversation.upload` to create (never overwrite) or update a shared file with `expectedVersion`; group files are limited to 2 GiB and message images to 10 MiB. Uploading never publishes a message: use explicit `chat.post` with `@workspace/…` paths. Receipts are durable, deduplicate identical retries, and an interrupted request is not replayed after restart. See [MESSAGE_COLLABORATION.md](docs/MESSAGE_COLLABORATION.md) for these separate contracts. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+`conversation.entry/download/download-status` provides full stored published content and a verified copy into the caller's own Aexus execution workspace by default (or its explicit company workspace ID), never a peer's private workspace. `conversation.download-local` is limited to the user or Secretary and writes to an explicitly chosen absolute Mac/Core-host path, refusing an existing file unless overwrite is explicit. Group members may then edit the personal copy and use `conversation.upload` to create (never overwrite) or update a shared file with `expectedVersion`; group files are limited to 2 GiB and message images to 10 MiB. Uploading never publishes a message: use explicit `chat.post` with `@workspace/…` paths. Receipts are durable, deduplicate identical retries, and an interrupted request is not replayed after restart. See [MESSAGE_COLLABORATION.md](../../docs/MESSAGE_COLLABORATION.md) for these separate contracts. See [CONVERSATION_CONTROLS.md](../../docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
 
 ## Asset center
 

@@ -21,7 +21,7 @@ function prepare(){
   const vendor=path.join(stage,'ui','vendor');fs.mkdirSync(vendor,{recursive:true});
   const expected=JSON.parse(fs.readFileSync(path.join(stage,'package.json'))).dependencies;for(const name of ['pdfjs-dist','katex'])if(require(name+'/package.json').version!==expected[name])throw Error('Installed asset dependency differs from pinned package: '+name);
   const pdf=path.dirname(require.resolve('pdfjs-dist/package.json'));
-  for(const [a,b]of [['build/pdf.mjs','pdf.mjs'],['build/pdf.worker.mjs','pdf.worker.mjs'],['web/pdf_viewer.css','pdf_viewer.css'],['cmaps','cmaps'],['standard_fonts','standard_fonts'],['wasm','wasm'],['LICENSE','PDFJS-LICENSE']])fs.cpSync(path.join(pdf,a),path.join(vendor,b),{recursive:true});
+  for(const [a,b]of [['build/pdf.mjs','pdf.mjs'],['build/pdf.worker.mjs','pdf.worker.mjs'],['web/pdf_viewer.css','pdf_viewer.css'],['web/images','images'],['cmaps','cmaps'],['standard_fonts','standard_fonts'],['wasm','wasm'],['LICENSE','PDFJS-LICENSE']])fs.cpSync(path.join(pdf,a),path.join(vendor,b),{recursive:true});
   fs.cpSync(path.join(path.dirname(require.resolve('katex/package.json')),'dist'),path.join(vendor,'katex'),{recursive:true});
   const lock=JSON.parse(fs.readFileSync(path.join(stage,'package-lock.json')));fs.writeFileSync(path.join(stage,'npm-shrinkwrap.json'),JSON.stringify(lock,null,2)+'\n');const inventory=Object.entries(lock.packages).filter(([k])=>k).map(([k,v])=>({name:k.slice(k.lastIndexOf('node_modules/')+13),version:v.version,license:v.license||(k==='node_modules/png-js'&&v.version==='1.1.0'?'MIT (verified installed LICENSE)':'UNSPECIFIED: inspect upstream license'),optional:!!v.optional,...(v.os?{os:v.os}:{}),...(v.cpu?{cpu:v.cpu}:{})}));fs.writeFileSync(path.join(stage,'DEPENDENCY_LICENSES.json'),JSON.stringify({source:'package-lock.json',dependencies:inventory},null,2)+'\n');
   fs.copyFileSync(path.join(path.dirname(require.resolve('katex/package.json')),'LICENSE'),path.join(vendor,'KATEX-LICENSE'));
@@ -30,6 +30,7 @@ function prepare(){
   fs.writeFileSync(path.join(output,'npm-pack.json'),JSON.stringify(packed,null,2)+'\n');
   const archive=path.join(output,packed.filename),unpack=path.join(temp,'unpack');fs.mkdirSync(unpack);run('tar',['-xzf',archive,'-C',unpack],temp,env);
   const payload=walk(path.join(unpack,'package'));
+  require('./check-ui-resources.cjs')(path.join(unpack,'package','ui'));
   for(const f of payload){if(/(^|\/)(node_modules|workspaces|credentials|artifacts|dist-plugin|\.margin-reader|\.agents-company|\.git)(\/|$)|source-location|(^|\/)\.env(?:\.|$)|docs\/(?:HISTORY|HOURLY_|VERIFICATION)/i.test(f.path))throw Error('Forbidden package file: '+f.path);const bytes=fs.readFileSync(path.join(unpack,'package',f.path));if(bytes.includes(Buffer.from(root))||bytes.includes(Buffer.from('/Users/djf/')))throw Error('Private source path in '+f.path);}
   const meta=JSON.parse(fs.readFileSync(path.join(unpack,'package/package.json')));if(meta.dependencies&&meta.bundledDependencies)throw Error('Native dependencies must be installed by target-platform npm');
   for(const f of inputs){const current=path.join(root,f.path);if(!fs.existsSync(current)||hash(fs.readFileSync(current))!==f.sha256)throw Error('Source changed during packaging; retry after integration: '+f.path);}

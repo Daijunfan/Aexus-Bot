@@ -7,9 +7,9 @@ import {Icon} from './Icon'
 import {PluginIcon} from './PluginIcon'
 import {MessageMenu} from './MessageMenu'
 
-type Props={plugins:PluginDescriptor[];active:string|null;settingsOpen:boolean;canvasTools:boolean;editing:boolean;overview:boolean;sharedOpen:boolean;checkingHosts:boolean;onToggleEdit:()=>void;onRefreshHosts:()=>void;onOpen:(id:string)=>void;onHome:()=>void;onSettings:()=>void;act:(cmd:string,args?:Record<string,unknown>)=>Promise<any>}
+type Props={teams?:string[];onTeam?:(name:string)=>void;plugins:PluginDescriptor[];active:string|null;settingsOpen:boolean;canvasTools:boolean;editing:boolean;overview:boolean;sharedOpen:boolean;checkingHosts:boolean;onToggleEdit:()=>void;onRefreshHosts:()=>void;onOpen:(id:string)=>void;onHome:()=>void;onSettings:()=>void;act:(cmd:string,args?:Record<string,unknown>)=>Promise<any>}
 /** Global tools occupy the header; content keeps the full window width. */
-export function ApplicationLauncher({plugins,active,settingsOpen,canvasTools,editing,overview,sharedOpen,checkingHosts,onToggleEdit,onRefreshHosts,onOpen,onHome,onSettings,act}:Props){
+export function ApplicationLauncher({teams=[],onTeam,plugins,active,settingsOpen,canvasTools,editing,overview,sharedOpen,checkingHosts,onToggleEdit,onRefreshHosts,onOpen,onHome,onSettings,act}:Props){
  useI18n()
  const [menu,setMenu]=useState<{kind:'settings'|'plugins';x:number;y:number;trigger:HTMLButtonElement}|null>(null),[error,setError]=useState(''),gear=useRef<HTMLButtonElement>(null)
  useEffect(()=>setMenu(null),[active,settingsOpen,canvasTools])
@@ -30,6 +30,7 @@ export function ApplicationLauncher({plugins,active,settingsOpen,canvasTools,edi
     <hr/>
     <button type="button" role="menuitemcheckbox" aria-checked={sharedOpen} className="application-files" onDragOver={dragOver} onDrop={drop} onClick={()=>run(()=>{void act('view.shared',{enabled:!sharedOpen})})}><Icon name="folder-opened"/><span>{t('Files and assets')}</span>{sharedOpen&&<Icon className="application-menu-trailing" name="check"/>}</button>
     {canvasTools&&<><button type="button" role="menuitemcheckbox" aria-checked={editing} onClick={()=>run(onToggleEdit)}><Icon name="edit"/><span>{t('Edit canvas')}</span>{editing&&<Icon className="application-menu-trailing" name="check"/>}</button><button type="button" role="menuitemcheckbox" aria-checked={overview} onClick={()=>run(()=>{void act('settings.set',{showTeamOverview:!overview})})}><Icon name="location"/><span>{t('Team overview')}</span>{overview&&<Icon className="application-menu-trailing" name="check"/>}</button></>}
+    {onTeam&&teams.length>0&&<><hr/><span className="messenger-menu-label">{t('Team')}</span>{teams.map(name=><button key={name} type="button" role="menuitem" aria-label={t('Open Team {0}',[name])} onClick={()=>run(()=>onTeam(name))}><Icon name="folder-opened"/><span>{name}</span><Icon className="application-menu-trailing" name="chevron-right"/></button>)}</>}
     <button type="button" role="menuitem" disabled={checkingHosts} aria-busy={checkingHosts} onClick={()=>run(onRefreshHosts)}><Icon className={checkingHosts?'is-checking':''} name="refresh"/><span>{t(checkingHosts?'Checking hosts…':'Refresh host status')}</span></button>
     <hr/><button type="button" role="menuitem" onClick={()=>run(onHome)}><Icon name="home"/><span>{t('Back to Team')}</span></button>
    </>}

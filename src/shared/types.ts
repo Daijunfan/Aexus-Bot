@@ -225,8 +225,8 @@ export type MessageReply={id:string;role:'user'|'assistant';author?:PrincipalRef
 /** Outgoing evidence belongs to this task; incoming employee reply receipts are separate. */
 export type OutboundReceipt={taskId:string;deliveredAt?:number;readAt?:number}
 export type Item =
-  | { role: 'user'; id: string; directSequence?:number; createdAt?:number; author?:PrincipalRef; sourceView?:import('./message-source').MessageSourceView; context?:import('./message-source').NativeInputContext; outbound?:OutboundReceipt;delivery?:{state:string;error?:string}; text: string; images?:string[];files?:MessageAttachment[];reply?:MessageReply }
-  | { role: 'assistant'; id: string; questionId?:string; directSequence?:number; author?:PrincipalRef; createdAt?:number; blocks: Block[];images?:string[];files?:MessageAttachment[];reply?:MessageReply }
+  | { role: 'user'; id: string; directSequence?:number; createdAt?:number; author?:PrincipalRef; sourceView?:import('./message-source').MessageSourceView; context?:import('./message-source').NativeInputContext; outbound?:OutboundReceipt;delivery?:{state:string;error?:string}; text: string; images?:string[];imageNames?:Record<string,string>;files?:MessageAttachment[];reply?:MessageReply }
+  | { role: 'assistant'; id: string; questionId?:string; directSequence?:number; author?:PrincipalRef; createdAt?:number; blocks: Block[];images?:string[];imageNames?:Record<string,string>;files?:MessageAttachment[];reply?:MessageReply }
   | { role: 'notice'; id: string; createdAt?:number; text: string; tone: 'info' | 'error' }
 
 export type ActivityPreview={unread?:boolean;replyId?:string;kind:'speech'|'thinking'|'tool';text:string;detail?:string;tool?:string;running?:boolean}

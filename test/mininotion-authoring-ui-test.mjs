@@ -1,3 +1,5 @@
+import {pluginPage} from './fixtures/plugin-page.mjs';
+import {desktopExecutable} from './fixtures/desktop-app.mjs';
 // Real hosted renderer, same declared authoring API; packaged-app override supported.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -11,16 +13,16 @@ const root=path.resolve(import.meta.dirname,'..'),run=promisify(execFile);
 const temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-authoring-ui-')));
 const out=process.env.AGENTS_COMPANY_TEST_ARTIFACTS||path.join(root,'artifacts/mininotion-agent-delivery/authoring-ui');
 fs.mkdirSync(out,{recursive:true});
-const env={...process.env,AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_PLUGIN_DIRS:''};
+const env={...process.env,AGENTS_COMPANY_TEST_BOTS_URL:'http://127.0.0.1:1',AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_PLUGIN_DIRS:''};
 for(const key of Object.keys(env))if(key.startsWith('AGENTS_COMPANY_TOKEN')||['ELECTRON_RUN_AS_NODE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_URL','AGENTS_COMPANY_PLUGIN_RPC','AGENTS_COMPANY_BUILTIN_PLUGINS','MINI_NOTION_SOCKET','MINI_NOTION_WORKSPACE','MINI_NOTION_DATA_DIR'].includes(key))delete env[key];
-const app=await electron.launch({executablePath:process.env.AGENTS_COMPANY_TEST_APP||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[root],env});
+const app=await electron.launch({executablePath:desktopExecutable(process.env.AGENTS_COMPANY_TEST_APP)||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[root],env});
 let page=await app.firstWindow();page.setDefaultTimeout(25000);
 const errors=[],checks=[];
 const cli=async(...args)=>{const r=JSON.parse((await run(process.execPath,[path.join(root,'bin/agents'),...args,'--json'],{env,cwd:root,timeout:30000,maxBuffer:16e6})).stdout);assert.ok(r.ok,r.error);return r.data};
 const api=(method,params={})=>cli('plugin','call','mininotion',method,'--params',JSON.stringify(params));
 const pass=text=>{checks.push(text);console.log('PASS '+text)};
 try{
- await page.locator('.infinite-canvas').waitFor();
+ await page.locator('.agent-board').waitFor();
  const descriptor=await cli('plugin','describe','mininotion');assert.equal((descriptor.plugin?.version??descriptor.version),JSON.parse(fs.readFileSync(path.join(root,'PlugIns/mini-notion/package.json'),'utf8')).version);
  const note=await api('page.create',{title:'CLI 技术分析',color:'white'});
  const child=await api('page.create',{title:'子页面调用链',color:'white',parentId:note.id});
@@ -31,7 +33,7 @@ try{
  const legacy=JSON.parse(fs.readFileSync(legacyLocation.absolutePath,'utf8'));
  legacy.page.blocks.push({id:'legacy-table-fixture',type:'table',content:{rows:[{cells:[[{type:'text',text:'旧格式表格可见'}]]}]}});
  fs.writeFileSync(legacyLocation.absolutePath,JSON.stringify(legacy));await api('fs.sync');
- const opened=app.waitForEvent('window');await cli('plugin','open','mininotion');page=await opened;page.setDefaultTimeout(25000);page.on('pageerror',e=>errors.push(e.message));await page.locator('.sidebar').waitFor();
+ const opened=app.waitForEvent('window');await cli('plugin','open','mininotion');page=await pluginPage(await opened);page.setDefaultTimeout(25000);page.on('pageerror',e=>errors.push(e.message));await page.locator('.sidebar').waitFor();
  await api('page.open',{pageId:note.id});
  await expect(page.getByRole('textbox',{name:'页面标题',exact:true})).toHaveValue(note.title);
  await expect(page.locator('.bn-editor table')).toContainText('共享领域服务');

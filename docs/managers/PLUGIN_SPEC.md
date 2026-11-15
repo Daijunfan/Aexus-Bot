@@ -6,7 +6,7 @@
 
 ## Package
 
-复制 [`examples/plugin-starter`](examples/plugin-starter) 即可从一个无依赖示例开始。
+复制 [`examples/plugin-starter`](../../examples/plugin-starter) 即可从一个无依赖示例开始。
 每个包必须包含 `agents-company.plugin.json`：
 
 ```json
@@ -166,7 +166,7 @@ Work 员工启动前，宿主会准备所选插件的运行时和 Workspace 内�
 窗口直接加载插件页面，不使用 iframe，也不增加宿主侧栏或工具框；公司画布仍在主窗口中。
 没有 Team 也可使用插件。相同插件和工作区重复打开时聚焦已有窗口。
 `view open plugin --plugin ID` 保留为兼容入口；`plugin view ID` 是仅返回 URL 的底层接口。
-窗口打开、关闭、位置、尺寸、最小化/全屏都可用宿主 CLI 操作，见 [API.md](API.md)。
+窗口打开、关闭、位置、尺寸、最小化/全屏都可用宿主 CLI 操作，见 [API.md](../../API.md)。
 `agents serve` 同样支持这些 Core 命令，返回 `attached:false`，不需要 Electron。
 每个插件视图使用独立的本机端口和随机令牌前缀。不暴露 Electron/Node 或宿主 IPC 对象。
 
@@ -303,7 +303,7 @@ MiniNotion 的 `--workspace` 模式将 Markdown、代码/文本、CSV、图片�
 ## Host scheduling foundation (v1)
 
 未来插件需要安排宿主员工工作时，复用 `agents schedule` / socket `schedule.*`。
-完整规范见 [SCHEDULER.md](SCHEDULER.md)。`source` 可保存插件 ID 以便过滤；它不授予权限。
+完整规范见 [SCHEDULER.md](../../SCHEDULER.md)。`source` 可保存插件 ID 以便过滤；它不授予权限。
 模型、思考覆盖是临时的，目录和引擎身份来自已有员工；不要另启隐藏会话或私自提升权限。
 宿主运行才会触发，插件必须呈现真实的失败、跳过、取消结果。本版本没有把它接入 MiniNotion。
 

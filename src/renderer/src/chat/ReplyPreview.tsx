@@ -5,7 +5,7 @@ import {Icon} from '../components/Icon'
 import {MotionStrip} from './MotionStrip'
 
 export function replyAuthor(reply:MessageReply,employeeName:string,names:Record<string,string>){
-  if(reply.conversation)return reply.author?.kind==='operator'?uiText('You'):reply.authorName??uiText('Original sender')
+  if(reply.conversation)return reply.author?.kind==='operator'?uiText('You'):reply.authorName??(reply.author?.kind==='agent'?names[reply.author.employeeId]??uiText('Former teammate'):uiText('Original sender'))
   return reply.role==='assistant'?employeeName:reply.author?.kind==='operator'?uiText('You'):reply.author?.kind==='agent'?names[reply.author.employeeId]??uiText('Former teammate'):uiText('Original message')
 }
 

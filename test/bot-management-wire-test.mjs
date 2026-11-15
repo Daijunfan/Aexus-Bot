@@ -55,9 +55,9 @@ try{
  const transport=path.join(root,'src/main/bot-bridge/http.ts'),origin='http://127.0.0.1:'+server.address().port,entry=path.join(temp,'catalog.cjs')
  const fixtureEntry=path.join(temp,'entry.ts');fs.writeFileSync(fixtureEntry,'export * from '+JSON.stringify(path.join(root,'src/main/bot-bridge/catalog.ts'))+';export {remoteBots} from '+JSON.stringify(path.join(root,'src/main/bot-bridge/client.ts'))+';')
  await build({entryPoints:[fixtureEntry],outfile:entry,bundle:true,platform:'node',format:'cjs',packages:'external',logLevel:'silent',plugins:[{name:'isolated-native-management-wire',setup(b){
-  b.onResolve({filter:/^\.\/credentials$/},args=>args.importer.includes('/bot-bridge/')?{path:'credentials',namespace:'fixture'}:undefined)
+  b.onResolve({filter:/^\.\/credentials$/},args=>args.importer.replaceAll('\\','/').includes('/bot-bridge/')?{path:'credentials',namespace:'fixture'}:undefined)
   b.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:`export class CredentialError extends Error{};export const getChatGptAuth=()=>({accountId:'fixture-dot',userId:'fixture-user',accessToken:'not-a-credential',expired:false});export const getGrokAuth=()=>({accountId:'fixture-grok',userId:'fixture-user',accessToken:'not-a-credential',expired:false});export const getGrokComputerKeys=()=>{throw Error('No native computers in this fixture')};export const decodeJwt=()=>null`,loader:'js'}))
-  b.onResolve({filter:/^\.\/http$/},args=>/bot-bridge\/(dots|grok|client)\.ts$/.test(args.importer)?{path:'http',namespace:'wire'}:undefined)
+  b.onResolve({filter:/^\.\/http$/},args=>/bot-bridge\/(dots|grok|client)\.ts$/.test(args.importer.replaceAll('\\','/'))?{path:'http',namespace:'wire'}:undefined)
   b.onLoad({filter:/.*/,namespace:'wire'},()=>({contents:`import * as wire from ${JSON.stringify(transport)};const target=value=>{const url=new URL(value);return ${JSON.stringify(origin)}+(url.hostname==='chatgpt.com'?'/dots'+url.pathname.replace('/backend-api',''):'/grok/'+url.pathname.split('/').at(-1))+url.search};export const httpJson=(url,options)=>wire.httpJson(target(url),options);export const httpStream=(url,options)=>wire.httpStream(target(url),options)`,loader:'js',resolveDir:root}))
  }}]})
  const native=require(entry),pass=message=>{checks.push(message);console.log('PASS '+message)}

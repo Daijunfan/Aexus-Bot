@@ -2,7 +2,7 @@
   "name": "agents-company",
   "productName": "Aexus Bot",
   "version": "0.58.1",
-  "description": "Open CLI-first infrastructure for coding-agent interaction, experiments, games and user-defined work",
+  "description": "A private AI intelligence team for information gathering, document reading, collaborative analysis and ongoing tasks.",
   "main": "./out/main/index.js",
   "author": {
     "name": "Avalon",
@@ -329,7 +329,7 @@
     "@types/react-dom": "^19.1.7",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.0.0",
-    "electron": "44.4.4",
+    "electron": "44.11.3",
     "electron-builder": "^26.15.3",
     "electron-vite": "^4.0.0",
     "emojibase-data": "17.0.0",
@@ -339,10 +339,14 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "remark-math": "6.0.0",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.5",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
+  },
+  "overrides": {
+    "minimatch@>=7 <11.0.1": "11.0.1",
+    "katex": "$katex"
   },
   "bin": {
     "agents": "./bin/agents",

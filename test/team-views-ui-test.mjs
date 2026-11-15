@@ -1,61 +1,17 @@
-import {desktopExecutable} from './fixtures/desktop-app.mjs'
+// Single Team Board; saved Team scopes still project role employees and clean native Workers.
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
-import {createRequire} from 'node:module'
-import {execFile} from 'node:child_process'
-import {promisify} from 'node:util'
 import assert from 'node:assert/strict'
-
-const require=createRequire(import.meta.url),{_electron:electron,expect}=require('@playwright/test'),run=promisify(execFile),root=path.resolve(import.meta.dirname,'..')
-const temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-agents-nav-ui-')))
-const env={...process.env,AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'960'};delete env.ELECTRON_RUN_AS_NODE
-const app=await electron.launch({executablePath:desktopExecutable(process.env.AGENTS_COMPANY_TEST_APP)||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[root],env}),page=await app.firstWindow()
-const cli=async(...args)=>{const reply=JSON.parse((await run(process.execPath,[root+'/bin/agents',...args,'--json'],{env,timeout:20000})).stdout);assert.ok(reply.ok,reply.error);return reply.data}
-const errors=[];page.on('pageerror',error=>errors.push(error.message))
+import {createRequire} from 'node:module'
+import {_electron as electron,expect} from '@playwright/test'
+import {fixtureCore} from './fixtures/headless-core.mjs'
+import {desktopExecutable} from './fixtures/desktop-app.mjs'
+const root=process.cwd(),require=createRequire(import.meta.url),output=path.resolve(process.env.AGENTS_COMPANY_TEST_ARTIFACTS||'artifacts/team-views');fs.mkdirSync(output,{recursive:true})
+let f,app,page;const errors=[],checks=[],pass=text=>{checks.push(text);console.log('PASS '+text)}
 try{
-  await page.locator('.infinite-canvas').waitFor()
-  for(const name of ['Alpha','Beta'])await cli('group','add',name)
-  await expect(page.locator('[data-department="Alpha"]')).toHaveCount(1)
-  await expect(page.locator('[data-department="Beta"]')).toHaveCount(1)
-
-  const agents=page.locator('.company-navigation').getByRole('button',{name:'Team',exact:true})
-  const message=page.locator('.company-navigation').getByRole('button',{name:'Message',exact:true})
-  await expect(agents).toBeVisible();await expect(message).toBeVisible()
-  await expect(page.locator('.company-navigation').getByRole('button',{name:'Messages',exact:true})).toHaveCount(0)
-  await expect(page.locator('.company-view-menu')).toHaveCount(0)
-  assert.equal(await agents.getAttribute('aria-haspopup'),null)
-  assert.equal(await page.locator('.company-view-trigger').getAttribute('aria-expanded'),null)
-
-  // A saved subview still exists, but the Agents tab never exposes or selects it.
-  const focus=await cli('team-view','create','--name','Focus','--teams','["Alpha"]')
-  await cli('team-view','select',focus.id)
-  await expect(page.locator('[data-department="Beta"]')).toHaveCount(0)
-  await expect(agents).toBeVisible()
-  await expect(page.locator('.company-view-trigger')).toHaveAttribute('title','Agents')
-
-  // Selecting Agents resolves the stable main view and keeps every saved view intact.
-  await agents.click()
-  await expect(page.locator('[data-department="Alpha"]')).toHaveCount(1)
-  await expect(page.locator('[data-department="Beta"]')).toHaveCount(1)
-  const saved=await cli('team-view','list')
-  const kept=saved.views.find(view=>view.id===focus.id)
-  assert.ok(kept,'saved team view identity is preserved')
-  assert.deepEqual(kept.teams,['Alpha'])
-
-  await message.click()
-  await expect(page.locator('.message-view')).toBeVisible()
-  await page.locator('.company-navigation').getByRole('button',{name:'Team',exact:true}).click()
-  await expect(page.locator('.infinite-canvas')).toBeVisible()
-
-  // Chinese labels stay singular/wording: 消息 and 员工, without the removed subview picker.
-  await cli('settings','set','--language','zh-CN')
-  await page.reload();await page.locator('.infinite-canvas').waitFor()
-  await expect(page.locator('.company-navigation').getByRole('button',{name:'员工',exact:true})).toBeVisible()
-  await expect(page.locator('.company-navigation').getByRole('button',{name:'消息',exact:true})).toBeVisible()
-  await expect(page.locator('.company-view-menu')).toHaveCount(0)
-
-  assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())))
-  assert.deepEqual(errors,[])
-  console.log('PASS Agents/Message navigation: single Agents entry, stable main view, saved views preserved, no subview picker')
-}finally{await app.close();fs.rmSync(temp,{recursive:true,force:true})}
+ f=await fixtureCore();const core=async(cmd,args={})=>{const reply=await f.request(null,cmd,args);assert.ok(reply.ok,cmd+': '+reply.error);return reply.data};for(const name of ['Alpha','Beta'])await core('group.add',{name});const a=await f.create('Alpha reader','Alpha'),b=await f.create('Beta reader','Beta'),native=await core('worker.create',{engine:'codex',title:'Clean Beta Worker',employee:b.id}),personal=await core('worker.create',{engine:'codex',title:'Personal Worker',cwd:f.temp}),before=(await core('session.list')).sessions.map(({id,group,engine,cwd,threadId})=>({id,group,engine,cwd,threadId})),nativeBefore=await core('worker.snapshot',{id:native.id});for(const card of [a,b])fs.writeFileSync(path.join(card.cwd,'view-original.txt'),card.id);assert.equal(nativeBefore.worker.running,false);assert.deepEqual(nativeBefore.items,[]);await core('worker.draft',{id:native.id,text:'Clean native draft survives Team scopes'});await f.stop();const env={...f.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1000'};delete env.ELECTRON_RUN_AS_NODE;const application=process.env.AGENTS_COMPANY_TEST_APP;app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env});page=await app.firstWindow();page.on('pageerror',error=>errors.push(error.message));await expect(page.locator('.agent-board')).toBeVisible()
+ const navigation=page.locator('.company-navigation'),team=navigation.getByRole('button',{name:'Team',exact:true}),message=navigation.getByRole('button',{name:'Message',exact:true}),roles=page.locator('.agent-board-panel[data-employee]:visible'),workers=page.locator('.worker-board-panel:visible'),scope=page.locator('.board-directory-scope');await expect(roles).toHaveCount(2);await expect(workers).toHaveCount(2);await expect(team).toBeVisible();await expect(message).toBeVisible();await expect(navigation.getByRole('button',{name:'Messages',exact:true})).toHaveCount(0);await expect(page.locator('.company-view-menu,.team-subviews,.characters-canvas,.workers-view')).toHaveCount(0);assert.equal(await team.getAttribute('aria-haspopup'),null);assert.equal(await team.getAttribute('aria-expanded'),null);pass('The real Team entry opens one Board with role employees and native Workers, without the retired view menu or a redundant subview bar')
+ const focus=await core('team-view.create',{name:'Focus Alpha',teams:['Alpha']});await core('team-view.select',{id:focus.id});await expect(roles).toHaveCount(1);await expect(page.locator('[data-employee="'+a.id+'"]')).toBeVisible();await expect(workers).toHaveCount(0);await expect(scope).toContainText('Focus Alpha');await team.click();await expect(scope).toContainText('Focus Alpha');await expect(roles).toHaveCount(1);await message.click();await expect(page.locator('.message-view')).toBeVisible();await team.click();await expect(page.locator('.agent-board')).toBeVisible();await expect(scope).toContainText('Focus Alpha');await expect(roles).toHaveCount(1);await page.reload();await expect(scope).toContainText('Focus Alpha');await expect(roles).toHaveCount(1);const kept=(await core('team-view.list')).views.find(view=>view.id===focus.id);assert.deepEqual({id:kept.id,teams:kept.teams},{id:focus.id,teams:['Alpha']});pass('Selecting Team again, Message/Team round trips and reload preserve the exact saved Alpha scope and its ID instead of resetting it')
+ await scope.getByRole('button',{name:'Show all teams',exact:true}).click();await expect(scope).toHaveCount(0);await expect(roles).toHaveCount(2);await expect(workers).toHaveCount(2);const beta=await core('team-view.create',{name:'Focus Beta',teams:['Beta']});await core('team-view.select',{id:beta.id});await expect(roles).toHaveCount(1);await expect(page.locator('[data-employee="'+b.id+'"]')).toBeVisible();await expect(workers).toHaveCount(1);await expect(page.locator('[data-worker="'+native.id+'"] .board-composer textarea')).toHaveValue('Clean native draft survives Team scopes');await expect(page.locator('[data-worker="'+personal.id+'"]')).toBeHidden();await core('settings.set',{language:'zh-CN'});await page.reload();await expect(page.locator('.agent-board')).toBeVisible();await expect(navigation.getByRole('button',{name:'Team',exact:true})).toBeVisible();await expect(navigation.getByRole('button',{name:'Message',exact:true})).toBeVisible();await expect(scope).toContainText('Focus Beta');await expect(roles).toHaveCount(1);await expect(workers).toHaveCount(1);await expect(page.locator('[data-worker="'+native.id+'"] .board-composer textarea')).toHaveValue('Clean native draft survives Team scopes');await expect(page.locator('.company-view-menu,.team-subviews,.characters-canvas,.workers-view')).toHaveCount(0);pass('Show all teams explicitly restores both kinds of members; Beta ownership filters the native Worker, retains its draft, and stable Team/Message branding and scope survive Chinese reload')
+ const after=(await core('session.list')).sessions.map(({id,group,engine,cwd,threadId})=>({id,group,engine,cwd,threadId}));assert.deepEqual(after,before);const nativeAfter=await core('worker.snapshot',{id:native.id});assert.deepEqual(nativeAfter.items,[]);assert.deepEqual(nativeAfter.receipts,[]);assert.equal(nativeAfter.worker.running,false);for(const key of ['id','engine','cwd','host','employee','team'])assert.deepEqual(nativeAfter.worker[key],nativeBefore.worker[key]);assert.deepEqual(nativeAfter.configuration,nativeBefore.configuration);for(const card of [a,b])assert.equal(fs.readFileSync(path.join(card.cwd,'view-original.txt'),'utf8'),card.id);assert.deepEqual(errors,[]);assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())));await page.screenshot({path:path.join(output,'team.png'),animations:'disabled'});pass('Navigation never starts a native Worker, injects role context or changes identities, engine, workspace, configuration or original files');fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:true,checks,errors,paidModelCalls:0,productionDataUsed:false},null,2)+'\n')
+}catch(error){await page?.screenshot({path:path.join(output,'failure.png')}).catch(()=>{});fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({error:error.stack,checks,errors},null,2)+'\n');throw error}finally{await app?.close();await f?.close()}

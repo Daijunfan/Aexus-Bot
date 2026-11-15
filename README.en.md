@@ -2,132 +2,100 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-**Make access to information more equal.**
+**Information access, for everyone.**
 
-Give individuals an AI team that follows information, reads documents, develops analysis together, and keeps work moving.
+Follow the world's information. Let your AI team read, discuss, check the evidence, and keep delivering the results you care about.
 
-Aexus Bot is a self-hosted workspace for your private AI intelligence team. Bring sources, documents, and questions into one place. Assign Agents to read, organize, discuss, and deliver findings, then use persistent tasks to follow the subjects that matter over time.
+Aexus Bot brings information channels, documents, multiple Agents, and persistent tasks into one workspace. Use **Message** to gather information and delegate work, **Team** to organize members and follow progress, and **Mission** to schedule ongoing attention and deliveries.
 
-You choose the sources, responsibilities, and standards for accepting a result. Source material, conversations, files, and task records stay connected so you can revisit the evidence, compare reasoning, and ask follow-up questions.
-
-[Get started](#getting-started) · [Deployment](docs/DEPLOYMENT.md) · [CLI / API](API.md) · [Permissions](PERMISSIONS.md)
-
-![Aexus Bot information board: an original application screenshot provided by the maintainer](docs/images/intelligence-channels.png)
-
-<p align="center"><sub>Browse sources and conversations in one workspace.</sub></p>
-
-## Why a private AI intelligence team?
-
-Useful information is spread across platforms, documents, and discussions. Reading it consistently and turning it into useful work takes time.
-
-Our aim is to bring information work that once required several people to an individual's desktop: helping more people discover information, understand it, and use it in their own decisions and actions. This is the information equality Aexus Bot works toward.
-
-“Private” means you can host the system yourself, choose its models and execution engines, and control your documents, members, permissions, and workspaces. When you use cloud models or remote services, their data-processing boundaries depend on the services and configuration you select.
-
-## Organize your information work
-
-| What you follow | How the team can help |
-| --- | --- |
-| Industry, technology, or a specific topic | Connect sources, assign reading by subject, and prepare briefings with references to original material. |
-| Papers, reports, and long documents | Read PDFs and documents, extract useful passages, raise questions, and produce analysis and deliverable files. |
-| Different views of the same question | Ask members to examine material separately, develop views, check supporting evidence, and discuss findings in a group. |
-| Subjects that need regular attention | Schedule recurring or event-triggered work and retain execution and delivery records. |
-| Findings that require a decision or action | Ask the user a saved choice question, record the decision, and assign follow-up work. |
-
-Start with a concrete request, for example:
-
-> Prepare a daily AI industry briefing from my chosen sources. Keep the original links and identify questions worth following. Ask another member to review those judgments each week.
-
-Specify sources, time ranges, assignees, delivery formats, and acceptance criteria. Members generate analysis according to the task; important judgments can receive an independent review and be checked against the original material.
+[Get started](#getting-started) · [Deployment](docs/DEPLOYMENT.md) · [CLI / API](API.md)
 
 ## Let your team help you read the foreign press
 
-Choose a magazine, report, or long document from a channel and ask a member to download it into their assigned workspace. Specify the questions, articles, or pages that matter to you, then ask the team to read, summarize, and check the evidence.
+Choose a magazine, report, or long document and ask a member to download it into their workspace. Specify the questions, articles, or pages that matter, and let the team read with your interests in mind.
 
-> Read the parts of this issue relevant to my questions. Explain each point, place the original page image beside it, and finish with questions worth following. Send it as one illustrated message.
+![Aexus Bot report reading: image excerpts and explanations alternate within one message](docs/images/magazine-reading.png)
 
-Members can export a chosen PDF page as an image and alternate **text, image, text, image inside a single message**, or split the material into several messages by topic. Images retain previews, zoom, and download. Rich messages have no fixed image-count cap.
+<p align="center"><sub>Report image excerpts and explanations alternate within one message, with the complete source attached.</sub></p>
 
-The same workflow works in private conversations, groups, and threads, with consistent APIs for local and cloud workspaces. You choose the questions and assess the findings; the team handles reading and organization. [Read the workflow and API guide](docs/MAGAZINE_READING.md).
+> Read the articles about the AI industry in this issue. Explain each topic, place the original page images alongside the explanation, and finish with questions worth following. Send it as one illustrated message.
 
-## Three views connect information and work
+Members can export selected PDF pages as images and alternate **text, image, text, image within a single message**, or split the material into several messages by topic. Preview, zoom, and download images while reading at your own pace.
 
-### Message · Gather information and discuss it
+The workflow connects private conversations, groups, and threads, with the same APIs for local and cloud workspaces. [Explore the reading workflow](docs/MAGAZINE_READING.md).
 
-Message brings news channels, private conversations, and groups into one workspace.
+## From information worth following to work worth doing
 
-- **Information channels:** browse Telegram, X, YouTube, and other sources with source, keyword, and time filters. Members read and search through authorized interfaces.
-- **Private and group conversations:** delegate directly or discuss topics with quotes, threads, polls, and collaborative checklists.
-- **Material and deliveries:** share files, preview images and documents, read PDFs in Margin Reader, and retain related messages and file records.
+| What you want to accomplish | How the team works |
+| --- | --- |
+| Follow an industry, technology, or topic | Subscribe to sources, divide reading by subject, and prepare briefings with original references. |
+| Understand papers, reports, and long documents | Read the material, identify key points, and explain arguments alongside original pages and charts. |
+| Compare different judgments | Ask members to analyze independently, review the evidence, and discuss the same material together. |
+| Receive a useful daily briefing | Choose the timing, assignees, and format while building a record of reading and delivery. |
+| Turn findings into follow-up work | Save your decisions, assign tasks, and follow results through reminders and supervision. |
 
-External Workers such as Dot and Grok can also participate in conversations while keeping their native identities and histories. With the official apps installed and signed in on macOS, Aexus automatically connects their native local executors, including for Web clients, without opening either main app. Existing Mac identities and execution permissions are retained. [Native integration details](docs/BOT_WORKERS.md).
+You arrange the sources, documents, workspaces, and responsibilities. Information work that once required several people can become part of your daily routine.
 
-![Group discussion with distinct member identities and replies](docs/images/group-discussion.png)
+## Three views connect reading, collaboration, and delivery
 
-<details>
-<summary>See quoted replies and conversation context</summary>
+### Message · The center of information and discussion
 
-![Quoted group replies keep follow-up questions connected to their context](docs/images/group-replies.png)
+Keep information channels, private conversations, and groups together. When something deserves attention, continue with a question, a discussion, or a task.
 
-</details>
+- **Information channels:** gather content from Telegram, X, YouTube, Zhihu, and LinkedIn; filter by source, keywords, and time. Members can read and search through the same APIs.
+- **Rich conversations:** use illustrated messages, quotes, threads, polls, and collaborative checklists to discuss, add context, and bring findings together.
+- **Shared material:** preview images and documents, read PDFs in Margin Reader, edit and manage files, and return to the related conversation.
+
+External Workers such as Dot and Grok retain their native identities and histories. Manage Bots, native groups, members, and runtime configuration in Message through the same operations used by the CLI. After installing and signing in to the official apps on macOS, Aexus Bot connects their local execution channels so desktop and Web conversations can use your Mac. [Native Bot integration](docs/BOT_WORKERS.md) · [The Message workspace](docs/MESSAGE_EXPERIENCE.md).
 
 ### Team · Organize your intelligence members
 
-Assign responsibilities such as source monitoring, document reading, topic analysis, independent review, and briefing preparation. A Secretary coordinates and follows up on tasks, while you inspect the members' actual work.
+Assign responsibilities such as source monitoring, document reading, topic analysis, independent review, and briefing preparation. A Secretary coordinates work, and you can open a member's workbench to follow actual progress.
 
-**Characters** presents people and team activity. **Board** lets you follow several complete employee workbenches at once. **Workers** manages independent native Agent sessions. Conversations, files, terminals, tool calls, approvals, and queues form the workbench.
+Role-based employees and native **Workers** share one concurrent work board, with unified search, categories, and progress tracking. Conversations, files, terminals, tool calls, approvals, and queues live in each member's workbench. Workers use independent native sessions and retain clean native context.
 
-Members can use different native engines and models and execute locally or in registered remote environments.
+Connect **Codex, Claude Agent, Cline, Pi, OpenCode, Kilo Code, DeepSeek Harness, and Google Antigravity**. Choose your models and native configuration, then arrange execution locally or in registered remote environments. [Explore engine capabilities](ENGINE_CAPABILITIES.md).
 
-Supported native engines include Codex, Claude Agent, Cline, Pi, OpenCode, Kilo Code, DeepSeek Harness and **Google Antigravity**. Each retains its own native configuration and sign-in. Available model controls and execution environments follow the selected adapter’s actual capabilities. [Engine capabilities](ENGINE_CAPABILITIES.md).
+![Aexus Bot Team: independent member workbenches and conversations side by side](docs/images/team-board.png)
 
-### Mission · Turn attention into sustained follow-through
+### Mission · Keep important work moving
 
-Mission manages one-time, recurring, event-triggered, and persistent goals through ten layouts, including calendars, boards, and timelines.
+Organize one-time, recurring, event-triggered, and persistent goals in calendars, boards, lists, and timelines. Save filters and views around the subjects you follow.
 
-Use Secretary supervision or independent execution, inspect runs and results, and save filters and views. Persistent goals retain reminders and follow-up until explicitly confirmed successful; a reply or native turn ending does not automatically complete the goal.
+![Aexus Bot Mission: a weekly calendar of scheduled topics and deliveries](docs/images/mission-calendar.png)
 
-User decisions are saved as conversation choice questions. They support options, an Other free-text answer, a declared timeout decision, or indefinite waiting. New messages and other tasks do not overwrite pending questions.
+Choose Secretary supervision or independent member execution. Reminders, run records, and deliverables stay connected, and persistent goals end with explicit confirmation of success.
 
-## The foundation for reading, analysis, and execution
+Decisions stay in the conversation: define the choices, use **Other** to write your own answer, and select a timeout decision or continued waiting. Handle other messages and return when you are ready to decide. [Persistent goals and user decisions](docs/MISSIONS_AND_QUESTIONS.md).
 
-### Native Agent engines
+## Connect your documents, tools, and workspaces
 
-Aexus Bot supports Codex, Claude Code, Cline, Pi, OpenCode, Kilo Code, and DeepSeek Harness. Engines use their native configuration and authentication; you choose the model providers, accounts, and associated costs.
+Bind workspaces to local directories or registered cloud hosts. Members use their assigned workspace, groups organize shared material, and files and native sessions retain stable identities across upgrades.
 
-Native Agents execute reading, analysis, file processing, and concrete work. Aexus Bot organizes members, permissions, communication, workspaces, and persistent tasks. See [engine adapters](docs/ENGINE_ADAPTERS.md) and [capabilities](ENGINE_CAPABILITIES.md) for each integration's scope.
+| Plugin | What it brings |
+| --- | --- |
+| **Margin Reader** | Read PDFs and documents, collect excerpts, and organize references. |
+| **MiniNotion** | Organize notes, databases, and knowledge. |
+| **Cloud Hosts** | Manage remote hosts, connections, and terminals. |
 
-### Documents and workspaces
+Grant members read, modify, or create access to specific content. Desktop, browser, CLI / API, and native member tools share one Core, so the same work can continue through different interfaces.
 
-Workspaces can bind directories on the Core host or registered cloud hosts. Members use their assigned workspace, while group shared content is managed separately. Files and native sessions keep stable identities across upgrades.
-
-The repository includes three independent plugins:
-
-- **Margin Reader:** document reading, excerpts, and reference organization.
-- **MiniNotion:** notes, databases, and knowledge organization.
-- **Cloud Hosts:** remote hosts, connection status, and terminals.
-
-Grant members read, modify, or create access to specific plugin content. Information collection and server-side storage are maintained in the separate [xhs_publisher](https://github.com/Daijunfan/xhs_publisher) project; Aexus Bot provides the client and controlled integration APIs.
-
-### Your team and permissions
-
-Desktop, browser, CLI / API, and native member tools use the same Core and follow the same business rules and identity checks. Secretaries, Governors, Managers, and employees have distinct responsibilities; authority comes from actual roles and grants.
-
-The current product is a single-owner, self-hosted system with support for multiple browser clients. Documents and credentials live outside application binaries. See [deployment](docs/DEPLOYMENT.md), [permissions](PERMISSIONS.md), and [security](SECURITY.md) for operational boundaries.
+Information collection and server storage are maintained in the separate [xhs_publisher](https://github.com/Daijunfan/xhs_publisher) project. Subscription management and reading come together in Aexus Bot. [Information channels](docs/CHANNELS.md) · [Workspaces and files](docs/FILES_WORKBENCH.md) · [Permissions](PERMISSIONS.md).
 
 ## Getting started
 
-1. Start the desktop application or connect to your own Core Web backend.
-2. Check native engines, model configuration, and authentication in Settings.
+1. Start the desktop application or connect to your Core Web backend.
+2. Choose an engine in Settings, then configure and authenticate your models.
 3. Create a team, bind its workspace, and assign responsibilities.
-4. Connect sources, provide documents, or ask a specific question.
-5. Discuss in Message, follow work in Team, and use Mission for ongoing attention and deliveries.
+4. Connect information sources, provide documents, or ask a specific question.
+5. Discuss in Message, follow progress in Team, and arrange ongoing deliveries through Mission.
 
-Deployment options include macOS / Windows desktop and Linux Core / Web with a browser. See [deployment](docs/DEPLOYMENT.md) for prerequisites, platform boundaries, and remote access.
+[Explore deployment options](docs/DEPLOYMENT.md): macOS / Windows desktop, or Linux Core / Web with a browser.
 
-### Run from source
+<details>
+<summary>Run from source, package, and deploy</summary>
 
-Use Node.js **22.18+** (**22.19+** for Pi; validation baseline: Node 24), npm, and the required engines' native configuration. SSH / POSIX terminals require Python and OpenSSH.
+Use Node.js **22.18+** (**22.19+** for Pi) and npm. SSH workflows also require Python and OpenSSH.
 
 ```sh
 git clone https://github.com/Daijunfan/Aexus-Bot.git
@@ -154,29 +122,17 @@ npm run build:web
 node bin/agents serve --web --port 5151
 ```
 
-Run `node bin/agents web token` in another terminal, then sign in at `http://127.0.0.1:5151`. Use HTTPS or an SSH tunnel for another device. One Core owns each data directory.
+Run `node bin/agents web token` in another terminal, then sign in at `http://127.0.0.1:5151`. See [deployment](docs/DEPLOYMENT.md) for remote connections and service configuration.
 
-## Documentation and development
+</details>
+
+## Explore further
 
 - [Deployment](docs/DEPLOYMENT.md) · [CLI / API](API.md) · [Architecture](ARCHITECTURE.md)
-- [Persistent goals and decisions](docs/MISSIONS_AND_QUESTIONS.md) · [Information channels](docs/CHANNELS.md)
-- [Group collaboration](docs/GROUP_COLLABORATION.md) · [Documents and files](docs/FILES_WORKBENCH.md)
-- [Engine capabilities](ENGINE_CAPABILITIES.md) · [Plugin development](PLUGIN_SPEC.md)
-- [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
-
-Development uses `main`. The application is **Aexus Bot**, installed at `/Applications/Aexus Bot.app` on macOS.
-
-```sh
-npm run typecheck
-npm test
-npm run test:release-ui
-npm run test:release-engines
-```
-
-Tests use temporary data and deterministic protocol fixtures. Platforms are validated separately; real-model and real-host tests are recorded explicitly. Some detailed references are written in Chinese.
+- [Reading the foreign press](docs/MAGAZINE_READING.md) · [Group collaboration](docs/GROUP_COLLABORATION.md) · [Information channels](docs/CHANNELS.md)
+- [Engine capabilities](ENGINE_CAPABILITIES.md) · [Plugin development](PLUGIN_SPEC.md) · [Contributing](CONTRIBUTING.md)
+- [Permissions](PERMISSIONS.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
 
 ## License
 
-Project code is licensed under **GNU GPL v3**. Third-party code, artwork, native engines, and model services retain their own licenses or terms.
-
-See [LICENSE](LICENSE), [licensing details](LICENSING.md), and [third-party notices](THIRD_PARTY_NOTICES.md).
+Project code is licensed under **GNU GPL v3**. [LICENSE](LICENSE) · [Licensing details](LICENSING.md) · [Third-party notices](THIRD_PARTY_NOTICES.md).

@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 /** Deterministic transport fixture using the real remote filesystem protocol locally. */
-export function localTunnel(directory,root){
+export function localTunnel(directory,root,offlineHost=''){
   fs.mkdirSync(directory,{recursive:true})
   for(const name of ['workspace_files.py','remote.py'])fs.copyFileSync(path.join(root,'Modules/Tunnel',name),path.join(directory,name))
   fs.writeFileSync(path.join(directory,'bridge.py'),`import sys,json,pathlib,base64
@@ -12,6 +12,8 @@ if sys.argv[1]=='serve':
  exec((root/'remote.py').read_text(encoding='utf-8'),globals())
 else:
  data=json.load(sys.stdin);target=data['target'];operation=sys.argv[1]
+ if target.get('host')==${JSON.stringify(offlineHost)}:
+  sys.stderr.write('fixture: SSH offline');sys.exit(255)
  if operation in ['check','ping']:
   print(json.dumps({'connected':True,'info':'Local protocol fixture','environment':{'os':target['os'],'hostname':'fixture'}}))
  elif operation=='prepare':

@@ -91,8 +91,7 @@ async function parseEpub(bytes) {
 }
 async function parsePdf(bytes, password) {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const base = path.dirname(require.resolve('pdfjs-dist/package.json'));
-  const task = pdfjs.getDocument({ data: new Uint8Array(bytes), password, verbosity: 0, isEvalSupported: false, useSystemFonts: true, cMapUrl: path.join(base, 'cmaps') + path.sep, cMapPacked: true, standardFontDataUrl: path.join(base, 'standard_fonts') + path.sep });
+  const task = pdfjs.getDocument({ data: new Uint8Array(bytes), password, verbosity: 0, isEvalSupported: false, useSystemFonts: true, ...require('./pdf-resources.cjs')() });
   let pdf;
   try {
     pdf = await task.promise;

@@ -50,3 +50,7 @@
 .company-actions .team-add-member>.add-employee{border-radius:8px 0 0 8px}
 .company-actions .team-add-member>.employee-type-menu{width:30px;min-width:30px;padding-inline:4px;border-radius:0 8px 8px 0}
 .worker-title .board-member-kind{font-weight:600;color:var(--accent)}
+
+.board-sidebar .board-roster-unread{position:static;display:block;flex:none;width:7px;height:7px;border:0;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent)}
+.board-sidebar .board-roster-row[data-focused=true] .board-roster-unread{background:var(--button-ink);box-shadow:0 0 0 3px color-mix(in srgb,var(--button-ink) 15%,transparent)}
+@container agents-directory (max-width:178px){.board-sidebar .board-roster-unread{position:absolute;right:4px;top:5px;border:2px solid var(--bg-elev);box-shadow:none}}

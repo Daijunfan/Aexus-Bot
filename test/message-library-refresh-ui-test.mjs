@@ -14,10 +14,10 @@ try{
  const styles=[...fs.readFileSync(path.join(renderer,'main.tsx'),'utf8').matchAll(/import\s+(['"])([^'"]+\.css)\1/g)].map(([,quote,file])=>'import '+JSON.stringify(file.startsWith('.')?path.resolve(renderer,file):file)).join('\n')
  fs.writeFileSync(path.join(temp,'fixture.tsx'),`
 import React,{useEffect} from 'react';import {createRoot} from 'react-dom/client';
-import {MessageLibrary} from '${renderer}/components/MessageLibrary';
-import {MessengerContext,useMessengerState} from '${renderer}/components/useMessenger';
-import {setInterfaceLanguage} from '${renderer}/i18n';setInterfaceLanguage('en');
-function Fixture(){const messenger=useMessengerState(true);window.libraryFixture={open:messenger.setLibrary};useEffect(()=>{if(messenger.ready)messenger.setLibrary({})},[messenger.ready]);return <MessengerContext.Provider value={messenger}><div className="app in-messages"><div className="message-view"><div className="message-stage">{messenger.library&&<MessageLibrary key={JSON.stringify(messenger.library)}/>}</div></div></div></MessengerContext.Provider>}
+import {MessageLibrary} from ${JSON.stringify(path.join(renderer,'components/MessageLibrary'))};
+import {MessengerContext,useMessengerState} from ${JSON.stringify(path.join(renderer,'components/useMessenger'))};
+import {setInterfaceLanguage} from ${JSON.stringify(path.join(renderer,'i18n'))};setInterfaceLanguage('en');
+function Fixture(){const messenger=useMessengerState(true);window.libraryFixture={open:messenger.setLibrary};useEffect(()=>{if(messenger.ready)messenger.setLibrary({})},[messenger.ready]);return <MessengerContext.Provider value={messenger}><div className="app in-messages"><div className="message-view"><div className="message-stage">{messenger.library&&<MessageLibrary key={JSON.stringify(messenger.library)} store={{sessions:[],groups:[]}}/>}</div></div></div></MessengerContext.Provider>}
 createRoot(document.getElementById('root')).render(<Fixture/>);
 `+styles)
  await build({configFile:false,root:temp,publicDir:false,esbuild:{jsx:'automatic'},build:{outDir:path.join(temp,'dist'),reportCompressedSize:false},logLevel:'silent'})
@@ -32,7 +32,7 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
   window.agents={platform:'macos',onEvent:listener=>{listeners.add(listener);return()=>listeners.delete(listener)},call:async(cmd,args={})=>{
    window.calls.push({cmd,args:structuredClone(args)})
    if(cmd==='messenger.state')return {version:1,revision:1,conversations:{},messages:{},drafts:{},folders:[]}
-   if(cmd==='messenger.search'){
+   if(cmd==='chat.get')return {id:args.id,name:args.id==='studio'?'Studio':'Other group',memberIds:[],members:[],createdAt:1,updatedAt:1,revision:1,readSequence:0,lastIncomingSequence:0,unread:false};if(cmd==='chat.topic-list')return [{id:'general',name:'General',icon:'💬',color:'violet',closed:false,pinned:true,archived:false,revision:1,createdAt:1}];if(cmd==='messenger.search'){
     window.maxSearching=Math.max(window.maxSearching,++window.searching)
     const all=window.records.filter(message=>(!args.conversation||message.conversation===args.conversation)&&(!args.query||message.text.toLowerCase().includes(args.query.toLowerCase()))&&(args.filter!=='saved'||message.preferences.saved)&&(args.author!=='you'||message.authorIdentity.kind==='operator')&&(args.author!=='employee'||message.authorIdentity.kind==='agent')).sort((a,b)=>b.createdAt-a.createdAt||a.conversation.localeCompare(b.conversation)||a.id.localeCompare(b.id))
     const offset=args.offset??0,messages=all.slice(offset,offset+(args.limit??40)),result=structuredClone({messages,total:all.length,hasMore:offset+messages.length<all.length})
@@ -58,8 +58,9 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
  await page.evaluate(()=>{window.searchDelay=0;window.records[0].text='Original group proposal';window.libraryFixture.open({})});await expect(text.first()).toHaveText('Original group proposal');await settled()
  await page.evaluate(()=>{window.records[0].text='Corrected group proposal';window.records[0].editedAt=400;window.records[0].editRevision=1;window.emit('chat:changed',{id:'studio',editedMessageId:'g1'})})
  await expect(text.first()).toHaveText('Corrected group proposal');await expect(rows.first()).toContainText('Edited')
- await page.evaluate(()=>{window.records.unshift(window.message('group:studio','g2','A new public update',500));window.emit('chat:changed',{id:'studio'})})
+ await page.evaluate(()=>{window.records.unshift(window.message('group:studio','g2','A new public update',500));window.emit('chat:changed',{id:'studio',messageId:'g2',kind:'published'})})
  await expect(rows).toHaveCount(4);await expect(text.first()).toHaveText('A new public update')
+ await page.evaluate(()=>{window.records.find(message=>message.id==='p1').text='Private publication in the global library';window.emit('direct:changed',{employee:'aster',cardId:'aster'})});await expect(page.locator('[data-message-key="employee:aster/p1"] p')).toHaveText('Private publication in the global library')
  for(const [index,event] of ['session:user','session:turn-end','session:interrupted','session:error'].entries()){
   await page.evaluate(([index,event])=>{window.records.unshift(window.message('employee:aster','private-'+index,'Persisted '+event,600+index));window.emit(event,{sessionId:'live-aster',...(event==='session:error'?{message:'Fixture stopped'}:{})})},[index,event])
   await expect(text.first()).toHaveText('Persisted '+event)
@@ -71,18 +72,20 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
  await expect.poll(async()=>(await searches()).length).toBe(count+1);await settled();await page.waitForTimeout(100);assert.equal((await searches()).length,count+1,'a change burst coalesces into one refresh')
 
  await open({conversation:'group:studio',filter:'saved'});await expect(rows).toHaveCount(2);await settled();count=(await searches()).length
- await emit('chat:changed',{id:'other'});await emit('session:turn-end',{sessionId:'live-aster'});await emit('channel:changed',{kind:'posts',channelIds:['news']});await page.waitForTimeout(180)
- assert.equal((await searches()).length,count,'group scope ignores other groups, private turns and channels')
+ await emit('chat:changed',{id:'other',messageId:'other-publication',kind:'published'});await emit('chat:changed',{id:'studio',messageId:'g1',kind:'receipt'});await emit('direct:changed',{employee:'aster',cardId:'aster'});await emit('session:turn-end',{sessionId:'live-aster'});await emit('channel:changed',{kind:'posts',channelIds:['news']});await page.waitForTimeout(180)
+ assert.equal((await searches()).length,count,'group scope ignores other group publications, receipt-only changes, private ledgers, native turns and channels')
  await page.evaluate(()=>{window.records.find(message=>message.id==='g1').text='Saved proposal corrected again';window.emit('chat:changed',{id:'studio',editedMessageId:'g1'})})
  await expect(text).toContainText(['A new public update','Saved proposal corrected again'])
+ await page.evaluate(()=>{window.records.unshift(window.message('group:studio','g3','A new publication in the scoped group library',700));window.emit('chat:changed',{id:'studio',messageId:'g3',kind:'published'})});await expect(rows).toHaveCount(3);await expect(text.first()).toHaveText('A new publication in the scoped group library');await settled();count=(await searches()).length;await emit('chat:changed',{id:'studio',messageId:'g3',kind:'receipt'});await page.waitForTimeout(180);assert.equal((await searches()).length,count,'a visible publication receipt does not query unchanged result bodies')
 
  await open({conversation:'employee:aster'});await expect(rows).toHaveCount(5);await settled();count=(await searches()).length
- await emit('chat:changed',{id:'studio'});await emit('channel:changed',{kind:'posts',channelIds:['news']});await page.waitForTimeout(180);assert.equal((await searches()).length,count,'private scope ignores group and channel traffic')
+ await emit('chat:changed',{id:'studio',messageId:'g3',kind:'published'});await emit('channel:changed',{kind:'posts',channelIds:['news']});await page.waitForTimeout(180);assert.equal((await searches()).length,count,'private scope ignores group and channel traffic')
  await page.evaluate(()=>{window.records.find(message=>message.id==='p1').text='Private result after interruption';window.emit('session:interrupted',{sessionId:'live-aster'})})
  await expect(text.last()).toHaveText('Private result after interruption');assert.equal((await searches()).at(-1).args.conversation,'employee:aster','native session events retain the explicit employee search scope')
+ await page.evaluate(()=>{window.records.unshift(window.message('employee:aster','published-private','Explicit independently published private reply',900));window.emit('direct:changed',{employee:'aster',cardId:'aster'})});await expect(text.first()).toHaveText('Explicit independently published private reply');await settled();count=(await searches()).length;await emit('direct:changed',{employee:'other',cardId:'other'});await page.waitForTimeout(180);assert.equal((await searches()).length,count,'another private ledger does not refresh this employee scope')
  await open({conversation:'channel:news'});await expect(rows).toHaveCount(0);await settled();count=(await searches()).length
  await emit('channel:changed',{kind:'reads',channelIds:['news'],entryIds:['seen-article']});await page.waitForTimeout(180);assert.equal((await searches()).length,count,'personal reading never reloads unchanged search result bodies')
- await emit('chat:changed',{id:'studio'});await emit('session:user',{sessionId:'live-aster'});await emit('channel:changed',{kind:'posts',channelIds:['other']});await page.waitForTimeout(180);assert.equal((await searches()).length,count,'channel scope ignores unrelated traffic')
+ await emit('chat:changed',{id:'studio',messageId:'g3',kind:'published'});await emit('direct:changed',{employee:'aster',cardId:'aster'});await emit('session:user',{sessionId:'live-aster'});await emit('channel:changed',{kind:'posts',channelIds:['other']});await page.waitForTimeout(180);assert.equal((await searches()).length,count,'channel scope ignores unrelated traffic')
  await emit('channel:changed',{kind:'posts',channelIds:['news']});await expect.poll(async()=>(await searches()).length).toBe(count+1);await settled()
 
  // Preserve a deep reading position and every loaded record when new results arrive at the head.
@@ -119,7 +122,7 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
  count=(await searches()).length;await emit('session:turn-end',{sessionId:'live-aster'});await page.getByRole('button',{name:'Close message library',exact:true}).click();await expect(page.locator('.message-library')).toHaveCount(0)
  await page.evaluate(()=>{window.held.shift()();window.emit('chat:changed',{id:'studio'});window.emit('session:turn-end',{sessionId:'live-aster'})});await page.waitForTimeout(180)
  assert.equal((await searches()).length,count,'unmounted library has no event or timer queries');assert.deepEqual(errors,[])
- assert.ok((await page.evaluate(()=>window.calls)).every(call=>['messenger.state','messenger.search'].includes(call.cmd)),'fixture never mutates Core or starts an engine')
- fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({passed:true,checks:['slow initial results remain visible during continuous events','one in-flight same-query search and coalesced trailing refresh','global group edits and new posts','persisted private user/completed/interrupted/error events','group/private/channel scopes','saved group edits','no token-triggered queries','burst debounce','76 loaded results retained with stable reading anchor','query/filter/conversation changes reject superseded responses','leave cancels timer and ignores late response'],realCoreCalls:0,platform:'headless Chrome'},null,2))
+ assert.ok((await page.evaluate(()=>window.calls)).every(call=>['messenger.state','messenger.search','chat.get','chat.topic-list'].includes(call.cmd)),'fixture never mutates Core or starts an engine')
+ fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({passed:true,checks:['slow initial results remain visible during continuous events','one in-flight same-query search and coalesced trailing refresh','global and scoped published group events include messageId','global and scoped direct publications refresh independently of native turns','receipt-only events and unrelated group/private/channel scopes do not query','persisted private user/completed/interrupted/error events','saved group edits','no token-triggered queries','burst debounce','76 loaded results retained with stable reading anchor','query/filter/conversation changes reject superseded responses','leave cancels timer and ignores late response'],realCoreCalls:0,platform:'headless Chrome'},null,2))
  console.log('PASS live message library refresh: group and persisted private changes, scoped/debounced queries, stable reading window, stale response and leave cleanup')
 }finally{await browser?.close();fs.rmSync(temp,{recursive:true,force:true})}

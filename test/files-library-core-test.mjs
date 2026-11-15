@@ -12,7 +12,7 @@ try{
  f=await assetWorkbenchFixture(application.directory);const {rpc,a,b,conversation,member,workspace,source,channelWorkspace,remote}=f
  await rpc('card.avatar',{id:a.id,avatar:'fate-saber-chibi'});await rpc('card.avatar',{id:b.id,avatar:'fate-cu-chulainn-chibi'})
  const catalog=await rpc('assets.tree'),nodes=flatten(catalog),remoteNode=nodes.find(n=>n.id==='team:Remote%20team'),host=remoteNode.host
- assert.equal(host.name,'Fixture remote');assert.equal(host.kind,'remote');assert.equal(host.os,'linux');assert.equal(nodes.find(n=>n.id==='employee:'+a.id).host.kind,'local')
+ assert.equal(host.name,'Fixture remote');assert.equal(host.kind,'remote');assert.equal(host.os,process.platform==='darwin'?'macos':process.platform==='win32'?'windows':'linux');assert.equal(nodes.find(n=>n.id==='employee:'+a.id).host.kind,'local')
  assert.equal(nodes.find(n=>n.id===conversation).owner.conversation,conversation);assert.ok(!nodes.some(n=>n.owner?.employee&&n.id.startsWith(conversation+'|')))
  assert.ok(!JSON.stringify(nodes.map(n=>n.host)).includes(remote));for(const h of catalog.facets.hosts)for(const key of ['address','identityFile','password','secret','defaultDirectory','host'])assert.ok(!(key in h),'Host projection must not disclose '+key)
  const shelf=await rpc('assets.browse',{employee:a.id});assert.equal(shelf.entries.length,2);assert.ok(shelf.entries.every(n=>n.owner.employee===a.id||n.owner.conversation===conversation&&n.owner.employee===undefined));assert.deepEqual(new Set(shelf.entries.map(n=>n.owner.view)),new Set(['Company','Messages']))

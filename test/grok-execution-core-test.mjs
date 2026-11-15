@@ -48,12 +48,12 @@ try{
  fs.symlinkSync(path.join(root,'node_modules'),path.join(temp,'node_modules'),'dir')
  const entry=path.join(temp,'daemon.cjs'),transport=path.join(root,'src/main/bot-bridge/http.ts')
  await build({entryPoints:[path.join(root,'src/main/daemon.ts')],outfile:entry,bundle:true,platform:'node',format:'cjs',packages:'external',define:{__AGENTS_PROJECT_ROOT__:JSON.stringify(root)},logLevel:'silent',plugins:[{name:'isolated-grok-protocol',setup(b){
-  b.onResolve({filter:/^\.\/credentials$/},args=>args.importer.includes('/bot-bridge/')?{path:'credentials',namespace:'grok-test'}:undefined)
+  b.onResolve({filter:/^\.\/credentials$/},args=>args.importer.replaceAll('\\','/').includes('/bot-bridge/')?{path:'credentials',namespace:'grok-test'}:undefined)
   b.onLoad({filter:/.*/,namespace:'grok-test'},()=>({contents:`export class CredentialError extends Error{};export function getGrokComputerKeys(){throw new Error('Native Mac execution is excluded from this protocol fixture')};export function decodeJwt(){return null};export function getGrokAuth(){return {accountId:'fixture',accessToken:'fixture-not-a-credential',expired:false}};export function getChatGptAuth(){throw new CredentialError('Dot excluded from Grok protocol test')}`,loader:'js'}))
-  b.onResolve({filter:/^\.\/http$/},args=>/bot-bridge\/(grok|client)\.ts$/.test(args.importer)?{path:'transport',namespace:'grok-wire'}:undefined)
+  b.onResolve({filter:/^\.\/http$/},args=>/bot-bridge\/(grok|client)\.ts$/.test(args.importer.replaceAll('\\','/'))?{path:'transport',namespace:'grok-wire'}:undefined)
   b.onLoad({filter:/.*/,namespace:'grok-wire'},()=>({contents:`import * as wire from ${JSON.stringify(transport)};const target=url=>process.env.AC_GROK_PROTOCOL_URL+'/'+new URL(url).pathname.split('/').at(-1);export const httpJson=(url,opts)=>wire.httpJson(target(url),opts);export const httpStream=(url,opts)=>wire.httpStream(target(url),opts);`,loader:'js',resolveDir:root}))
  }}]})
- f=await fixtureCore({AC_GROK_PROTOCOL_URL:'http://127.0.0.1:'+server.address().port},entry)
+ f=await fixtureCore({AGENTS_COMPANY_TEST_BOTS_URL:'',AC_GROK_PROTOCOL_URL:'http://127.0.0.1:'+server.address().port},entry)
  const rpc=async(cmd,args={})=>{const r=await f.request(null,cmd,args);assert.ok(r.ok,r.error);return r.data},pass=text=>{checks.push(text);console.log('PASS '+text)}
  await rpc('bot.sync');const bot=(await rpc('bot.list')).find(bot=>bot.bot.provider==='grok');assert.ok(bot)
  await Promise.all([rpc('bot.sync'),rpc('bot.sync')]);assert.equal(watches,1)

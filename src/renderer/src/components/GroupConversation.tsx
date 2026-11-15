@@ -179,7 +179,7 @@ function GroupConversationBody({group,store,sessions,drafts,onBack,onPrivate,top
   const off=api.onEvent(event=>{
    if(event.channel==='client:connected'){void refresh();return}
    if(event.channel!=='chat:changed'||event.payload.id!==group.id)return
-   const id=event.payload.editedMessageId??event.payload.messageId
+   const id=event.payload.kind==='published'?undefined:event.payload.editedMessageId??event.payload.messageId
    if(id){if(!loadedHistory.current.some(message=>message.id===id))return;messageReadOrder.current.set(id,++readOrder.current);changed.add(id);if(!messageTimer)messageTimer=setTimeout(()=>{messageTimer=undefined;void refreshChanged()},35);return}
    if(!timer)timer=setTimeout(()=>{timer=undefined;void refresh()},35)
   })
@@ -200,7 +200,7 @@ function GroupConversationBody({group,store,sessions,drafts,onBack,onPrivate,top
  const markLatestRead=async(passive=false)=>{const last=loadedHistory.current.at(-1);if(last){const result=await api.call<{acknowledged:boolean}>('chat.acknowledge',{id:group.id,...topicQuery,messageId:last.id});if(!result.acknowledged){if(passive)return;throw Error(uiText('Activate this window before marking messages as read.'))}}if(!await messenger.conversations([conversation],{unread:false}) )throw Error(uiText('Could not update the unread reminder. Try again.'));setUnreadAfter(null)}
  const bottomReadError=useReadAtBottom(transcript,group.id,!loading&&!reading.restoring&&!threadId&&!groupInfoOpen&&!editing&&!search&&!messenger.library&&!messenger.forward&&!conversationJump&&!!(scopeUnread||messenger.state.conversations[conversation]?.unread),markLatestRead)
  const prepareMessageSend=useMessageMotion({conversation,ready:!loading,items:motionItems,transcript,composer,following:()=>follow.current})
- const galleryImages=useMemo(()=>history.filter(message=>!message.deletedAt&&!messenger.state.messages[messageKey(conversation,message.id)]?.hidden).flatMap(message=>messageGalleryItems({group:group.id,messageId:message.id},(message.attachments??[]).filter(file=>file.kind==='image').map(file=>file.path),message.text)),[history,group.id,messenger.state.messages])
+ const galleryImages=useMemo(()=>history.filter(message=>!message.deletedAt&&!messenger.state.messages[messageKey(conversation,message.id)]?.hidden).flatMap(message=>messageGalleryItems({group:group.id,messageId:message.id},(message.attachments??[]).filter(file=>file.kind==='image').map(file=>file.path),message.text,Object.fromEntries((message.attachments??[]).filter(file=>file.kind==='image').map(file=>[file.path,file.name])))),[history,group.id,messenger.state.messages])
  const searchItems=useMemo(()=>history.map(message=>({id:message.id,text:message.text,images:message.attachments?.map(file=>file.path)})),[history])
  useComposerHeight(composer,text,!messageToEdit,group.id,true)
  const newest=history.at(-1)

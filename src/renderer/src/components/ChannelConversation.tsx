@@ -33,7 +33,7 @@ import '../styles/group-message-layout.css'
 export function ChannelConversation({channel,store,onBack,sourceId}:{channel:ChannelView;store:Store;onBack:()=>void;sourceId?:string}){
  useI18n()
  const [profile,setProfile]=useState<{sourceId?:string}|null>(null),[refreshing,setRefreshing]=useState(false),[accessOpen,setAccessOpen]=useState(false),[workspaceOpen,setWorkspaceOpen]=useState(false),[detailId,setDetailId]=useState<string|null>(null)
- const [options,setOptions]=useState<{x:number;y:number}|null>(null),optionsButton=useRef<HTMLButtonElement>(null),header=useRef<HTMLDivElement>(null)
+ const [options,setOptions]=useState<{x:number;y:number}|null>(null),optionsButton=useRef<HTMLButtonElement>(null),header=useRef<HTMLDivElement>(null),keepHeaderReading=useRef<()=>boolean>(()=>false)
  const {value:social,ready:sourcesReady}=useCatalog<SocialElement>('messenger.social',true,event=>event.channel==='channel:changed',80,{includeDisabled:true})
  const source=sourceId?social.find(item=>item.id===sourceId):undefined,title=source?.name??channel.name,displayKind=source?.platform??channel.kind,displayAvatar=sourceId?source?.avatar:channel.avatar
  useEffect(()=>{if(source&&source.channelId!==channel.id)void api.call('view.open',{kind:'messages',sourceId:source.id})},[source?.channelId,channel.id])
@@ -45,7 +45,13 @@ export function ChannelConversation({channel,store,onBack,sourceId}:{channel:Cha
  const feedKey=sourceId?'source:'+sourceId:'channel:'+channel.id,savedView=messenger.channelViews[feedKey]
  const [view,setView]=useState<ChannelFeedView>(savedView?.view??'conversation'),[selectedSources,setSelectedSources]=useState<string[]>(savedView?.sourceIds??(sourceId?[sourceId]:[])),[previousSources,setPreviousSources]=useState<string[]>(savedView?.previousSourceIds??[]),viewRef=useRef<ChannelFeedView>(savedView?.view??'conversation'),viewPositions=useRef({conversation:0,board:0,posts:0}),restoreView=useRef(false)
  const zoom=usePostsZoom(feed,view==='posts',feedKey,savedView?.postsScale??1,postsScale=>messenger.rememberChannelView(feedKey,{view:viewRef.current,sourceIds:selectedSources,previousSourceIds:previousSources,postsScale}))
- const fitHeader=()=>{const node=header.current;if(!node)return;const height=node.offsetHeight+'px';if(node.parentElement?.style.getPropertyValue('--channel-header-height')!==height)node.parentElement?.style.setProperty('--channel-header-height',height)}
+ const fitHeader=()=>{
+  const node=header.current;if(!node)return
+  const height=node.offsetHeight,previous=node.parentElement?.style.getPropertyValue('--channel-header-height');if(previous===height+'px')return
+  const area=feed.current,top=area?.scrollTop??0,oldHeight=parseFloat(previous||'0'),preserve=!!previous&&top>oldHeight&&keepHeaderReading.current()
+  node.parentElement?.style.setProperty('--channel-header-height',height+'px')
+  if(area&&preserve)area.scrollTop=top+height-oldHeight
+ }
  useLayoutEffect(fitHeader)
  useEffect(()=>{const node=header.current;if(!node)return;const observer=new ResizeObserver(fitHeader);observer.observe(node);return()=>observer.disconnect()},[])
  useLayoutEffect(()=>{const node=feed.current;if(!node)return;const animation=playMessageMotion(node,[{opacity:.72,transform:'translateY(5px)'},{opacity:1,transform:'none'}],200);return()=>animation?.cancel()},[feedKey,view,selectedSources.join(',')])
@@ -60,7 +66,9 @@ export function ChannelConversation({channel,store,onBack,sourceId}:{channel:Cha
  const scopeSummary=selectedSources.length?{unreadCount:scopeSources.reduce((sum,source)=>sum+source.unreadCount,0),firstUnread:scopeSources.find(source=>source.firstUnread&&!timeline.some(entry=>entry.id===source.firstUnread!.id))?.firstUnread??scopeSources.find(source=>source.firstUnread)?.firstUnread}:current
  const firstUnread=timeline.find(entry=>reading.entries.get(entry.id)?.state==='unread')?.id
  const readingKey=conversation+'/timeline/'+JSON.stringify(selectedSources),savedReading=useMemo(()=>readingPosition(readingKey),[readingKey])
- const readingMemory=useReadingPosition({identity:view==='conversation'&&!filtered?readingKey:undefined,initial:savedReading,ready:sourcesReady&&!history.loading&&!history.more&&reading.ready,items:timeline,root:feed,skip:messenger.jump?.conversation===conversation,onRestore:value=>{positioned.current=true;following.current=value;setUnreadBoundary(firstUnread??null);setReadPositioned(true)}})
+ const readingMemory=useReadingPosition({identity:view==='conversation'&&!filtered?readingKey:undefined,initial:savedReading,ready:sourcesReady&&!history.loading&&!history.more&&reading.ready,items:timeline,root:feed,skip:restoreView.current&&positioned.current||messenger.jump?.conversation===conversation,onRestore:value=>{positioned.current=true;following.current=value;setUnreadBoundary(firstUnread??null);setReadPositioned(true)}})
+ // ResizeObserver retains its callback; read the current navigation state without competing with restore/latest.
+ keepHeaderReading.current=()=>view==='conversation'&&!filtered&&positioned.current&&!following.current&&!jumping.current&&!earlierRequested.current&&!restoreView.current&&!readingMemory.restoring
  const takeReadingControl=()=>{if(view!=='conversation')return;readingMemory.cancelRestore();positioned.current=true;setReadPositioned(true)}
  const dividerId=unreadBoundary?reading.entries.get(unreadBoundary)?.state==='unread'?unreadBoundary:undefined:!positioned.current?firstUnread:undefined,earlierUnread=!!scopeSummary?.firstUnread&&!timeline.some(entry=>entry.id===scopeSummary.firstUnread!.id)&&(!!history.cursor)
  const earlierCount=Math.max(0,(scopeSummary?.unreadCount??0)-timeline.filter(entry=>reading.entries.get(entry.id)?.state==='unread').length),loadingEarlier=history.more||earlierRequested.current&&!reading.ready

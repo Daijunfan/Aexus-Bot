@@ -94,7 +94,7 @@ import { scheduleRequest,reconcileSchedules } from './scheduler/service'
 import { remoteTarget } from '../shared/remote'
 import { executeRemote,checkRemote,remoteFiles,closeRemote,resolveEmployeeWorkspace,teamConnectionId } from './tunnel'
 import { checkCloudNative,cloudNativeTarget,readCloudNativeSession } from './cloud-native'
-import {createWorker,listWorkers,workerEngines,startWorker,readWorker,inputWorker,saveWorkerDraft,resizeWorker,stopWorker,removeEmployeeWorkers,workerSnapshot,sendWorker,dequeueWorker,respondWorker,configureWorker,interruptWorker} from './native-workers'
+import {createWorker,listWorkers,renameWorkerTeam,workerEngines,startWorker,readWorker,inputWorker,saveWorkerDraft,resizeWorker,stopWorker,removeEmployeeWorkers,workerSnapshot,sendWorker,dequeueWorker,respondWorker,configureWorker,interruptWorker} from './native-workers'
 import {beforeChannelRequest,flushChannelContent,saveChannelContent,loadChannelAsset,loadChannelPost,loadChannelMessage} from './channel-content'
 import { openTerminal,listTerminals,readTerminal,waitTerminalOutput,inputTerminal,resizeTerminal,closeTerminal,closeEmployeeTerminals } from './terminals'
 // A unix-socket server so the whole app can be driven from a terminal. Every
@@ -943,6 +943,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
     case 'group.rename': {
       const old=s(a.name),next=String(a.nextName??'').trim(),store=renameGroup(old,next)
       if(old!==next){
+        renameWorkerTeam(old,next)
         closeRemote(teamConnectionId(old))
         for(const card of store.sessions.filter(value=>value.group===next))provisionEmployee(card.cwd,employeeRoot(store,card)!,employeeSettings(store,card))
         const view=getView();if(view.name===old)setView({...view,name:next})

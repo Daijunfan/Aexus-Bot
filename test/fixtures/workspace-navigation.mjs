@@ -1,13 +1,15 @@
-// Content regressions explicitly reveal the current disclosure navigation.
-// The dedicated disclosure tests verify primary-click and memory behavior.
-export async function showTeamNavigation(page){await page.locator('.company-navigation').waitFor();await page.evaluate(()=>window.agents.call('view.navigation',{section:'team',expanded:true}))}
+// Content cases use the current Team Board; primary-button behavior has its own tests.
+export async function showTeamNavigation(page){
+ await page.locator('.company-navigation').waitFor()
+ await page.evaluate(()=>window.agents.call('view.select',{id:'company'}))
+ await page.locator('.agent-board').waitFor({state:'visible'})
+}
 export async function selectWorkspaceTab(page,name){
  await page.locator('.company-navigation').waitFor()
- const view=await page.evaluate(()=>window.agents.call('view.get')),team=['Engineering','Research','Characters','Workers'].includes(name)||name==='Board'&&view.kind!=='plan'
- if(team){
-  if(view.kind!=='home')await page.evaluate(()=>window.agents.call('view.select',{id:'company'}))
+ if(['Engineering','Research','Characters','Workers'].includes(name))throw Error('Team has no '+name+' subview. Test its current Board behavior or a real Team/Message round trip instead.')
+ const view=await page.evaluate(()=>window.agents.call('view.get'))
+ if(name==='Board'&&view.kind!=='plan'){
   await showTeamNavigation(page)
-  await page.locator('.team-subviews').getByRole('tab',{name,exact:true}).click()
  }else{
   if(view.kind!=='plan')await page.evaluate(()=>window.agents.call('view.select',{id:'plan',missionTab:'plan'}))
   await page.locator('.plan-view-tabs').getByRole('tab',{name,exact:true}).click()

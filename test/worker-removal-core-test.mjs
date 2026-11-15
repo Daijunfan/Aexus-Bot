@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process'
 import {fixtureCore} from './fixtures/headless-core.mjs'
 const out=path.resolve(process.env.AGENTS_COMPANY_TEST_ARTIFACTS||'artifacts/worker-conversations/removal');fs.mkdirSync(out,{recursive:true});const f=await fixtureCore({AC_NATIVE_WORKER_FIXTURE:'1'}),checks=[]
 const core=async(cmd,args={})=>{const result=await f.request(null,cmd,args);assert.ok(result.ok,cmd+': '+result.error);return result.data},pass=text=>{checks.push(text);console.log('PASS '+text)}
-const alive=pid=>{try{return !execFileSync('ps',['-o','stat=','-p',String(pid)],{encoding:'utf8'}).trim().startsWith('Z')}catch{return false}}
+const alive=pid=>{try{if(process.platform==='win32'){process.kill(pid,0);return true}return !execFileSync('ps',['-o','stat=','-p',String(pid)],{encoding:'utf8'}).trim().startsWith('Z')}catch{return false}}
 const make=async(name)=>{const cwd=path.join(f.temp,name);fs.mkdirSync(cwd);fs.writeFileSync(path.join(cwd,'keep.txt'),'Keep my work');return core('worker.create',{engine:'codex',title:name,cwd})}
 try{
  const target=await make('target'),peer=await make('peer')

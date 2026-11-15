@@ -206,7 +206,7 @@ async function main() {
   if (!group || group === 'help' || group === '--help') {
     if(parseOnly||process.env.AGENTS_COMPANY_EMPLOYEE||process.env.AGENTS_COMPANY_TOKEN||process.env.AGENTS_COMPANY_TOKEN_FILE||process.env.AGENTS_COMPANY_PORT){
       const commands=await send({cmd:'api.list'})
-      out(commands,items=>['Agents Company — 当前身份可调用的 CLI',...items.map(c=>'agents '+c.name.replaceAll('.',' ')+' '+c.args+'\n  '+c.summary),'共享文档索引：agents api docs；完整命令目录：agents api list --all'].join('\n'))
+      out(commands,items=>['Aexus Bot — 当前身份可调用的 CLI',...items.map(c=>'agents '+c.name.replaceAll('.',' ')+' '+c.args+'\n  '+c.summary),'共享文档索引：agents api docs；完整命令目录：agents api list --all'].join('\n'))
     }else console.log(help())
     return
   }

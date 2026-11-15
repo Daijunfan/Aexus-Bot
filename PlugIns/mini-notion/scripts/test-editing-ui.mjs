@@ -1,3 +1,5 @@
+import {pluginPage} from '../../../test/fixtures/plugin-page.mjs';
+import {desktopExecutable} from '../../../test/fixtures/desktop-app.mjs';
 // Exercise the real hosted plugin in an isolated, hidden Agents Company window.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -17,6 +19,7 @@ fs.mkdirSync(path.join(temp, 'fixture'));
 fs.writeFileSync(path.join(temp, 'fixture/release-all'), '');
 const env = {
   ...process.env,
+  AGENTS_COMPANY_TEST_BOTS_URL:'http://127.0.0.1:1',
   AGENTS_COMPANY_HOME: path.join(temp, 'state'),
   AGENTS_COMPANY_WORKSPACES: path.join(temp, 'work'),
   AGENTS_COMPANY_PROJECTS: path.join(temp, 'projects'),
@@ -37,14 +40,14 @@ for (const key of Object.keys(env))
   )
     delete env[key];
 const app = await electron.launch({
-  executablePath: process.env.AGENTS_COMPANY_TEST_APP || require('../electron/runtime.cjs').electronRuntime().executable,
+  executablePath: desktopExecutable(process.env.AGENTS_COMPANY_TEST_APP) || require('../electron/runtime.cjs').electronRuntime().executable,
   args: process.env.AGENTS_COMPANY_TEST_APP ? [] : [root],
   env,
 });
 let page = await app.firstWindow();
 page.setDefaultTimeout(15000);
 const errors = [],
-  requests = [];
+  requests = [],consoleErrors=[];
 let log = '';
 app.process().stderr.on('data', (data) => {
   log = (log + data).slice(-6000);
@@ -64,7 +67,7 @@ const cli = async (...args) => {
   return reply.data;
 };
 const api = (method, params = {}) =>
-  cli('plugin', 'call', 'mininotion', method, '--team', 'Notion验收', '--params', JSON.stringify(params));
+  cli('plugin', 'call', 'mininotion', method, '--params', JSON.stringify(params));
 let checks = 0;
 const ok = (label) => {
   checks++;
@@ -77,8 +80,8 @@ const openPicker = async () => {
   return page.getByRole('dialog', { name: '选择图标' });
 };
 try {
-  await page.locator('.infinite-canvas').waitFor();
-  await cli('group', 'add', 'Notion验收', '--mode', 'work', '--plugin', 'mininotion');
+  await page.locator('.agent-board').waitFor();
+  // Plugin content lives in its independent portable collection, not a new Work Team.
   const note = await api('page.create', {
     title: '研究笔记',
     color: 'white',
@@ -101,18 +104,20 @@ try {
         children: [{ id: 'target', type: 'paragraph', content: 'local first 是这里的精确匹配。' }],
       },
       { id: 'editable', type: 'paragraph', content: '' },
+      { id: 'heading-toggle', type: 'heading', props: { level: 2, isToggleable: true }, content: 'Heading toggle', children: [{id:'heading-child',type:'paragraph',content:'Heading child stays unchanged.'}] },
     ],
   });
   const second = await api('page.create', { title: 'local first 项目', color: 'white' });
   await api('page.create', { title: 'local other first', color: 'white' });
   const opened = app.waitForEvent('window');
-  await cli('plugin', 'open', 'mininotion', '--team', 'Notion验收');
-  page = await opened;
+  await cli('plugin', 'open', 'mininotion');
+  const hosted=await opened;page = await pluginPage(hosted);
   page.setDefaultTimeout(15000);
   page.on('pageerror', (error) => {
     errors.push(error.message);
     console.error(error.stack);
   });
+  page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())});
   page.on('request', (request) => {
     if (/^https?:/.test(request.url()) && !/^https?:\/\/(127\.0\.0\.1|localhost)/.test(request.url()))
       requests.push(request.url());
@@ -121,7 +126,16 @@ try {
   await cli('plugin', 'place', win.id, '--width', '1150', '--height', '850');
   await page.locator('.sidebar').waitFor();
   await api('page.open', { pageId: note.id });
+  assert.ok(!(await hosted.locator('.plugin-host>iframe').getAttribute('sandbox')).split(/\s+/).includes('allow-same-origin'));
+  assert.equal(await page.evaluate(()=>{try{void window.localStorage;return 'available'}catch(error){return error.name}}),'SecurityError');
+  const originalBlocks=(await api('page.get',{pageId:note.id})).blocks;
+  for(const [id,childId]of [['toggle','target'],['heading-toggle','heading-child']]){
+    const toggle=page.locator('[data-id="'+id+'"] .bn-toggle-button').first(),child=page.locator('[data-id="'+childId+'"] .bn-inline-content').last();
+    await expect(child).toBeHidden();await toggle.click();await expect(child).toBeVisible();await toggle.click();await expect(child).toBeHidden();
+  }
+  assert.deepEqual((await api('page.get',{pageId:note.id})).blocks,originalBlocks,'Expansion is UI state and cannot rewrite document content');
   await expect(page.locator('.equation-block .katex')).toBeVisible();
+  ok('real opaque-origin host keeps its sandbox; toggle lists and headings open/close without Storage access or document mutation and equations still render');
   await expect(page.locator('.inline-equation .katex')).toBeVisible();
   await page.getByRole('button', { name: '编辑块公式', exact: true }).click();
   await page.getByRole('textbox', { name: 'LaTeX 公式' }).fill('\\frac{a}{b} = c');
@@ -350,15 +364,15 @@ try {
   await api('settings.set', { changes: { theme: 'dark' } });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.screenshot({ animations: 'disabled', path: path.join(artifacts, 'equations-dark.png') });
-  await cli('plugin', 'dismiss', win.id);
+  const beforeReopen=(await api('page.get',{pageId:note.id})).blocks;await cli('plugin', 'dismiss', win.id);
   const reopened = app.waitForEvent('window');
-  await cli('plugin', 'open', 'mininotion', '--team', 'Notion验收');
-  page = await reopened;
+  await cli('plugin', 'open', 'mininotion');
+  page = await pluginPage(await reopened);page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())});
   await page.locator('.sidebar').waitFor();
   await expect(page.getByRole('tablist', { name: '页面标签' }).getByRole('tab')).toHaveCount(2);
   await api('page.open', { pageId: note.id });
   await expect(page.locator('.equation-block .katex')).toBeVisible();
-  assert.deepEqual(errors, []);
+  assert.deepEqual((await api('page.get',{pageId:note.id})).blocks,beforeReopen,'Saving and reopening retains the full original page blocks');assert.deepEqual(consoleErrors,[]);await expect(page.getByText('页面暂时无法显示',{exact:true})).toHaveCount(0);assert.deepEqual(errors, []);
   assert.deepEqual(requests, []);
   assert.ok(
     await app.evaluate(({ BrowserWindow }) =>
@@ -366,6 +380,7 @@ try {
     ),
   );
   ok('cold UI reopen, dark rendering, no external network or renderer exceptions');
+  fs.writeFileSync(path.join(artifacts,'result.json'),JSON.stringify({passed:true,checks,errors,consoleErrors,externalRequests:requests,sandboxPreserved:true,opaqueOriginStorage:'SecurityError',toggleListAndHeadingClicks:true,documentBlocksUnchangedByExpansion:true,reopenBlocksUnchanged:true,modelsRun:0},null,2)+'\n');
   console.log(`PASS=${checks} FAIL=0 — no model inference`);
 } catch (error) {
   console.error(log, errors);

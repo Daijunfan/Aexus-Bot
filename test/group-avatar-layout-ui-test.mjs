@@ -16,7 +16,7 @@ try{
  const rpc=async(cmd,args={},token=null)=>{console.log('RPC '+cmd);let timer;try{const r=await Promise.race([f.request(token,cmd,args),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Fixture request timed out: '+cmd)),12000)})]);assert.ok(r.ok,cmd+': '+r.error);return r.data}finally{clearTimeout(timer)}}
  await rpc('settings.set',{language:'en',viewAppearance:{messages:{theme:'white'}}});await f.cli('group','add','Design studio')
  const a=await f.create('Mira','Design studio'),b=await f.create('Rowan','Design studio'),c=await f.create('Lin · 资料与版本检查','Design studio')
- for(const [card,avatar] of [[a,'fireball'],[b,'seedy'],[c,'byte']])await rpc('card.avatar',{id:card.id,avatar})
+ for(const [card,avatar] of [[a,'fireball'],[b,'seedy'],[c,'byte']]){await rpc('avatar.update',{id:avatar,enabled:true});await rpc('card.avatar',{id:card.id,avatar})}
  await rpc('messenger.profile',{image:{name:'my-photo.png',mimeType:'image/png',data:fs.readFileSync(path.join(root,'app_icon.png')).toString('base64')}})
  const group=await rpc('chat.create',{name:'Design review',members:[a.id,b.id,c.id]}),tokens=new Map(await Promise.all([a,b,c].map(async card=>[card.id,await f.token(card.id)])))
  const post=async(text,card,extra={})=>rpc('chat.post',{id:group.id,text,kind:card?'summary':'message',clientMessageId:crypto.randomUUID(),...extra},card?tokens.get(card.id):null)
@@ -30,7 +30,7 @@ try{
  if(native){await f.stop();const env={...f.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1000'};delete env.ELECTRON_RUN_AS_NODE;app=await electron.launch({executablePath:require('electron'),args:[application.directory],env});page=await app.firstWindow()}
  else{browser=await chromium.launch({headless:true,...(process.platform==='darwin'?{channel:'chrome'}:{})});page=await browser.newPage({viewport:{width:1440,height:1000}});await page.goto('http://127.0.0.1:'+port);await page.locator('.web-login input').fill(fs.readFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim());await page.getByRole('button',{name:'Enter workspace',exact:true}).click()}
  page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));await page.emulateMedia({reducedMotion:'reduce'})
- await expect(page.locator('.infinite-canvas')).toBeVisible();await page.getByRole('button',{name:'Messages',exact:true}).click();await page.getByRole('button',{name:'Open group '+group.name,exact:true}).click()
+ await expect(page.locator('.agent-board')).toBeVisible();await page.getByRole('button',{name:'Message',exact:true}).click();await page.getByRole('button',{name:'Open group '+group.name,exact:true}).click()
  const bubble=id=>page.locator('[data-group-message="'+id+'"]'),row=id=>bubble(id).locator('..'),feed=page.locator('.group-conversation .group-transcript')
  const geometry=async id=>{
   await bubble(id).scrollIntoViewIfNeeded();await page.mouse.move(2,2);await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))
@@ -49,8 +49,8 @@ try{
  await feed.evaluate(el=>el.scrollTo(0,0));await page.screenshot({path:path.join(out,'01-group-light.png'),animations:'disabled'})
  checks.push('All three real author IDs and the uploaded user photo render outside the bubbles; incoming left/outgoing right, continuous messages and emoji keep their original grouping.')
  // Existing bubble controls still act on the message, not the portrait or another author.
- await bubble(answer.id).scrollIntoViewIfNeeded();await bubble(answer.id).hover();await bubble(answer.id).getByRole('button',{name:'Reply to message',exact:true}).click();await expect(page.locator('.group-replying')).toContainText('Mira');await page.getByRole('button',{name:'Cancel group reply',exact:true}).click()
- await bubble(answer.id).hover();await bubble(answer.id).getByRole('button',{name:'More message actions',exact:true}).click();await page.getByRole('menuitem',{name:'Select message',exact:true}).click();await expect(bubble(answer.id)).toHaveAttribute('data-selected','true')
+ await bubble(answer.id).scrollIntoViewIfNeeded();await bubble(answer.id).click({button:'right'});await page.getByRole('menu',{name:'Message options',exact:true}).getByRole('menuitem',{name:'Reply',exact:true}).click();await expect(page.locator('.group-replying')).toContainText('Mira');await page.getByRole('button',{name:'Cancel group reply',exact:true}).click()
+ await bubble(answer.id).click({button:'right'});await page.getByRole('menuitem',{name:'Select message',exact:true}).click();await expect(bubble(answer.id)).toHaveAttribute('data-selected','true')
  const choice=await bubble(answer.id).evaluate(el=>{const avatar=el.parentElement.querySelector(':scope > .message-author-avatar').getBoundingClientRect(),toggle=el.querySelector('.message-select-toggle').getBoundingClientRect();return {separate:toggle.right<=avatar.left||toggle.left>=avatar.right||toggle.bottom<=avatar.top||toggle.top>=avatar.bottom,left:toggle.left}})
  assert.ok(choice.separate&&choice.left>=0,'Selection control must not cover the portrait');await page.getByRole('button',{name:'Cancel message selection',exact:true}).click()
  checks.push('Reply targets the correct author, selection remains usable without covering the outside portrait, and message actions retain their existing scope.')

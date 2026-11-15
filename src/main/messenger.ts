@@ -12,6 +12,7 @@ import {requireSavedChannelEntry} from './channel-content-policy'
 import {socialElements,socialIdentity,categoryRule} from './message-categories'
 import {conversationCategories,inCategory,matchesConversationType,matchesConversationQuery,uniqueConversations,CONVERSATION_TYPES,type CategoryEntry,type ConversationType} from '../shared/message-categories'
 import {resolveAvatar} from '../shared/avatars'
+import {activeAvatarIds} from './avatar-catalog'
 import {validatedImage} from './image-input'
 import type {PublicMessage,MessageSource} from './message-index'
 import {queryMessageIndex,type IndexKind,type IndexOptions,type IndexResult} from './message-index-client'
@@ -133,7 +134,7 @@ export async function messengerRequest(command:string,args:Record<string,any>={}
     atomicJson(profileImageFile,{sha256:image.sha256,name:args.image.name.trim(),mimeType:args.image.mimeType,data:image.data.toString('base64')})
     state.profile={image:{sha256:image.sha256}};return write(state)
    }
-   const avatar=args.avatar===null||args.avatar==='null'?undefined:resolveAvatar({avatar:args.avatar})
+   const avatar=args.avatar===null||args.avatar==='null'?undefined:resolveAvatar({avatar:args.avatar},activeAvatarIds())
    if(!state.profile?.image&&state.profile?.avatar===avatar)return state
    state.profile=avatar?{avatar}:{};const result=write(state);atomicJson(profileImageFile,null);return result
   }

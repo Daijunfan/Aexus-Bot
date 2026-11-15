@@ -25,7 +25,7 @@ async function verifyFixtureOnly(control,employees){
  const initial=files.filter(n=>n.endsWith('-initializing.json'));
  for(const file of initial){
   const id=file.slice(0,-'-initializing.json'.length);assert(employees.includes(id),'Only the explicitly created fixture employees may initialize.');
-  const request=JSON.parse(await fs.readFile(path.join(control,file),'utf8'));assert(request.text.includes('[Agents Company private initialization]'));
+  const request=JSON.parse(await fs.readFile(path.join(control,file),'utf8'));assert(request.text.includes('[Aexus initialization]'));assert(!request.text.includes('[Agents Company private initialization]'));
   const receipt=JSON.parse(await fs.readFile(path.join(control,id+'-read.json'),'utf8'));assert.deepEqual(receipt.operations,['identity','index']);
  }
  return {syntheticInitializations:initial.length,syntheticWorkTurns:0,realModelCalls:0};

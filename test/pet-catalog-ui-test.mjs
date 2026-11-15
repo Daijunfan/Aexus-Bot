@@ -1,83 +1,43 @@
-// Official artwork, identity compatibility and playback; isolated hidden app, no model calls.
+// Real current character picker, historical artwork and identity compatibility; hidden fixture only.
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import {createRequire} from 'node:module'
-import {execFile} from 'node:child_process'
-import {promisify} from 'node:util'
 import assert from 'node:assert/strict'
-import {FATE_AVATARS} from '../src/shared/office.ts'
-const require=createRequire(import.meta.url),{_electron:electron,expect}=require('@playwright/test'),run=promisify(execFile),root=path.resolve(import.meta.dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'ac-pets-'))
-const community=['woodi','marmalade','voltcoin','inky','byte','wondercube'],sprites=['codex','dewey','fireball','rocky','seedy','stacky','bsod','null-signal','hoots',...community],buddies=JSON.parse(fs.readFileSync(root+'/src/renderer/src/assets/pets/claude-buddies.json')),selectable=[...sprites,...FATE_AVATARS],kinds=[...sprites,'clawd',...Object.keys(buddies)],control=path.join(temp,'fixture'),output=path.join(root,'artifacts/avatar-picker')
-fs.mkdirSync(control);fs.writeFileSync(path.join(control,'release-all'),'');fs.mkdirSync(output,{recursive:true})
-const env={...process.env,CODEX_BIN:path.join(root,'test/fixtures/initialization-codex.cjs'),CODEX_HOME:path.join(temp,'codex'),AC_INIT_FIXTURE:control,AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_HIDDEN:'1'}
-for(const key of Object.keys(env))if(key.startsWith('AGENTS_COMPANY_TOKEN')||['ELECTRON_RUN_AS_NODE','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_PORT'].includes(key))delete env[key]
-const app=await electron.launch({executablePath:process.env.AGENTS_COMPANY_TEST_APP||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[root],env}),page=await app.firstWindow();page.setDefaultTimeout(15000)
-const errors=[];page.on('pageerror',e=>errors.push(e.message))
-const cli=async(...args)=>{const r=JSON.parse((await run(process.execPath,[path.join(root,'bin/agents'),...args,'--json'],{env})).stdout);assert.ok(r.ok,r.error);return r.data}
+import {FATE_AVATARS,SELECTABLE_AVATARS} from '../src/shared/office.ts'
+import {ENGINE_DEFINITIONS} from '../src/shared/engines.ts'
+import {fixtureCore} from './fixtures/headless-core.mjs'
+import {desktopExecutable} from './fixtures/desktop-app.mjs'
+const require=createRequire(import.meta.url),{_electron:electron,expect}=require('@playwright/test'),root=path.resolve(import.meta.dirname,'..'),community=['woodi','marmalade','voltcoin','inky','byte','wondercube'],sprites=['codex','dewey','fireball','rocky','seedy','stacky','bsod','null-signal','hoots',...community],buddies=JSON.parse(fs.readFileSync(root+'/src/renderer/src/assets/pets/claude-buddies.json')),legacyPicker=[...sprites,...FATE_AVATARS],kinds=[...sprites,'clawd',...Object.keys(buddies)],out=path.resolve(process.env.AGENTS_COMPANY_TEST_ARTIFACTS||'artifacts/avatar-picker')
+fs.mkdirSync(out,{recursive:true});fs.rmSync(path.join(out,'result.json'),{force:true});let f,app,page;const checks=[],errors=[],fallbacks=[],pass=label=>{checks.push(label);console.log('PASS '+label)}
 try{
- await page.locator('.infinite-canvas').waitFor();await cli('settings','set','--language','zh-CN');await cli('engine','configure','--engine','claude','--data',JSON.stringify({sdkPath:root+'/test/fixtures/discussion-claude-sdk.mjs'}));await cli('group','add','Pet Studio');await cli('settings','set','--theme','white')
- const card=await cli('card','create','--title','Original identity','--avatar','marmalade','--group','Pet Studio','--model','gpt-6-luna'),mascot=page.locator(`[data-card-id="${card.id}"] .mascot`)
- await expect(mascot).toHaveAttribute('data-avatar','marmalade');await expect.poll(async()=>(await cli('session','status','--employee',card.id))[0].initialization.status).toBe('ready')
- for(const avatar of kinds){const updated=await cli('card','update',card.id,'--avatar',avatar),edited=updated.sessions.find(c=>c.id===card.id);assert.equal(edited.avatar,avatar);assert.equal(edited.id,card.id);await expect(mascot).toHaveAttribute('data-avatar',avatar)}
- const claude=await cli('card','create','--title','Claude mark','--avatar','clawd','--engine','claude','--group','Pet Studio')
- await expect.poll(async()=>(await cli('session','status','--employee',claude.id))[0].initialization.status).toBe('ready');
+ f=await fixtureCore();const core=async(cmd,args={})=>{const r=await f.request(null,cmd,args);assert.ok(r.ok,cmd+': '+r.error);return r.data}
+ await core('settings.set',{language:'en',viewAppearance:{company:{theme:'white'}}});await core('engine.configure',{engine:'claude',patch:{sdkPath:root+'/test/fixtures/discussion-claude-sdk.mjs'}});await core('group.add',{name:'Pet Studio'});const card=await f.create('Original identity','Pet Studio')
+ await f.stop();const env={...f.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1000'};delete env.ELECTRON_RUN_AS_NODE;const target=process.env.AGENTS_COMPANY_TEST_APP;app=await electron.launch({executablePath:target?desktopExecutable(target):require('electron'),args:target?[]:[root],env});page=await app.firstWindow();page.setDefaultTimeout(15000);page.on('pageerror',error=>errors.push(error.message));await page.emulateMedia({reducedMotion:'no-preference'});await page.locator('.agent-board').waitFor()
+ const call=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args}),panel=id=>page.locator('.agent-board-panel[data-employee="'+id+'"]'),roster=id=>page.locator('.board-roster-row[data-member-key="employee:'+id+'"]'),picker=page.getByRole('dialog',{name:'Choose character',exact:true}),form=page.locator('.employee-form'),shot=name=>page.screenshot({path:path.join(out,name+'.png')}),person=async id=>(await call('session.list')).sessions.find(value=>value.id===id)
+ assert.deepEqual((await call('avatar.list')).map(item=>item.id).sort(),[...SELECTABLE_AVATARS].sort())
+ for(const avatar of kinds){
+  const initial=await call('avatar.get',{id:avatar});await call('avatar.update',{id:avatar,enabled:true});await call('card.update',{id:card.id,patch:{avatar}});assert.equal((await person(card.id)).avatar,avatar);assert.equal((await person(card.id)).id,card.id)
+  for(const surface of [panel(card.id).locator('header'),roster(card.id)])await expect(surface.locator('[data-portrait]')).toHaveAttribute('data-portrait',avatar)
+  if(!initial.enabled){await call('avatar.update',{id:avatar,enabled:false});const archived=await call('avatar.get',{id:avatar});assert.equal(archived.enabled,false);assert.equal(archived.assignedCount,1);assert.notEqual(archived.displayId,avatar);for(const surface of [panel(card.id).locator('header'),roster(card.id)])await expect(surface.locator('[data-portrait]')).toHaveAttribute('data-portrait',archived.displayId);assert.equal((await person(card.id)).avatar,avatar);fallbacks.push({id:avatar,displayId:archived.displayId})}
+  if(buddies[avatar])for(const clip of Object.values(buddies[avatar])){assert.ok(clip.sequence.length);assert.ok(clip.sequence.every(index=>clip.frames[index]?.length===5))}
+ }
+ const retained=await person(card.id),retainedDisplay=(await call('avatar.get',{id:retained.avatar})).displayId;await page.reload();await expect(panel(card.id).locator('header [data-portrait]')).toHaveAttribute('data-portrait',retainedDisplay);assert.equal((await person(card.id)).avatar,kinds.at(-1));pass('Every historical sprite/Buddy ID can be explicitly enabled and assigned; archiving preserves the saved identity and projects the same stable fallback in the Board header and roster, including reload')
+ await call('avatar.update',{id:'clawd',enabled:true});const claude=await call('card.create',{title:'Claude mark',engine:'claude',avatar:'clawd',group:'Pet Studio'});await f.ready(claude.id);await call('avatar.update',{id:'clawd',enabled:false});const identities=(await call('session.list')).sessions.map(({id,engine,cwd,threadId,claudeSessionId,nativeSessions})=>({id,engine,cwd,threadId,claudeSessionId,nativeSessions}))
  for(const theme of ['black','white']){
-  await cli('settings','set','--theme',theme)
-  for(const [engine,id] of [['codex',card.id],['claude',claude.id]]){
-   const badge=page.locator(`[data-card-id="${id}"] .employee-badge`),mark=badge.locator('.badge-engine svg')
-   await expect(mark).toHaveAttribute('width','24');await expect(mark).toHaveAttribute('height','24')
-   const geometry=await mark.evaluate(el=>{const r=el.getBoundingClientRect(),b=el.closest('.employee-badge').getBoundingClientRect();return {inside:r.left>=b.left&&r.top>=b.top&&r.right<=b.right&&r.bottom<=b.bottom,square:Math.abs(r.width-r.height)<.1,fill:getComputedStyle(el.querySelector('path')).fill}})
-   assert.ok(geometry.inside&&geometry.square);assert.notEqual(geometry.fill,'none');if(engine==='claude')assert.equal(geometry.fill,'rgb(217, 119, 87)')
-   await badge.screenshot({path:path.join(output,`badge-${theme}-${engine}.png`)})
-  }
+  await call('settings.set',{viewAppearance:{company:{theme}}});await expect(page.locator('html')).toHaveAttribute('data-theme',theme)
+  for(const [engine,id] of [['codex',card.id],['claude',claude.id]]){await panel(id).getByRole('button',{name:'Open full conversation with '+(engine==='codex'?'Original identity':'Claude mark'),exact:true}).click();const header=page.locator('.conversation-dialog .employee-details-toolbar'),mark=header.locator('.session-heading [data-engine-mark="'+engine+'"]');await expect(mark).toHaveAttribute('width','20');await expect(mark).toHaveAttribute('height','20');const geometry=await mark.evaluate(el=>{const r=el.getBoundingClientRect(),b=el.closest('.session-heading').getBoundingClientRect();return {inside:r.left>=b.left&&r.top>=b.top&&r.right<=b.right&&r.bottom<=b.bottom,square:Math.abs(r.width-r.height)<.1,fill:getComputedStyle(el.querySelector('path')).fill}});assert.ok(geometry.inside&&geometry.square);assert.notEqual(geometry.fill,'none');if(engine==='claude')assert.equal(geometry.fill,'rgb(217, 119, 87)');await header.screenshot({path:path.join(out,`header-${theme}-${engine}.png`)});await page.getByRole('button',{name:'Close conversation',exact:true}).click()}
  }
- await page.locator('.add-employee').click();await expect(page.locator('.avatar-options button')).toHaveCount(57)
- await expect(page.locator('.avatar-options')).toHaveCount(1)
- await expect(page.locator('.avatar-collection,.avatar-collection-label,.avatar-options .buddy-body,.avatar-options [data-avatar=clawd]')).toHaveCount(0)
- assert.deepEqual((await page.locator('.avatar-options .mascot').evaluateAll(elements=>elements.map(el=>el.dataset.avatar))).sort(),[...selectable].sort(),'all other characters must remain, without duplicates')
- await expect(page.locator('.field-heading').filter({hasText:'选择你的伙伴'})).toContainText('57 款伙伴')
- for(const kind of sprites){
-  const pet=page.locator(`.avatar-options [data-avatar="${kind}"]`)
-  if(sprites.includes(kind)){
-   const atlas=await pet.locator('.pet-cell').evaluate(async el=>{const img=new Image();img.src=getComputedStyle(el).backgroundImage.slice(5,-2);await img.decode();return [img.naturalWidth,img.naturalHeight]});assert.deepEqual(atlas,[1152,208])
-  }else if(kind==='clawd')assert.equal(await pet.locator('img').evaluate(async img=>{await img.decode();return img.naturalWidth}),47)
-  else for(const clip of Object.values(buddies[kind])){assert.ok(clip.sequence.length);assert.ok(clip.sequence.every(index=>clip.frames[index]?.length===5))}
-  await pet.hover();await expect(pet).toHaveAttribute('data-pose','pickup');await expect(pet).toHaveCSS('animation-name','pet-hop');const frame=await pet.getAttribute('data-frame');await expect.poll(()=>pet.getAttribute('data-frame')).not.toBe(frame)
-  await page.mouse.move(1000,40);await expect(pet).toHaveClass(/official-napping/);await expect(pet.locator('.sleep-z')).toHaveCount(3)
- }
- await page.locator('.avatar-options').screenshot({path:path.join(output,'catalog.png')})
- await expect(page.locator('.engine-choices .codex-mark')).toHaveAttribute('aria-label','Codex');await expect(page.locator('.engine-choices .claude-mark')).toHaveAttribute('aria-label','Claude Agent')
- for(const mark of await page.locator('.engine-choices .codex-mark,.engine-choices .claude-mark').all())assert.ok((await mark.locator('path').first().getAttribute('d')).length>500)
- await page.locator('.engine-choices').screenshot({path:path.join(output,'engine-marks.png')})
- await page.emulateMedia({reducedMotion:'reduce'})
- const geometry=[]
- for(const theme of ['white','black']){
-  await cli('settings','set','--theme',theme)
-  const entries=await page.locator('.avatar-options button').evaluateAll(buttons=>buttons.map(button=>{
-   const pet=button.querySelector('.mascot'),view=pet.querySelector('.pet-viewport'),label=button.querySelector('.avatar-label'),frame=pet.querySelector('.official-frame')
-   const bottom=Math.max(pet.getBoundingClientRect().bottom,view.getBoundingClientRect().bottom,frame.getBoundingClientRect().bottom)
-   return {avatar:pet.dataset.avatar,position:getComputedStyle(pet).position,ownViewport:view.offsetParent===pet,gap:label.getBoundingClientRect().top-bottom}
-  }))
-  for(const entry of entries){assert.equal(entry.position,'relative');assert.ok(entry.ownViewport);assert.ok(entry.gap>=16,JSON.stringify(entry))}
-  geometry.push({theme,entries});await page.locator('.avatar-options').screenshot({path:path.join(output,`catalog-${theme}.png`)})
- }
- fs.writeFileSync(path.join(output,'geometry.json'),JSON.stringify(geometry,null,2)+'\n')
- for(const kind of ['fireball','hoots','marmalade','fate-saber-anime','fate-saber-chibi']){const pet=page.locator(`.avatar-options [data-avatar="${kind}"]`);await pet.hover();await expect(pet).toHaveCSS('animation-name','none');const frame=await pet.getAttribute('data-frame');await page.waitForTimeout(700);assert.equal(await pet.getAttribute('data-frame'),frame)}
- // Retired picker entries must not silently change saved employee identities.
- await cli('view','close');await cli('view','open','employee','--employee',card.id)
- await expect(page.locator('.avatar-options')).toHaveCount(1);await expect(page.locator('.avatar-options button')).toHaveCount(57)
- await expect(page.locator('.avatar-options .buddy-body,.avatar-options [data-avatar=clawd]')).toHaveCount(0)
- await expect(page.locator('.employee-preview .mascot')).toHaveAttribute('data-avatar',kinds.at(-1))
- await page.locator('.save-employee').click();await expect(page.locator('.employee-form')).toHaveCount(0)
- const preserved=(await cli('session','list')).sessions.find(c=>c.id===card.id)
- assert.equal(preserved.avatar,kinds.at(-1));assert.equal(preserved.cwd,card.cwd);assert.equal(preserved.engine,card.engine)
- await cli('view','open','employee','--employee',card.id)
- await page.locator('.avatar-options [data-avatar="hoots"]').click()
- await expect(page.locator('.employee-preview .mascot')).toHaveAttribute('data-avatar','hoots')
- await expect(page.locator('.avatar-options button.selected .mascot')).toHaveAttribute('data-avatar','hoots')
- await page.locator('.save-employee').click();await expect(page.locator('.employee-form')).toHaveCount(0)
- assert.equal((await cli('session','list')).sessions.find(c=>c.id===card.id).avatar,'hoots')
- assert.deepEqual(errors,[]);assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(w=>!w.isVisible())))
- console.log('PASS unified 57-character picker, only Clawd and the previously retired text-art choices hidden, saved identities and profile selection/save preserved, image/name clearance in both themes, retained animation frames and reduced-motion; hidden fixture, no model calls')
-}finally{await app.close();fs.rmSync(temp,{recursive:true,force:true})}
+ pass('Codex and Claude marks remain drawn, square, contained and correctly colored in the real full-conversation title in both themes')
+ for(const id of legacyPicker)await call('avatar.update',{id,enabled:true});const enabled=[...new Set([...SELECTABLE_AVATARS,...legacyPicker])].sort();await page.getByRole('button',{name:'Add Employee',exact:true}).click();await expect(form).toBeVisible();await expect(form.locator('.avatar-options')).toHaveCount(0);await form.getByRole('button',{name:'Change character',exact:true}).click();await expect(picker.locator('[data-character]')).toHaveCount(enabled.length);assert.deepEqual((await picker.locator('[data-character]').evaluateAll(nodes=>nodes.map(node=>node.dataset.character))).sort(),enabled);await expect(picker.locator('[data-character="clawd"],[data-character^="claude-"]')).toHaveCount(0)
+ assert.deepEqual((await form.locator('.engine-choices [data-engine]').evaluateAll(nodes=>nodes.map(node=>node.dataset.engine))).sort(),Object.keys(ENGINE_DEFINITIONS).sort());for(const engine of ['codex','claude']){const mark=form.locator('.engine-choices [data-engine-mark="'+engine+'"]');await expect(mark).toHaveAttribute('aria-label',ENGINE_DEFINITIONS[engine].label);assert.ok((await mark.locator('path').first().getAttribute('d')).length>500)}
+ const choose=async id=>{await picker.locator('[data-character="'+id+'"]').click();await expect(picker.locator('.character-stage .mascot')).toHaveAttribute('data-avatar',id)}
+ for(const kind of sprites){await choose(kind);const pet=picker.locator('.character-stage .mascot');const atlas=await pet.locator('.pet-cell').evaluate(async el=>{const img=new Image();img.src=getComputedStyle(el).backgroundImage.slice(5,-2);await img.decode();return [img.naturalWidth,img.naturalHeight]});assert.deepEqual(atlas,[1536,208*(['codex','hoots',...community].includes(kind)?11:9)]);await pet.hover();await expect(pet).toHaveAttribute('data-pose','pickup');await expect(pet).toHaveCSS('animation-name','pet-hop');const frame=await pet.getAttribute('data-frame');await expect.poll(()=>pet.getAttribute('data-frame')).not.toBe(frame);await picker.getByRole('button',{name:'Use character',exact:true}).click();const preview=form.locator('.employee-preview .mascot');await page.mouse.move(1300,40);await expect(preview).toHaveAttribute('data-avatar',kind);await expect(preview).toHaveClass(/official-napping/);await expect(preview.locator('.sleep-z')).toHaveCount(3);await form.getByRole('button',{name:'Change character',exact:true}).click()}
+ pass('All previously selectable sprite/Fate IDs remain available when explicitly enabled, without duplicates; every legacy sprite uses its exact native atlas, animated hover frames and sleeping creation preview')
+ const geometry=[];await page.emulateMedia({reducedMotion:'reduce'})
+ for(const theme of ['white','black']){await call('settings.set',{viewAppearance:{company:{theme}}});const entries=await picker.locator('.character-grid>[data-character]').evaluateAll(buttons=>buttons.map(button=>{const pet=button.querySelector('.message-avatar'),label=button.querySelector('strong'),r=pet.getBoundingClientRect(),b=button.getBoundingClientRect(),l=label.getBoundingClientRect();return {avatar:button.dataset.character,gap:l.top-r.bottom,inside:r.left>=b.left&&r.right<=b.right&&l.left>=b.left&&l.right<=b.right}}));assert.deepEqual(entries.map(entry=>entry.avatar).sort(),enabled);for(const entry of entries){assert.ok(entry.inside,JSON.stringify(entry));assert.ok(entry.gap>=7,JSON.stringify(entry))}geometry.push({theme,entries});await picker.screenshot({path:path.join(out,'catalog-'+theme+'.png')})}
+ fs.writeFileSync(path.join(out,'geometry.json'),JSON.stringify(geometry,null,2)+'\n');for(const kind of ['fireball','hoots','marmalade','fate-saber-anime','fate-saber-chibi']){await choose(kind);const pet=picker.locator('.character-stage .mascot');await pet.hover();await expect(pet).toHaveCSS('animation-name','none');const frame=await pet.getAttribute('data-frame');await page.waitForTimeout(700);assert.equal(await pet.getAttribute('data-frame'),frame)}
+ await picker.getByRole('button',{name:'Cancel',exact:true}).click();await form.getByRole('button',{name:'Cancel',exact:true}).click();pass('The independent catalog keeps every portrait and name separated in white/dark themes; reduced-motion freezes both atlas and Fate frames')
+ const profileDisplay=(await call('avatar.get',{id:retained.avatar})).displayId;await call('view.open',{kind:'employee',employee:card.id});const profile=page.locator('.employee-profile-page');await expect(profile.locator('.profile-portrait [data-portrait]')).toHaveAttribute('data-portrait',profileDisplay);await profile.getByRole('button',{name:'Edit profile',exact:true}).click();await expect(form.locator('.avatar-options')).toHaveCount(0);await expect(form.locator('.employee-preview [data-portrait]')).toHaveAttribute('data-portrait',profileDisplay);await form.getByRole('button',{name:'Save changes',exact:true}).click();await expect(form).toHaveCount(0);assert.equal((await person(card.id)).avatar,kinds.at(-1));await profile.getByRole('button',{name:'Change character',exact:true}).click();await choose('hoots');await expect(picker.locator('[data-character="hoots"]')).toHaveAttribute('aria-pressed','true');await picker.getByRole('button',{name:'Use character',exact:true}).click();await expect(profile.locator('.profile-portrait [data-portrait]')).toHaveAttribute('data-portrait','hoots');assert.equal((await person(card.id)).avatar,'hoots')
+ assert.deepEqual((await call('session.list')).sessions.map(({id,engine,cwd,threadId,claudeSessionId,nativeSessions})=>({id,engine,cwd,threadId,claudeSessionId,nativeSessions})),identities);pass('Saving an unchanged profile keeps an archived appearance ID; a deliberate picker confirmation changes only the appearance while workspace, engine and native identities remain intact')
+ assert.deepEqual(errors,[]);assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())));await shot('profile-selection');fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({passed:true,checks,errors,fallbacks,productionDataUsed:false,paidModelCalls:0},null,2)+'\n')
+}catch(error){await page?.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});fs.writeFileSync(path.join(out,'failure.json'),JSON.stringify({error:error.stack,checks,errors},null,2));throw error}finally{await app?.close();await f?.close()}

@@ -3,7 +3,7 @@ import {expect} from '@playwright/test'
 export async function readyEmployee(call,id){
  await expect.poll(async()=>{const state=(await call('session.status',{employee:id}))[0];if(state?.initialization?.status==='failed')throw Error(state.initialization.error);return state?.initialization?.status},{timeout:20000}).toBe('ready')
 }
-export async function createReady(call,args){const card=await call('card.create',args);await readyEmployee(call,card.id);return card}
+export async function createReady(call,args){if(args.avatar)await call('avatar.update',{id:args.avatar,enabled:true});const card=await call('card.create',args);await readyEmployee(call,card.id);return card}
 /** Idle before an asynchronous UI dispatch is not proof the submitted message completed. */
 export async function acceptedMessage(call,id,text){
  await expect.poll(async()=>(await call('session.transcript',{employee:id})).items.some(item=>item.role==='user'&&item.text===text),{timeout:15000}).toBe(true)

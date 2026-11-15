@@ -1,95 +1,54 @@
-// Test a built desktop executable against disposable state, never the installed user's Core.
+// Installed/built desktop binary, real bundled plugins and CLI; disposable state and native fixtures only.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import {fileURLToPath} from 'node:url'
+import {createHash} from 'node:crypto'
 import {execFile} from 'node:child_process'
 import {promisify} from 'node:util'
-import { _electron as electron,expect } from '@playwright/test'
-const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..')
-const executable=process.env.AGENTS_COMPANY_TEST_APP
-if(!executable||!fs.existsSync(executable))throw Error('Set AGENTS_COMPANY_TEST_APP to the built desktop executable')
-const temporary=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'agents-package-')))
-const output=path.resolve(process.env.AGENTS_COMPANY_TEST_ARTIFACTS||path.join(root,'artifacts','packaged-desktop-'+process.platform))
-fs.mkdirSync(output,{recursive:true})
-const fixture=path.join(temporary,'fixture');fs.mkdirSync(fixture);fs.writeFileSync(path.join(fixture,'release-all'),'')
-const env={...process.env,CODEX_BIN:path.join(root,'test/fixtures/initialization-codex.cjs'),CODEX_HOME:path.join(temporary,'codex'),AC_INIT_FIXTURE:fixture,AGENTS_COMPANY_HOME:path.join(temporary,'state'),AGENTS_COMPANY_PROJECTS:path.join(temporary,'projects'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1050'}
-for(const key of Object.keys(env))if(key.startsWith('AGENTS_COMPANY_TOKEN')||['ELECTRON_RUN_AS_NODE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_WEB_URL','AGENTS_COMPANY_URL','AGENTS_COMPANY_WORKSPACES','AGENTS_COMPANY_BUILTIN_PLUGINS','AGENTS_COMPANY_PLUGIN_DIRS','AGENTS_COMPANY_CLIENT'].includes(key))delete env[key]
+import sharp from 'sharp'
+import {_electron as electron,expect} from '@playwright/test'
+import {desktopExecutable} from './fixtures/desktop-app.mjs'
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),target=process.env.AGENTS_COMPANY_TEST_APP
+if(!target||!fs.existsSync(target))throw Error('Set AGENTS_COMPANY_TEST_APP to the desktop application or executable')
+const executable=desktopExecutable(target),temporary=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'agents-package-'))),output=path.resolve(process.env.AGENTS_COMPANY_TEST_ARTIFACTS||path.join(root,'artifacts','packaged-desktop-'+process.platform))
+fs.mkdirSync(output,{recursive:true});fs.rmSync(path.join(output,'results.json'),{force:true});const fixture=path.join(temporary,'fixture');fs.mkdirSync(fixture);fs.writeFileSync(path.join(fixture,'release-all'),'')
+const env={...process.env,CODEX_BIN:path.join(root,'test/fixtures/initialization-codex.cjs'),CODEX_HOME:path.join(temporary,'codex'),CLAUDE_CONFIG_DIR:path.join(temporary,'claude'),CLINE_DATA_DIR:path.join(temporary,'cline'),PI_CODING_AGENT_DIR:path.join(temporary,'pi'),DSH_HOME:path.join(temporary,'deepseek'),AC_INIT_FIXTURE:fixture,AGENTS_COMPANY_TEST_BOTS_URL:'http://127.0.0.1:1',AGENTS_COMPANY_HOME:path.join(temporary,'state'),AGENTS_COMPANY_PROJECTS:path.join(temporary,'projects'),AGENTS_COMPANY_SHARED_DIR:path.join(temporary,'shared'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1050'}
+for(const key of Object.keys(env))if(key.startsWith('AGENTS_COMPANY_TOKEN')||['ELECTRON_RUN_AS_NODE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_WEB_URL','AGENTS_COMPANY_URL','AGENTS_COMPANY_WORKSPACES','AGENTS_COMPANY_BUILTIN_PLUGINS','AGENTS_COMPANY_PLUGIN_DIRS','AGENTS_COMPANY_CLIENT','AGENTS_COMPANY_PORT'].includes(key))delete env[key]
 if(process.platform==='win32')env.AGENTS_COMPANY_OFFSCREEN='1'
-let app
-const checks=[],errors=[]
+let app,page;const checks=[],errors=[],artwork=[],pluginEvidence=[]
+const pink=async file=>{const {data,info}=await sharp(file).removeAlpha().raw().toBuffer({resolveWithObject:true});let n=0;for(let i=0;i<data.length;i+=info.channels)if(data[i]>180&&data[i+1]<90&&data[i+2]>180)n++;return n}
 try{
-  app=await electron.launch({executablePath:executable,args:[],env})
-  const page=await app.firstWindow();page.setDefaultTimeout(20000)
-  page.on('pageerror',error=>errors.push(error.message))
-  await page.locator('.infinite-canvas').waitFor()
-  const product=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).productName
-  await expect(page.locator('.company-brand span')).toHaveText(product)
-  assert.equal(await page.title(),product)
-  assert.equal(await app.evaluate(({app})=>app.getName()),product)
-  checks.push('Actual product name, window title and Company header match '+product)
-  const call=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args})
-  const plugins=await call('plugin.list')
-  const lock=JSON.parse(fs.readFileSync(path.join(root,'plugins.lock.json'),'utf8')).plugins
-  assert.equal(plugins.length,3)
-  for(const item of lock){const id=item.directory==='mini-notion'?'mininotion':item.directory;assert.equal(plugins.find(p=>p.id===id)?.version,item.version)}
-  checks.push('All three exact plugin versions bundled')
-  await call('group.add',{name:'Package Verification',mode:'build'})
-  const worker=await call('card.create',{title:'Package Employee',group:'Package Verification',engine:'codex',model:'gpt-6-luna',effort:'low',managementRole:'employee',character:'英雄王',avatarStyle:'chibi',profession:'验收'})
-  await expect.poll(async()=>{const status=(await call('session.status',{employee:worker.id}))[0];if(status.initialization?.status==='failed')throw Error(status.initialization.error);return status.initialization?.status},{timeout:20000}).toBe('ready')
-  await page.locator(`[data-card-id="${worker.id}"]`).first().waitFor()
-  assert.equal((await call('session.status',{employee:worker.id}))[0].title,'Package Employee')
-  assert.equal(worker.avatar,'fate-gilgamesh-chibi')
-  const pet=page.locator(`[data-card-id="${worker.id}"] .fate-pet`).first()
-  await pet.waitFor();assert.equal(await pet.getAttribute('data-avatar'),'fate-gilgamesh-chibi')
-  await pet.locator('.pet-cell').evaluate(async el=>{const img=new Image();img.src=getComputedStyle(el).backgroundImage.slice(5,-2);await img.decode();if(!img.naturalWidth||!img.naturalHeight)throw Error('Avatar sprite did not load')})
-  await page.locator(`[data-card-id="${worker.id}"]`).first().screenshot({path:path.join(output,'gilgamesh.png')})
-  checks.push('Named character API resolves Gilgamesh chibi and the installed renderer loads its actual sprite')
-  checks.push('Packaged Core creates and initializes an employee through a deterministic native protocol fixture; no provider request')
-  const terminal=await call('terminal.open',{employee:worker.id,cols:90,rows:24})
-  await call('terminal.input',{id:terminal.id,data:process.platform==='win32'?"Write-Output ('PACKAGE_'+'PTY_OK')\r":"printf 'PACKAGE_%s\\n' PTY_OK\n"})
-  let terminalReady=false
-  for(let attempt=0;attempt<100;attempt++){const state=await call('terminal.read',{id:terminal.id});if(state.output.includes('PACKAGE_PTY_OK')){terminalReady=true;break}await new Promise(resolve=>setTimeout(resolve,100))}
-  assert.ok(terminalReady,'Packaged terminal produced no confirmed output')
-  await call('terminal.resize',{id:terminal.id,cols:100,rows:30});await call('terminal.close',{id:terminal.id})
-  checks.push('Packaged native terminal input, output, resize and cleanup')
-  await page.screenshot({path:path.join(output,'office.png')})
-  const exported=await call('ui.screenshot',{path:path.join(output,'office-private.png'),privacy:true})
-  assert.equal(exported.privacy,true,'Core must forward the screenshot privacy option')
-  assert.equal(await page.locator('.team-root-label').first().evaluate(el=>getComputedStyle(el).visibility),'visible','Privacy export must restore the live UI')
-  checks.push('Privacy screenshot option reaches the desktop and restores live labels')
-  for(const plugin of plugins){
-    const team='Package '+plugin.id
-    await call('group.add',{name:team,mode:'work',pluginId:plugin.id})
-    const store=await call('session.list'),workspace=store.teamRoots[team]
-    assert.ok(path.resolve(workspace).startsWith(path.resolve(env.AGENTS_COMPANY_HOME)+path.sep),'Release workspaces must not depend on a developer checkout: '+workspace)
-    const pending=app.waitForEvent('window')
-    const opened=await call('plugin.open',{id:plugin.id,team})
-    const child=await pending;child.on('pageerror',error=>errors.push(error.message));await child.waitForLoadState('domcontentloaded')
-    await child.locator('body').waitFor();assert.ok((await child.locator('body').innerText()).trim().length>0)
-    await child.screenshot({path:path.join(output,plugin.id+'.png')})
-    await call('plugin.dismiss',{id:opened.id})
-    checks.push(plugin.id+': portable workspace, actual plugin window and save/close lifecycle')
-  }
-  if(process.platform==='darwin'){
-    const binary=path.resolve(path.dirname(executable),'../Resources/cli/aexus-bot'),run=promisify(execFile)
-    const cli=async(...args)=>{const reply=JSON.parse((await run(binary,[...args,'--json'],{env,timeout:60000,maxBuffer:8e6})).stdout);assert.ok(reply.ok,reply.error);return reply.data}
-    const plugin=(id,method,params={})=>cli('plugin','call',id,method,'--params',JSON.stringify(params))
-    const note=await plugin('mininotion','page.create',{title:'Packaged PDF',color:'white'})
-    await plugin('mininotion','block.append',{pageId:note.id,text:'FINAL_PLUGIN_PDF_OK'})
-    const pdf=await plugin('mininotion','file.export',{pageId:note.id,type:'pdf',output:'Exports/packaged.pdf'})
-    assert.equal(fs.readFileSync(pdf.path).subarray(0,5).toString(),'%PDF-')
-    fs.copyFileSync(pdf.path,path.join(output,'plugin-cli.pdf'))
-    assert.equal((await plugin('margin-reader','study.create',{title:'Installed CLI study'})).title,'Installed CLI study')
-    const hosts=await cli('plugin','describe','cloud-hosts')
-    assert.ok(hosts.api.commands.some(command=>command.method==='hosts.terminal-open'))
-    assert.ok(!hosts.api.commands.some(command=>command.method.includes('desktop')))
-    checks.push('Actual packaged CLI edits MiniNotion, exports a self-contained PDF, creates a Reader study and exposes SSH-only Cloud Hosts')
-  }
-  assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())))
-  assert.deepEqual(errors,[])
-  const report={platform:process.platform,version:JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,executable,checks,rendererErrors:errors,modelCalls:0,productionDataUsed:false}
-  fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(report,null,2)+'\n')
-  console.log('PASS '+JSON.stringify(report))
-}finally{await app?.close();fs.rmSync(temporary,{recursive:true,force:true,maxRetries:10,retryDelay:100})}
+ app=await electron.launch({executablePath:executable,args:[],env});page=await app.firstWindow();page.setDefaultTimeout(20000);page.on('pageerror',error=>errors.push(error.message));await page.emulateMedia({reducedMotion:'reduce'});await expect(page.locator('.agent-board')).toBeVisible()
+ const call=(cmd,args={})=>page.evaluate(async({cmd,args})=>{try{return await window.agents.call(cmd,args)}catch(error){throw Error(cmd+': '+(error?.message??JSON.stringify(error)))}},{cmd,args}),pluginCall=(id,method,params={})=>call('plugin.call',{id,method,params}),product=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).productName
+ await call('settings.set',{language:'en'});assert.equal(await page.title(),product);assert.equal(await app.evaluate(({app})=>app.getName()),product);assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].getTitle()),product);await page.locator('.application-settings-trigger').click();await expect(page.locator('.application-menu-heading')).toHaveText(product);await page.keyboard.press('Escape')
+ const navigation=page.locator('.company-navigation');for(const [name,selector] of [['Team','.agent-board'],['Message','.message-view'],['Mission','.plan-view'],['Team','.agent-board']]){await navigation.getByRole('button',{name,exact:true}).click();await expect(page.locator(selector)).toBeVisible()};await expect(page.locator('.team-subviews,.characters-canvas,.workers-view')).toHaveCount(0);checks.push('Actual native product/window/page titles match '+product+'; all three primary views work and Team directly displays its Board')
+ const plugins=await call('plugin.list'),lock=JSON.parse(fs.readFileSync(path.join(root,'plugins.lock.json'),'utf8')).plugins;assert.deepEqual(plugins.map(plugin=>plugin.id).sort(),['cloud-hosts','margin-reader','mininotion']);for(const item of lock){const id=item.directory==='mini-notion'?'mininotion':item.directory;assert.equal(plugins.find(plugin=>plugin.id===id)?.version,item.version)};checks.push('All three exact source-locked plugin versions are bundled')
+ await call('group.add',{name:'Package Verification',mode:'build'});const worker=await call('card.create',{title:'Package Employee',group:'Package Verification',engine:'codex',model:'gpt-6-luna',effort:'low',managementRole:'employee',character:'英雄王',avatarStyle:'chibi',profession:'验收'});await expect.poll(async()=>{const status=(await call('session.status',{employee:worker.id}))[0];if(status.initialization?.status==='failed')throw Error(status.initialization.error);return status.initialization?.status},{timeout:20000}).toBe('ready')
+ const panel=page.locator('.agent-board-panel[data-employee="'+worker.id+'"]'),roster=page.locator('.board-roster-row[data-member-key="employee:'+worker.id+'"]');await expect(panel).toBeVisible();assert.equal((await call('session.status',{employee:worker.id}))[0].title,'Package Employee');assert.equal(worker.avatar,'fate-gilgamesh-chibi');for(const surface of [panel.locator('header'),roster])await expect(surface.locator('[data-portrait]')).toHaveAttribute('data-portrait',worker.avatar)
+ const verifyArtwork=async(url,relative)=>{const actual=await app.evaluate(async(_electron,{url})=>{const fs=process.getBuiltinModule('node:fs'),{fileURLToPath}=process.getBuiltinModule('node:url'),{createHash}=process.getBuiltinModule('node:crypto');return createHash('sha256').update(fs.readFileSync(fileURLToPath(url))).digest('hex')},{url}),expected=createHash('sha256').update(fs.readFileSync(path.join(root,relative))).digest('hex');assert.equal(actual,expected,'Packaged artwork bytes must match '+relative);artwork.push({source:relative,sha256:actual})}
+ const portrait=panel.locator('header [data-portrait] img');await expect.poll(()=>portrait.evaluate(img=>img.complete&&img.naturalWidth>0)).toBe(true);await verifyArtwork(await portrait.evaluate(img=>img.currentSrc),'src/renderer/src/assets/pets/portraits/fate-gilgamesh-chibi.webp');await panel.getByRole('button',{name:'Open full conversation with Package Employee',exact:true}).click();const conversation=page.locator('.conversation-dialog');await conversation.getByRole('button',{name:'Employee details',exact:true}).click();const profile=conversation.locator('.employee-profile-page');await profile.getByRole('button',{name:'Change character',exact:true}).click();const picker=page.getByRole('dialog',{name:'Choose character',exact:true}),pet=picker.locator('.character-stage .fate-pet');await expect(pet).toHaveAttribute('data-avatar',worker.avatar);const sprite=await pet.locator('.pet-cell').evaluate(async el=>{const url=getComputedStyle(el).backgroundImage.slice(5,-2),img=new Image();img.src=url;await img.decode();if(!img.naturalWidth||!img.naturalHeight)throw Error('Avatar sprite did not load');return url});await verifyArtwork(sprite,'src/renderer/src/assets/pets/fate/fate-gilgamesh-chibi.webp');await picker.getByRole('button',{name:'Cancel',exact:true}).click();await profile.getByRole('button',{name:'Back to conversation',exact:true}).click();await conversation.getByRole('button',{name:'Close conversation',exact:true}).click();await panel.screenshot({path:path.join(output,'gilgamesh.png')});checks.push('Named-character API resolves Gilgamesh chibi; Board header/roster preserve its identity and the installed portrait/sprite match exact source bytes');checks.push('Packaged Core really initializes the role employee through the deterministic native protocol fixture; no provider request')
+ const terminal=await call('terminal.open',{employee:worker.id,cols:90,rows:24});await call('terminal.input',{id:terminal.id,data:process.platform==='win32'?"Write-Output ('PACKAGE_'+'PTY_OK')\r":"printf 'PACKAGE_%s\\n' PTY_OK\n"});let terminalReady=false;for(let attempt=0;attempt<100;attempt++){const state=await call('terminal.read',{id:terminal.id});if(state.output.includes('PACKAGE_PTY_OK')){terminalReady=true;break}await new Promise(resolve=>setTimeout(resolve,100))};assert.ok(terminalReady,'Packaged terminal produced no confirmed output');await call('terminal.resize',{id:terminal.id,cols:100,rows:30});await call('terminal.close',{id:terminal.id});checks.push('Packaged native terminal confirms real input/output, resize and cleanup')
+ await page.screenshot({path:path.join(output,'office.png')});const label=panel.locator('.board-workspace>span:not(.codicon)'),styleBefore=await label.getAttribute('style');await expect(label).toHaveText(worker.cwd);await label.evaluate(el=>{el.style.background='#ff00ff';el.style.color='#ff00ff';el.style.width='300px';el.style.height='40px'});const normalPath=path.join(output,'office-path-visible.png');await call('ui.screenshot',{path:normalPath});assert.ok(await pink(normalPath)>100);const privatePath=path.join(output,'office-private.png'),exported=await call('ui.screenshot',{path:privatePath,privacy:true});assert.equal(exported.privacy,true);assert.equal(await pink(privatePath),0,'Packaged privacy export contains a current Board workspace path');await expect(label).toHaveCSS('visibility','visible');await expect(panel.locator('.board-settings>summary')).toBeVisible();const restoredPath=path.join(output,'office-path-restored.png');await call('ui.screenshot',{path:restoredPath});assert.ok(await pink(restoredPath)>100);await label.evaluate((el,style)=>style===null?el.removeAttribute('style'):el.setAttribute('style',style),styleBefore);checks.push('Packaged privacy screenshot hides actual current Board path pixels and restores the normal visible paths and Controls')
+ for(const plugin of plugins){
+  let resource
+  if(plugin.id==='mininotion'){resource=await pluginCall(plugin.id,'page.create',{title:'Packaged native note',color:'white'});await pluginCall(plugin.id,'block.append',{pageId:resource.id,text:'NATIVE_WINDOW_ORIGINAL'})}
+  if(plugin.id==='margin-reader'){resource=await pluginCall(plugin.id,'study.create',{title:'Packaged native study'})}
+  const pending=app.waitForEvent('window'),opened=await call('plugin.open',{id:plugin.id}),child=await pending;child.setDefaultTimeout(20000);child.on('pageerror',error=>errors.push(error.message));await child.waitForLoadState('domcontentloaded');await expect(child.locator('.plugin-host>header>span')).toHaveText(plugin.name);await expect(child.locator('.plugin-host>iframe')).toBeVisible();const frame=child.frameLocator('.plugin-host>iframe');await expect(frame.locator('body')).toBeVisible();const ready={mininotion:'.app-shell','margin-reader':'#library-view','cloud-hosts':'#add'}[plugin.id];await expect(frame.locator(ready)).toBeVisible();if(plugin.id==='mininotion')await pluginCall(plugin.id,'page.open',{pageId:resource.id});if(plugin.id==='margin-reader')await pluginCall(plugin.id,'study.open',{setId:resource.id});assert.ok((await frame.locator('body').innerText()).trim().length>0)
+  const base=path.join(env.AGENTS_COMPANY_HOME,'workspaces',plugin.workspaceDirectory||plugin.id+'-workspace'),expectedWorkspace=plugin.defaultWorkspace==='collection'?base:path.join(base,'default');assert.equal(opened.workspace,expectedWorkspace,'Plugin uses its real default portable workspace');assert.ok(fs.existsSync(opened.workspace));assert.equal((await call('plugin.open',{id:plugin.id})).id,opened.id);assert.equal((await call('plugin.windows')).length,1)
+  if(plugin.id==='mininotion'){await expect(frame.getByRole('textbox',{name:'页面标题',exact:true})).toHaveValue('Packaged native note');await frame.getByRole('textbox',{name:'页面标题',exact:true}).fill('Saved from packaged MiniNotion');await frame.locator('.bn-editor').click();await frame.locator('.bn-editor').pressSequentially('NATIVE_WINDOW_EDIT_SAVED',{delay:1})}
+  if(plugin.id==='margin-reader'){await expect(frame.locator('#study-title')).toHaveText('Packaged native study');await frame.locator('#study-edit-set').click();await expect(frame.locator('#dialog')).toBeVisible();await frame.locator('#dialog [name=title]').fill('Saved from packaged Reader');await frame.locator('#dialog [name=description]').fill('NATIVE_READER_EDIT_SAVED');await frame.locator('#dialog-submit').click();await expect(frame.locator('#dialog')).toBeHidden();await expect(frame.locator('#study-title')).toHaveText('Saved from packaged Reader')}
+  if(plugin.id==='cloud-hosts'){await expect(frame.locator('#add')).toBeEnabled();await frame.locator('#add').click();await frame.locator('#detail form [name=name]').fill('Saved from packaged Cloud Hosts');await frame.locator('#detail form [name=host]').fill('fixture-user@package-fixture.invalid');await frame.locator('#detail form [name=defaultDirectory]').fill('/tmp/package-verification');await frame.getByRole('button',{name:'保存主机',exact:true}).click();await expect(frame.locator('#detail form')).toHaveCount(0);resource=(await pluginCall(plugin.id,'hosts.list')).find(host=>host.name==='Saved from packaged Cloud Hosts');assert.ok(resource);assert.equal(resource.status,undefined,'Saving a fixture host must not make an SSH connection')}
+  await child.screenshot({path:path.join(output,plugin.id+'.png')});assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())));await call('plugin.dismiss',{id:opened.id});await expect.poll(()=>child.isClosed()).toBe(true);await expect.poll(async()=>(await call('plugin.windows')).length).toBe(0)
+  if(plugin.id==='mininotion'){const saved=await pluginCall(plugin.id,'page.get',{pageId:resource.id});assert.equal(saved.title,'Saved from packaged MiniNotion');assert.ok(JSON.stringify(saved).includes('NATIVE_WINDOW_EDIT_SAVED'))}
+  if(plugin.id==='margin-reader'){const saved=await pluginCall(plugin.id,'study.get',{setId:resource.id});assert.equal(saved.title,'Saved from packaged Reader');assert.equal(saved.description,'NATIVE_READER_EDIT_SAVED')}
+  if(plugin.id==='cloud-hosts'){const saved=await pluginCall(plugin.id,'hosts.get',{id:resource.id});assert.equal(saved.name,'Saved from packaged Cloud Hosts');assert.equal(saved.host,'fixture-user@package-fixture.invalid');assert.equal(saved.defaultDirectory,'/tmp/package-verification');assert.equal(saved.status,undefined)}
+  pluginEvidence.push({id:plugin.id,version:plugin.version,workspace:opened.workspace,resourceId:resource.id,realWindow:true,uiSaveVerified:true});checks.push(plugin.id+': independent real plugin window, default portable workspace, actual UI edit and save-on-close verified through the authenticated Core')
+ }
+ const afterPlugins=await call('session.list');assert.deepEqual(afterPlugins.groups,['Package Verification']);assert.equal(afterPlugins.sessions.length,1);assert.equal(afterPlugins.sessions[0].id,worker.id);assert.equal(afterPlugins.sessions[0].cwd,worker.cwd);assert.equal(afterPlugins.sessions[0].avatar,worker.avatar);checks.push('Opening/managing plugins creates no Work Teams or extra employees and preserves the original project/role/workspace identity')
+ if(process.platform==='darwin'){
+  const binary=path.resolve(path.dirname(executable),'../Resources/cli/aexus-bot'),run=promisify(execFile),cli=async(...args)=>{const reply=JSON.parse((await run(binary,[...args,'--json'],{env,timeout:60000,maxBuffer:8e6})).stdout);assert.ok(reply.ok,reply.error);return reply.data},plugin=(id,method,params={})=>cli('plugin','call',id,method,'--params',JSON.stringify(params)),note=await plugin('mininotion','page.create',{title:'Packaged PDF',color:'white'});await plugin('mininotion','block.append',{pageId:note.id,text:'FINAL_PLUGIN_PDF_OK'});const pdf=await plugin('mininotion','file.export',{pageId:note.id,type:'pdf',output:'Exports/packaged.pdf'});assert.equal(fs.readFileSync(pdf.path).subarray(0,5).toString(),'%PDF-');fs.copyFileSync(pdf.path,path.join(output,'plugin-cli.pdf'));assert.equal((await plugin('margin-reader','study.create',{title:'Installed CLI study'})).title,'Installed CLI study');const hosts=await cli('plugin','describe','cloud-hosts');assert.ok(hosts.api.commands.some(command=>command.method==='hosts.terminal-open'));assert.ok(!hosts.api.commands.some(command=>command.method.includes('desktop')));checks.push('Actual packaged CLI edits MiniNotion, exports its self-contained PDF, creates a Reader study and exposes SSH-only Cloud Hosts')
+ }
+ assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())));assert.deepEqual(errors,[]);const report={passed:true,platform:process.platform,version:JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,executable,checks,artwork,pluginEvidence,rendererErrors:errors,modelCalls:0,realHostsModified:false,productionDataUsed:false};fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(report,null,2)+'\n');console.log('PASS '+JSON.stringify(report))
+}catch(error){await page?.screenshot({path:path.join(output,'failure.png')}).catch(()=>{});fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({error:error.stack,checks,errors},null,2));throw error}finally{await app?.close();fs.rmSync(temporary,{recursive:true,force:true,maxRetries:10,retryDelay:100})}

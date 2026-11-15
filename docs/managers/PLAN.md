@@ -1,6 +1,6 @@
 # Plan: shared scheduling database and Agent API
 
-持续目标与原有排期不同：`mission.*` 保存需要明确验收成功才结束的目标，支持秘书监督/独立完成、多名执行人和提醒时间；`schedule.*` 保持本文件所述的定时、重复与事件运行语义。原生运行成功不等于目标成功。私聊/群聊中的持久选择题使用 `question.*`，跨布局筛选及清理使用 `plan.preferences`。完整说明可通过 `agents api docs core/missions` 或 [持续任务与聊天选择题](docs/MISSIONS_AND_QUESTIONS.md) 阅读。
+持续目标与原有排期不同：`mission.*` 保存需要明确验收成功才结束的目标，支持秘书监督/独立完成、多名执行人和提醒时间；`schedule.*` 保持本文件所述的定时、重复与事件运行语义。原生运行成功不等于目标成功。私聊/群聊中的持久选择题使用 `question.*`，跨布局筛选及清理使用 `plan.preferences`。完整说明可通过 `agents api docs core/missions` 或 [持续任务与聊天选择题](../../docs/MISSIONS_AND_QUESTIONS.md) 阅读。
 
 Plan is the third application view. Table, Board, Timeline, Calendar, Planner, List, Gallery, Chart, Feed and Form are projections of the existing Core `schedule.*` records, not another scheduler or another set of employee conversations. The desktop, browser, operator CLI and authenticated employee CLI use the same Core authorization. Creating or switching a database view never starts an engine.
 
@@ -142,14 +142,14 @@ Table exposes the actual **Last run** outcome alongside scheduling state. Board 
 
 Calendar offers a display-timezone selector. Crowded days show three entries and a **+N more** button opening a **Day agenda**, with full titles, employees, times and recorded/upcoming status. Changing display timezone never changes the schedule. Forecasts assume a continuously running Core; they do not claim historical execution. Extremely distant finite previews beyond 10,000 calendar/window steps fail explicitly and should be narrowed.
 
-Detailed reproducible workflows and acceptance criteria: [Plan and MiniNotion scenarios](docs/PLAN_SCENARIOS.md).
+Detailed reproducible workflows and acceptance criteria: [Plan and MiniNotion scenarios](../../docs/PLAN_SCENARIOS.md).
 
 
 ## Complete layout catalog and read-model APIs
 
 Plan now covers every database layout ID in the source-versioned MiniNotion plugin. `plan.timeline` supplies estimated and actual run spans, `plan.analytics` aggregates full authorized record sets, and `plan.feed` supplies actual execution activity with cursor pagination. `plan.durationMinutes` / `--duration-minutes` is optional planning metadata, independent of timeout and actual run duration. Saved `options` preserve timezone, timeline scale, planner mode and chart choices. Form submits through `schedule.create`; future one-time timeline moves require confirmation and `expectedRevision`.
 
-The full layout mapping, schemas, examples, architectural decisions and step-by-step interactive casebook are in [Mission view parity](docs/PLAN_VIEW_PARITY.md). Automated regressions lock the observed failures after the interactive exploration, rather than standing in for it.
+The full layout mapping, schemas, examples, architectural decisions and step-by-step interactive casebook are in [Mission view parity](../../docs/PLAN_VIEW_PARITY.md). Automated regressions lock the observed failures after the interactive exploration, rather than standing in for it.
 
 ## Editing and independent appearance
 
@@ -242,7 +242,7 @@ window state are presentation actions and do not require a parallel scheduling A
 
 ## Conversation notices are separate from Plan
 
-Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Aexus managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Aexus roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Aexus managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Aexus roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](../../docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
 
 
 ## Secretary 应用管理

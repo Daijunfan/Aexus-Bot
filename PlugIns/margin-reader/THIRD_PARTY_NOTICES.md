@@ -17,7 +17,7 @@ Runtime packages and their license files are retained in the built node_modules 
 | marked | 15.0.12 | MIT | https://marked.js.org |
 | pdfjs-dist | 5.4.624 | Apache-2.0 | https://mozilla.github.io/pdf.js/ |
 | proper-lockfile | 4.1.2 | MIT | https://github.com/moxystudio/node-proper-lockfile |
-| sanitize-html | 2.17.7 | MIT | https://github.com/apostrophecms/apostrophe/tree/main/packages/sanitize-html#readme |
+| sanitize-html | 2.18.2 | MIT | https://github.com/apostrophecms/apostrophe/tree/main/packages/sanitize-html#readme |
 | pdf-lib | 1.17.1 | MIT | https://github.com/Hopding/pdf-lib |
 | katex | 0.18.9 | MIT | https://github.com/KaTeX/KaTeX |
 | @open-spaced-repetition/binding | 0.5.0 | MIT | https://github.com/open-spaced-repetition/ts-fsrs |

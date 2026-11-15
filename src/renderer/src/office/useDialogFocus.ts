@@ -1,5 +1,8 @@
 import { useEffect,useRef } from 'react'
 
+export const activeDialog=()=>[...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')].filter(el=>!el.closest('[hidden],[inert],[aria-hidden="true"]')&&getComputedStyle(el).visibility!=='hidden'&&el.getBoundingClientRect().height>0).at(-1)
+export const dialogFocusables=(dialog:HTMLElement|undefined|null)=>[...(dialog?.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, iframe, [tabindex="0"]')??[])].filter(el=>!el.hasAttribute('disabled')&&!el.closest('[aria-hidden="true"],[inert],[hidden]')&&el.getBoundingClientRect().height>0)
+
 /** Keep keyboard focus inside the current overlay and return it to its opener. */
 export function useDialogFocus(selector: string, open: boolean, returnFocus?:()=>HTMLElement|null,initialFocus?:string) {
   const restore=useRef(returnFocus);restore.current=returnFocus
@@ -7,10 +10,8 @@ export function useDialogFocus(selector: string, open: boolean, returnFocus?:()=
     if (!open) return
     const opener = document.activeElement as HTMLElement | null
     const dialog = document.querySelector<HTMLElement>(selector)
-    const activeDialog=()=>[...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')].filter(el=>!el.closest('[hidden],[inert],[aria-hidden="true"]')&&getComputedStyle(el).visibility!=='hidden'&&el.getBoundingClientRect().height>0).at(-1)
     const topmost=()=>activeDialog()===dialog
-    const focusable = () => [...(dialog?.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, iframe, [tabindex="0"]') ?? [])]
-      .filter((el) => !el.hasAttribute('disabled') && !el.closest('[aria-hidden="true"],[inert],[hidden]') && el.getBoundingClientRect().height > 0)
+    const focusable = () => dialogFocusables(dialog)
     // Locate only the initial focus target; avoid measuring every form control.
     const preferred=initialFocus?dialog?.querySelector<HTMLElement>(initialFocus):null
     const first=[...(preferred?[preferred]:[]),...(dialog?.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, iframe, [tabindex="0"]')??[])].find(el=>!el.hasAttribute('disabled')&&!el.closest('[aria-hidden="true"],[inert],[hidden]')&&el.getBoundingClientRect().height>0)

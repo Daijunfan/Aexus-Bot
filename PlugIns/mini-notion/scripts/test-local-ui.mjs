@@ -1,3 +1,5 @@
+import {pluginPage} from '../../../test/fixtures/plugin-page.mjs';
+import {desktopExecutable} from '../../../test/fixtures/desktop-app.mjs';
 // Exercise the real hosted plugin in an isolated, hidden Agents Company window.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -16,6 +18,7 @@ fs.mkdirSync(path.join(temp, 'fixture'));
 fs.writeFileSync(path.join(temp, 'fixture/release-all'), '');
 const env = {
   ...process.env,
+  AGENTS_COMPANY_TEST_BOTS_URL:'http://127.0.0.1:1',
   AGENTS_COMPANY_HOME: path.join(temp, 'state'),
   AGENTS_COMPANY_WORKSPACES: path.join(temp, 'work'),
   AGENTS_COMPANY_PROJECTS: path.join(temp, 'projects'),
@@ -36,7 +39,7 @@ for (const key of Object.keys(env))
   )
     delete env[key];
 const app = await electron.launch({
-  executablePath: process.env.AGENTS_COMPANY_TEST_APP || require('../electron/runtime.cjs').electronRuntime().executable,
+  executablePath: desktopExecutable(process.env.AGENTS_COMPANY_TEST_APP) || require('../electron/runtime.cjs').electronRuntime().executable,
   args: process.env.AGENTS_COMPANY_TEST_APP ? [] : [root],
   env,
 });
@@ -63,7 +66,7 @@ const cli = async (...args) => {
   return reply.data;
 };
 const api = (method, params = {}) =>
-  cli('plugin', 'call', 'mininotion', method, '--team', 'Notion验收', '--params', JSON.stringify(params));
+  cli('plugin', 'call', 'mininotion', method, '--params', JSON.stringify(params));
 let checks = 0;
 const ok = (label) => {
   checks++;
@@ -76,9 +79,9 @@ const openPicker = async () => {
   return page.getByRole('dialog', { name: '选择图标' });
 };
 try {
-  await page.locator('.infinite-canvas').waitFor();
+  await page.locator('.agent-board').waitFor();
   assert.equal((await cli('plugin', 'list')).find(plugin => plugin.id === 'mininotion').version, JSON.parse(fs.readFileSync(path.join(root, 'PlugIns/mini-notion/package.json'))).version);
-  await cli('group', 'add', 'Notion验收', '--mode', 'work', '--plugin', 'mininotion');
+  // Plugin content lives in its independent portable collection, not a new Work Team.
   const note = await api('page.create', {
     title: '我的知识库',
     color: 'white',
@@ -96,8 +99,8 @@ try {
   const target = await api('page.create', { title: '收集箱', color: 'white', icon: 'icon:Inbox:orange' });
   await api('settings.set', { changes: { theme: 'light', sidebarWidth: 225 } });
   const opened = app.waitForEvent('window');
-  await cli('plugin', 'open', 'mininotion', '--team', 'Notion验收');
-  page = await opened;
+  await cli('plugin', 'open', 'mininotion');
+  page = await pluginPage(await opened);
   page.setDefaultTimeout(15000);
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('request', (request) => {
@@ -264,9 +267,8 @@ try {
   await picker.evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
   await expect(picker).toHaveCSS('opacity', '1');
   await expect(picker).toHaveCSS('background-color', 'rgb(34, 34, 34)');
-  const box = await picker.boundingBox();
-  const viewport =
-    page.viewportSize() || (await page.evaluate(() => ({ width: innerWidth, height: innerHeight })));
+  // Both rectangles use the renderer iframe's coordinates, excluding its host permission header.
+  const {box,viewport}=await picker.evaluate(element=>({box:element.getBoundingClientRect().toJSON(),viewport:{width:innerWidth,height:innerHeight}}));
   assert.ok(
     box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height,
   );
@@ -275,8 +277,8 @@ try {
   ok('picker remains inside a narrow window');
   await cli('plugin', 'dismiss', window.id);
   const reopened = app.waitForEvent('window');
-  await cli('plugin', 'open', 'mininotion', '--team', 'Notion验收');
-  page = await reopened;
+  await cli('plugin', 'open', 'mininotion');
+  page = await pluginPage(await reopened);
   await page.locator('.sidebar').waitFor();
   await api('page.open', { pageId: note.id });
   await expect(page.locator('.page-large-icon svg.lucide-book-open')).toBeVisible();

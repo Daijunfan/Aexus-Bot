@@ -1,3 +1,5 @@
+import {pluginPage} from './fixtures/plugin-page.mjs';
+import {desktopExecutable} from './fixtures/desktop-app.mjs';
 // Native installed/candidate event UI. All schedules and pages belong to a disposable home.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -9,7 +11,7 @@ import { promisify } from 'node:util';
 const require=createRequire(import.meta.url),{_electron:electron,expect}=require('@playwright/test');
 const root=path.resolve(import.meta.dirname,'..'),run=promisify(execFile),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'mn-events-ui-')));
 const out=process.env.AGENTS_COMPANY_TEST_ARTIFACTS||path.join(root,'artifacts/mininotion-event-ui/visual');fs.mkdirSync(out,{recursive:true});
-const env={...process.env,AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_PLUGIN_DIRS:process.env.MINI_NOTION_TEST_PLUGIN||''};
+const env={...process.env,AGENTS_COMPANY_TEST_BOTS_URL:'http://127.0.0.1:1',AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_PLUGIN_DIRS:process.env.MINI_NOTION_TEST_PLUGIN||''};
 for(const key of Object.keys(env))if(key.startsWith('AGENTS_COMPANY_TOKEN')||['ELECTRON_RUN_AS_NODE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_URL','AGENTS_COMPANY_PLUGIN_RPC','AGENTS_COMPANY_BUILTIN_PLUGINS','MINI_NOTION_SOCKET','MINI_NOTION_WORKSPACE','MINI_NOTION_DATA_DIR'].includes(key))delete env[key];
 const cli=async(...args)=>{const r=JSON.parse((await run(process.execPath,[root+'/bin/agents',...args,'--json'],{env,cwd:root,timeout:45000,maxBuffer:48e6})).stdout);assert.ok(r.ok,r.error);return r.data};
 const api=(method,params={})=>cli('plugin','call','mininotion',method,'--params',JSON.stringify(params));
@@ -31,8 +33,8 @@ async function noCollisions(){
  }));assert.deepEqual(collisions,[],'optical event collisions');
 }
 try{
- app=await electron.launch({executablePath:process.env.AGENTS_COMPANY_TEST_APP||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[process.env.AGENTS_COMPANY_PROFILE_APPLICATION||root],env});
- await(await app.firstWindow()).locator('.infinite-canvas').waitFor();
+ app=await electron.launch({executablePath:desktopExecutable(process.env.AGENTS_COMPANY_TEST_APP)||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[process.env.AGENTS_COMPANY_PROFILE_APPLICATION||root],env});
+ await(await app.firstWindow()).locator('.agent-board').waitFor();
  const home=await api('page.create',{title:'研发工作室',icon:'icon:CalendarDays:blue',color:'white'});
  const db=await api('database.create',{title:'研发日程 · Engineering',parentId:home.id,color:'white',icon:'icon:CalendarRange:blue',columns:[
   {id:'date',name:'安排时间',type:'date'},{id:'status',name:'状态',type:'select',options:['未开始','进行中','已完成']},{id:'owner',name:'负责人',type:'text'},
@@ -66,7 +68,7 @@ try{
  for(const type of viewNames){const existing=(await api('view.list',{databaseId:db.id})).find(v=>v.type===type);views[type]=existing||await api('view.create',{databaseId:db.id,type,name:viewLabels[type]});
   await api('view.update',{databaseId:db.id,viewId:views[type].id,changes:{calendarBy:'date',dateAnchor:day,planDoneBy:'status',planDoneValue:'已完成',timeZone:zone,chartGroup:'status'}})}
  await api('settings.set',{changes:{appearance:{palette:'aurora',wallpaper:'none'}}});
- const pending=app.waitForEvent('window');await cli('plugin','open','mininotion');page=await pending;page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));
+ const pending=app.waitForEvent('window');await cli('plugin','open','mininotion');page=await pluginPage(await pending);page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));
  await page.locator('.sidebar').waitFor();await expect.poll(async()=>(await api('status')).guiClients).toBeGreaterThan(0);
  const window=await app.browserWindow(page);
  const resize=async(w,h=920)=>{await window.evaluate((win,{w,h})=>win.setContentSize(w,h),{w,h});await expect.poll(()=>page.evaluate(()=>innerWidth)).toBe(w)};

@@ -45,8 +45,8 @@ async function mapPdf(set,p){
   output.setTitle(set.title);output.setProducer('Margin Reader local map exporter');return {bytes:Buffer.from(await output.save()),pages:output.getPageCount(),cards:layout.positions.size,rasterized:true};
 }
 async function annotatedPdf(args){
-  const pdfjs=await import('pdfjs-dist/legacy/build/pdf.mjs'),path=require('node:path'),base=path.dirname(require.resolve('pdfjs-dist/package.json'));
-  const sourceBytes=Buffer.from(args.sourceBytes),output=await PDFDocument.load(sourceBytes),task=pdfjs.getDocument({data:new Uint8Array(sourceBytes),password:args.password,isEvalSupported:false,verbosity:0,cMapUrl:path.join(base,'cmaps')+path.sep,cMapPacked:true,standardFontDataUrl:path.join(base,'standard_fonts')+path.sep,wasmUrl:path.join(base,'wasm')+path.sep});
+  const pdfjs=await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const sourceBytes=Buffer.from(args.sourceBytes),output=await PDFDocument.load(sourceBytes),task=pdfjs.getDocument({data:new Uint8Array(sourceBytes),password:args.password,isEvalSupported:false,verbosity:0,...require('./pdf-resources.cjs')()});
   const warnings=[],notes=[];let annotations=0;
   try{
     const source=await task.promise;

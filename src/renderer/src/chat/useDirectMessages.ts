@@ -60,6 +60,12 @@ export function useDirectMessages(employeeId:string|undefined,enabled:boolean,ar
   })
   return()=>{clearTimeout(timer);off();request.current++}
  },[employeeId,enabled,load])
- useEffect(()=>{if(enabled&&around&&!loaded.current.some(item=>item.id===around)){anchor.current=around;void load('initial')}},[around,employeeId,enabled,load])
+ useEffect(()=>{
+  if(!enabled||!around||loaded.current.some(item=>item.id===around))return
+  const prior=anchor.current;anchor.current=around
+  const completion=load('initial'),token=request.current;let pending=true
+  void completion.then(()=>{pending=false})
+  return()=>{if(!pending||request.current!==token)return;request.current++;anchor.current=prior===around?undefined:prior;if(active.current===employeeId&&!loaded.current.length)void load('initial')}
+ },[around,employeeId,enabled,load])
  const current=enabled&&owner===employeeId;return {items:current?items:[],ready:current&&ready,error:current?error:'',latestIncoming:current?latestIncoming:undefined,readSequence:current?readSequence:0,nextBefore:current?nextBefore:null,refresh,loadOlder,loadLatest}
 }

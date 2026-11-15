@@ -1,8 +1,11 @@
 /** Product interface copy only. User names, messages, files and model output are never translated. */
 import {engineeringZh} from './engineering.ts'
-import {botManagementZh} from './bot-management'
+import {botManagementZh} from './bot-management.ts'
 export const zhCN:Record<string,string> = {
   'Choose employee type':'选择员工类型',
+  'Secretary is always authorized.':'Secretary 始终拥有访问权限。',
+  'Choose files to share':'选择要共享的文件',
+  'Team layout':'Team 布局',
   'Role-based employee':'角色员工',
   'Worker Team':'Worker 所属团队',
   'Worker · native conversation without a role prompt':'Worker · 原生会话，不注入角色提示词',
@@ -2501,6 +2504,7 @@ export const zhCN:Record<string,string> = {
   "max": "最高",
   "Configure employee workspace": "配置员工工作空间",
   "Meet your new companion.": "认识你的新伙伴。",
+  "This view has no teams. Switch to All Team to add an employee.": "当前视图没有团队，请切换到 All Team 后添加员工。",
   "This view has no teams. Add existing teams by editing the view, or switch to All Team.": "当前视图没有团队，请先编辑视图加入已有团队，或切换到 All Team。",
   "Scheduled instant": "计划时点",
   "Estimated span": "预估时段",

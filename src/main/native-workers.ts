@@ -67,6 +67,11 @@ export function listWorkers(employee?:string){
  if(employee||!isAppAdministrator(principal)&&principal.kind==='agent')owner(employee)
  return records().filter(w=>employee?w.employee===employee:isAppAdministrator(principal)||principal.kind==='agent'&&w.employee===principal.employeeId).map(present)
 }
+/** Team names are presentation metadata, never native execution or ownership. */
+export function renameWorkerTeam(name:string,next:string){
+ const saved=records();if(!saved.some(worker=>worker.team===name))return
+ atomicJson(file,saved.map(worker=>worker.team===name?{...worker,team:next}:worker));changed()
+}
 export function workerEngines():NativeWorkerEngine[]{return Object.keys(ENGINE_DEFINITIONS).map(engine=>{const id=engine as NativeWorkerEngine['engine'],executable=engineExecutable(id,false),resolved=path.isAbsolute(executable)?executable:resolveBinary(executable);return {engine:id,label:ENGINE_DEFINITIONS[id].label,installed:path.isAbsolute(resolved)&&fs.existsSync(resolved)}})}
 export function createWorker(args:{employee?:string;team?:string;engine:string;title?:string;cwd?:string;clientRequestId?:string}){
  if(!isEngine(args.engine))throw Error('Unsupported native Coding Agent engine')

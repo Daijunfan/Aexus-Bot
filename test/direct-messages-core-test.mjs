@@ -12,6 +12,7 @@ try{
  await f.cli('group','add','Studio');await f.cli('group','add','Engineering')
  const a=await f.create('Aster','Studio'),b=await f.create('Rowan','Studio'),c=await f.create('Cedar','Engineering'),m=await f.create('Manager','Studio','manager'),s=await f.create('Secretary','Studio','secretary')
  const at=await f.token(a.id),bt=await f.token(b.id),mt=await f.token(m.id),st=await f.token(s.id)
+ const identities=store=>store.sessions.map(({id,cwd,engine,threadId,claudeSessionId,group})=>({id,cwd,engine,threadId,claudeSessionId,group})),originalIdentities=identities(await f.cli('session','list'));fs.writeFileSync(path.join(a.cwd,'identity-keep.txt'),'original workspace file')
  const png=await sharp({create:{width:3,height:2,channels:3,background:'#336699'}}).png().toBuffer(),changed=await sharp({create:{width:5,height:2,channels:3,background:'#aa3311'}}).png().toBuffer()
  await rpc(at,'workspace.write',{employee:a.id,path:'media/photo.png',contentBase64:png.toString('base64'),create:true})
  await rpc(at,'workspace.write',{employee:a.id,path:'media/brief.txt',content:'ORIGINAL_BRIEF_CONTENT',create:true})
@@ -31,14 +32,14 @@ try{
  const userSend=await rpc(null,'direct.send',{employee:b.id,text:'USER_PRIVATE_ONLY',clientMessageId:'user-direct-1'})
  assert.equal(userSend.sent,true);assert.equal(userSend.status,'queued');assert.match(userSend.directMessageId,/^dm_/)
  assert.ok((await f.cli('session','queue','--employee',b.id)).some(item=>item.text==='USER_PRIVATE_ONLY'))
- let bHistory=await history(b.id);assert.equal(bHistory.length,1);assert.equal(bHistory[0].role,'user');assert.equal(bHistory[0].author.kind,'operator');assert.equal(bHistory[0].text,'USER_PRIVATE_ONLY')
+ let bHistory=await history(b.id);assert.equal(bHistory.length,1);assert.equal(bHistory[0].role,'user');assert.equal(bHistory[0].author.kind,'operator');assert.equal(bHistory[0].text,'USER_PRIVATE_ONLY');assert.equal(bHistory[0].imageNames,undefined,'Text-only history does not add an empty image-name payload')
  fs.unlinkSync(path.join(f.control,b.id+'.hold-user'))
  await f.until(async()=>{const items=(await f.cli('session','transcript',b.id)).items;return items.some(item=>item.text?.includes('USER_PRIVATE_ONLY'))&&!(await f.status(b.id)).busy},'queued private input delivered')
  bHistory=await history(b.id);assert.equal(bHistory.length,1,'delivery and native output add no rows')
  assert.equal((await inbox(b.id)).text,'USER_PRIVATE_ONLY');assert.equal((await inbox(b.id)).unread,false)
  // An employee publishes own text/image/file rows only, with durable idempotency.
  const p1=await rpc(at,'direct.post',{text:'AGENT_TEXT_1',clientMessageId:'agent-text-1'})
- await rpc(at,'direct.post',{images:['media/photo.png'],clientMessageId:'agent-image-1'})
+ const imagePost=await rpc(at,'direct.post',{images:['media/photo.png'],clientMessageId:'agent-image-1'})
  const fileOnly=await rpc(at,'direct.post',{files:['media/brief.txt'],clientMessageId:'agent-file-1'})
  const privateKey='employee:'+a.id
  const rawId=(await f.cli('session','transcript',a.id)).items.find(i=>i.role==='user'&&i.text==='RAW_NATIVE_SENTINEL').id
@@ -47,7 +48,7 @@ try{
  const fileSearch=await rpc(null,'messenger.search',{conversation:privateKey,query:'brief',filter:'files'});assert.equal(fileSearch.total,1);assert.equal(fileSearch.messages[0].id,fileOnly.id);assert.equal(fileSearch.messages[0].files[0].name,'brief.txt')
  await deny(null,'messenger.reference',{conversation:privateKey,id:rawId})
  assert.equal((await rpc(null,'messenger.reference',{conversation:privateKey,id:p1.id})).text,'AGENT_TEXT_1')
- const gallery=await rpc(null,'messenger.gallery',{conversation:privateKey});assert.equal(gallery.images.length,1);assert.ok(gallery.images[0].path.startsWith('@direct/'))
+ const gallery=await rpc(null,'messenger.gallery',{conversation:privateKey});assert.equal(gallery.images.length,1);assert.ok(gallery.images[0].path.startsWith('@direct/'));assert.equal(gallery.images[0].name,'photo.png')
  await rpc(null,'messenger.message',{conversation:privateKey,id:p1.id,patch:{saved:true}})
  assert.equal((await rpc(null,'messenger.search',{conversation:privateKey,filter:'saved'})).total,1)
  const [p4a,p4b]=await Promise.all([rpc(at,'direct.post',{text:'AGENT_ONCE',clientMessageId:'agent-once'}),rpc(at,'direct.post',{text:'AGENT_ONCE',clientMessageId:'agent-once'})])
@@ -56,6 +57,7 @@ try{
  let ah=await history(a.id);assert.equal(ah.length,4);assert.equal(new Set(ah.map(item=>item.id)).size,4)
  for(const item of ah)assert.deepEqual(item.author,{kind:'agent',employeeId:a.id})
  assert.equal(ah[0].blocks[0].text,'AGENT_TEXT_1');assert.match(ah[1].images[0],/^@direct\//);assert.match(ah[2].files[0].path,/^@direct\//)
+ assert.deepEqual(ah[1].imageNames,{[imagePost.attachments[0].path]:'photo.png'});assert.equal(ah[1].images[0],imagePost.attachments[0].path);assert.match(ah[1].images[0],/^@direct\/dm_[0-9a-f-]{36}\/[0-9a-f-]{36}$/);assert.ok(!ah[1].images[0].includes('photo.png'))
  assert.equal(ah[2].files[0].name,'brief.txt');assert.equal(ah[2].files[0].bytes,Buffer.byteLength('ORIGINAL_BRIEF_CONTENT'))
  assert.ok(!(await history(b.id)).some(item=>item.id===p1.id));assert.ok(!ah.some(item=>['RAW_NATIVE_SENTINEL','GROUP_ONLY_SENTINEL','USER_PRIVATE_ONLY'].some(text=>item.text?.includes(text))))
  // Authenticated identity and management bounds; no field can spoof an author.
@@ -71,18 +73,20 @@ try{
  await deny(st,'direct.post',{employee:a.id,text:'spoof-secretary',clientMessageId:'spoof-secretary'})
  const secretaryOwn=await rpc(st,'direct.post',{text:'SECRETARY_OWN_PRIVATE',clientMessageId:'secretary-own'});assert.equal(secretaryOwn.conversation,'employee:'+s.id)
  assert.ok((await rpc(st,'direct.history',{employee:s.id})).items.some(item=>item.id===secretaryOwn.id));assert.ok(!(await history(a.id)).some(item=>item.id===secretaryOwn.id))
- const managed=await rpc(st,'direct.send',{employee:a.id,text:'SECRETARY_INPUT',clientMessageId:'secretary-input'});assert.ok(managed.directMessageId)
+ const managed=await rpc(st,'direct.send',{employee:a.id,text:'SECRETARY_INPUT',images:['media/photo.png'],clientMessageId:'secretary-input'});assert.ok(managed.directMessageId)
  await f.until(async()=>!(await f.status(a.id)).busy,'Secretary private input')
- ah=await history(a.id);assert.equal(ah.length,5);assert.equal(ah[4].role,'user');assert.deepEqual(ah[4].author,{kind:'agent',employeeId:s.id});assert.equal(ah[4].text,'SECRETARY_INPUT')
+ ah=await history(a.id);assert.equal(ah.length,5);assert.equal(ah[4].role,'user');assert.deepEqual(ah[4].author,{kind:'agent',employeeId:s.id});assert.equal(ah[4].text,'SECRETARY_INPUT');assert.equal(ah[4].images.length,1);assert.deepEqual(ah[4].imageNames,{[ah[4].images[0]]:'photo.png'});assert.match(ah[4].images[0],/^@direct\/dm_[0-9a-f-]{36}\/[0-9a-f-]{36}$/);assert.notEqual(ah[4].images[0],ah[1].images[0],'Each published message retains its own immutable media identity')
  assert.equal((await inbox(a.id)).text,'SECRETARY_INPUT')
  // Published local media are immutable copies pinned by @direct references.
- const imageRef=ah[1].images[0],fileRef=ah[2].files[0].path
+ const imageRef=ah[1].images[0],userImageRef=ah[4].images[0],fileRef=ah[2].files[0].path
  const imageBefore=await rpc(null,'workspace.image',{employee:a.id,path:imageRef});assert.equal(Buffer.from(imageBefore.data,'base64').equals(png),true)
+ assert.equal(Buffer.from((await rpc(null,'workspace.image',{employee:a.id,path:userImageRef})).data,'base64').equals(png),true)
  const infoBefore=await rpc(null,'transfer.download-info',{from:{employee:a.id,path:fileRef}});assert.equal(infoBefore.bytes,Buffer.byteLength('ORIGINAL_BRIEF_CONTENT'))
  await rpc(at,'workspace.write',{employee:a.id,path:'media/photo.png',contentBase64:changed.toString('base64')})
  await rpc(at,'workspace.write',{employee:a.id,path:'media/brief.txt',content:'CHANGED_SOURCE_BRIEF'})
  assert.notEqual((await rpc(null,'workspace.image',{employee:a.id,path:'media/photo.png'})).data,imageBefore.data,'source image really changed')
  assert.equal(Buffer.from((await rpc(null,'workspace.image',{employee:a.id,path:imageRef})).data,'base64').equals(png),true)
+ assert.equal(Buffer.from((await rpc(null,'workspace.image',{employee:a.id,path:userImageRef})).data,'base64').equals(png),true);const mediaHistory=await history(a.id);for(const reference of [imageRef,userImageRef]){const entry=mediaHistory.find(item=>item.images?.includes(reference));assert.equal(entry.imageNames[reference],'photo.png')}
  const infoAfter=await rpc(null,'transfer.download-info',{from:{employee:a.id,path:fileRef}});assert.equal(infoAfter.bytes,infoBefore.bytes);assert.equal(infoAfter.modifiedAt,infoBefore.modifiedAt)
  const chunk=await rpc(null,'transfer.download-chunk',{from:{employee:a.id,path:fileRef},offset:0,modifiedAt:infoAfter.modifiedAt});assert.equal(Buffer.from(chunk.data,'base64').toString(),'ORIGINAL_BRIEF_CONTENT')
  assert.equal((await rpc(null,'transfer.download-info',{from:{employee:a.id,path:imageRef}})).bytes,png.length)
@@ -103,12 +107,15 @@ try{
  await rpc(st,'direct.acknowledge',{employee:a.id,messageId:newer.id});summary=await inbox(a.id);assert.equal(summary.unread,false);assert.equal(summary.readSequence,ah[5].directSequence)
  // Restart preserves identities, media and private data without replaying work.
  await f.until(async()=>(await f.cli('session','status')).every(item=>!item.busy),'all work settled')
+ const ledgerFile=path.join(f.env.AGENTS_COMPANY_HOME,'direct',a.id+'.json'),ledgerBefore=fs.readFileSync(ledgerFile,'utf8');assert.ok(JSON.parse(ledgerBefore).entries.every(entry=>!Object.hasOwn(entry,'imageNames')),'Image names are a read projection, not a ledger migration')
  const finalA=await rpc(null,'direct.history',{employee:a.id,limit:500}),finalB=await rpc(null,'direct.history',{employee:b.id,limit:500}),transcriptCount=(await f.cli('session','transcript',a.id)).items.length
+ assert.equal(fs.readFileSync(ledgerFile,'utf8'),ledgerBefore,'Projecting original image names does not rewrite the immutable ledger')
  await f.stop();await f.start()
  assert.deepEqual(await rpc(null,'direct.history',{employee:a.id,limit:500}),finalA);assert.deepEqual(await rpc(null,'direct.history',{employee:b.id,limit:500}),finalB)
  assert.equal((await f.cli('session','transcript',a.id)).items.length,transcriptCount,'restart starts no automatic work');assert.equal((await f.status(a.id)).busy,false)
  assert.equal((await rpc(null,'transfer.download-info',{from:{employee:a.id,path:fileRef}})).bytes,infoBefore.bytes)
- const report={test:'direct-messages-core',status:'passed',employees:5,cases:['native-and-group-isolation','explicit-user-input','agent-media-identity','auth-and-management-bounds','secretary-manage-without-spoof','idempotent-and-concurrent-posts','immutable-attachments','cursor-and-stale-ack','restart-preserves-data'],fixture:{imageBytes:png.length,fileBytes:infoBefore.bytes}}
- const artifact=path.join(f.root,'artifacts','explicit-private-messages','core-result.json');fs.mkdirSync(path.dirname(artifact),{recursive:true});fs.writeFileSync(artifact,JSON.stringify(report,null,2))
+ assert.deepEqual(identities(await f.cli('session','list')),originalIdentities);assert.equal(fs.readFileSync(path.join(a.cwd,'identity-keep.txt'),'utf8'),'original workspace file');for(const reference of [imageRef,userImageRef]){assert.equal(Buffer.from((await rpc(null,'workspace.image',{employee:a.id,path:reference})).data,'base64').equals(png),true);assert.equal((await rpc(null,'transfer.download-info',{from:{employee:a.id,path:reference}})).name,'photo.png')}
+ const report={test:'direct-messages-core',status:'passed',employees:5,cases:['native-and-group-isolation','explicit-user-input','agent-media-identity','auth-and-management-bounds','secretary-manage-without-spoof','idempotent-and-concurrent-posts','immutable-attachments','original-image-names-with-opaque-paths','user-and-assistant-name-projections','identity-preserved','cursor-and-stale-ack','restart-preserves-data'],fixture:{imageBytes:png.length,fileBytes:infoBefore.bytes}}
+ const artifact=process.env.AGENTS_COMPANY_TEST_ARTIFACTS?path.join(process.env.AGENTS_COMPANY_TEST_ARTIFACTS,'core-result.json'):path.join(f.root,'artifacts','explicit-private-messages','core-result.json');fs.mkdirSync(path.dirname(artifact),{recursive:true});fs.writeFileSync(artifact,JSON.stringify(report,null,2))
  console.log('PASS direct messages Core: native/group isolation, explicit user input with auto-enqueue, own-identity agent media, auth/spoof/Manager bounds, Secretary management, concurrent idempotency, immutable @direct copies, cursor/stale ack, restart preservation')
 }finally{await f.close()}

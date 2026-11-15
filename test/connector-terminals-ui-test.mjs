@@ -1,74 +1,46 @@
+// Real Core activity and canonical routes; the retained SVG component has its own isolated host.
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import net from 'node:net'
 import assert from 'node:assert/strict'
 import {createRequire} from 'node:module'
-import {_electron as electron,expect} from '@playwright/test'
+import {chromium,_electron as electron,expect} from '@playwright/test'
 import platform from '../bin/platform.cjs'
-const root=path.resolve(import.meta.dirname,'..'),require=createRequire(import.meta.url),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-line-ends-'))),control=path.join(temp,'fixture'),output=path.join(root,'artifacts/badge-docking-fix')
-fs.mkdirSync(control);fs.writeFileSync(path.join(control,'release-all'),'');fs.mkdirSync(output,{recursive:true})
-const env={...process.env,AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1100',CODEX_BIN:path.join(root,'test/fixtures/initialization-codex.cjs'),CODEX_HOME:path.join(temp,'codex'),AC_INIT_FIXTURE:control}
-for(const key of ['ELECTRON_RUN_AS_NODE','AGENTS_COMPANY_TOKEN','AGENTS_COMPANY_TOKEN_FILE','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_URL'])delete env[key]
-const app=await electron.launch({executablePath:process.env.AGENTS_COMPANY_TEST_APP||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[root],env}),page=await app.firstWindow()
-const rpc=(auth,cmd,args={})=>new Promise((resolve,reject)=>{const socket=net.connect(platform.controlEndpoint(env.AGENTS_COMPANY_HOME));let buffer='';socket.on('error',reject);socket.on('connect',()=>socket.write(JSON.stringify({auth,cmd,args})+'\n'));socket.on('data',data=>{buffer+=data;if(buffer.includes('\n')){socket.end();const value=JSON.parse(buffer.split('\n')[0]);value.ok?resolve(value.data):reject(Error(value.error))}})})
+import {fixtureCore} from './fixtures/headless-core.mjs'
+import {desktopExecutable} from './fixtures/desktop-app.mjs'
+import {retainedOffice} from './fixtures/retained-office.mjs'
+const root=process.cwd(),require=createRequire(import.meta.url),web=process.argv.includes('--web'),mode=web?'web':'desktop',output=path.resolve(process.env.AGENTS_COMPANY_TEST_ARTIFACTS||'artifacts/connector-terminals/'+mode);fs.mkdirSync(output,{recursive:true});const probe=net.createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve))
+let f,component,app,browser,page;const followers=[],checks=[],errors=[]
 const checkArrow=async(edge,connection)=>{
- const arrow=edge.locator('.management-arrow');await expect(arrow).toBeVisible()
+ const arrow=edge.locator('.management-arrow');await arrow.scrollIntoViewIfNeeded();await expect(arrow).toBeVisible()
  const {x,y,dx,dy}=await arrow.evaluate(e=>{const m=e.transform.baseVal.consolidate().matrix;return {x:m.e,y:m.f,dx:m.a,dy:m.b}})
  assert.ok(connection.points.some((b,i)=>{if(!i)return false;const a=connection.points[i-1];return Math.abs(dx-Math.sign(b.x-a.x))<1e-6&&Math.abs(dy-Math.sign(b.y-a.y))<1e-6&&x>=Math.min(a.x,b.x)-.001&&x<=Math.max(a.x,b.x)+.001&&y>=Math.min(a.y,b.y)-.001&&y<=Math.max(a.y,b.y)+.001}),'Arrow must follow an actual route segment toward the receiving employee')
- const end=connection.points.at(-1);assert.ok(Math.abs(x-end.x)<.001&&Math.abs(y-end.y)<.001,'Arrow tip must reach the actual receiving endpoint, never an earlier segment');const box=await arrow.boundingBox();assert.ok(box&&box.width>0&&box.height>0,'Arrow remains visible even when its final segment is short')
+ const end=connection.points.at(-1);assert.ok(Math.abs(x-end.x)<.001&&Math.abs(y-end.y)<.001,'Arrow reaches the canonical receiving endpoint');const box=await arrow.boundingBox();assert.ok(box&&box.width>0&&box.height>0,'Arrow remains visible for short final segments')
 }
-const followers=[]
 try{
- await page.locator('.infinite-canvas').waitFor()
- const user=fs.readFileSync(path.join(env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim(),call=(cmd,args)=>rpc(user,cmd,args)
- await call('settings.set',{theme:'white'});await call('group.add',{name:'Studio',mode:'build'})
- const create=async(auth,title,role,avatar)=>{const c=await rpc(auth,'card.create',{title,group:'Studio',engine:'codex',model:'gpt-6-luna',effort:'low',managementRole:role,avatar});await expect.poll(async()=>(await call('session.status',{employee:c.id}))[0].initialization.status).toBe('ready');return c}
- const manager=await create(user,'Manager','manager','marmalade'),token=(await call('auth.agent-token',{id:manager.id})).token,workers=[]
+ component=await retainedOffice(web);f=await fixtureCore(web?{AGENTS_COMPANY_WEB:'1',AGENTS_COMPANY_WEB_PORT:String(port)}:{})
+ const call=async(cmd,args={},auth=null)=>{const response=await f.request(auth,cmd,args);assert.ok(response.ok,cmd+': '+response.error);return response.data}
+ await call('settings.set',{language:'en',viewAppearance:{company:{theme:'white'}}});await call('group.add',{name:'Studio'});for(const id of ['marmalade','byte','woodi','wondercube'])await call('avatar.update',{id,enabled:true})
+ const create=async(auth,title,role,avatar)=>{const card=await call('card.create',{title,group:'Studio',engine:'codex',model:'gpt-6-luna',effort:'low',managementRole:role,avatar},auth);await f.ready(card.id);return card}
+ const manager=await create(null,'Manager','manager','marmalade'),token=await f.token(manager.id),workers=[]
  for(const [i,avatar] of ['byte','woodi','wondercube'].entries())workers.push(await create(token,'Employee '+(i+1),'employee',avatar))
- await call('room.bounds',{name:'Studio',bounds:{x:0,y:0,width:976,height:862,arrangement:'free'}})
- for(const [card,x,y] of [[manager,488,182],[workers[0],19,267],[workers[1],133,525],[workers[2],536,524]])await call('card.place',{id:card.id,x,y,snap:false})
- const before=(await call('office.layout')).connections.map(r=>({id:r.id,points:r.points,path:r.path}))
- const subscriptions=new Map()
- const highlight=async employee=>{
-  subscriptions.get(employee)?.destroy()
-  const socket=net.connect(platform.controlEndpoint(env.AGENTS_COMPANY_HOME));followers.push(socket);subscriptions.set(employee,socket)
-  await new Promise((resolve,reject)=>{socket.once('error',reject);socket.once('connect',()=>socket.write(JSON.stringify({cmd:'session.follow',args:{employee},auth:token})+'\n'));socket.once('data',()=>resolve())})
- }
- for(const worker of workers){
-  fs.writeFileSync(path.join(control,worker.id+'.hold-user'),'')
-  await rpc(token,'session.send',{employee:worker.id,text:'Hold this fixture turn'})
-  await highlight(worker.id)
- }
- await page.emulateMedia({reducedMotion:'no-preference'})
- const active=page.locator('.management-connection[data-active=true]');await expect(active).toHaveCount(3);await expect(page.locator('.office-connections')).toHaveCSS('animation-name','management-flow');await expect(page.locator('.sleep-marks')).toHaveCount(0)
+ await call('room.bounds',{name:'Studio',columns:3,rows:2});for(const [card,seat]of [[manager,2],[workers[0],1],[workers[1],3],[workers[2],5]])await call('card.place',{id:card.id,seat})
+ const before=(await call('office.layout')).connections.map(({id,points,path})=>({id,points,path})),camera=await call('canvas.view'),identity=store=>store.sessions.map(({id,cwd,engine,threadId,avatar})=>({id,cwd,engine,threadId,avatar})),preserved=identity(await call('session.list'));assert.equal(before.length,3)
+ if(web){browser=await chromium.launch({headless:true,...(process.platform==='darwin'?{channel:'chrome'}:{})});page=await browser.newPage({viewport:{width:1440,height:1100}});await page.goto('http://127.0.0.1:'+port);await page.locator('.web-login input').fill(fs.readFileSync(path.join(f.env.AGENTS_COMPANY_HOME,'control.token'),'utf8').trim());await page.getByRole('button',{name:'Enter workspace',exact:true}).click()}
+ else{await f.stop();const env={...f.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1100'};delete env.ELECTRON_RUN_AS_NODE;const application=process.env.AGENTS_COMPANY_TEST_APP;app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env});page=await app.firstWindow()}
+ page.setDefaultTimeout(18000);page.on('pageerror',error=>errors.push(error.message));await expect(page.locator('.agent-board')).toBeVisible();if(web)await expect(page.locator('.web-connection')).toContainText('Connected to Core');await expect(page.locator('.team-subviews,.characters-canvas')).toHaveCount(0)
+ for(const card of [manager,...workers]){await expect(page.locator('[data-employee="'+card.id+'"]>header h3')).toHaveText(card.title);await expect(page.getByRole('button',{name:'Focus '+card.title,exact:true})).toBeVisible()}
+ await component.attach(page);await page.evaluate(()=>window.retainedOfficeFixture.show('connections'));await expect(page.locator('.retained-connection-scroll')).toBeVisible()
+ const subscriptions=new Map(),highlight=async employee=>{subscriptions.get(employee)?.destroy();const socket=net.connect(platform.controlEndpoint(f.env.AGENTS_COMPANY_HOME));followers.push(socket);subscriptions.set(employee,socket);await new Promise((resolve,reject)=>{socket.once('error',reject);socket.once('connect',()=>socket.write(JSON.stringify({cmd:'session.follow',args:{employee},auth:token})+'\n'));socket.once('data',()=>resolve())})}
+ for(const worker of workers){fs.writeFileSync(path.join(f.control,worker.id+'.hold-user'),'');await call('session.send',{employee:worker.id,text:'Hold this fixture turn'},token);await highlight(worker.id)}
+ await page.emulateMedia({reducedMotion:'no-preference'});await expect(page.locator('#retained-office-fixture .management-connection[data-active=true]')).toHaveCount(3);await expect(page.locator('#retained-office-fixture .office-connections')).toHaveCSS('animation-name','management-flow');await page.evaluate(()=>window.retainedOfficeFixture.show('canvas'));await expect(page.locator('#retained-office-fixture .employee')).toHaveCount(4);for(const worker of workers)await expect(page.locator('#retained-office-fixture [data-card-id="'+worker.id+'"]')).toHaveAttribute('data-state','working');for(const card of [manager,...workers])await expect(page.locator('#retained-office-fixture [data-card-id="'+card.id+'"] .mascot[data-avatar]')).toHaveAttribute('data-avatar',card.avatar);await expect(page.locator('#retained-office-fixture .sleep-marks')).toHaveCount(0);await page.evaluate(()=>window.retainedOfficeFixture.show('connections'));await expect(page.locator('.retained-connection-scroll')).toBeVisible()
  for(const zoom of [.33,.8,1.2]){
-  await call('canvas.set',{x:40,y:15,zoom})
-  await expect(page.locator('.infinite-canvas')).toHaveAttribute('data-zoom',zoom.toFixed(3))
-  for(const connection of before){
-   // Each active-arrow check starts a real communication, rather than requiring a long-lived cue.
-   await Promise.all(workers.map(worker=>highlight(worker.id)))
-   const edge=page.locator(`[data-connection="${connection.id}"]`),arrow=edge.locator('.management-arrow')
-   await checkArrow(edge,connection);await expect(arrow).toHaveAttribute('fill','none');await expect(arrow).toHaveCSS('stroke','rgb(20, 122, 78)')
-   assert.equal(await edge.locator('.management-line').getAttribute('d'),connection.path,'Styling must not change the canonical editable route')
-   assert.equal(await edge.locator('.management-line').getAttribute('marker-end'),null,'Active flow must not carry an overlapping triangle')
-   assert.equal(await edge.locator('.management-terminal-lead').evaluate(e=>getComputedStyle(e).animationName),'none','Endpoint lead must stay steady')
-   assert.equal(await arrow.evaluate(e=>getComputedStyle(e).animationName),'none','Direction arrow must stay steady');if(zoom===.33)assert.ok((await arrow.boundingBox()).width<=12,'Overview arrow stays compact')
-  }
-  await page.screenshot({path:path.join(output,`terminals-${zoom}.png`)})
-  if(zoom===.33)await page.locator('.world-room').first().screenshot({path:path.join(output,'overview-detail.png')})
+  await page.evaluate(zoom=>window.retainedOfficeFixture.setZoom(zoom),zoom);await expect.poll(()=>page.locator('.retained-connection-scroll .canvas-world').evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a)).toBeCloseTo(zoom,3)
+  for(const connection of before){await Promise.all(workers.map(worker=>highlight(worker.id)));const edge=page.locator('#retained-office-fixture [data-connection="'+connection.id+'"]'),arrow=edge.locator('.management-arrow');await expect(edge).toHaveAttribute('data-active','true');await checkArrow(edge,connection);await expect(arrow).toHaveAttribute('fill','none');await expect(arrow).toHaveCSS('stroke','rgb(20, 122, 78)');assert.equal(await edge.locator('.management-line').getAttribute('d'),connection.path);assert.equal(await edge.locator('.management-line').getAttribute('marker-end'),null);assert.equal(await edge.locator('.management-terminal-lead').evaluate(el=>getComputedStyle(el).animationName),'none');assert.equal(await arrow.evaluate(el=>getComputedStyle(el).animationName),'none');if(zoom===.33)assert.ok((await arrow.boundingBox()).width<=12)}
+  await page.screenshot({path:path.join(output,'retained-terminals-'+zoom+'.png'),animations:'disabled'});assert.deepEqual(await call('canvas.view'),camera,'Component-scale cases do not re-enable the retired camera API')
  }
- for(const side of ['left','top','right','bottom']){
-  await call('connector.set',{manager:manager.id,employee:workers[0].id,target:{side,offset:.5}})
-  await highlight(workers[0].id)
-  const connection=(await call('office.layout')).connections.find(r=>r.employeeId===workers[0].id)
-  await expect(page.locator(`[data-connection="${connection.id}"] .management-line`)).toHaveAttribute('d',connection.path);await checkArrow(page.locator(`[data-connection="${connection.id}"]`),connection)
- }
- await call('connector.reset',{manager:manager.id,employee:workers[0].id})
- followers.forEach(socket=>socket.destroy());followers.length=0
- for(const worker of workers)await call('session.interrupt',{employee:worker.id})
- await expect(page.locator('.management-terminal')).toHaveCount(0,{timeout:5000})
- assert.deepEqual((await call('office.layout')).connections.map(r=>({id:r.id,points:r.points,path:r.path})),before)
- assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(w=>!w.isVisible())))
- console.log('PASS active arrows at 33%, 80%, 120% and all four receiving sides: fixed open arrowhead, flowing body, canonical routing unchanged, idle arrows restored; isolated fixture only')
-}finally{followers.forEach(socket=>socket.destroy());await app.close();fs.rmSync(temp,{recursive:true,force:true})}
+ checks.push('The isolated real ConnectionLayer keeps canonical routes, visible directed open arrowheads, green active flow and steady terminal leads at 33/80/120 percent component scales')
+ for(const side of ['left','top','right','bottom']){await call('connector.set',{manager:manager.id,employee:workers[0].id,target:{side,offset:.5}});await highlight(workers[0].id);const connection=(await call('office.layout')).connections.find(value=>value.employeeId===workers[0].id),edge=page.locator('#retained-office-fixture [data-connection="'+connection.id+'"]');await expect(edge.locator('.management-line')).toHaveAttribute('d',connection.path);await checkArrow(edge,connection)}
+ await call('connector.reset',{manager:manager.id,employee:workers[0].id});followers.forEach(socket=>socket.destroy());followers.length=0;for(const worker of workers)await call('session.interrupt',{employee:worker.id});await expect(page.locator('#retained-office-fixture .management-terminal')).toHaveCount(0,{timeout:5000});assert.deepEqual((await call('office.layout')).connections.map(({id,points,path})=>({id,points,path})),before);assert.deepEqual(identity(await call('session.list')),preserved);checks.push('All four receiving sides, idle restoration, stored routes, visible member identity and native workspace references remain correct')
+ await page.evaluate(()=>window.retainedOfficeFixture.hide());await expect(page.locator('.agent-board')).toBeVisible();await expect(page.locator('.team-subviews')).toHaveCount(0);if(app)assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())));assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:true,mode,scope:'real Board identities + isolated retained ConnectionLayer rendering',checks,errors,paidModelCalls:0,productionDataUsed:false},null,2)+'\n');checks.forEach(check=>console.log('PASS '+mode+': '+check))
+}catch(error){await page?.screenshot({path:path.join(output,'failure.png'),animations:'disabled'}).catch(()=>{});throw error}finally{followers.forEach(socket=>socket.destroy());await page?.evaluate(()=>window.retainedOfficeFixture?.unmount()).catch(()=>{});await app?.close();await browser?.close();await f?.close();component?.dispose()}

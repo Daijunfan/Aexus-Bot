@@ -1,39 +1,27 @@
-// Hidden, isolated rendering benchmark. No production state or paid model calls.
+// Hidden, isolated benchmark of the current real Board. No production state or paid model calls.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import {createRequire} from 'node:module'
-const require=createRequire(import.meta.url),{_electron:electron}=require('@playwright/test')
-const root=path.resolve(import.meta.dirname,'..'),baseline=process.argv.includes('--baseline'),backup=process.env.AGENTS_PERFORMANCE_BASELINE??(baseline?fs.readFileSync('/tmp/ac-perf-current-backup','utf8').trim():root)
-if(baseline&&!fs.existsSync(backup+'/node_modules'))fs.symlinkSync(root+'/node_modules',backup+'/node_modules','dir')
-const target=baseline?backup:root,folder=path.join(root,'artifacts/performance-0.48.1');fs.mkdirSync(folder,{recursive:true})
-const temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-perf-'))),home=temp+'/state';fs.mkdirSync(home)
-const groups=['Team A','Team B','Team C'],sessions=['fireball','dewey','marmalade','woodi'].map((avatar,i)=>{
- const group=groups[i<2?0:i-1],cwd=temp+'/projects/'+group+'/'+avatar;fs.mkdirSync(cwd,{recursive:true})
- return {id:'perf'+i,title:avatar,group,cwd,engine:i%2?'claude':'codex',kind:'worker',managementRole:'employee',avatar,createdAt:i+1,position:{x:i===1?390:100,y:i===1?220:220}}
-})
-fs.writeFileSync(home+'/sessions.json',JSON.stringify({groups,sessions,fullAccessDefaultApplied:true,access:{version:2,revision:1,relations:[],globalManagerIds:[]},rooms:Object.fromEntries(groups.map((g,i)=>[g,{col:i,row:0,w:1,h:1,bounds:{x:i%2*860,y:Math.floor(i/2)*650,width:760,height:560,pinned:true,shape:'rounded',arrangement:'free'},design:{scenery:false}}])),teamRoots:Object.fromEntries(groups.map(g=>[g,temp+'/projects/'+g])),preferences:{theme:'white',showTeamOverview:false},viewport:{x:20,y:20,zoom:.6}}))
-const env={...process.env,AGENTS_COMPANY_HOME:home,AGENTS_COMPANY_PROJECTS:temp+'/projects',AGENTS_COMPANY_WORKSPACES:temp+'/work',AGENTS_COMPANY_BUILTIN_PLUGINS:root+'/build/plugins',AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1168',AGENTS_COMPANY_HEIGHT:'1096'}
-for(const key of Object.keys(env))if(/^(AGENTS_COMPANY_TOKEN|AGENTS_COMPANY_SOCKET|AGENTS_COMPANY_EMPLOYEE|ELECTRON_RUN_AS_NODE)/.test(key))delete env[key]
-const installed=process.env.AGENTS_PERFORMANCE_APP
-const app=await electron.launch({executablePath:installed||require('electron'),args:installed?[]:[target],env}),page=await app.firstWindow();const errors=[];page.on('pageerror',e=>errors.push(e.message))
-const wait=ms=>new Promise(r=>setTimeout(r,ms))
+import {_electron as electron,expect} from '@playwright/test'
+import {desktopExecutable} from './fixtures/desktop-app.mjs'
+const require=createRequire(import.meta.url),root=process.cwd(),baseline=process.argv.includes('--baseline'),target=baseline?process.env.AGENTS_PERFORMANCE_BASELINE:root
+if(!target)throw Error('A baseline run requires an explicit AGENTS_PERFORMANCE_BASELINE checkout using the current Board contract')
+const folder=path.resolve(process.env.AGENTS_COMPANY_TEST_ARTIFACTS||'artifacts/performance-current');fs.mkdirSync(folder,{recursive:true});const temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'aexus-perf-'))),home=path.join(temp,'state');fs.mkdirSync(home)
+const groups=['Team A','Team B','Team C'],avatars=['fireball','dewey','marmalade','woodi'],sessions=avatars.map((avatar,i)=>{const group=groups[i<2?0:i-1],cwd=path.join(temp,'projects',group,avatar);fs.mkdirSync(cwd,{recursive:true});fs.writeFileSync(path.join(cwd,'performance-keep.txt'),avatar);return {id:'perf'+i,title:avatar,group,cwd,engine:i%2?'claude':'codex',kind:'worker',managementRole:'employee',avatar,createdAt:i+1,position:{x:i===1?390:100,y:220}}})
+const seed={groups,sessions,avatarCatalog:{revision:1,enabled:avatars},fullAccessDefaultApplied:true,access:{version:2,revision:1,relations:[],globalManagerIds:[]},rooms:Object.fromEntries(groups.map((group,i)=>[group,{col:i,row:0,w:1,h:1,bounds:{x:i%2*860,y:Math.floor(i/2)*650,width:760,height:560,pinned:true,shape:'rounded',arrangement:'free'},design:{scenery:false}}])),teamRoots:Object.fromEntries(groups.map(group=>[group,path.join(temp,'projects',group)])),preferences:{theme:'white',viewAppearance:{company:{theme:'white'}},showTeamOverview:false},viewport:{x:20,y:20,zoom:.6}};fs.writeFileSync(path.join(home,'sessions.json'),JSON.stringify(seed))
+const env={...process.env,AGENTS_COMPANY_HOME:home,AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_TEST_BOTS_URL:'http://127.0.0.1:1',AGENTS_COMPANY_BUILTIN_PLUGINS:path.join(root,'build/plugins'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1168',AGENTS_COMPANY_HEIGHT:'1096',CODEX_HOME:path.join(temp,'codex'),CLAUDE_CONFIG_DIR:path.join(temp,'claude'),CLINE_DATA_DIR:path.join(temp,'cline'),PI_CODING_AGENT_DIR:path.join(temp,'pi'),DSH_HOME:path.join(temp,'deepseek'),CODEX_BIN:path.join(root,'test/fixtures/initialization-codex.cjs')};for(const key of Object.keys(env))if(key.startsWith('AGENTS_COMPANY_TOKEN')||['ELECTRON_RUN_AS_NODE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_PORT','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_URL','AGENTS_COMPANY_CLIENT'].includes(key))delete env[key]
+const installed=process.env.AGENTS_PERFORMANCE_APP||process.env.AGENTS_COMPANY_TEST_APP;let app,page;const errors=[],wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))
 try{
- await page.locator('.infinite-canvas').waitFor();await page.locator('.official-pet').first().waitFor()
- // Explicit diagnostic visibility: benchmark identical animated frames in hidden windows.
- await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].webContents.send('api:event',{channel:'desktop:visibility',payload:{active:false,visible:true}}))
- await wait(1400);await app.evaluate(({app})=>app.getAppMetrics());const samples=[]
- for(let i=0;i<3;i++){await wait(2000);samples.push(await app.evaluate(({app})=>app.getAppMetrics().filter(x=>['Browser','Tab','GPU'].includes(x.type)).map(x=>({type:x.type,cpu:x.cpu.percentCPUUsage,rss:x.memory.workingSetSize}))))}
- const moving=await page.locator('.official-frame').evaluateAll(nodes=>nodes.map(el=>({animation:getComputedStyle(el).animationName,rect:{width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height}})))
- // Deterministic frozen frame only for visual comparison; runtime samples above are animated.
- await page.evaluate(()=>document.getAnimations().forEach(a=>{a.pause();a.currentTime=0}))
- const screenshot=path.join(folder,baseline?'before-idle.png':installed?'installed-idle.png':'after-idle.png');await page.screenshot({path:screenshot,scale:'css'})
- if(!baseline){
-  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].webContents.send('api:event',{channel:'desktop:visibility',payload:{active:false,visible:false}}));await wait(100)
-  assert.equal(await page.locator('.infinite-canvas').getAttribute('data-animated'),'false')
- }
- assert.deepEqual(errors,[]);assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(w=>!w.isVisible())))
- const report={baseline,installed:!!installed,version:await app.evaluate(({app})=>app.getVersion()),samples,moving,screenshot,errors}
- fs.writeFileSync(path.join(folder,baseline?'before-idle.json':installed?'installed-idle.json':'after-idle.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2))
-}finally{await app.close();fs.rmSync(temp,{recursive:true,force:true})}
+ app=await electron.launch({executablePath:installed?desktopExecutable(installed):require('electron'),args:installed?[]:[target],env});page=await app.firstWindow();page.on('pageerror',error=>errors.push(error.message));await page.emulateMedia({reducedMotion:'no-preference'});await expect(page.locator('.agent-board')).toBeVisible();await expect(page.locator('.agent-board-panel')).toHaveCount(4);await expect(page.locator('.board-roster-row')).toHaveCount(4);await expect(page.locator('.characters-canvas,.infinite-canvas')).toHaveCount(0);const actualDocumentHidden=await page.evaluate(()=>document.hidden)
+ // Explicit diagnostic visibility drives the current DOM visibility gate while the OS window stays hidden.
+ const visibility=async hidden=>page.evaluate(hidden=>{Object.defineProperty(document,'hidden',{configurable:true,value:hidden});Object.defineProperty(document,'visibilityState',{configurable:true,value:hidden?'hidden':'visible'});document.dispatchEvent(new Event('visibilitychange'))},hidden);await visibility(false)
+ await wait(1400);await app.evaluate(({app})=>app.getAppMetrics());const samples=[];for(let i=0;i<3;i++){await wait(2000);samples.push(await app.evaluate(({app})=>app.getAppMetrics().filter(item=>['Browser','Tab','GPU'].includes(item.type)).map(item=>({type:item.type,cpu:item.cpu.percentCPUUsage,rss:item.memory.workingSetSize}))))}
+ assert.equal(samples.length,3);assert.ok(samples.every(sample=>sample.some(item=>item.type==='Tab')&&sample.every(item=>Number.isFinite(item.cpu)&&Number.isFinite(item.rss))))
+ const avatar=page.locator('.board-roster-row .message-list-avatar').first();await avatar.hover();await expect(avatar).toHaveAttribute('data-avatar-playing','true');const sprite=avatar.locator('.official-pet'),firstFrame=await sprite.getAttribute('data-frame');await expect(sprite).not.toHaveAttribute('data-frame',firstFrame);const moving=await page.locator('.message-list-avatar').evaluateAll(nodes=>nodes.map(element=>({playing:element.dataset.avatarPlaying==='true',rect:{width:element.getBoundingClientRect().width,height:element.getBoundingClientRect().height},frames:[...element.querySelectorAll('.official-pet')].map(frame=>({frame:frame.getAttribute('data-frame'),animation:getComputedStyle(frame).animationName}))})));assert.ok(moving.length>=4&&moving.some(value=>value.playing));assert.ok(moving.every(value=>value.rect.width>=32&&value.rect.height>=32))
+ // Only freeze the screenshot; all CPU/RSS samples above used the unmodified live Board.
+ await page.evaluate(()=>document.getAnimations().forEach(animation=>{animation.pause();animation.currentTime=0}));const screenshot=path.join(folder,baseline?'before-idle.png':installed?'installed-idle.png':'after-idle.png');await page.screenshot({path:screenshot,scale:'css'});await visibility(true);await expect(page.locator('.message-list-avatar[data-avatar-playing=true]')).toHaveCount(0);await expect(page.locator('.message-avatar-live')).toHaveCount(0)
+ assert.deepEqual(errors,[]);assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())));for(const card of sessions)assert.equal(fs.readFileSync(path.join(card.cwd,'performance-keep.txt'),'utf8'),card.avatar)
+ const report={passed:true,baseline,installed:!!installed,scope:'current real Board idle; explicit DOM visibility diagnostic, physical windows hidden',actualDocumentHidden,version:await app.evaluate(({app})=>app.getVersion()),sampleCount:3,samplePeriodMs:2000,settleMs:1400,samples,moving,screenshot,hiddenPlayingAvatars:0,errors,productionDataUsed:false,paidModelCalls:0};fs.writeFileSync(path.join(folder,baseline?'before-idle.json':installed?'installed-idle.json':'after-idle.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2))
+}catch(error){await page?.screenshot({path:path.join(folder,'failure.png')}).catch(()=>{});fs.writeFileSync(path.join(folder,'failure.json'),JSON.stringify({error:error.stack,errors},null,2)+'\n');throw error}finally{await app?.close();fs.rmSync(temp,{recursive:true,force:true})}

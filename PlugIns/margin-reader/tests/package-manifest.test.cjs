@@ -2,6 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {walk}=require('../scripts/release-pack.cjs');
 const {manifestFiles,validateTarEntries,verifyPayload}=require('../scripts/verify-package.cjs');
+const checkUiResources=require('../scripts/check-ui-resources.cjs');
 
 function fixture(t){
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'mr-package-manifest-'));
@@ -47,4 +48,16 @@ test('file manifests reject ambiguous names, duplicate identities and inconsiste
  assert.throws(()=>manifestFiles(duplicate),/duplicate manifest path/);
  assert.throws(()=>manifestFiles({...manifest,fileCount:1}),/manifest count/);
  assert.throws(()=>manifestFiles({...manifest,unpackedBytes:manifest.unpackedBytes+1}),/byte total/);
+});
+
+test('packaged UI checks actual local assets without interpreting data SVG contents as files',t=>{
+ const {directory}=fixture(t);
+ fs.mkdirSync(path.join(directory,'images'));
+ fs.writeFileSync(path.join(directory,'index.html'),'<link href="viewer.css"><script src="reader.js"></script>');
+ fs.writeFileSync(path.join(directory,'reader.js'),'');
+ fs.writeFileSync(path.join(directory,'viewer.css'),`.toolbar{mask:url("images/tool.svg")} .paper{background:url("data:image/svg+xml,%3Csvg filter='url(%23grain)'/%3E")}`);
+ fs.writeFileSync(path.join(directory,'images/tool.svg'),'<svg/>');
+ assert.equal(checkUiResources(directory),3);
+ fs.unlinkSync(path.join(directory,'images/tool.svg'));
+ assert.throws(()=>checkUiResources(directory),/Missing UI resource: viewer\.css -> images\/tool\.svg/);
 });

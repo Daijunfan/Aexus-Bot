@@ -6868,7 +6868,7 @@
   {
     "name": "channel.file-download",
     "args": "--post POST_ID --file FILE_ID",
-    "summary": "User-only: copy a cloud document into this channel shared workspace, with SHA-256 verification; cloud cache retention never removes the local copy",
+    "summary": "User or Secretary: copy a cloud document into this channel shared workspace, with SHA-256 verification; employees use conversation.download for their own Team copy",
     "gui": "Download to channel",
     "inputSchema": {
       "type": "object",
@@ -8095,7 +8095,7 @@
   {
     "name": "channel.post",
     "args": "POST_ID",
-    "summary": "User or Secretary: read a retained news item with current channel routing",
+    "summary": "Read a retained news item with current channel routing; an employee needs a channel reading grant, while the user and Secretary are always authorized",
     "gui": "News detail",
     "inputSchema": {
       "type": "object",
@@ -8165,7 +8165,7 @@
   {
     "name": "channel.image",
     "args": "CHANNEL_ID --post POST_ID --media MEDIA_ID [--max-edge 96|640|1280]",
-    "summary": "User or Secretary: read a published news image from memory or the server, never staging or arbitrary URLs",
+    "summary": "Read a published news image with a channel reading grant; user and Secretary always have access. Reads only published memory/server content, never staging or arbitrary URLs",
     "gui": "News images",
     "inputSchema": {
       "type": "object",
@@ -8862,7 +8862,7 @@
   {
     "name": "messenger.profile",
     "args": "[--avatar ID|null | --image JSON|@file]",
-    "summary": "User-only: upload a personal image, choose an avatar.list ID or reset with null; author identity stays unchanged",
+    "summary": "User or Secretary: upload a personal image, choose an avatar.list ID or reset with null; author identity stays unchanged",
     "gui": "Your message avatar",
     "inputSchema": {
       "type": "object",
@@ -8909,7 +8909,7 @@
   {
     "name": "messenger.profile-image",
     "args": "--sha256 HASH",
-    "summary": "User-only: read the current personal avatar image at its exact saved revision",
+    "summary": "User or Secretary: read the current personal avatar image at its exact saved revision",
     "gui": "Your message avatar",
     "inputSchema": {
       "type": "object",

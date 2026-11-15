@@ -66,7 +66,9 @@ try{
   const transcript=await rpc('session.transcript',{employee:employee.id}),notice=transcript.items.find(item=>item.role==='user'&&item.text.startsWith(body))
   assert.ok(notice);assert.ok(notice.text.includes('[User uploaded shared files]'));for(const name of [photo,photo2,brief,empty])assert.ok(notice.text.includes(name))
   assert.equal(notice.images?.length??0,0);assert.equal(notice.files?.length??0,0)
-  const work=JSON.parse(fs.readFileSync(path.join(f.control,employee.id+'-work.json'),'utf8'));assert.ok(work.text.includes(employee.cwd));assert.ok(work.text.includes('Group files are shared conversation content'));assert.ok(work.text.includes('conversation.file'));assert.ok(work.text.includes('workspace.catalog'))
+  const work=JSON.parse(fs.readFileSync(path.join(f.control,employee.id+'-work.json'),'utf8'));assert.equal(work.cwd,employee.cwd);assert.equal(work.documentationTools,true)
+  const shared=await rpc('conversation.workspace',{conversation:ref},employee.id===a.id?ta:tb)
+  assert.equal(shared.personalWorkspace,employee.cwd);assert.match(shared.policy,/Group files are shared conversation content/)
  }
  assert.deepEqual(fs.readdirSync(a.cwd).sort(),personalFiles);assert.deepEqual((await rpc('direct.history',{employee:a.id})).items,[])
  assert.equal((await rpc('chat.send',{id:group.id,text:body,images:[photo,photo2],files:[brief,empty],mentions:'all',clientMessageId:'shared-attachments-once'})).id,message.id)

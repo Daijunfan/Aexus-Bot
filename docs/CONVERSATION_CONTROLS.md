@@ -2,28 +2,28 @@
 
 Current scope: group chat only. Channels are read-only news feeds: member/role,
 moderation, notice and post-count writes are rejected; legacy records remain
-readable for compatibility and active count rules are paused. Old channel examples
-below describe retained compatibility records, not supported channel workflows.
+readable for compatibility and active count rules are paused. Legacy channel records
+are for historical inspection, not current write workflows.
 Employees use [channel fetch/search](CHANNELS.md#read-only-employee-channel-api)
 without joining or saving.
 
-This is the Messages conversation contract. Read `conversation.policy` before acting. Conversation IDs are `group:cg_…` or `channel:nc_…`. Employee names, Team names and the current UI do not identify a destination.
+This is the Message group governance contract. Read `conversation.policy` before changing a group, using its exact `group:cg_…` reference. Channels use `channel.access` reading grants; their `channel:nc_…` references also remain valid for authorized news and historical reads. Employee names, Team names and the current UI do not identify a destination.
 
 ## Three separate domains
 
 | Domain | Identity and purpose | API / storage |
 | --- | --- | --- |
 | Aexus | Employee / Manager / Governor / Secretary; engine work and organizational control | `card.*`, `management.*`, `session.*` |
-| Group / channel | Group/channel **Owner / Admin / Member**; conversation governance and fixed-text notices | `chat.*`, `conversation.policy/role/mute/silence`, `conversation.notice-*` |
+| Message group | Independent **Owner / Admin / Member** offices; group governance and fixed-text announcements | `chat.*`, `conversation.policy/role/mute/silence`, `conversation.notice-*` |
 | Plan | Employee schedules explicitly created in Plan, including time/event-triggered research and publishing tasks | `plan.*`, `schedule.*`; existing Plan scheduler and records |
 
 The `group.*` namespace refers to Aexus Teams. Message chat groups use `chat.*`; owning a chat group never grants `group.remove`, Team management or employee deletion. Always keep those IDs and namespaces separate.
 
-Conversation roles never change `managementRole`, engine permissions, Team membership, workspaces, credentials, or Plan target authority. A Aexus Employee may own a group containing a Aexus Secretary. That Secretary remains a group Member until explicitly appointed. Aexus rank does not grant moderation, notification management, ownership transfer or group deletion. Agent message/history access requires actual group membership or channel membership, including Secretary.
+Group offices never change `managementRole`, engine permissions, Team membership, workspaces, credentials or Mission target authority. An Employee may own a group containing a Secretary; Secretary does not acquire an Owner/Admin office automatically. Secretary separately retains application-administration access without joining, as does the user. Other employees need the relevant group membership/office, and channel reading requires an explicit grant. Secretary always has channel access.
 
-Conversation notifications contain literal saved text. Core posts it to this conversation without invoking a model, performing private reading, queuing Agent work, running tools, or creating a Plan record. They do not appear in Plan; they have no `action`, `prompt`, `employeeId` work target, event trigger, or Mission view. Never substitute a notice for an employee task. A fixed-text channel announcement uses the notice API. Per-Agent new-post counting and saved prompts use the separate `channel.post-trigger-*` workflow described in [Message collaboration](MESSAGE_COLLABORATION.md); it may invoke the member but creates no Plan record. Explicit Plan schedules remain available for time/event-driven employee work.
+Conversation notifications contain literal saved text. Core posts it to this conversation without invoking a model, performing private reading, queuing Agent work, running tools, or creating a Plan record. They do not appear in Plan; they have no `action`, `prompt`, `employeeId` work target, event trigger, or Mission view. Never substitute a notice for an employee task. Announcements apply to groups only. Channel discussion, announcement and post-count writes are retired; retained history is described in [Message collaboration](MESSAGE_COLLABORATION.md#retained-channel-history-apis). Explicit Mission schedules remain available for employee work.
 
-The human application user retains an administrative recovery override through the same APIs. This does not create a human Owner/Admin membership and is not conferred on any Aexus Agent, including Secretary. Owner, Admin and Member offices are always held by existing Agent employees. UI office labels remain English in all interface languages.
+The user and Secretary administer through the same authenticated Core APIs. These application-level rights do not create an Owner/Admin membership, change employee identities or bypass the explicit Owner transfer/removal safeguards. Owner, Admin and Member offices are held by existing employees; their protocol values remain `owner`, `admin` and `member`.
 
 ## Shared group context
 
@@ -43,9 +43,9 @@ Messages from `chat.send` and `chat.post` reach every current group member. Ment
 
 An Admin cannot remove, demote or mute the Owner. Ownership transfer is explicit and atomic: the target becomes the single Owner and the previous Owner becomes Admin. To remove the Owner from membership, transfer ownership first. A group-wide mute restricts Members, including future Members; its Owner/Admin may still publish. An explicit individual mute also blocks that Agent's public posting and notification publication, but does not remove moderation authority or prevent reading/private work.
 
-`chat.create {name,members,ownerId?}` creates a group. An Agent caller becomes Owner and must be among its members; it cannot name a different Owner at creation. The human user selects an Agent `ownerId`; omitted `ownerId` uses the first explicitly selected member for legacy CLI compatibility. Adding a Team selects current employees only; it grants no office based on Aexus roles. Existing groups without ownership are not automatically assigned to a high-ranked employee: their active Owner is returned as null, and the user can explicitly appoint one. If an Owner employee is removed, existing Admins retain their ordinary capabilities but do not automatically acquire ownership or dissolution rights.
+`chat.create {name,members,ownerId?}` creates a group. An ordinary Agent caller becomes Owner and must be among its members; it cannot name a different Owner at creation. The user or Secretary selects an Agent `ownerId`; omitted `ownerId` uses the first explicitly selected member for legacy CLI compatibility. Adding a Team selects current employees only; it grants no office based on Aexus roles. Existing groups without ownership are not automatically assigned to a high-ranked employee: their active Owner is returned as null, and the user can explicitly appoint one. If an Owner employee is removed, existing Admins retain their ordinary capabilities but do not automatically acquire ownership or dissolution rights.
 
-Channels now distinguish ordinary Member access from Owner/Admin publication and governance. Existing channel Admins retain their offices; no Owner is invented during migration. `conversation.role` with `role:member` demotes an Admin while retaining membership. Use `conversation.member` with `action:remove` to remove membership and workspace access. The human user can explicitly appoint the first Owner, and Owner may transfer ownership. Channel role changes update the publisher roster but never grant a Member article-publishing rights. External source/collector deployment remains separate; collectors receive no conversation administration, notice or post-count rule rights.
+Channels have no current employee offices or group controls. In **Channel options → Channel access**, the user or Secretary grants/revokes API readers atomically; Secretary stays automatically authorized. A reading grant creates no group membership or workspace. Historical offices and records remain accessible under their existing read scopes, but role/member/moderation/notice writes reject. External collectors publish source content with their separate scoped credentials; employees read through fetch/search and attachment APIs.
 
 ## Discover before changing
 
@@ -56,7 +56,7 @@ agents conversation role 'group:cg_GROUP_ID' --employee EMPLOYEE_ID --role membe
 agents conversation role 'group:cg_GROUP_ID' --employee NEW_OWNER_ID --role owner --expected-revision 6 --json
 ```
 
-`conversation.policy` returns `conversation`, `name`, `kind`, `revision`, `ownerId`, `members[{id,name,role,mutedUntil?}]`, `actorRole`, `mutes`, `silent` and `allowedActions`. The actor role is `owner/admin/member`, or `operator` for the human user; `operator` is a caller classification, not a group office. Member reads do not grant access to notice configuration. Actions are computed from current conversation office, never Aexus rank.
+`conversation.policy` returns `conversation`, `name`, `kind`, `revision`, `ownerId`, `members[{id,name,role,mutedUntil?}]`, `actorRole`, `mutes`, `silent` and `allowedActions`. The actor role is `owner/admin/member`, or `operator` for the human user; `operator` is a caller classification, not a group office. Member reads do not grant access to notice configuration. Group actions reflect the current office plus the separate user/Secretary administration policy; the returned `allowedActions` is authoritative. Historical channel policy exposes no current mutation actions.
 
 All new policy mutations require the current `expectedRevision`. Reload policy after a conflict. `chat.update`, `chat.delete` and legacy `chat.mute` use the same independent role authorization; they cannot bypass it. The legacy mute call remains compatible with old clients that omit a revision. The new `conversation.mute` should be preferred for revision-protected automation.
 
@@ -69,7 +69,7 @@ agents conversation mute 'group:cg_GROUP_ID' --member EMPLOYEE_ID --muted false 
 agents conversation silence 'group:cg_GROUP_ID' --silent true --expected-revision 10 --json
 ```
 
-`mute` restricts public posting. The duration is 1–31536000 seconds; omission is indefinite. An active individual restriction and group-wide restriction combine. Removing an individual restriction does not override a still-active group-wide restriction. In channels, `all` restricts all Agent public posting, including Member discussion and Owner/Admin publishing; an Admin can still turn the restriction off through moderation APIs. The guard applies to channel discussion, employee article publishing and static notices, even with full native engine access.
+`mute` restricts public posting. The duration is 1–31536000 seconds; omission is indefinite. An active individual restriction and group-wide restriction combine. Removing an individual restriction does not override a still-active group-wide restriction. This moderation API applies to groups. Channels reject mute, silence, discussion and announcement writes; reading grants do not permit publishing.
 
 `silence` sets conversation-wide **quiet notifications**. Scheduled text remains visible in history and contributes to genuine incoming unread state. It suppresses the application's scheduled-notice attention banner. It does not delete messages, acknowledge reads, mute an Agent's posting, disable a recurring notice, or alter any Plan task. No browser push service or operating-system sound notification is introduced. Banner delivery is best effort to connected application windows; message delivery is persistent. Configuring quiet mode is restricted to the current Owner/Admin, with the human recovery override.
 
@@ -87,7 +87,7 @@ Supported rules:
 
 A daily reminder uses all weekdays `[1,2,3,4,5,6,7]`. ISO weekdays are Monday=1 through Sunday=7. Interval is 60–31536000 seconds, anchored to the provided instant. Absolute timestamps require `Z` or an explicit UTC offset. Weekly/daily rules require an IANA timezone and retain local wall-clock time across timezone offset changes. An ambiguous repeated local time is resolved once at the earlier occurrence; nonexistent local times shift forward using compatible calendar resolution. Preview returns up to five strictly subsequent instants and does not persist or publish anything.
 
-The human user chooses an actual Admin/Owner Agent publisher. Agent callers must select themselves when creating a notice or changing its publisher. Admins may edit or pause existing notices created by other Admins while retaining the existing publisher. Publication always carries `notice: {noticeId,occurrenceId,scheduledFor,automatic:true,silent}` and the saved publisher identity; the interface marks it **Scheduled notice**, not a model response. There are no Agent delivery/read receipts for these automatic messages. An explicit later user reply may start ordinary Agent work under the existing chat rules.
+The user or Secretary chooses an actual Admin/Owner employee publisher. Other Agent callers must select themselves when creating a notice or changing its publisher. Admins may edit or pause existing notices created by other Admins while retaining the existing publisher. Publication always carries `notice: {noticeId,occurrenceId,scheduledFor,automatic:true,silent}` and the saved publisher identity; the interface marks it **Scheduled notice**, not a model response. There are no Agent delivery/read receipts for these automatic messages. An explicit later user reply may start ordinary Agent work under the existing chat rules.
 
 ```sh
 agents conversation notice-preview 'group:cg_GROUP_ID' --rule '{"kind":"weekly","days":[1,2,3,4,5],"time":"09:00","timezone":"Asia/Shanghai"}' --json
@@ -117,7 +117,7 @@ Creation requires a caller/conversation-scoped `clientRequestId`; unchanged retr
 
 ## Recovery, revocation and storage
 
-The Core owns one notification timer and `APP_HOME/conversation-notices.sqlite`, separate from `schedules.json`, Mission views, employee queues and plugin reminder databases. The durable occurrence record is created before publishing. Its deterministic message ID makes recovery after a crash between message insertion and completion idempotent. Both group JSON history and channel SQLite history retain one published message per occurrence.
+The Core owns one notification timer and `APP_HOME/conversation-notices.sqlite`, separate from `schedules.json`, Mission views, employee queues and plugin reminder databases. The durable occurrence record is created before publishing. Its deterministic message ID makes recovery after a crash between message insertion and completion idempotent. Group history retains one published message per occurrence. Historical channel notice records are preserved for reads; they do not resume channel publication.
 
 On restart, a missed one-time notice is delivered once while its creator/publisher remain authorized. Repeating notices missed by more than 60 seconds are recorded as skipped and advanced to the next future occurrence; there is no offline backlog flood. A recently due repeat has at most one catch-up publication. The service cannot wake a sleeping or stopped Core. History records published/skipped/cancelled outcomes, never fabricated model execution results.
 

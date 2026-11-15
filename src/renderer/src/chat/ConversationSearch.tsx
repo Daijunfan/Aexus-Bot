@@ -9,7 +9,7 @@ export function ConversationSearch({open,onOpen,items,transcript,onNavigate,onRe
   useI18n()
 
   const messenger=useMessenger()
-  const [query,setQuery]=useState(''),[index,setIndex]=useState(0),input=useRef<HTMLInputElement>(null)
+  const [query,setQuery]=useState(''),[index,setIndex]=useState(0),[navigationRequest,setNavigationRequest]=useState(0),input=useRef<HTMLInputElement>(null)
   const matches=useMemo(()=>query.trim()?items.filter(item=>item.text.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())):[],[items,query])
   const current=matches.length?Math.min(index,matches.length-1):0
   const activeId=matches[current]?.id
@@ -30,6 +30,8 @@ export function ConversationSearch({open,onOpen,items,transcript,onNavigate,onRe
     else {setQuery('');setIndex(0);if(wasOpen.current)transcript.current?.closest('.message-conversation,.group-conversation')?.querySelector<HTMLButtonElement>('[data-message-search-trigger]')?.focus()}
     wasOpen.current=open
   },[open,transcript])
+  // Loaded pages update counts, but only a search/step intent requests scrolling.
+  // Latest cancels viewport navigation without clearing the retained search.
   useEffect(()=>{
     if(!open||!activeId)return
     const controller=new AbortController();let marked:HTMLElement|null=null
@@ -39,9 +41,9 @@ export function ConversationSearch({open,onOpen,items,transcript,onNavigate,onRe
       marked=el;el.dataset.searchMatch='true';if(!reveal.current)el.scrollIntoView({block:'center'});const root=transcript.current;if(root)navigate.current(root.scrollHeight-root.clientHeight-root.scrollTop)
     })()
     return()=>{controller.abort();if(marked)delete marked.dataset.searchMatch}
-  },[activeId,open,query,transcript])
+  },[index,navigationRequest,open,query,transcript])
   if(!open)return null
-  const step=(offset:number)=>{if(matches.length)setIndex((current+offset+matches.length)%matches.length)}
+  const step=(offset:number)=>{if(matches.length){setIndex((current+offset+matches.length)%matches.length);setNavigationRequest(value=>value+1)}}
   return <MotionStrip className="conversation-search" role="search" aria-label={uiText("Search this conversation")}>
     <Icon name="search"/><input ref={input} value={query} aria-label={uiText("Find in conversation")} placeholder={uiText("Find in this conversation…")} onChange={event=>{setQuery(event.target.value);setIndex(0)}} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();step(event.shiftKey?-1:1)}}}/>
     {conversation&&<button className="conversation-search-all" title={uiText("Search all history")} aria-label={uiText("Search all history")} onClick={()=>{onOpen(false);messenger?.setLibrary({conversation,query,topicId})}}><Icon name="search-fuzzy"/></button>}

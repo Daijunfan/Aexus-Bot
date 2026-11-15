@@ -38,9 +38,8 @@ async function pdfImage(args) {
   const file = await safePath(args.workspace, args.filename);
   assert(version(await fs.stat(file)) === args.sourceVersion, 'SOURCE_CHANGED', 'PDF changed before capture.');
   const bytes = args.pdfBytes?Buffer.from(args.pdfBytes):await readBounded(file), pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const base = path.dirname(require.resolve('pdfjs-dist/package.json'));
   const task = pdfjs.getDocument({ data: new Uint8Array(bytes), password: args.password, verbosity: 0, isEvalSupported: false,
-    cMapUrl: path.join(base, 'cmaps') + path.sep, cMapPacked: true, standardFontDataUrl: path.join(base, 'standard_fonts') + path.sep, wasmUrl: path.join(base, 'wasm') + path.sep });
+    ...require('./pdf-resources.cjs')() });
   try {
     const pdf = await task.promise, crops = [];
     const pages = [...new Set(args.rects.map(r => r.page))].sort((a,b) => a-b);

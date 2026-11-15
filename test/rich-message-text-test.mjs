@@ -30,6 +30,7 @@ try{
   "import React,{useRef,useState} from 'react';import {createRoot} from 'react-dom/client';",
   "import {BlockView} from './chat/Chat';import {RichMessageText,mathMarkdown} from './chat/RichMessageText';",
   "import {MessageActions} from './chat/MessageActions';import {QuoteSelection} from './chat/QuoteSelection';",
+  "import {replyAuthor} from './chat/ReplyPreview';",
   "import {ChannelNewsCard} from './components/ChannelNewsCard';",
   "import {highlightQuote} from './chat/quoteTextRange';import {quoteText,validateQuote} from '../../shared/message-quotes';",
   "import {setInterfaceLanguage} from './i18n';setInterfaceLanguage('en');",styles,
@@ -37,6 +38,7 @@ try{
   'const post={id:"news-fixture",channelId:"channel-fixture",sourceId:"source-fixture",externalId:"item",plugin:"x",sourceName:"Fixture author",title:"Scientific article",body:source,url:"https://example.com/article",publishedAt:Date.now(),media:[],saved:false};window.fixturePost=post;',
   'window.quoteProjection=quoteText(quoteSource);window.validate=quote=>validateQuote(quoteSource,quote);',
   'window.highlight=quote=>highlightQuote(document.querySelector(\'[data-chat-item="quote"]\'),quoteSource,quote);window.normalize=mathMarkdown;',
+  'window.replyLabels=language=>{setInterfaceLanguage(language);const base={id:"reference",role:"assistant",text:"Original",conversation:"employee:aster"},names={aster:"Aster",secretary:"Kira"},cases=[{...base,author:{kind:"agent",employeeId:"aster"}},{...base,author:{kind:"agent",employeeId:"aster"},authorName:"Recorded original name"},{...base,role:"user",author:{kind:"operator"},authorName:"You"},{...base,author:{kind:"agent",employeeId:"deleted"}},base,{...base,conversation:undefined},{...base,role:"user",author:{kind:"agent",employeeId:"secretary"}}];const labels=cases.map(reply=>replyAuthor(reply,"Aster",names));setInterfaceLanguage("en");return labels};',
   'function Fixture(){const container=useRef(null),[news,setNews]=useState(post);window.updateNews=patch=>setNews(old=>({...old,...patch}));return <main ref={container} className="fixture" tabIndex={-1}>',
   '<section className="message-conversation"><h2>Private message</h2><div className="turn assistant" data-chat-item="private"><BlockView block={{kind:"text",text:source}} english/><MessageActions text={source}/></div></section>',
   '<section><h2>Group message</h2><div className="group-message" data-chat-item="group"><BlockView block={{kind:"text",text:source}} english/></div></section>',
@@ -57,6 +59,8 @@ try{
  await page.addStyleTag({content:fs.readFileSync(path.join(temp,'app.css'),'utf8')+'\nbody{margin:0;overflow:auto}.fixture{padding:20px;max-width:960px;margin:auto;display:grid;gap:18px}.fixture>section{min-width:0;padding:18px;background:white;border:1px solid var(--border);border-radius:14px}.fixture .message-conversation{overflow:visible;display:block}.fixture .turn{width:100%;max-width:100%;margin:0}.fixture .group-message{max-width:100%;margin:0}.fixture .message-actions{position:static;opacity:1;pointer-events:auto}.fixture h2{margin:0 0 12px}'})
  await page.addScriptTag({content:fs.readFileSync(path.join(temp,'app.js'),'utf8')})
  await page.evaluate(()=>document.fonts.ready)
+ assert.deepEqual(await page.evaluate(()=>window.replyLabels('en')),['Aster','Recorded original name','You','Former teammate','Original sender','Aster','Kira'])
+ assert.deepEqual(await page.evaluate(()=>window.replyLabels('zh-CN')),['Aster','Recorded original name','我','原成员','原发送者','Aster','Kira'])
  const privateRow=page.locator('[data-chat-item="private"]'),quoteRow=page.locator('[data-chat-item="quote"]')
  await expect(privateRow.locator('table')).toHaveCount(1)
  await expect(privateRow.locator('blockquote')).toHaveCount(1)
@@ -72,7 +76,7 @@ try{
  assert.deepEqual(external,[])
  await privateRow.getByRole('link',{name:'a safe source'}).click()
  assert.deepEqual(await page.evaluate(()=>window.calls.at(-1)),{cmd:'external.open',args:{url:'https://example.com/research'}})
- await privateRow.getByRole('button',{name:'Copy message',exact:true}).click()
+ await privateRow.getByRole('button',{name:'Message options',exact:true}).click();await page.getByRole('menu',{name:'Message options',exact:true}).getByRole('menuitem',{name:'Copy text',exact:true}).click()
  assert.equal(await page.evaluate(()=>window.copies.at(-1)),source,'whole-message copy retains original Markdown and TeX')
  await expect(page.locator('#json .command-data')).toBeVisible()
  assert.equal(await page.locator('#json .rich-math').count(),0)
@@ -80,11 +84,11 @@ try{
  await news.getByRole('button',{name:'Read more',exact:true}).click()
  await expect(news.getByRole('button',{name:'Show less',exact:true})).toHaveAttribute('aria-expanded','true')
  await expect(news.locator('.rich-math-block')).toHaveCount(2)
- await news.getByRole('button',{name:'Copy message',exact:true}).click()
- assert.equal(await page.evaluate(()=>window.copies.at(-1)),['Scientific article',source,'https://example.com/article'].join('\n\n'))
- await news.getByRole('button',{name:'Save article',exact:true}).click()
+ await news.click({button:'right'});await page.getByRole('menu',{name:'Article actions',exact:true}).getByRole('menuitem',{name:'Copy text',exact:true}).click()
+ assert.equal(await page.evaluate(()=>window.copies.at(-1)),['Scientific article',source].join('\n\n'))
+ await news.click({button:'right'});await page.getByRole('menu',{name:'Article actions',exact:true}).getByRole('menuitem',{name:'Save article',exact:true}).click()
  assert.equal(await page.evaluate(()=>window.newsChanges.at(-1).saved),true)
- await news.getByRole('button',{name:'Original',exact:true}).click()
+ await news.click({button:'right'});await page.getByRole('menu',{name:'Article actions',exact:true}).getByRole('menuitem',{name:'Original',exact:true}).click()
  assert.deepEqual(await page.evaluate(()=>window.calls.at(-1)),{cmd:'external.open',args:{url:'https://example.com/article'}})
  const media=[{id:'photo-one',name:'one.png',mimeType:'image/png',bytes:68,sha256:'one'},{id:'photo-two',name:'two.png',mimeType:'image/png',bytes:68,sha256:'two'}]
  await page.evaluate(media=>window.updateNews({media}),media)
@@ -125,6 +129,6 @@ try{
   await page.screenshot({path:path.join(out,'rich-'+width+'.png'),animations:'disabled'})
  }
  assert.deepEqual(errors,[])
- fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({passed:true,checks:['private/group/news shared renderer','GFM/code/raw HTML','inline/block and alternate TeX delimiters','untrusted math links/images','literal prices','original Markdown copy','surrounding exact quotes/highlights','math selection guard','320px formula/table containment','JSON view preserved'],platform:'headless Chromium on macOS',providerCalls:0},null,2))
+ fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({passed:true,checks:['private/group/news shared renderer','GFM/code/raw HTML','inline/block and alternate TeX delimiters','untrusted math links/images','literal prices','original Markdown copy','surrounding exact quotes/highlights','math selection guard','320px formula/table containment','JSON view preserved','English/Chinese reply authors preserve recorded names, resolve trusted IDs and distinguish deleted/unknown authors'],platform:'headless Chromium on macOS',providerCalls:0},null,2))
  console.log('PASS rich text source: GFM/KaTeX, safe trust boundaries, original copy, precise surrounding quotes, math selection guard and narrow layouts')
 }finally{await browser?.close();fs.rmSync(temp,{recursive:true,force:true})}

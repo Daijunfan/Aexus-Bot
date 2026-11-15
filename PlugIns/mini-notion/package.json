@@ -1,6 +1,6 @@
 {
   "name": "mini-notion",
-  "version": "1.26.47",
+  "version": "1.26.48",
   "description": "A thoughtful, local-first workspace for macOS",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "dev:web": "vite --host 127.0.0.1",
     "build": "tsc -b && node scripts/backend.mjs && vite build",
     "start": "node scripts/start.mjs",
-    "test": "node scripts/backend.mjs && node scripts/test-contracts.mjs",
+    "test": "npm run build && node scripts/test-contracts.mjs",
     "test:e2e": "npm run build && node scripts/icon.mjs && playwright test",
     "package": "npm run build && node scripts/icon.mjs && node scripts/source.mjs && electron-builder --mac --arm64",
     "typecheck": "tsc -b",
@@ -29,7 +29,7 @@
     "test:editing-ui": "node scripts/test-editing-ui.mjs",
     "test:workspace": "node scripts/backend.mjs && node --test tests/folder.test.cjs tests/workspace-layout.test.cjs",
     "test:workspace-ui": "node scripts/test-workspace-ui.mjs",
-    "test:contracts": "node scripts/backend.mjs && node scripts/test-contracts.mjs",
+    "test:contracts": "npm test",
     "test:media": "node scripts/test.mjs tests/coalesced-writer.test.ts tests/image-assets.test.ts tests/presentation.test.ts",
     "test:ux": "npm run build && playwright test tests/selection-database-ux.e2e.ts tests/table-columns.e2e.ts tests/view-operations.e2e.ts"
   },
@@ -48,6 +48,7 @@
     "y-protocols": "^1.0.7"
   },
   "devDependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.269",
     "@blocknote/core": "0.54.2",
     "@blocknote/mantine": "0.54.2",
     "@blocknote/react": "0.54.2",
@@ -60,7 +61,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.0",
     "commander": "^15.0.0",
-    "electron": "44.3.0",
+    "electron": "44.11.3",
     "electron-builder": "^26.0.12",
     "esbuild": "^0.28.2",
     "jsep": "^1.4.0",
@@ -69,8 +70,10 @@
     "sharp": "^0.35.4",
     "shiki": "^4.4.3",
     "typescript": "^5.9.3",
-    "vite": "^8.3.0",
-    "@anthropic-ai/claude-agent-sdk": "^0.3.269"
+    "vite": "^8.3.0"
+  },
+  "overrides": {
+    "minimatch@>=7 <11.0.1": "11.0.1"
   },
   "build": {
     "appId": "local.mininotion.desktop",

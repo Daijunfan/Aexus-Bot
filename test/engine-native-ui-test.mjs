@@ -18,7 +18,7 @@ try{
  const application=process.env.AGENTS_COMPANY_TEST_APP,env={...f.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1000'};delete env.ELECTRON_RUN_AS_NODE
  app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env});const page=await app.firstWindow();page.setDefaultTimeout(20000)
  const call=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args})
- await page.locator('.infinite-canvas').waitFor();await call('settings.set',{language:'en',theme:'white'});await call('view.open',{kind:'settings'})
+ await page.locator('.agent-board').waitFor();await call('settings.set',{language:'en',theme:'white'});await call('view.open',{kind:'settings'})
  await page.locator('.settings-engines > summary').click()
  const claude=page.locator('[data-engine-health="claude"]'),catalog=claude.locator('.engine-provider-catalog');await expect(catalog.locator('.engine-provider-row')).toHaveCount(2);await expect(catalog.locator('[data-active=true]')).toContainText('DeepSeek Official Flash');await expect(catalog).toContainText('Other service');assert.ok(!(await catalog.innerText()).includes('PRIVATE_CLAUDE_TEST_KEY'))
  await expect(page.locator('[data-engine-health="cline"] .engine-provider-catalog')).toContainText('deepseek-v4-pro');await expect(page.locator('[data-engine-health="pi"] .engine-provider-catalog')).toContainText('Native Pi service')

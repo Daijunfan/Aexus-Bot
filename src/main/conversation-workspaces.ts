@@ -51,7 +51,7 @@ function directory(root:string,create=true){
  return root
 }
 function layout(info:Identity,create=true){
- if(info.kind==='group'&&info.storage){const remote=info.storage.kind==='remote'?cloudHostTarget(info.storage.hostId!,info.storage.directory):undefined,paths=remote?.os==='windows'?path.win32:path.posix;return {root:info.storage.directory,data:{version:1 as const,folderName:paths.basename(info.storage.directory),members:{} as Record<string,string>},remote}}
+ if(info.kind==='group'&&info.storage){const remote=info.storage.kind==='remote'?cloudHostTarget(info.storage.hostId!,info.storage.directory):undefined,paths=remote?(remote.os==='windows'?path.win32:path.posix):path;return {root:info.storage.directory,data:{version:1 as const,folderName:paths.basename(info.storage.directory),members:{} as Record<string,string>},remote}}
  if(create)fs.mkdirSync(APP_HOME,{recursive:true,mode:0o700});let base=fs.existsSync(APP_HOME)?fs.realpathSync(APP_HOME):path.resolve(APP_HOME)
  for(const part of ['conversation-workspaces',info.kind,info.id])base=directory(path.join(base,part),create)
  const file=path.join(base,'workspace.json')

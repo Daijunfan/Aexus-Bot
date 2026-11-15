@@ -1,3 +1,5 @@
+import {pluginPage} from './fixtures/plugin-page.mjs';
+import {desktopExecutable} from './fixtures/desktop-app.mjs';
 import { verifyColorThemes } from './fixtures/mininotion-color-themes.mjs';
 // Presentation regression on an isolated workspace; no model calls or user documents.
 import fs from 'node:fs';
@@ -12,7 +14,7 @@ const root=path.resolve(import.meta.dirname,'..'),run=promisify(execFile);
 const out=process.env.AGENTS_COMPANY_TEST_ARTIFACTS||path.join(root,'artifacts/mininotion-ui-polish/visual');
 fs.mkdirSync(out,{recursive:true});
 const temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'mn-visual-')));
-const env={...process.env,AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_PLUGIN_DIRS:process.env.MINI_NOTION_TEST_PLUGIN||''};
+const env={...process.env,AGENTS_COMPANY_TEST_BOTS_URL:'http://127.0.0.1:1',AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_PLUGIN_DIRS:process.env.MINI_NOTION_TEST_PLUGIN||''};
 for(const key of Object.keys(env))if(key.startsWith('AGENTS_COMPANY_TOKEN')||['ELECTRON_RUN_AS_NODE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_URL','AGENTS_COMPANY_PLUGIN_RPC','AGENTS_COMPANY_BUILTIN_PLUGINS','MINI_NOTION_SOCKET','MINI_NOTION_WORKSPACE','MINI_NOTION_DATA_DIR'].includes(key))delete env[key];
 const cli=async(...args)=>{const v=JSON.parse((await run(process.execPath,[root+'/bin/agents',...args,'--json'],{cwd:root,env,timeout:45000,maxBuffer:48e6})).stdout);assert.ok(v.ok,v.error);return v.data};
 const api=(method,params={})=>cli('plugin','call','mininotion',method,'--params',JSON.stringify(params));
@@ -35,8 +37,8 @@ async function noOverlap(selector){
   }));assert.deepEqual(overlaps,[],selector+' overlapping children');
 }
 try{
-  app=await electron.launch({executablePath:process.env.AGENTS_COMPANY_TEST_APP||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[root],env});
-  await(await app.firstWindow()).locator('.infinite-canvas').waitFor();
+  app=await electron.launch({executablePath:desktopExecutable(process.env.AGENTS_COMPANY_TEST_APP)||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[root],env});
+  await(await app.firstWindow()).locator('.agent-board').waitFor();
   const image=await api('fs.asset-upload',{name:'visual-cover.svg',contentBase64:fs.readFileSync(root+'/PlugIns/mini-notion/src/assets/cover-paper.svg').toString('base64')});
   const imageUrl=typeof image==='string'?image:image.url;
   const main=await api('page.create',{title:'工作与思考 · Project notebook',icon:'icon:BookOpen:blue',cover:imageUrl,color:'white',blocks:[{type:'paragraph',content:'把复杂的工作整理成清晰的页面。封面、图标、层级和视图应当安静而一致。'},{type:'heading',props:{level:2},content:'清晰的结构'},{type:'bulletListItem',content:'先记录事实，再连接想法。'},{type:'checkListItem',props:{checked:true},content:'每一个细节都能通过实际交互验证。'},{type:'paragraph',content:[{type:'link',href:'https://example.invalid',content:[{type:'text',text:'链接与正文各司其职',styles:{}}]}]}]});
@@ -50,7 +52,7 @@ try{
   for(const [i,type] of types.entries())views.push(type==='table'?initial:await api('view.create',{databaseId:db.id,type,name:names[i]}));
   for(const view of views)await api('view.update',{databaseId:db.id,viewId:view.id,changes:{groupBy:'status',calendarBy:'date',chartGroup:'status',cardPreview:'cover',dateAnchor:today}});
   for(let i=0;i<6;i++)await api('record.create',{databaseId:db.id,title:['界面设计','交互细节','架构梳理','排版与图标','质量验收','发布准备'][i],icon:i%2?'icon:FileText:blue':'📄',color:'white',cover:i%2?imageUrl:'sage',values:{status:['计划中','进行中','已完成'][i%3],date:today,owner:'设计团队',progress:i*20},blocks:[{type:'paragraph',content:'保持内容清楚、界面轻盈，让每一次操作都有一致的反馈。'}]});
-  const pending=app.waitForEvent('window');await cli('plugin','open','mininotion');page=await pending;page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
+  const pending=app.waitForEvent('window');await cli('plugin','open','mininotion');page=await pluginPage(await pending);page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
   await page.locator('.sidebar').waitFor();await expect.poll(async()=>(await api('status')).guiClients).toBeGreaterThan(0);
   const window=await app.browserWindow(page);
   const resize=async(width,height)=>{await window.evaluate((w,size)=>w.setContentSize(size.width,size.height),{width,height});await expect.poll(()=>page.evaluate(()=>innerWidth)).toBe(width)};

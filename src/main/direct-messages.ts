@@ -36,9 +36,12 @@ const hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).d
 export const directSendKey=(value:string)=>'direct:'+hash(value)
 const sameAuthor=(a:PrincipalRef,b:PrincipalRef)=>a.kind===b.kind&&(a.kind==='operator'||b.kind==='agent'&&a.employeeId===b.employeeId)
 const binding=(employee:string)=>{const c=executionEmployee(readStore(),card(employee));return JSON.stringify([c.cwd,c.remote??null])}
-const body=(entry:Entry):Item=>entry.author.kind==='operator'||entry.delivery
- ?{role:'user',id:entry.id,directSequence:entry.sequence,createdAt:entry.createdAt,author:entry.author,text:entry.text,images:entry.attachments.filter(a=>a.kind==='image').map(a=>a.path),files:entry.attachments.filter(a=>a.kind==='file'),reply:entry.reply,outbound:entry.outbound,delivery:entry.delivery?{state:entry.delivery.boot!==boot&&['preparing','queued'].includes(entry.delivery.state)?'interrupted':entry.delivery.state,error:entry.delivery.error}:undefined}
- :{role:'assistant',id:entry.id,questionId:entry.questionId,author:entry.author,directSequence:entry.sequence,createdAt:entry.createdAt,blocks:entry.text?[{kind:'text',text:entry.text}]:[],images:entry.attachments.filter(a=>a.kind==='image').map(a=>a.path),files:entry.attachments.filter(a=>a.kind==='file'),reply:entry.reply}
+const body=(entry:Entry):Item=>{
+ const images=entry.attachments.filter(attachment=>attachment.kind==='image'),media={images:images.map(attachment=>attachment.path),imageNames:images.length?Object.fromEntries(images.map(attachment=>[attachment.path,attachment.name])):undefined,files:entry.attachments.filter(attachment=>attachment.kind==='file')}
+ return entry.author.kind==='operator'||entry.delivery
+ ?{role:'user',id:entry.id,directSequence:entry.sequence,createdAt:entry.createdAt,author:entry.author,text:entry.text,...media,reply:entry.reply,outbound:entry.outbound,delivery:entry.delivery?{state:entry.delivery.boot!==boot&&['preparing','queued'].includes(entry.delivery.state)?'interrupted':entry.delivery.state,error:entry.delivery.error}:undefined}
+ :{role:'assistant',id:entry.id,questionId:entry.questionId,author:entry.author,directSequence:entry.sequence,createdAt:entry.createdAt,blocks:entry.text?[{kind:'text',text:entry.text}]:[],...media,reply:entry.reply}
+}
 
 /** Public items are an independent ledger, never a projection of native Agent history. */
 export function directItems(employee:string){readable(employee);return state(employee).entries.map(body)}

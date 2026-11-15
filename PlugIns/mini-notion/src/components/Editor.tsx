@@ -17,8 +17,10 @@ import {
   defaultProps,
   isTableCellSelection,
   formatKeyboardShortcut,
+  wrapInBlockStructure,
 } from '@blocknote/core';
-import { createCodeBlockSpec } from '@blocknote/core/blocks';
+import { createCodeBlockSpec, createToggleWrapper } from '@blocknote/core/blocks';
+import { toggleState } from '../content/toggleState';
 import { zh } from '@blocknote/core/locales';
 import {
   insertOrUpdateBlockForSlashMenu,
@@ -416,10 +418,30 @@ codeBlock.config = { ...codeBlock.config, propSchema: { ...codeBlock.config.prop
 const renderCodeBlock = codeBlock.implementation.render;
 codeBlock.implementation.render = function (block, editor) { return renderCodeBlock.call(this, { ...block, props: { ...block.props, language: normalizeCodeLanguage(block.props.language) } }, editor); };
 codeBlock.implementation.meta = { ...codeBlock.implementation.meta, highlight: block => normalizeCodeLanguage(block.props.language) };
+// BlockNote 0.54.2 render shells: blocks/ListItem/toggleListItem/block.ts and
+// blocks/Heading/block.ts (MPL-2.0; see THIRD_PARTY_NOTICES.md). Keep its parsing,
+// export and shortcuts; inject only the public createToggleWrapper UI-state adapter.
+// Keep createSpec.ts's wrapInBlockStructure decoration for content DOM and fold CSS.
+const toggleListItem: typeof defaultBlockSpecs.toggleListItem = {
+  ...defaultBlockSpecs.toggleListItem,
+  implementation: { ...defaultBlockSpecs.toggleListItem.implementation, render(block, editor) {
+    const contentDOM = document.createElement('p');
+    return wrapInBlockStructure({ ...createToggleWrapper(block, editor, contentDOM, toggleState), contentDOM }, block.type, block.props, defaultBlockSpecs.toggleListItem.config.propSchema, false, this.blockContentDOMAttributes);
+  } },
+};
+const heading: typeof defaultBlockSpecs.heading = {
+  ...defaultBlockSpecs.heading,
+  implementation: { ...defaultBlockSpecs.heading.implementation, render(block, editor) {
+    const contentDOM = document.createElement(`h${block.props.level}`);
+    return wrapInBlockStructure({ ...createToggleWrapper(block, editor, contentDOM, toggleState), contentDOM }, block.type, block.props, defaultBlockSpecs.heading.config.propSchema, false, this.blockContentDOMAttributes);
+  } },
+};
 export const schema = withMultiColumn(
   BlockNoteSchema.create({
     blockSpecs: {
       ...defaultBlockSpecs,
+      toggleListItem,
+      heading,
       codeBlock,
       equation: Equation(),
       bookmark: Bookmark(),

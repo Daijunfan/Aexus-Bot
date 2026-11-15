@@ -30,7 +30,7 @@ export function projectClineRequest(body:any,directory:string,remote=false){
       const images:any[]=[]
       const text=part.text.replace(/\[agents-company-image:([a-f0-9-]{36})\]/g,(_marker:string,id:string)=>{
         const attachment=readJson(path.join(directory,id+'.json'))
-        if(!Array.isArray(attachment)||!attachment.length||attachment.length>16)throw Error('Cline image attachment is missing or invalid')
+        if(!Array.isArray(attachment)||!attachment.length)throw Error('Cline image attachment is missing or invalid')
         for(const image of attachment){
           if(!['image/png','image/jpeg','image/gif','image/webp'].includes(image.mimeType)||typeof image.data!=='string')throw Error('Invalid Cline image content')
           images.push({type:'image_url',image_url:{url:`data:${image.mimeType};base64,${image.data}`}})

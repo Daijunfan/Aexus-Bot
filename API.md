@@ -2106,7 +2106,7 @@ turn may use it in Plan, Ask and `dontAsk` modes without a file-write approval.
 Other generic API writes still obey Ask/Full access and planning rules, and
 initialization or silent/awareness reading cannot publish.
 
-`direct.history {employee,limit?,before?,around?}` reads only the published ledger.
+`direct.history {employee,limit?,before?,around?}` reads only the published ledger. Image items can include `imageNames`, a read-only mapping from each opaque attachment path to its original basename. Attachment identity and stored bytes remain unchanged.
 `limit` is 1–500 (default 200); `before` selects entries below a direct sequence,
 and `around` centers a page on an exact direct message ID. It returns
 `{items,revision,latestIncoming,readSequence,nextBefore}` and never includes native
@@ -2745,33 +2745,35 @@ not change the employee's identity, engine, role, directory or position.
 
 Historical generic IDs retain their original community aliases.
 
-## Employee conversation identity, sidebar and snapping
+## Employee conversation identity and current Team layout
 
 ```sh
-agents settings set --sidebar-width 72 --snap-employees on
-agents card place CARD_ID --x 280 --y 69 --snap on --zoom 1
-agents card place CARD_ID --x 280 --y 69 --snap off
-agents view open conversation --employee CARD_ID --plugin mininotion
+agents card place EMPLOYEE_ID --seat 2 --json
+agents office layout --json
+agents room layout "TEAM_NAME" --json
+agents view open conversation --employee EMPLOYEE_ID
 agents view open home
 ```
 
-An employee, character and conversation share one editable display name. Rename
-APIs accept the employee ID or its live session ID; the original workspace
-folder name and path stay unchanged.
+An employee, character and native conversation share one editable display name.
+Rename APIs accept the stable employee ID or its live session ID; the original
+workspace folder name and path stay unchanged.
 
-`sidebarWidth` accepts 56–96 pixels; legacy wide-sidebar settings display as the new 64px default. The sidebar shows icons only, with hover labels; it remains resizable within this range. `snapEmployees` is a boolean and defaults to true. Both persist via
-`settings.set` and are included in `settings.get`.
+Settings and plugins are available at the upper left of the application. There is
+no global navigation rail. Team opens one Board with its own client-local,
+resizable agent directory; Workers appear alongside role-based employees.
 
-`card.place` accepts optional `snap:boolean` and `zoom:number` (0.08–3, default 1).
-The desktop Team minimap is hidden by default. The left-sidebar button below
-the shared transfer folder toggles it through `settings.set`; the equivalent CLI
-is `agents settings set --team-overview on|off`. It reads the same `room.layout`
-geometry and saves each focus/overview jump with `canvas.set`.
-Omitting `snap` uses the stored preference. The shared algorithm attracts to a
-regular seat/row/column within 13 screen pixels and avoids occupied seats. During
-pointer dragging, a 22-pixel release threshold prevents jitter. UI drag previews
-use the same geometry, then commit the resolved point with `snap:false` to retain
-that precise preview. Option/Alt temporarily bypasses attraction.
+`card.place` accepts a numbered `seat` and optional `expectedSeating`. It checks
+current layout authority and moves into an empty seat or atomically swaps the
+occupant. Coordinates in `office.layout` / `room.layout` are read-only projections.
+Arbitrary `x/y`, `snap` and `zoom` placement arguments reject. See
+[Team seating and Board columns](#team-seating-room-controls-and-board-columns)
+for current dimensions, room placement and stale-layout checks.
+
+Historical `sidebarWidth` / `snapEmployees` preferences remain compatible with
+saved state; they do not create a global rail, free placement or a minimap in the
+current primary views. `canvas.set` and infinite canvas navigation are retired.
+Client navigation does not change shared room geometry.
 
 Plugin-context conversations open in the company window while the independent plugin
 window stays open. The matching plugin ID is validated against the employee's Work
@@ -3039,8 +3041,8 @@ Codex uses native remote execution, with no local execution environment or local
 Hooks. An unavailable directory or disconnected SSH transport fails instead of
 falling back to Mac execution. These are runtime/tool restrictions, not an OS sandbox
 around the host controller, which still runs the CLI and SSH transport on the Mac.
-See [cloud safety verification](artifacts/cloud-safety/README.md) for real GPT rounds
-and forced invalid-tool tests. Existing processes require reconnection to load changes.
+See [engine adapter contracts](docs/ENGINE_ADAPTERS.md) for execution locations,
+transport and controls. Existing processes require reconnection to load changes.
 
 `settings.set.pageZoom` (`--page-zoom`) is persisted independently of canvas zoom; range 0.75–1.5, default 1. The desktop applies the same setting for Cmd/Ctrl +, − and 0. File-tree drafts are not filesystem objects: Enter submits `workspace.write`/`mkdir`/`move`; Escape or clicking elsewhere cancels.
 
@@ -3471,21 +3473,21 @@ original post ID, filename, size, caption and publication time.
 
 ## Conversation governance and static notifications
 
-Group offices use Owner / Admin / Member and are held by Agent employees. They are independent of Aexus managementRole. Admins may appoint/revoke other Admins; only Owner transfers ownership or dissolves a group. The human user retains recovery access without occupying an Agent office. Existing unowned groups require explicit assignment.
+Group offices use Owner / Admin / Member and are held by Agent employees. They are independent of Aexus managementRole. Admins may appoint/revoke other Admins; only Owner transfers ownership or dissolves a group. The user and Secretary retain application-administration access without occupying an Agent office. Existing unowned groups require explicit assignment.
 
-Use `conversation.policy` to discover current offices, moderation state, revision and allowedActions. `conversation.role/mute/silence` require the current expectedRevision. Secretary administers all conversations without joining; other Aexus roles still require actual conversation offices. Legacy chat.update/delete/mute enforce the same office boundary. Group-wide mute restricts Members; channel-wide mute restricts all publishers. Quiet mode keeps notice messages and unread state but suppresses the connected application's attention banner.
+Use `conversation.policy` to discover current group offices, moderation state, revision and allowedActions. `conversation.role/mute/silence` require the current expectedRevision. Secretary administers without joining; other employees require actual group offices. Legacy chat.update/delete/mute enforce the same group boundary. Group-wide mute restricts Members; Owner/Admin can still publish unless individually muted. Quiet mode keeps group notice messages and unread state but suppresses the connected application's attention banner. Channels use reading grants instead: member/role/moderation/notice writes reject, and historical read APIs remain available.
 
-`conversation.notice-list/get/create/update/delete/preview/history` manage fixed-text notifications. They use a separate Core timer and conversation-notices.sqlite, never Plan schedules, employee work queues or model calls. Creation requires a stable clientRequestId and spec {name,text,publisherId,rule,enabled}; rule is once, interval or weekly (all weekdays gives daily). Updates and deletion require expectedRevision. The automatic published message has noticeId, occurrenceId, scheduledFor and silent metadata. Replaying a pending occurrence after restart cannot duplicate its message. Revoked creators or publishers disable future publication; recurring downtime does not produce a backlog.
+`conversation.notice-list/get/create/update/delete/preview/history` manage group-only fixed-text notifications; channel records remain read-only history. They use a separate Core timer and conversation-notices.sqlite, never Plan schedules, employee work queues or model calls. Creation requires a stable clientRequestId and spec {name,text,publisherId,rule,enabled}; rule is once, interval or weekly (all weekdays gives daily). Updates and deletion require expectedRevision. The automatic published message has noticeId, occurrenceId, scheduledFor and silent metadata. Replaying a pending occurrence after restart cannot duplicate its message. Revoked creators or publishers disable future publication; recurring downtime does not produce a backlog.
 
 Read [Conversation controls](docs/CONVERSATION_CONTROLS.md) or `agents api docs core/conversation-controls` for the role matrix, exact schemas, quiet/mute distinction, creator/publisher constraints, timezone and recovery behavior. Explicit Plan schedules use `schedule.*`. Channel post-count tasks are retired; employees explicitly fetch/search news.
 
-## Message collaboration: offices, workspaces, files and post-count prompts
+## Message collaboration: group offices, reading grants and Team file copies
 
 The current contract is [MESSAGE_COLLABORATION.md](docs/MESSAGE_COLLABORATION.md), available through `agents api docs core/message-collaboration`. Message groups distinguish Owner/Admin/Member; channels are read-only feeds. `conversation.member` adds/removes membership; `conversation.role` changes an office without treating demotion as removal. `conversation.audit` returns real governance actors and revision-protected actions.
 
 `workspace.catalog` returns the employee's Team-assigned execution workspace only. Shared group files are conversation content, accessed with conversation.file; group membership creates no private directory or alternate execution location.
 
-`conversation.entry` returns complete stored public text, links, media and documents. `conversation.download` copies an attachment into a selected own workspace; `conversation.download-status` reports actual progress and committed paths. Stable request keys deduplicate unchanged attempts, and staging plus size/SHA checks preserve originals and existing files.
+`conversation.entry` returns complete published private/group/channel text, links, media and documents under the current reading scope. `conversation.download` copies an attachment into the employee's assigned Team workspace, on its actual execution host; `conversation.download-status` reports actual progress and committed paths. Channel grants are not group membership or an alternate workspace, and a grant starts no employee task. Stable request keys deduplicate unchanged attempts, and staging plus size/SHA checks preserve originals and existing files.
 
 Group `conversation.notice-*` posts timed literal text without Agent work; Plan
 `schedule.*`/`plan.*` manages explicit employee tasks. Channel post-count workflows
@@ -3730,7 +3732,7 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents channel search</code> | <code>CHANNEL_ID [--query TEXT &#124; --keywords-all JSON &#124; --keywords-any JSON] [--limit N] [--source SOURCE_ID &#124; --sources JSON] [--since ISO --until ISO --time-ranges JSON --exclude-keywords JSON] [--cursor CURSOR] [--images]</code> | Authorized employees (Secretary always authorized): search retained news text, titles and source names with a reading grant, without saving. Full results newest first; text only by default, --images includes native image blocks. Combine multiple source IDs (OR), absolute [since,until) ranges or timeRanges (OR), keywordsAll (AND), keywordsAny (OR), and excludeKeywords (NOT); groups combine with AND. Same bounded pagination as fetch APIs. | Read-only channel search | chat |
 | <code>agents channel aggregate</code> | <code>--plugin telegram&#124;x&#124;youtube&#124;zhihu&#124;linkedin</code> | User-only: consolidate empty platform channel wrappers into one aggregate while retaining subscription and article identities; old channel links remain aliases | Platform channel aggregation | operator |
 | <code>agents channel media-register</code> | <code>--source-id ID --external-id ID --published-at MS --media-key KEY --name FILE --mime-type TYPE --sha256 SHA --bytes N</code> | Configured archive collector only: verify and register an existing server image without sending its bytes through the Mac | Server-owned channel media | operator |
-| <code>agents channel file-download</code> | <code>--post POST_ID --file FILE_ID</code> | User-only: copy a cloud document into this channel shared workspace, with SHA-256 verification; cloud cache retention never removes the local copy | Download to channel | operator |
+| <code>agents channel file-download</code> | <code>--post POST_ID --file FILE_ID</code> | User or Secretary: copy a cloud document into this channel shared workspace, with SHA-256 verification; employees use conversation.download for their own Team copy | Download to channel | operator |
 | <code>agents channel file-status</code> | <code>--post POST_ID --file FILE_ID</code> | Read cloud-to-channel download progress and the saved relative workspace path; never starts a download | Channel document progress | operator |
 | <code>agents channel connection</code> | <code>ID</code> | Read configured process origin, receiver URL, source IDs and last authenticated contact; saving configuration never claims a live connection | Channel connection | operator |
 | <code>agents channel avatar-image</code> | <code>ID</code> | User or Secretary: read the independently retained custom channel avatar | Channel avatar | operator |
@@ -3753,10 +3755,10 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents channel source-update</code> | <code>ID --patch JSON&#124;@file</code> | User or Secretary: save source settings or an equivalent profile URL, preserving source/target identities and retained news | News subscriptions | operator |
 | <code>agents channel source-remove</code> | <code>ID</code> | User or Secretary: unfollow a source while retaining its identity and saved news | News subscriptions | operator |
 | <code>agents channel posts</code> | <code>[--channel ID] [--source ID &#124; --sources JSON] [--saved] [--query TEXT] [--cursor CURSOR] [--limit N] [--order newest&#124;discovery --seed TEXT --snapshot MS --avoid-first ID]</code> | User or Secretary: page current news and permanent saved items with stable item identities | News feed | operator |
-| <code>agents channel post</code> | <code>POST_ID</code> | User or Secretary: read a retained news item with current channel routing | News detail | chat |
+| <code>agents channel post</code> | <code>POST_ID</code> | Read a retained news item with current channel routing; an employee needs a channel reading grant, while the user and Secretary are always authorized | News detail | chat |
 | <code>agents channel save</code> | <code>POST_ID on&#124;off</code> | User or Secretary: explicitly save a news item and its images locally, or resume its original expiry | Saved news | operator |
 | <code>agents channel delete</code> | <code>POST_ID</code> | User or Secretary: delete local news and images with bounded replay protection | News deletion | operator |
-| <code>agents channel image</code> | <code>CHANNEL_ID --post POST_ID --media MEDIA_ID [--max-edge 96&#124;640&#124;1280]</code> | User or Secretary: read a published news image from memory or the server, never staging or arbitrary URLs | News images | chat |
+| <code>agents channel image</code> | <code>CHANNEL_ID --post POST_ID --media MEDIA_ID [--max-edge 96&#124;640&#124;1280]</code> | Read a published news image with a channel reading grant; user and Secretary always have access. Reads only published memory/server content, never staging or arbitrary URLs | News images | chat |
 | <code>agents channel export</code> | <code>POST_ID</code> | User or Secretary: explicitly download a retained article and original images | News download | operator |
 | <code>agents channel collector-add</code> | <code>--name NAME [--sources JSON&#124;all &#124; --channel ID]</code> | Issue a source-scoped credential or bind a replacement process credential to an external channel; plaintext is returned once | News collector connection | operator |
 | <code>agents channel collectors</code> | <code>—</code> | User or Secretary: list collector metadata without tokens or token hashes | News collector connection | operator |
@@ -3773,8 +3775,8 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents messenger sticker-save</code> | <code>--name TEXT --pack NAME --image JSON</code> | User/Secretary imports a signature-checked PNG/JPEG/GIF/WebP up to 2 MiB into a local sticker pack. Same image and pack is idempotent; no message is sent. | Import local sticker | operator |
 | <code>agents messenger sticker-image</code> | <code>ID</code> | Read one current local sticker image for the authenticated user; imported stickers do not grant filesystem access. | Sticker preview | operator |
 | <code>agents messenger sticker-remove</code> | <code>--ids JSON</code> | Remove selected stickers from your library; previously shared group images remain independent and intact. | Remove local stickers | operator |
-| <code>agents messenger profile</code> | <code>[--avatar ID&#124;null &#124; --image JSON&#124;@file]</code> | User-only: upload a personal image, choose an avatar.list ID or reset with null; author identity stays unchanged | Your message avatar | operator |
-| <code>agents messenger profile-image</code> | <code>--sha256 HASH</code> | User-only: read the current personal avatar image at its exact saved revision | Your message avatar | operator |
+| <code>agents messenger profile</code> | <code>[--avatar ID&#124;null &#124; --image JSON&#124;@file]</code> | User or Secretary: upload a personal image, choose an avatar.list ID or reset with null; author identity stays unchanged | Your message avatar | operator |
+| <code>agents messenger profile-image</code> | <code>--sha256 HASH</code> | User or Secretary: read the current personal avatar image at its exact saved revision | Your message avatar | operator |
 | <code>agents messenger directory</code> | <code>[--type all&#124;outsource&#124;private&#124;groups&#124;channels&#124;telegram&#124;x&#124;youtube&#124;zhihu&#124;linkedin] [--query TEXT] [--folder ID] [--archived exclude&#124;only&#124;include] [--offset N] [--limit N]</code> | User or Secretary: query one category using folder ID from messenger.state.categories, or one type. No category means All. Archive filtering applies only to All; category queries include their archived conversations. No message bodies, read acknowledgements or execution. | Message category filtering | operator |
 | <code>agents messenger social</code> | <code>[--platform telegram&#124;x&#124;youtube&#124;zhihu&#124;linkedin] [--include-disabled]</code> | User or Secretary: list each social element with stable source ID, parent channel, latest publication and per-source unread count; no reads acknowledged | Social category picker | operator |
 | <code>agents messenger reorder</code> | <code>SCOPE --order JSON&#124;null [--expected-order JSON]</code> | User or Secretary: persist category or conversation positions in categories/all/favorites/archive/a type:* category ID/a custom folder ID; null restores automatic order, unrelated drafts and hidden positions remain unchanged | Message drag ordering | operator |

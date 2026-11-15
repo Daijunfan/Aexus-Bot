@@ -22,7 +22,7 @@ function uploadSlot(signal:AbortSignal):Promise<()=>void>{
 const scope=(conversation:string)=>conversation.startsWith('worker:')?{worker:conversation.slice(7)}:conversation.startsWith('group:')?{group:conversation.slice(6)}:conversation.startsWith('channel:')?{channel:conversation.slice(8)}:{employee:conversation.slice(9)}
 const imageFile=(file:File)=>['image/png','image/jpeg','image/gif','image/webp'].includes(file.type)&&file.size<=10*1024*1024
 function base64(bytes:Uint8Array){let value='';for(let i=0;i<bytes.length;i+=8192)value+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(value)}
-export function useAttachmentUploads(conversation:string,onReady:(conversation:string,path:string,kind:'image'|'file')=>void,_count:number,composerKey=conversation){
+export function useAttachmentUploads(conversation:string,onReady:(conversation:string,path:string,kind:'image'|'file')=>void,count:number,composerKey=conversation){
  const [jobs,setJobs]=useState<Upload[]>([]),tasks=useRef(new Map<string,Upload>())
  const ready=useRef({composerKey,onReady});ready.current={composerKey,onReady}
  useEffect(()=>onPluginFlush(async()=>{if(tasks.current.size)throw Error('Finish or cancel attachment transfers before leaving.')}),[])
@@ -41,6 +41,7 @@ export function useAttachmentUploads(conversation:string,onReady:(conversation:s
   release?.();update()
  }
  const add=(files:File[])=>{
+  if(conversation.startsWith('worker:')&&count+tasks.current.size+files.length>16)throw Error(uiText('Choose at most 16 attachments'))
   if(files.some(file=>file.size>2*1024*1024*1024))throw Error(uiText('Files must be at most 2 GiB'))
   for(const file of files)void run({id:crypto.randomUUID(),conversation,composerKey,onReady,file,progress:0,state:'uploading',controller:new AbortController()})
  }

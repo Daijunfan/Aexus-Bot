@@ -9,7 +9,7 @@ import {Icon} from '../components/Icon'
 
 /** A view supplies its ordered public images; opening a gallery freezes that order. */
 export const MessageGalleryContext=createContext<{images:GalleryImage[];history?:GalleryQuery}|null>(null)
-export function messageGalleryItems(source:Omit<GalleryImage,'path'>,paths:string[],text:string){const labels=messageImageLabels(text,paths.length);return paths.map((path,index)=>({...source,path,caption:labels[index]}))}
+export function messageGalleryItems(source:Omit<GalleryImage,'path'>,paths:string[],text:string,names?:Record<string,string>){const labels=messageImageLabels(text,paths.length);return paths.map((path,index)=>({...source,path,name:names?.[path]??source.name,caption:labels[index]}))}
 export function MessageImages({worker,employee,group,channel,paths,messageId,caption}:{worker?:string;employee?:string;group?:string;channel?:string;paths:string[];messageId?:string;caption?:string}){
  const [ratios,setRatios]=useMessageRowState<Record<string,number>>('images:ratios',{}),inherited=useContext(MessageGalleryContext),items=paths.map(path=>({worker,employee,group,channel,path,messageId,caption}))
  if(!paths.length)return null
@@ -28,7 +28,7 @@ export function MessageImage(source:GalleryImage&{onDimensions?:(ratio:number)=>
   if(root.current)observer.observe(root.current)
   return()=>{active=false;observer.disconnect()}
  },[worker,employee,group,channel,path,attempt])
- const name=path.split(/[\\/]/).at(-1)||'Photo',key=galleryKey(source)
+ const key=galleryKey(source),name=source.name||gallery?.images.find(item=>galleryKey(item)===key)?.name||path.split(/[\\/]/).at(-1)||'Photo'
  const origin=(item:GalleryImage)=>{const scope=root.current?.closest('.transcript,.group-transcript,.message-library-results,.message-attachment-draft')??root.current?.parentElement;return [...scope?.querySelectorAll<HTMLButtonElement>('[data-gallery-image]')??[]].find(button=>button.dataset.galleryImage===galleryKey(item))??null}
  return <><button ref={root} type="button" className="message-photo" data-gallery-image={key} aria-label={error?uiText('Retry image {0}',[name]):uiText('View image {0}',[name])} aria-busy={!image&&!error||undefined} onClick={()=>{if(error){setAttempt(value=>value+1);return}const items=gallery?.images.some(item=>galleryKey(item)===key)?gallery.images:[source];setOpened({items:[...items],index:items.findIndex(item=>galleryKey(item)===key),history:gallery?.history})}}>{image?<img alt={name} src={image} onLoad={event=>source.onDimensions?.(event.currentTarget.naturalWidth/event.currentTarget.naturalHeight)}/>:<span><Icon name={error?'refresh':'file-media'}/>{error?uiText('Preview unavailable · Retry'):uiText('Loading image…')}</span>}</button>{opened&&<MessageImageViewer items={opened.items} initialIndex={opened.index} initialSrc={image} history={opened.history} origin={origin} prepareClose={async item=>{if(!origin(item)&&item.messageId&&gallery?.images.some(image=>galleryKey(image)===galleryKey(item)))await viewport?.scrollToMessage(item.messageId,{block:'nearest'})}} onReveal={source.worker?undefined:source.messageId&&messenger?item=>{messenger.setLibrary(null);void messenger.navigate({conversation:item.channel?'channel:'+item.channel:item.group?'group:'+item.group:'employee:'+item.employee,id:item.messageId!})}:undefined} onClose={()=>setOpened(null)}/>}</>
 }

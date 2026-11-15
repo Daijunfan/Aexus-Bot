@@ -1,28 +1,27 @@
-// Verify actual exported pixels, not just the privacy flag; no model calls or production data.
+// Actual exported pixels from the current Board; isolated native fixtures and hidden windows only.
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import {createRequire} from 'node:module'
 import sharp from 'sharp'
-import {_electron as electron} from '@playwright/test'
-const root=process.cwd(),require=createRequire(import.meta.url),temp=fs.mkdtempSync(path.join(os.tmpdir(),'ac-export-')),out=root+'/artifacts/restored-companions'
-fs.mkdirSync(out,{recursive:true})
-const env={...process.env,AGENTS_COMPANY_HOME:temp+'/state',AGENTS_COMPANY_PROJECTS:temp+'/projects',AGENTS_COMPANY_HIDDEN:'1'}
-for(const k of Object.keys(env))if(k.startsWith('AGENTS_COMPANY_TOKEN')||['ELECTRON_RUN_AS_NODE','AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_PORT'].includes(k))delete env[k]
-const app=await electron.launch({executablePath:process.env.AGENTS_COMPANY_TEST_APP||require('electron'),args:process.env.AGENTS_COMPANY_TEST_APP?[]:[root],env}),page=await app.firstWindow()
-const call=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args})
+import {_electron as electron,expect} from '@playwright/test'
+import {fixtureCore} from './fixtures/headless-core.mjs'
+import {desktopExecutable} from './fixtures/desktop-app.mjs'
+const root=process.cwd(),require=createRequire(import.meta.url),out=path.resolve(process.env.AGENTS_COMPANY_TEST_ARTIFACTS||'artifacts/restored-companions')
+fs.mkdirSync(out,{recursive:true});fs.rmSync(path.join(out,'privacy-result.json'),{force:true});let f,app,page;const captures=[],errors=[]
 const pink=async file=>{const {data,info}=await sharp(file).removeAlpha().raw().toBuffer({resolveWithObject:true});let n=0;for(let i=0;i<data.length;i+=info.channels)if(data[i]>180&&data[i+1]<90&&data[i+2]>180)n++;return n}
 try{
- await page.locator('.infinite-canvas').waitFor();await call('group.add',{name:'Private Path',mode:'build'})
- await page.locator('.team-root-label').waitFor()
- // Bright diagnostic color lets the test detect even one stale sensitive frame.
- await page.locator('.team-root-label').evaluate(el=>{el.style.background='#ff00ff';el.style.color='#ff00ff';el.style.width='300px';el.style.height='40px'})
- await page.screenshot({path:out+'/privacy-visible.png'});assert.ok(await pink(out+'/privacy-visible.png')>100)
+ f=await fixtureCore();const core=async(cmd,args={})=>{const result=await f.request(null,cmd,args);assert.ok(result.ok,cmd+': '+result.error);return result.data};await core('settings.set',{language:'en',viewAppearance:{company:{theme:'white'}},boardMaxColumns:2});await core('group.add',{name:'Private Path',mode:'build'});const role=await f.create('Private role','Private Path'),worker=await core('worker.create',{engine:'codex',cwd:f.temp,title:'Private native Worker'}),before=await core('worker.snapshot',{id:worker.id});assert.equal(before.worker.running,false);assert.deepEqual(before.items,[]);assert.deepEqual(before.receipts,[])
+ await f.stop();const env={...f.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1440',AGENTS_COMPANY_HEIGHT:'1050'};delete env.ELECTRON_RUN_AS_NODE;const target=process.env.AGENTS_COMPANY_TEST_APP;app=await electron.launch({executablePath:target?desktopExecutable(target):require('electron'),args:target?[]:[root],env});page=await app.firstWindow();page.setDefaultTimeout(15000);page.on('pageerror',error=>errors.push(error.message));await page.emulateMedia({reducedMotion:'reduce'});await expect(page.locator('.agent-board')).toBeVisible()
+ const call=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args}),rolePanel=page.locator('.agent-board-panel[data-employee="'+role.id+'"]'),workerPanel=page.locator('.worker-board-panel[data-worker="'+worker.id+'"]'),paths=[rolePanel.locator('.board-workspace>span:not(.codicon)'),workerPanel.locator('.board-workspace>span:not(.codicon)')]
+ const roleBefore=(await call('session.transcript',{employee:role.id})).items,workerBefore=await call('worker.snapshot',{id:worker.id});assert.equal(workerBefore.worker.running,false);assert.deepEqual(workerBefore.items,before.items);assert.deepEqual(workerBefore.receipts,before.receipts);assert.deepEqual(JSON.parse(JSON.stringify(workerBefore.configuration)),before.configuration);await call('session.open',{cardId:role.id});await expect(rolePanel.locator('.board-settings>summary')).toBeVisible()
+ await expect(paths[0]).toHaveText(role.cwd);await expect(paths[1]).toHaveText(worker.cwd);for(const node of paths){await expect(node).toBeVisible();await node.evaluate(el=>{el.style.background='#ff00ff';el.style.color='#ff00ff';el.style.width='300px';el.style.height='40px'})}
+ const ordinary=path.join(out,'privacy-visible.png');await call('ui.screenshot',{path:ordinary});const visiblePixels=await pink(ordinary);assert.ok(visiblePixels>100,'Normal export must actually paint both diagnostic path labels')
  for(let i=0;i<3;i++){
-  const file=out+`/privacy-export-${i}.png`;await call('ui.screenshot',{path:file,privacy:true});assert.equal(await pink(file),0,'Privacy export captured a stale frame containing the visible path')
-  assert.equal(await page.locator('.team-root-label').evaluate(el=>getComputedStyle(el).visibility),'visible')
+  const file=path.join(out,'privacy-export-'+i+'.png'),exported=await call('ui.screenshot',{path:file,privacy:true});assert.equal(exported.privacy,true);const sensitivePixels=await pink(file);captures.push({path:file,sensitivePixels});assert.equal(sensitivePixels,0,'Privacy export captured a stale frame containing a current Board role/Worker path')
+  for(const node of paths){await expect(node).toBeVisible();assert.equal(await node.evaluate(el=>getComputedStyle(el).visibility),'visible')};await expect(rolePanel.locator('.board-settings>summary')).toBeVisible();await expect(workerPanel.locator('.board-workspace>small')).toBeVisible()
+  const restored=path.join(out,'privacy-restored-'+i+'.png');await call('ui.screenshot',{path:restored});assert.ok(await pink(restored)>100,'Export must restore actual normal path pixels, not merely its DOM visibility')
  }
- assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(w=>!w.isVisible())))
- console.log('PASS actual private export pixels across repeated hidden-window captures; live labels restored')
-}finally{await app.close();fs.rmSync(temp,{recursive:true,force:true})}
+ const after=await call('worker.snapshot',{id:worker.id});assert.equal(after.worker.running,false);assert.deepEqual(after.items,before.items);assert.deepEqual(after.receipts,before.receipts);assert.deepEqual(after.configuration,workerBefore.configuration);assert.deepEqual((await call('session.transcript',{employee:role.id})).items,roleBefore);assert.equal((await call('session.status',{employee:role.id}))[0].busy,false);assert.deepEqual(errors,[]);assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())))
+ fs.writeFileSync(path.join(out,'privacy-result.json'),JSON.stringify({passed:true,captures,visiblePixels,role:role.id,worker:worker.id,errors,modelCalls:0,productionDataUsed:false,desktopHidden:true},null,2)+'\n');console.log('PASS repeated private exports contain zero current role/Worker path pixels; normal exports and live Controls are restored; no native Worker started')
+}catch(error){await page?.screenshot({path:path.join(out,'privacy-failure.png')}).catch(()=>{});fs.writeFileSync(path.join(out,'privacy-failure.json'),JSON.stringify({error:error.stack,captures,errors},null,2));throw error}finally{await app?.close();await f?.close()}

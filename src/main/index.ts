@@ -89,7 +89,7 @@ setUiHandler(async (op, args) => {
   }
   if (op === 'screenshot' && win) {
     const contents=win.webContents,throttled=contents.getBackgroundThrottling()
-    const css=args?.privacy?await contents.insertCSS('.team-root-label,.activity-bubble,.room-dimension{visibility:hidden!important}'):undefined
+    const css=args?.privacy?await contents.insertCSS('.team-root-label,.activity-bubble,.room-dimension,.board-workspace>span:not(.codicon){visibility:hidden!important}'):undefined
     try{
       if(throttled)contents.setBackgroundThrottling(false)
       await contents.executeJavaScript('Promise.all([...document.images].filter(i=>{const r=i.getBoundingClientRect();return i.complete&&i.naturalWidth>0&&r.bottom>0&&r.top<innerHeight&&r.right>0&&r.left<innerWidth}).map(i=>i.decode().catch(()=>undefined)))')

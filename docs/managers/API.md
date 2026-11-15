@@ -22,7 +22,7 @@ Team 与员工可改显示名，既有目录与归属保持固定。所有管理
 
 ## 知乎与 LinkedIn 频道
 
-`channel.source-add/sources/source-update/source-remove` 和 `messenger.social/directory/folder-save` 接受 `zhihu`、`linkedin`，沿用原用户/Secretary 管理权限及频道读取授权。公开来源的真实采集范围、候选身份核验与访问错误见 [知识频道](docs/KNOWLEDGE_CHANNELS.md)。订阅确认不等于内容采集成功；新平台不借用其他平台凭据。
+`channel.source-add/sources/source-update/source-remove` 和 `messenger.social/directory/folder-save` 接受 `zhihu`、`linkedin`，沿用原用户/Secretary 管理权限及频道读取授权。公开来源的真实采集范围、候选身份核验与访问错误见 [知识频道](../../docs/KNOWLEDGE_CHANNELS.md)。订阅确认不等于内容采集成功；新平台不借用其他平台凭据。
 
 
 
@@ -42,11 +42,11 @@ Mission 现在同时展示原有 `schedule.*` 排期和 `mission.*` 持续任务
 
 `question.ask/get/list/wait/answer/cancel` 是私聊/群聊中的应用选择卡，独立于原生引擎审批。选项数量不固定，自动增加 `other` 自由文本；有限等待必须声明 fallback，`timeoutSeconds:null` 一直等待用户。只有真实用户能 answer。新消息、任务提醒、连接关闭和重启都不会覆盖 pending 记录。`question.wait` 每次最长 25 秒，pending 时让出当前任务，不用循环模型轮次等待。
 
-`plan.preferences` 保存所有 Mission 视图共用的筛选、隐藏列表和成功/失败保留策略，使用 `expectedRevision`。默认保留；可设置自动归档或删除。未成功的持续任务永不自动删除，仍有后续发生时间或活跃轮次的排期不会被自动清理。显示过滤不影响执行。完整参数和 CLI 示例见 [持续任务与聊天选择题](docs/MISSIONS_AND_QUESTIONS.md)。
+`plan.preferences` 保存所有 Mission 视图共用的筛选、隐藏列表和成功/失败保留策略，使用 `expectedRevision`。默认保留；可设置自动归档或删除。未成功的持续任务永不自动删除，仍有后续发生时间或活跃轮次的排期不会被自动清理。显示过滤不影响执行。完整参数和 CLI 示例见 [持续任务与聊天选择题](../../docs/MISSIONS_AND_QUESTIONS.md)。
 
 ## Native bot and group CRUD
 
-`bot.native-create`, `bot.configure`, `bot.members` and `bot.native-delete` operate on native platform objects through the same authenticated Core for UI and CLI. Confirmed writes may return `directorySyncPending:true` if only the subsequent catalog refresh is unavailable. Stable request retries reconcile known Grok creation/duplicate IDs and confirmed native deletion without replaying the native mutation; unknown Dot creation is never inferred from a name. See [native Bot management](docs/BOT_WORKERS.md).
+`bot.native-create`, `bot.configure`, `bot.members` and `bot.native-delete` operate on native platform objects through the same authenticated Core for UI and CLI. Confirmed writes may return `directorySyncPending:true` if only the subsequent catalog refresh is unavailable. Stable request retries reconcile known Grok creation/duplicate IDs and confirmed native deletion without replaying the native mutation; unknown Dot creation is never inferred from a name. See [native Bot management](../../docs/BOT_WORKERS.md).
 
 ## Published group files
 
@@ -248,7 +248,7 @@ agents card create --title Analyst --group Studio --engine antigravity --json
 agents worker create --engine antigravity --cwd /path/to/project --title Google --json
 ```
 
-`engine.models` accepts optional `model` for native ACP engines to inspect the selected model's current reasoning options without inference. Google uses its native sign-in/configuration, not an application URL/key override. If sign-in is missing, run the configured executable with `acp --login` once on the Core host; discovery never launches OAuth. A configured native API key may authenticate through `gemini-api-key`; native credentials are never exposed in responses. CLI 1.5.9 downloads are pinned to Google's official Storage objects and SHA-512. Native account eligibility, provider availability and quota are separate from protocol/configuration checks. See [adapter boundaries](docs/ENGINE_ADAPTERS.md#google-antigravity).
+`engine.models` accepts optional `model` for native ACP engines to inspect the selected model's current reasoning options without inference. Google uses its native sign-in/configuration, not an application URL/key override. If sign-in is missing, run the configured executable with `acp --login` once on the Core host; discovery never launches OAuth. A configured native API key may authenticate through `gemini-api-key`; native credentials are never exposed in responses. CLI 1.5.9 downloads are pinned to Google's official Storage objects and SHA-512. Native account eligibility, provider availability and quota are separate from protocol/configuration checks. See [adapter boundaries](../../docs/ENGINE_ADAPTERS.md#google-antigravity).
 
 ## DeepSeek Harness
 
@@ -514,7 +514,7 @@ Aexus and Messages use the same profile and original employee identity.
 The user opens **Workspaces → User originals** to edit shared root files through
 `conversation.file`. Employee APIs keep originals and peer folders read-only while
 allowing their own named subfolder and explicit copying to the personal Workspace.
-See [CONVERSATION_WORKSPACES.md](docs/CONVERSATION_WORKSPACES.md) for exact operations.
+See [CONVERSATION_WORKSPACES.md](../../docs/CONVERSATION_WORKSPACES.md) for exact operations.
 
 ## Custom categories and social elements
 
@@ -732,7 +732,7 @@ separate engine or storage implementation.
 
 ## Employee task scheduling
 
-Scheduling is a host Core API, available without Electron. See [SCHEDULER.md](SCHEDULER.md)
+Scheduling is a host Core API, available without Electron. See [SCHEDULER.md](../../SCHEDULER.md)
 for the complete v1 contract, JSON examples, timezone/window policies and recovery behavior.
 
 ```sh
@@ -839,7 +839,7 @@ Installing a validated package updates the shared catalogue and keeps matching
 Work Team launchers bound to their existing workspaces. `workspace.docs` prepares
 the shared documentation entry and authorized runtime launchers, not workspace manuals.
 It preserves user-authored text around managed sections of AGENTS.md and CLAUDE.md.
-See [PLUGIN_SPEC.md](PLUGIN_SPEC.md) for the package and documentation format.
+See [PLUGIN_SPEC.md](../../PLUGIN_SPEC.md) for the package and documentation format.
 
 ## Sessions
 
@@ -1220,7 +1220,7 @@ are recreated on the next message using the saved native thread ID. Text, readab
 reasoning, tool output and tool-state events stream into the same CLI/UI transcript;
 late background output updates its original tool entry.
 
-See [ENGINE_CAPABILITIES.md](ENGINE_CAPABILITIES.md) for the current audit and tests.
+See [ENGINE_CAPABILITIES.md](../../ENGINE_CAPABILITIES.md) for the current audit and tests.
 
 ## Aexus management
 
@@ -1381,7 +1381,7 @@ Manager 自己创建的同 Team Employee，以及 Governor 在任意 Team 创建
 
 ## 员工职位：Secretary / Governor / Manager / Employee
 
-权限属于 `managementRole`，不属于名字、Team、工作目录或视图。Secretary 是最高应用管理职位，帮助用户操作 Avalon 及全部已授权插件，组织与委派具体业务工作；完整矩阵见 [PERMISSIONS.md](PERMISSIONS.md)。
+权限属于 `managementRole`，不属于名字、Team、工作目录或视图。Secretary 是最高应用管理职位，帮助用户操作 Avalon 及全部已授权插件，组织与委派具体业务工作；完整矩阵见 [PERMISSIONS.md](../../PERMISSIONS.md)。
 
 ```sh
 agents management roles --json
@@ -1829,7 +1829,7 @@ agents messenger forward-draft --data null --expected-client-message-id ATTEMPT_
 
 `messenger:changed` emits only a revision and optional conversation reference. Actual
 personal content is fetched through the authenticated user API. Invalid/corrupt state
-is not silently replaced. See [MESSAGE_PARITY.md](docs/MESSAGE_PARITY.md) for the ongoing
+is not silently replaced. See [MESSAGE_PARITY.md](../../docs/MESSAGE_PARITY.md) for the ongoing
 feature audit; these APIs alone do not establish full commercial UI parity.
 
 ### Shared application views and read receipts
@@ -1921,7 +1921,7 @@ creator is the Owner and must be a member; the user may select a member as Owner
 `chat.update {id,name?,members?,addTeams?,expectedRevision?}` replaces supplied members
 and adds current employees from supplied Teams. Owner/Admin manage membership and
 moderation; only Owner, the user or Secretary dissolves a group. See
-[conversation roles](docs/CONVERSATION_CONTROLS.md).
+[conversation roles](../../docs/CONVERSATION_CONTROLS.md).
 
 `chat.get` returns group/member identities and unread metadata. `chat.history`
 returns `{messages,nextBefore}` in chronological order, with `limit` 1–100 (default 50).
@@ -2126,7 +2126,7 @@ turn may use it in Plan, Ask and `dontAsk` modes without a file-write approval.
 Other generic API writes still obey Ask/Full access and planning rules, and
 initialization or silent/awareness reading cannot publish.
 
-`direct.history {employee,limit?,before?,around?}` reads only the published ledger.
+`direct.history {employee,limit?,before?,around?}` reads only the published ledger. Image items can include `imageNames`, a read-only mapping from each opaque attachment path to its original basename. Attachment identity and stored bytes remain unchanged.
 `limit` is 1–500 (default 200); `before` selects entries below a direct sequence,
 and `around` centers a page on an exact direct message ID. It returns
 `{items,revision,latestIncoming,readSequence,nextBefore}` and never includes native
@@ -2273,7 +2273,7 @@ Telegram, X and YouTube each use one aggregate channel with original author imag
 and internal author tabs. `channel.source-add {plugin,locator,name?,targetId?,
 pollSeconds?,channelId?,enabled?}` preserves stable source identities. Changing a
 route moves every retained article without changing post IDs. Unfollowing disables
-collection while preserving identity and saved content. See [CHANNELS.md](docs/CHANNELS.md).
+collection while preserving identity and saved content. See [CHANNELS.md](../../docs/CHANNELS.md).
 
 `channel.posts {channelId?,sourceId?,saved?,query?,cursor?,limit?,order?,seed?,snapshot?}`
 returns bounded browsing excerpts in `{posts,total,nextCursor}`; `channel.post {id}`
@@ -2765,33 +2765,35 @@ not change the employee's identity, engine, role, directory or position.
 
 Historical generic IDs retain their original community aliases.
 
-## Employee conversation identity, sidebar and snapping
+## Employee conversation identity and current Team layout
 
 ```sh
-agents settings set --sidebar-width 72 --snap-employees on
-agents card place CARD_ID --x 280 --y 69 --snap on --zoom 1
-agents card place CARD_ID --x 280 --y 69 --snap off
-agents view open conversation --employee CARD_ID --plugin mininotion
+agents card place EMPLOYEE_ID --seat 2 --json
+agents office layout --json
+agents room layout "TEAM_NAME" --json
+agents view open conversation --employee EMPLOYEE_ID
 agents view open home
 ```
 
-An employee, character and conversation share one editable display name. Rename
-APIs accept the employee ID or its live session ID; the original workspace
-folder name and path stay unchanged.
+An employee, character and native conversation share one editable display name.
+Rename APIs accept the stable employee ID or its live session ID; the original
+workspace folder name and path stay unchanged.
 
-`sidebarWidth` accepts 56–96 pixels; legacy wide-sidebar settings display as the new 64px default. The sidebar shows icons only, with hover labels; it remains resizable within this range. `snapEmployees` is a boolean and defaults to true. Both persist via
-`settings.set` and are included in `settings.get`.
+Settings and plugins are available at the upper left of the application. There is
+no global navigation rail. Team opens one Board with its own client-local,
+resizable agent directory; Workers appear alongside role-based employees.
 
-`card.place` accepts optional `snap:boolean` and `zoom:number` (0.08–3, default 1).
-The desktop Team minimap is hidden by default. The left-sidebar button below
-the shared transfer folder toggles it through `settings.set`; the equivalent CLI
-is `agents settings set --team-overview on|off`. It reads the same `room.layout`
-geometry and saves each focus/overview jump with `canvas.set`.
-Omitting `snap` uses the stored preference. The shared algorithm attracts to a
-regular seat/row/column within 13 screen pixels and avoids occupied seats. During
-pointer dragging, a 22-pixel release threshold prevents jitter. UI drag previews
-use the same geometry, then commit the resolved point with `snap:false` to retain
-that precise preview. Option/Alt temporarily bypasses attraction.
+`card.place` accepts a numbered `seat` and optional `expectedSeating`. It checks
+current layout authority and moves into an empty seat or atomically swaps the
+occupant. Coordinates in `office.layout` / `room.layout` are read-only projections.
+Arbitrary `x/y`, `snap` and `zoom` placement arguments reject. See
+[Team seating and Board columns](#team-seating-room-controls-and-board-columns)
+for current dimensions, room placement and stale-layout checks.
+
+Historical `sidebarWidth` / `snapEmployees` preferences remain compatible with
+saved state; they do not create a global rail, free placement or a minimap in the
+current primary views. `canvas.set` and infinite canvas navigation are retired.
+Client navigation does not change shared room geometry.
 
 Plugin-context conversations open in the company window while the independent plugin
 window stays open. The matching plugin ID is validated against the employee's Work
@@ -3059,8 +3061,8 @@ Codex uses native remote execution, with no local execution environment or local
 Hooks. An unavailable directory or disconnected SSH transport fails instead of
 falling back to Mac execution. These are runtime/tool restrictions, not an OS sandbox
 around the host controller, which still runs the CLI and SSH transport on the Mac.
-See [cloud safety verification](artifacts/cloud-safety/README.md) for real GPT rounds
-and forced invalid-tool tests. Existing processes require reconnection to load changes.
+See [engine adapter contracts](../../docs/ENGINE_ADAPTERS.md) for execution locations,
+transport and controls. Existing processes require reconnection to load changes.
 
 `settings.set.pageZoom` (`--page-zoom`) is persisted independently of canvas zoom; range 0.75–1.5, default 1. The desktop applies the same setting for Cmd/Ctrl +, − and 0. File-tree drafts are not filesystem objects: Enter submits `workspace.write`/`mkdir`/`move`; Escape or clicking elsewhere cancels.
 
@@ -3202,7 +3204,7 @@ agents transfer cancel TRANSFER_ID --json
 
 ## Plan scheduling database
 
-**Plan** is a third application view, backed by the existing host scheduler. It provides Table, Board, Timeline, Calendar, Planner, List, Gallery, Chart, Feed and Form, saved filtered views, employee assignment, priority, tags, notes, previews and real run history. All layouts share canonical jobs and employee conversations; they do not copy MiniNotion data or create another executor. See [PLAN.md](PLAN.md) for the full API and safety contract.
+**Plan** is a third application view, backed by the existing host scheduler. It provides Table, Board, Timeline, Calendar, Planner, List, Gallery, Chart, Feed and Form, saved filtered views, employee assignment, priority, tags, notes, previews and real run history. All layouts share canonical jobs and employee conversations; they do not copy MiniNotion data or create another executor. See [PLAN.md](../../PLAN.md) for the full API and safety contract.
 
 ```sh
 agents view select plan --json
@@ -3217,7 +3219,7 @@ Every Agent can schedule itself through `self`, resolved from authentication. Ev
 
 `plan.query` adds bounded database filters/sorting; `plan.calendar` projects future occurrences and actual retained runs; `plan.timeline` separates planned estimates from actual durations, `plan.analytics` aggregates all authorized pages, and `plan.feed` returns actual activity with stable cursor pagination; `plan.views/view-create/view-update/view-delete` manage presentation definitions only. Board status is computed, not a user claim that work succeeded. Core must remain running and its host awake; this does not wake a sleeping computer. Busy manual work is never interrupted to satisfy a timer. No inference runs merely from opening Plan or previewing dates.
 
-Complete layout/API mapping and interactive design findings: [Mission view parity](docs/PLAN_VIEW_PARITY.md). Optional `plan.durationMinutes` is an estimate only, never a timeout or employee reservation. Saved-view `options` preserve timezone, temporal scale and chart configuration. They also save table `hiddenProperties` and `density:comfortable|compact`; discover exact property IDs in `plan.schema.tableProperties`. Task titles/actions and Core data remain available. `plan.query` returns every current `assignees` identity for multi-person missions.
+Complete layout/API mapping and interactive design findings: [Mission view parity](../../docs/PLAN_VIEW_PARITY.md). Optional `plan.durationMinutes` is an estimate only, never a timeout or employee reservation. Saved-view `options` preserve timezone, temporal scale and chart configuration. They also save table `hiddenProperties` and `density:comfortable|compact`; discover exact property IDs in `plan.schema.tableProperties`. Task titles/actions and Core data remain available. `plan.query` returns every current `assignees` identity for multi-person missions.
 
 Mission read models accept `filter.allOf` to intersect flat conditions rather than overwrite saved-view filters with global criteria. Queries allow up to 32 clauses; saved views and global preferences allow 10 each. Outer criteria still apply, archive mode is inherited unless explicitly narrowed, state/priority arrays match any listed value, and tags require all listed values. Conflicting scopes correctly match no records. Deleted-job history does not acquire missing current metadata from a combined clause.
 
@@ -3343,7 +3345,7 @@ session, when the client supports those actions.
 
 ## Group and channel workspaces
 
-Full API and worked examples: [Conversation workspaces](docs/CONVERSATION_WORKSPACES.md),
+Full API and worked examples: [Conversation workspaces](../../docs/CONVERSATION_WORKSPACES.md),
 also available through `agents api docs core/conversation-workspaces --json`.
 
 `conversation.workspace` and `conversation.workspaces` describe shared conversation content, not employee execution workspaces. An employee has only the Team-assigned Team workspace; `workspace.catalog` returns that one location. Joining groups does not create per-member folders or change cwd. Group descriptors omit memberDirectory/memberPath and members[].directory. Existing legacy folders and originals stay in place as ordinary shared content.
@@ -3356,9 +3358,9 @@ Local/cloud storage is transparent to employee file, upload, download, version/c
 
 The group header opens one shared-file manager. `conversation.files` includes completed uploads and published files/images, with message/sender fields only when known. It supports search, sort, real preview IDs and recoverable trash without rewriting messages. Local PDF/image covers reuse Margin Reader; legacy attachments are previewable too. `conversation.file-open {conversation,path,version}` is user/Secretary only: it opens the exact current shared PDF in Margin Reader directly from its shared root, without an explicit Save As or library import or leaving the main conversation. Images use the existing viewer.
 
-The same manager creates and edits shared text through `conversation.file write`, preserving the read `hash` for conflict checks. A group `conversation.file move` accepts optional `expectedVersion` and preserves active/recoverable attachment references after a file or folder rename. File moves and attachment publication are ordered within that group; text-only messages and native execution remain concurrent. Source text, authors, task snapshots and receipts are not rewritten. Destination collisions and stale versions fail before the move. The Core maintains message reference metadata; clients must use the shared API rather than rename physical paths directly. See [shared-file operations](docs/CONVERSATION_WORKSPACES.md#one-shared-file-manager).
+The same manager creates and edits shared text through `conversation.file write`, preserving the read `hash` for conflict checks. A group `conversation.file move` accepts optional `expectedVersion` and preserves active/recoverable attachment references after a file or folder rename. File moves and attachment publication are ordered within that group; text-only messages and native execution remain concurrent. Source text, authors, task snapshots and receipts are not rewritten. Destination collisions and stale versions fail before the move. The Core maintains message reference metadata; clients must use the shared API rather than rename physical paths directly. See [shared-file operations](../../docs/CONVERSATION_WORKSPACES.md#one-shared-file-manager).
 
-See [Conversation files and workspaces](docs/CONVERSATION_WORKSPACES.md) for CLI examples and boundaries. Archive/restore still changes only user organization and preserves memberships, histories and file data.
+See [Conversation files and workspaces](../../docs/CONVERSATION_WORKSPACES.md) for CLI examples and boundaries. Archive/restore still changes only user organization and preserves memberships, histories and file data.
 
 ## Plan automation and channel schedules
 
@@ -3487,25 +3489,25 @@ original post ID, filename, size, caption and publication time.
 
 `workspace.pdf {employee,path,operation?,page?,limit?,width?,to?,expectedVersion?,password?}` 在同一工作区权限下提供 info、分页 text、原页 page 和导出 render。page 通过原生工具返回真实 PNG 图像块；render 使用已有受控上传协议把 PNG 写回同一员工工作区，本地/云端参数一致。原 PDF 与 Reader 书库状态不变；同名同内容复用，同名不同内容拒绝覆盖。read-only 分类仅 info/text/page，render 仍需写权限与原生批准。
 
-`direct.post` / `chat.post` 沿用 text/images：正文中 `![说明](attachment:1)` 引用 images 数组去重后的第 1 张图片，允许文字、图片交替多轮，单消息无固定图片数上限；未引用的附件保留原有底部相册。无对应附件的引用会明确拒绝，不发布残缺图文。群组发布正文支持 64000 字符。转发合并时重新映射编号，纯文本转发保留图片说明。完整 CLI 示例、扫描页与资源边界见 [MAGAZINE_READING.md](docs/MAGAZINE_READING.md)，原生文档入口为 `core/magazine-reading`。
+`direct.post` / `chat.post` 沿用 text/images：正文中 `![说明](attachment:1)` 引用 images 数组去重后的第 1 张图片，允许文字、图片交替多轮，单消息无固定图片数上限；未引用的附件保留原有底部相册。无对应附件的引用会明确拒绝，不发布残缺图文。群组发布正文支持 64000 字符。转发合并时重新映射编号，纯文本转发保留图片说明。完整 CLI 示例、扫描页与资源边界见 [MAGAZINE_READING.md](../../docs/MAGAZINE_READING.md)，原生文档入口为 `core/magazine-reading`。
 
 ## Conversation governance and static notifications
 
-Group offices use Owner / Admin / Member and are held by Agent employees. They are independent of Aexus managementRole. Admins may appoint/revoke other Admins; only Owner transfers ownership or dissolves a group. The human user retains recovery access without occupying an Agent office. Existing unowned groups require explicit assignment.
+Group offices use Owner / Admin / Member and are held by Agent employees. They are independent of Aexus managementRole. Admins may appoint/revoke other Admins; only Owner transfers ownership or dissolves a group. The user and Secretary retain application-administration access without occupying an Agent office. Existing unowned groups require explicit assignment.
 
-Use `conversation.policy` to discover current offices, moderation state, revision and allowedActions. `conversation.role/mute/silence` require the current expectedRevision. Secretary administers all conversations without joining; other Aexus roles still require actual conversation offices. Legacy chat.update/delete/mute enforce the same office boundary. Group-wide mute restricts Members; channel-wide mute restricts all publishers. Quiet mode keeps notice messages and unread state but suppresses the connected application's attention banner.
+Use `conversation.policy` to discover current group offices, moderation state, revision and allowedActions. `conversation.role/mute/silence` require the current expectedRevision. Secretary administers without joining; other employees require actual group offices. Legacy chat.update/delete/mute enforce the same group boundary. Group-wide mute restricts Members; Owner/Admin can still publish unless individually muted. Quiet mode keeps group notice messages and unread state but suppresses the connected application's attention banner. Channels use reading grants instead: member/role/moderation/notice writes reject, and historical read APIs remain available.
 
-`conversation.notice-list/get/create/update/delete/preview/history` manage fixed-text notifications. They use a separate Core timer and conversation-notices.sqlite, never Plan schedules, employee work queues or model calls. Creation requires a stable clientRequestId and spec {name,text,publisherId,rule,enabled}; rule is once, interval or weekly (all weekdays gives daily). Updates and deletion require expectedRevision. The automatic published message has noticeId, occurrenceId, scheduledFor and silent metadata. Replaying a pending occurrence after restart cannot duplicate its message. Revoked creators or publishers disable future publication; recurring downtime does not produce a backlog.
+`conversation.notice-list/get/create/update/delete/preview/history` manage group-only fixed-text notifications; channel records remain read-only history. They use a separate Core timer and conversation-notices.sqlite, never Plan schedules, employee work queues or model calls. Creation requires a stable clientRequestId and spec {name,text,publisherId,rule,enabled}; rule is once, interval or weekly (all weekdays gives daily). Updates and deletion require expectedRevision. The automatic published message has noticeId, occurrenceId, scheduledFor and silent metadata. Replaying a pending occurrence after restart cannot duplicate its message. Revoked creators or publishers disable future publication; recurring downtime does not produce a backlog.
 
-Read [Conversation controls](docs/CONVERSATION_CONTROLS.md) or `agents api docs core/conversation-controls` for the role matrix, exact schemas, quiet/mute distinction, creator/publisher constraints, timezone and recovery behavior. Explicit Plan schedules use `schedule.*`. Channel post-count tasks are retired; employees explicitly fetch/search news.
+Read [Conversation controls](../../docs/CONVERSATION_CONTROLS.md) or `agents api docs core/conversation-controls` for the role matrix, exact schemas, quiet/mute distinction, creator/publisher constraints, timezone and recovery behavior. Explicit Plan schedules use `schedule.*`. Channel post-count tasks are retired; employees explicitly fetch/search news.
 
-## Message collaboration: offices, workspaces, files and post-count prompts
+## Message collaboration: group offices, reading grants and Team file copies
 
-The current contract is [MESSAGE_COLLABORATION.md](docs/MESSAGE_COLLABORATION.md), available through `agents api docs core/message-collaboration`. Message groups distinguish Owner/Admin/Member; channels are read-only feeds. `conversation.member` adds/removes membership; `conversation.role` changes an office without treating demotion as removal. `conversation.audit` returns real governance actors and revision-protected actions.
+The current contract is [MESSAGE_COLLABORATION.md](../../docs/MESSAGE_COLLABORATION.md), available through `agents api docs core/message-collaboration`. Message groups distinguish Owner/Admin/Member; channels are read-only feeds. `conversation.member` adds/removes membership; `conversation.role` changes an office without treating demotion as removal. `conversation.audit` returns real governance actors and revision-protected actions.
 
 `workspace.catalog` returns the employee's Team-assigned execution workspace only. Shared group files are conversation content, accessed with conversation.file; group membership creates no private directory or alternate execution location.
 
-`conversation.entry` returns complete stored public text, links, media and documents. `conversation.download` copies an attachment into a selected own workspace; `conversation.download-status` reports actual progress and committed paths. Stable request keys deduplicate unchanged attempts, and staging plus size/SHA checks preserve originals and existing files.
+`conversation.entry` returns complete published private/group/channel text, links, media and documents under the current reading scope. `conversation.download` copies an attachment into the employee's assigned Team workspace, on its actual execution host; `conversation.download-status` reports actual progress and committed paths. Channel grants are not group membership or an alternate workspace, and a grant starts no employee task. Stable request keys deduplicate unchanged attempts, and staging plus size/SHA checks preserve originals and existing files.
 
 Group `conversation.notice-*` posts timed literal text without Agent work; Plan
 `schedule.*`/`plan.*` manages explicit employee tasks. Channel post-count workflows
@@ -3513,7 +3515,7 @@ are retired: writes are rejected and old active rules are paused with history re
 
 ## File library and storage information
 
-`assets.browse` provides paged workspace shelves, folder navigation and recursive file/folder search, filtered by view, Team, employee, conversation, storage host, file type or storage class. `assets.info` explicitly returns physical location, host metadata, logical ownership and verification state. `assets.preview` derives a bounded cover from a local file or already-cached publication thumbnail; it never downloads remote originals. All three are user asset operations and do not broaden Agent workspace access. GUI actions reuse the same Core and existing file mutation APIs. Full interaction, limits and CLI examples: [FILES_WORKBENCH.md](docs/FILES_WORKBENCH.md).
+`assets.browse` provides paged workspace shelves, folder navigation and recursive file/folder search, filtered by view, Team, employee, conversation, storage host, file type or storage class. `assets.info` explicitly returns physical location, host metadata, logical ownership and verification state. `assets.preview` derives a bounded cover from a local file or already-cached publication thumbnail; it never downloads remote originals. All three are user asset operations and do not broaden Agent workspace access. GUI actions reuse the same Core and existing file mutation APIs. Full interaction, limits and CLI examples: [FILES_WORKBENCH.md](../../docs/FILES_WORKBENCH.md).
 
 Socket 与原生 Codex JSONL 按 LF 分帧，保留 UTF-8 文本中的 Unicode 行/段落分隔字符，不能使用会把 U+2028/U+2029 当成消息边界的行读取器。
 
@@ -3568,7 +3570,7 @@ agents worker file WORKER_ID --operation list --path . --json
 agents worker terminal WORKER_ID --operation open --json
 ```
 
-`worker.configure` 的权限选项按引擎区分：通用 default、acceptEdits、bypassPermissions；Claude 还支持原生 dontAsk 和 auto。`worker.configure` 支持 `planMode/thinking/fastMode` 布尔值，以及当前连接公布的 `nativeOptions`；CLI 布尔值必须明确写 `true` 或 `false`。忙碌时禁止切换配置或上下文。`worker.inspect` 支持 capabilities、config、skills、mcp、account、usage；不存在的原生能力明确拒绝，不伪造账号、用量或 MCP 服务。账号、MCP 与高级原生选项仅供用户和 Secretary。具体引擎能力参见 [ENGINE_CAPABILITIES.md](ENGINE_CAPABILITIES.md)。
+`worker.configure` 的权限选项按引擎区分：通用 default、acceptEdits、bypassPermissions；Claude 还支持原生 dontAsk 和 auto。`worker.configure` 支持 `planMode/thinking/fastMode` 布尔值，以及当前连接公布的 `nativeOptions`；CLI 布尔值必须明确写 `true` 或 `false`。忙碌时禁止切换配置或上下文。`worker.inspect` 支持 capabilities、config、skills、mcp、account、usage；不存在的原生能力明确拒绝，不伪造账号、用量或 MCP 服务。账号、MCP 与高级原生选项仅供用户和 Secretary。具体引擎能力参见 [ENGINE_CAPABILITIES.md](../../ENGINE_CAPABILITIES.md)。
 
 `worker.send` 可带工作目录内的 `images/files` 路径（合计最多 16 项）；Core 检查物理路径和当前所有权，图片通过原生图像协议提交，不支持图像的引擎不接受伪图像输入。浏览器本地文件先经 `worker.upload-begin` 与通用 transfer 分块上传，不能当成 Core 本地路径。`worker.file`、下载、拖放和文件保存复用现有工作区边界与冲突检查。可选 `worker.terminal` 仅允许用户或 Secretary 使用，是在该工作目录打开的普通 Shell，与 Coding Agent 协议独立；Worker 删除时同时结束自己的原生进程、工具后代和这些 Shell。
 
@@ -3593,7 +3595,7 @@ agents channel source-update SOURCE_ID --patch '{"enabled":false}' --json
 
 ## 外部 Worker 与事件唤醒
 
-macOS Core 会为已接入的 Dot/Grok 自动管理原生 Mac 后台执行组件，无需打开两个官方主应用；浏览器与桌面使用同一 Core 生命周期。`bot.list[].bot.localComputer` 返回 `state:stopped|starting|connected|reconnecting|external|error|unsupported`、可选 `connectedAt/error`。connected 来自真实原生通道确认，external 仅表示已有原生进程管理；消息送达、Mac 连接和模型额度互相独立。沿用既有原生账户、机器标识、插件和执行权限，不向 Bot 提供 Core 身份，不切换执行主机。断线与启动失败在后台恢复，不重放任务。详见 [外部 Worker](docs/BOT_WORKERS.md#自动连接-mac)。
+macOS Core 会为已接入的 Dot/Grok 自动管理原生 Mac 后台执行组件，无需打开两个官方主应用；浏览器与桌面使用同一 Core 生命周期。`bot.list[].bot.localComputer` 返回 `state:stopped|starting|connected|reconnecting|external|error|unsupported`、可选 `connectedAt/error`。connected 来自真实原生通道确认，external 仅表示已有原生进程管理；消息送达、Mac 连接和模型额度互相独立。沿用既有原生账户、机器标识、插件和执行权限，不向 Bot 提供 Core 身份，不切换执行主机。断线与启动失败在后台恢复，不重放任务。详见 [外部 Worker](../../docs/BOT_WORKERS.md#自动连接-mac)。
 
 Grok 外部会话使用原生账户的只读用量查询；额度耗尽会显示原因和本地时区的重置时间，保留历史与输入草稿，不自动更改套餐或开通付费。`bot.list[].bot.issue` 提供 `code/message/detail?/retryAt?/at/turnId?`；`direct.send-status.executionFailure` 提供关联原消息的同类执行错误。`status=accepted` 是送达确认，不是执行成功。执行失败持久保存、重启恢复，原生连接重建不重放已接收消息。正常发送先唤醒原生运行环境。
 
@@ -3601,13 +3603,13 @@ Message 原生管理器通过 `bot.catalog` 显示完整 Bot/群组数量与目�
 
 `bot.configure` 修改已验证的原生字段，`bot.members` 查询/多选保存 Grok 原生 Bot 成员，`bot.native-create` 创建原生 Bot 或群组，`bot.control` 调用提供方支持的暂停/恢复/主 Dot 或停止/重置/复制。读 `bot.profile.actions` 判断实际能力，不猜参数。设置与成员写入携带 `expectedVersion`；修改冲突保留草稿。创建和控制携带稳定 UUID `clientRequestId`，未知远端结果不重放。`bot.native-delete` 在准确 ID 确认及版本核验后删除原生对象，并保留 Aexus 文字记录与工作区；重置也要求 `confirmNativeId`。
 
-以上原生管理操作仅用户与 Secretary 可用，并继续检查原生账户权限。`bot.update/delete/restore` 分别为 Aexus 别名、断开与恢复；`bot.access` 单独授权 Aexus 员工，不改变原生群成员。原有 list/sync/create/group-create 保持兼容。消息和文件继续使用 direct.*、chat.*、conversation.*；不会给外部 Bot 签发 Core 身份。普通员工逐项授权，Secretary 全局可用。云端员工使用同一 API，把附件下载到自己的远程工作区；Secretary 始终本地。详见 [原生账户管理](docs/BOT_WORKERS.md#原生账户管理)。
+以上原生管理操作仅用户与 Secretary 可用，并继续检查原生账户权限。`bot.update/delete/restore` 分别为 Aexus 别名、断开与恢复；`bot.access` 单独授权 Aexus 员工，不改变原生群成员。原有 list/sync/create/group-create 保持兼容。消息和文件继续使用 direct.*、chat.*、conversation.*；不会给外部 Bot 签发 Core 身份。普通员工逐项授权，Secretary 全局可用。云端员工使用同一 API，把附件下载到自己的远程工作区；Secretary 始终本地。详见 [原生账户管理](../../docs/BOT_WORKERS.md#原生账户管理)。
 
-委派前先保存持续的 message.received 事件计划，收到一条确认并不结束等待。程序监测用 monitor.* 管理、输出稳定 ID 的 JSON 行，空闲不调用模型。规则、授权、重启和多段回复约定见 [外部 Worker](docs/BOT_WORKERS.md) 与 [事件任务](docs/EVENT_TASKS.md)。
+委派前先保存持续的 message.received 事件计划，收到一条确认并不结束等待。程序监测用 monitor.* 管理、输出稳定 ID 的 JSON 行，空闲不调用模型。规则、授权、重启和多段回复约定见 [外部 Worker](../../docs/BOT_WORKERS.md) 与 [事件任务](../../docs/EVENT_TASKS.md)。
 
 ## 群组协作与共享内容
 
-群资料、八种群主题色、话题、讨论串、投票/测验、协作清单、共享表情/置顶、可恢复消息移除、邀请审批/封禁、内容保护与导出使用同一套 Core / CLI。完整参数、重试和权限语义见 [群组协作](docs/GROUP_COLLABORATION.md)，原生工具可读取 `api.docs core/group-collaboration`。
+群资料、八种群主题色、话题、讨论串、投票/测验、协作清单、共享表情/置顶、可恢复消息移除、邀请审批/封禁、内容保护与导出使用同一套 Core / CLI。完整参数、重试和权限语义见 [群组协作](../../docs/GROUP_COLLABORATION.md)，原生工具可读取 `api.docs core/group-collaboration`。
 
 `chat.details.revision` 管理资料，`conversation.policy.policyRevision` 管理成员/角色/禁言；普通消息和阅读回执不会使这两个版本失效。话题和讨论串草稿独立保存；线程阅读用 `chat.acknowledge --message-ids JSON` 精确确认，避免误读同话题其他消息。文件回收站与消息移除分别管理；两者都不删除员工工作区或重放任务。
 
@@ -3615,7 +3617,7 @@ Worker Web sends and native commands with `clientMessageId` use the Core durable
 
 ## Engineering 工程协作
 
-Engineering / Research 不再作为 Team 子页面。已有工程记录、关联 Team 与 Mission 及 `engineering.*` CLI/API 保留，未迁移、删除或改变原生执行身份。创建、文本/图形编排、原生 Worker 执行、两级验收、链路复验与最终确认都由同一认证 Core 提供。完整参数与 Mermaid、提示词、返工和恢复约定见 [Engineering](docs/ENGINEERING.md)，员工可通过 `agents api docs core/engineering` 读取。
+Engineering / Research 不再作为 Team 子页面。已有工程记录、关联 Team 与 Mission 及 `engineering.*` CLI/API 保留，未迁移、删除或改变原生执行身份。创建、文本/图形编排、原生 Worker 执行、两级验收、链路复验与最终确认都由同一认证 Core 提供。完整参数与 Mermaid、提示词、返工和恢复约定见 [Engineering](../../docs/ENGINEERING.md)，员工可通过 `agents api docs core/engineering` 读取。
 
 后台创建工程使用 `team-view.create --select false` 建立 Governor 任务范围，不切换用户当前视图。先调用 `engineering.create --spec @file --client-request-id KEY`，再读取 `engineering.context --id ID`。使用 graph key 选择节点，Employee ID 用于真实身份绑定，两者不能混用。Worker 原生完成不代表验收成功：必须 `engineering.employee-review`、`engineering.manager-review`、`engineering.manager-complete`，最后 `engineering.complete`。关联 Mission 不能用普通完成接口跳过这些步骤。上级与秘书的任务、原生执行和权限边界保持现有 Core 策略。
 
@@ -3750,7 +3752,7 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents channel search</code> | <code>CHANNEL_ID [--query TEXT &#124; --keywords-all JSON &#124; --keywords-any JSON] [--limit N] [--source SOURCE_ID &#124; --sources JSON] [--since ISO --until ISO --time-ranges JSON --exclude-keywords JSON] [--cursor CURSOR] [--images]</code> | Authorized employees (Secretary always authorized): search retained news text, titles and source names with a reading grant, without saving. Full results newest first; text only by default, --images includes native image blocks. Combine multiple source IDs (OR), absolute [since,until) ranges or timeRanges (OR), keywordsAll (AND), keywordsAny (OR), and excludeKeywords (NOT); groups combine with AND. Same bounded pagination as fetch APIs. | Read-only channel search | chat |
 | <code>agents channel aggregate</code> | <code>--plugin telegram&#124;x&#124;youtube&#124;zhihu&#124;linkedin</code> | User-only: consolidate empty platform channel wrappers into one aggregate while retaining subscription and article identities; old channel links remain aliases | Platform channel aggregation | operator |
 | <code>agents channel media-register</code> | <code>--source-id ID --external-id ID --published-at MS --media-key KEY --name FILE --mime-type TYPE --sha256 SHA --bytes N</code> | Configured archive collector only: verify and register an existing server image without sending its bytes through the Mac | Server-owned channel media | operator |
-| <code>agents channel file-download</code> | <code>--post POST_ID --file FILE_ID</code> | User-only: copy a cloud document into this channel shared workspace, with SHA-256 verification; cloud cache retention never removes the local copy | Download to channel | operator |
+| <code>agents channel file-download</code> | <code>--post POST_ID --file FILE_ID</code> | User or Secretary: copy a cloud document into this channel shared workspace, with SHA-256 verification; employees use conversation.download for their own Team copy | Download to channel | operator |
 | <code>agents channel file-status</code> | <code>--post POST_ID --file FILE_ID</code> | Read cloud-to-channel download progress and the saved relative workspace path; never starts a download | Channel document progress | operator |
 | <code>agents channel connection</code> | <code>ID</code> | Read configured process origin, receiver URL, source IDs and last authenticated contact; saving configuration never claims a live connection | Channel connection | operator |
 | <code>agents channel avatar-image</code> | <code>ID</code> | User or Secretary: read the independently retained custom channel avatar | Channel avatar | operator |
@@ -3773,10 +3775,10 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents channel source-update</code> | <code>ID --patch JSON&#124;@file</code> | User or Secretary: save source settings or an equivalent profile URL, preserving source/target identities and retained news | News subscriptions | operator |
 | <code>agents channel source-remove</code> | <code>ID</code> | User or Secretary: unfollow a source while retaining its identity and saved news | News subscriptions | operator |
 | <code>agents channel posts</code> | <code>[--channel ID] [--source ID &#124; --sources JSON] [--saved] [--query TEXT] [--cursor CURSOR] [--limit N] [--order newest&#124;discovery --seed TEXT --snapshot MS --avoid-first ID]</code> | User or Secretary: page current news and permanent saved items with stable item identities | News feed | operator |
-| <code>agents channel post</code> | <code>POST_ID</code> | User or Secretary: read a retained news item with current channel routing | News detail | chat |
+| <code>agents channel post</code> | <code>POST_ID</code> | Read a retained news item with current channel routing; an employee needs a channel reading grant, while the user and Secretary are always authorized | News detail | chat |
 | <code>agents channel save</code> | <code>POST_ID on&#124;off</code> | User or Secretary: explicitly save a news item and its images locally, or resume its original expiry | Saved news | operator |
 | <code>agents channel delete</code> | <code>POST_ID</code> | User or Secretary: delete local news and images with bounded replay protection | News deletion | operator |
-| <code>agents channel image</code> | <code>CHANNEL_ID --post POST_ID --media MEDIA_ID [--max-edge 96&#124;640&#124;1280]</code> | User or Secretary: read a published news image from memory or the server, never staging or arbitrary URLs | News images | chat |
+| <code>agents channel image</code> | <code>CHANNEL_ID --post POST_ID --media MEDIA_ID [--max-edge 96&#124;640&#124;1280]</code> | Read a published news image with a channel reading grant; user and Secretary always have access. Reads only published memory/server content, never staging or arbitrary URLs | News images | chat |
 | <code>agents channel export</code> | <code>POST_ID</code> | User or Secretary: explicitly download a retained article and original images | News download | operator |
 | <code>agents channel collector-add</code> | <code>--name NAME [--sources JSON&#124;all &#124; --channel ID]</code> | Issue a source-scoped credential or bind a replacement process credential to an external channel; plaintext is returned once | News collector connection | operator |
 | <code>agents channel collectors</code> | <code>—</code> | User or Secretary: list collector metadata without tokens or token hashes | News collector connection | operator |
@@ -3793,8 +3795,8 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents messenger sticker-save</code> | <code>--name TEXT --pack NAME --image JSON</code> | User/Secretary imports a signature-checked PNG/JPEG/GIF/WebP up to 2 MiB into a local sticker pack. Same image and pack is idempotent; no message is sent. | Import local sticker | operator |
 | <code>agents messenger sticker-image</code> | <code>ID</code> | Read one current local sticker image for the authenticated user; imported stickers do not grant filesystem access. | Sticker preview | operator |
 | <code>agents messenger sticker-remove</code> | <code>--ids JSON</code> | Remove selected stickers from your library; previously shared group images remain independent and intact. | Remove local stickers | operator |
-| <code>agents messenger profile</code> | <code>[--avatar ID&#124;null &#124; --image JSON&#124;@file]</code> | User-only: upload a personal image, choose an avatar.list ID or reset with null; author identity stays unchanged | Your message avatar | operator |
-| <code>agents messenger profile-image</code> | <code>--sha256 HASH</code> | User-only: read the current personal avatar image at its exact saved revision | Your message avatar | operator |
+| <code>agents messenger profile</code> | <code>[--avatar ID&#124;null &#124; --image JSON&#124;@file]</code> | User or Secretary: upload a personal image, choose an avatar.list ID or reset with null; author identity stays unchanged | Your message avatar | operator |
+| <code>agents messenger profile-image</code> | <code>--sha256 HASH</code> | User or Secretary: read the current personal avatar image at its exact saved revision | Your message avatar | operator |
 | <code>agents messenger directory</code> | <code>[--type all&#124;outsource&#124;private&#124;groups&#124;channels&#124;telegram&#124;x&#124;youtube&#124;zhihu&#124;linkedin] [--query TEXT] [--folder ID] [--archived exclude&#124;only&#124;include] [--offset N] [--limit N]</code> | User or Secretary: query one category using folder ID from messenger.state.categories, or one type. No category means All. Archive filtering applies only to All; category queries include their archived conversations. No message bodies, read acknowledgements or execution. | Message category filtering | operator |
 | <code>agents messenger social</code> | <code>[--platform telegram&#124;x&#124;youtube&#124;zhihu&#124;linkedin] [--include-disabled]</code> | User or Secretary: list each social element with stable source ID, parent channel, latest publication and per-source unread count; no reads acknowledged | Social category picker | operator |
 | <code>agents messenger reorder</code> | <code>SCOPE --order JSON&#124;null [--expected-order JSON]</code> | User or Secretary: persist category or conversation positions in categories/all/favorites/archive/a type:* category ID/a custom folder ID; null restores automatic order, unrelated drafts and hidden positions remain unchanged | Message drag ordering | operator |
@@ -4316,7 +4318,7 @@ Saved-job preview accepts `{id,patch?,after?,count?}`. A patch is temporary and 
 
 ## Plan extension (additive v1)
 
-Plan is now a first-class view over this same scheduler. `afterSeconds`, `employeeId:"self"`, monthly rules, `maxOccurrences`, Plan metadata, creation idempotency and revision checks are documented in [PLAN.md](PLAN.md). All previous job IDs and schedules remain valid. Ordinary Employees may schedule themselves through a self-target-only delegation; scheduling others requires a strictly lower role within the existing Team/global control scope. `schedule:changed` broadcasts saved database changes. The host must remain online and awake.
+Plan is now a first-class view over this same scheduler. `afterSeconds`, `employeeId:"self"`, monthly rules, `maxOccurrences`, Plan metadata, creation idempotency and revision checks are documented in [PLAN.md](../../PLAN.md). All previous job IDs and schedules remain valid. Ordinary Employees may schedule themselves through a self-target-only delegation; scheduling others requires a strictly lower role within the existing Team/global control scope. `schedule:changed` broadcasts saved database changes. The host must remain online and awake.
 
 ## Read-model layout extension
 
@@ -4328,7 +4330,7 @@ Plan is now a first-class view over this same scheduler. `afterSeconds`, `employ
 
 `schedule.create/update/preview/run/resume/trigger` 等目标操作均受同一权限边界保护。撤权后旧自动授权保持停用；合法调用者显式 update/resume 才重新授权，manual run/signal trigger 使用当前调用者的本次授权，不能借用原作者凭据，manual run 也不会重新启用旧自动委派。后台到期运行复核保存的授权，实际执行和异步准备之后再次复核。新增 `action.channelId` 明确关联员工引擎频道，要求目标持续具有发布成员身份。旧 UI 的 `source:channel:ID` 仅迁移为经过校验的频道引用，不授予权限。移除成员会停用关联任务。
 
-事件规则现支持 `signal`、`channel.posted`、`message.received`、`session.completed`、`monitor.output`、`monitor.exited`。来源分别使用 channelId、conversation、employeeId 或 monitorId，只有对应字段可填写。先保存事件再执行委派/启动监测程序。忙碌、冷却和工作时间窗将事件持久排队，每次最多合并 100 条，其余继续等待；稳定 ID 去重，重启保留队列，已开始后中断的执行不盲目重做。Dot 的首条确认或安静间隔不表示整个任务完成。见 [事件计划与程序监控](docs/EVENT_TASKS.md) 和 [外部 Worker](docs/BOT_WORKERS.md)。
+事件规则现支持 `signal`、`channel.posted`、`message.received`、`session.completed`、`monitor.output`、`monitor.exited`。来源分别使用 channelId、conversation、employeeId 或 monitorId，只有对应字段可填写。先保存事件再执行委派/启动监测程序。忙碌、冷却和工作时间窗将事件持久排队，每次最多合并 100 条，其余继续等待；稳定 ID 去重，重启保留队列，已开始后中断的执行不盲目重做。Dot 的首条确认或安静间隔不表示整个任务完成。见 [事件计划与程序监控](../../docs/EVENT_TASKS.md) 和 [外部 Worker](../../docs/BOT_WORKERS.md)。
 
 事件计划立即出现在 Plan，等待时 nextAt 为 null；预览不虚构日期，日历展示真实执行记录。事件与定时任务共用原有持久化、保留策略、执行器和取消入口，不另建计时器或员工会话。频道表单复用完整 PlanEditor，尚未配置发布计划时明确显示自动发布未配置。详细字段和 CLI 示例见 PLAN.md 的 Unified automation 章节。
 
@@ -4351,7 +4353,7 @@ also accept `--expected-revision` to guard against a changed task.
 
 ## Conversation notices are separate from Plan
 
-Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Aexus managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Aexus roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
+Current conversation offices (Group Owner/Admin/Member, channel Admin) are independent of Aexus managementRole. Ordinary employees need actual conversation Owner/Admin to configure mute, quiet mode and fixed-text notifications; user/Secretary administer all groups; Secretary administers all groups without joining; other Aexus roles still need the actual conversation office. Owner alone dissolves groups or transfers ownership, with user/Secretary administrative recovery. `conversation.notice-*` posts saved text through an independent Core timer/storage without running an Agent or entering Plan. Plan `schedule.*` remains the exclusive API for scheduled employee work. See [CONVERSATION_CONTROLS.md](../../docs/CONVERSATION_CONTROLS.md) for the current, detailed boundary.
 
 
 ## Secretary 应用管理

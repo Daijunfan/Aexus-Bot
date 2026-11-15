@@ -47,8 +47,10 @@ export function MessageLibrary({store}:{store:Store}){
     if(change.kind!=='messages'&&(author!=='all'||!['all','saved','media','links'].includes(filter)))return
     if(config.conversation&&change.channelIds&&!change.channelIds.includes(config.conversation.slice(8)))return
    }else if(event.channel==='chat:changed'){
-    if(event.payload.messageId&&!event.payload.editedMessageId)return // Receipt-only updates do not change searchable content.
+    if(event.payload.kind==='receipt')return
     if(config.conversation&&config.conversation!=='group:'+event.payload.id)return
+   }else if(event.channel==='direct:changed'){
+    if(config.conversation&&config.conversation!=='employee:'+event.payload.employee)return
    }else if(['session:user','session:turn-end','session:interrupted','session:error'].includes(event.channel)){
     // Private events identify a live session, not its employee. Keep the search's employee scope.
     if(config.conversation&&!config.conversation.startsWith('employee:'))return

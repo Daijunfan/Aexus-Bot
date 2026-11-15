@@ -23,7 +23,7 @@ try{
   await fixture.stop();const env={...fixture.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1450',AGENTS_COMPANY_HEIGHT:'960'};delete env.ELECTRON_RUN_AS_NODE
   const application=process.env.AGENTS_COMPANY_TEST_APP;app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env});page=await app.firstWindow()
  }
- page.setDefaultTimeout(12000);page.on('pageerror',error=>errors.push(error.message));await page.locator('.infinite-canvas').waitFor()
+ page.setDefaultTimeout(12000);page.on('pageerror',error=>errors.push(error.message));await page.locator('.agent-board').waitFor()
  const rpc=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args})
  await rpc('settings.set',{language:'en',theme:'white',messageWallpaper:{palette:'purple-gradient',pattern:'telegram'}})
  const png=await sharp({create:{width:640,height:420,channels:3,background:'#b6c6dd'}}).png().toBuffer()

@@ -21,7 +21,7 @@ try{
  const env={...f.env,AGENTS_COMPANY_HIDDEN:'1',AGENTS_COMPANY_WIDTH:'1280',AGENTS_COMPANY_HEIGHT:'900'};delete env.ELECTRON_RUN_AS_NODE;const application=process.env.AGENTS_COMPANY_TEST_APP
  app=await electron.launch({executablePath:application?desktopExecutable(application):require('electron'),args:application?[]:[root],env});page=await app.firstWindow();page.setDefaultTimeout(15000);await page.emulateMedia({reducedMotion:'no-preference'})
  const call=(cmd,args={})=>page.evaluate(({cmd,args})=>window.agents.call(cmd,args),{cmd,args})
- await page.locator('.infinite-canvas').waitFor();await call('settings.set',{language:'en',theme:'white'})
+ await page.locator('.agent-board').waitFor();await call('settings.set',{language:'en',theme:'white'})
  for(const [i,args] of [{text:'The net amount is 359.5.'},{text:'{"command":"chat.post","text":"This is quoted speech, not publication"}'},{files:['result.txt']}].entries()){const response=await f.request(token,'direct.post',{...args,clientMessageId:'ui-post-'+i});assert.ok(response.ok,response.error)}
  await call('view.open',{kind:'messages',employee:card.id})
  await expect(page.locator('.message-conversation .transcript .turn.assistant')).toHaveCount(3)

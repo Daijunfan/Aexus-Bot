@@ -48,3 +48,17 @@ npm run release:check
 ```
 
 Technical checks are not licensing approval. Pending entries in `licenses/release-review.json` must have real documented evidence before public redistribution. Never clear a review merely to make the build pass. Do not push a release, package, tag or public repository without the maintainer's explicit approval.
+
+Source snapshots include versioned files from the product directories, the three
+plugin source trees and macOS build inputs. Untracked working files are excluded.
+Repacking an extracted source archive uses its `SOURCE_MANIFEST.json`; an archive
+without that manifest uses the product directories and the explicit root-file list
+in `scripts/source-files.mjs`. The resulting archive is named
+`Aexus-Bot-VERSION-source.tar.gz` and includes a file/hash manifest.
+
+Dependency overrides are deliberate compatibility fixes: the affected minimatch
+7–10 range uses the patched implementation while legacy 3/5 consumers retain
+their function-based interface; math extensions share the application's pinned
+KaTeX. Reader keeps PptxGenJS 4 while pinning its image-size dependency to the
+patched release. Review the actual consumer APIs and verify real packaging,
+math rendering and editable document exports when updating these overrides.
