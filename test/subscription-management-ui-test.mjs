@@ -57,11 +57,11 @@ try{
  const added=await receive();assert.equal(added.targets.filter(t=>t.plugin==='youtube'&&t.enabled).length,3);await confirm(added);await expect(receipt()).toHaveAttribute('data-sync-state','synced')
  assert.equal((await call('channel.post',{id:news.id})).saved,true)
  pass('Mac UI restores and adds subscriptions, defaults to followed authors and preserves saved news and stable identities')
- for(const [platform,label,locator] of [['telegram','Telegram','@subscription_telegram'],['x','X','@subscription_x']]){
+ for(const [platform,label,locator] of [['zhihu','知乎','https://daily.zhihu.com/'],['linkedin','LinkedIn','https://www.linkedin.com/company/fixture-research'],['telegram','Telegram','@subscription_telegram'],['x','X','@subscription_x']]){
   await dialog.getByRole('button',{name:'Add subscription',exact:true}).click();await dialog.getByRole('button',{name:'Platform',exact:true}).click();await page.getByRole('option',{name:label,exact:true}).click();await dialog.getByRole('textbox',{name:'Subscription address',exact:true}).fill(locator);await dialog.getByRole('button',{name:platform==='telegram'?'Follow channel':'Follow author',exact:true}).click();await expect(dialog.locator('.channel-source-row')).toHaveCount(1)
   const config=await receive();assert.equal(config.targets.filter(target=>target.plugin===platform&&target.enabled).length,1);await confirm(config);await expect(receipt()).toHaveAttribute('data-sync-state','synced')
  }
- pass('Telegram and X use the same confirmed UI save and scoped server application receipt as YouTube')
+ pass('Zhihu, LinkedIn, Telegram and X use the same confirmed UI save and scoped server receipt as YouTube')
  if(web){
   let failed=false;const loseResponse=async route=>{const request=route.request().postDataJSON();if(!failed&&request.cmd==='channel.source-add'&&request.args.locator==='@retry_author'){failed=true;await route.fetch();await route.abort('failed')}else await route.continue()}
   await page.route('**/api/rpc',loseResponse);await dialog.getByRole('button',{name:'Add subscription',exact:true}).click();await dialog.getByRole('textbox',{name:'Subscription address',exact:true}).fill('@retry_author');await dialog.getByRole('button',{name:'Follow author',exact:true}).click();await expect(dialog.getByRole('alert')).toBeVisible();await page.unroute('**/api/rpc',loseResponse);await dialog.getByRole('button',{name:'Follow author',exact:true}).click();await expect(dialog.locator('.channel-source-row')).toHaveCount(2)
@@ -81,4 +81,4 @@ try{
  await confirm(await receive());await expect(receipt()).toHaveAttribute('data-sync-state','synced');await page.screenshot({path:path.join(out,'subscriptions-applied.png'),animations:'disabled'});assert.deepEqual(errors,[])
  if(app)assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())))
  fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({passed:true,checks,errors,providerCalls:0,application:application||'source'},null,2)+'\n')
-}finally{await app?.close();await browser?.close();await fixture?.close();fs.rmSync(temp,{recursive:true,force:true})}
+}finally{await app?.close();await browser?.close();await fixture?.close();fs.rmSync(temp,{recursive:true,force:true,maxRetries:10,retryDelay:100})}

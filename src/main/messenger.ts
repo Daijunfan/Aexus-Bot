@@ -40,7 +40,7 @@ const profileImageFile=join(APP_HOME,'messenger-profile-image.json')
 function readDisk(){return readJson<MessengerState>(file,()=>({...EMPTY_MESSENGER,conversations:{},messages:{},drafts:{}}),value=>!!value&&typeof value==='object'&&(value as MessengerState).version===1&&Number.isSafeInteger((value as MessengerState).revision)&&['conversations','messages','drafts'].every(key=>!!(value as any)[key]&&typeof (value as any)[key]==='object'&&!Array.isArray((value as any)[key]))&&((value as MessengerState).orders===undefined||!!(value as MessengerState).orders&&typeof (value as MessengerState).orders==='object'&&!Array.isArray((value as MessengerState).orders)&&Object.entries((value as MessengerState).orders!).every(([scope,order])=>orderScope(scope)&&validOrder(order))))}
 function normalizeChannelReferences(state:MessengerState){
  const aliases=channelRows('SELECT alias,channel_id FROM channel_aliases');if(!aliases.length)return state
- const sources=new Map(channelRows("SELECT id,channel_id FROM sources WHERE plugin IN ('telegram','x','youtube')").map(row=>['source:'+row.id,'channel:'+canonicalChannelId(row.channel_id)]))
+ const sources=new Map(channelRows("SELECT id,channel_id FROM sources WHERE plugin IN ('telegram','x','youtube','zhihu','linkedin')").map(row=>['source:'+row.id,'channel:'+canonicalChannelId(row.channel_id)]))
  const reference=(key:string)=>sources.get(key)??(key.startsWith('channel:')?'channel:'+canonicalChannelId(key.slice(8)):key)
  const conversations:MessengerState['conversations']={}
  for(const [key,value] of Object.entries(state.conversations)){const target=reference(key);if(target===key&&!conversations[target]){conversations[target]={...value};continue}conversations[target]={...conversations[target],...value,pinned:!!conversations[target]?.pinned||!!value.pinned,favorite:!!conversations[target]?.favorite||!!value.favorite,unread:!!conversations[target]?.unread||!!value.unread}}
@@ -75,7 +75,7 @@ function resolve(input:unknown){
 function listIdentity(value:unknown){
  if(typeof value!=='string'||!value.startsWith('source:'))return resolve(value)
  const source=socialIdentity(value)
- return ['youtube','x','telegram'].includes(source.platform)?resolve('channel:'+source.channelId):source
+ return ['youtube','x','telegram','zhihu','linkedin'].includes(source.platform)?resolve('channel:'+source.channelId):source
 }
 function newsMessage(post:ChannelPost):MessengerMessage{return {conversation:conversationKey('channel',post.channelId),conversationTitle:getChannel(post.channelId).name,id:post.id,author:post.authorName??post.sourceName,role:'assistant',text:[post.title,post.body,post.url].filter(Boolean).join('\n\n'),images:post.media.map(media=>post.id+'/'+media.id),createdAt:post.publishedAt,preferences:{saved:post.saved},news:post}}
 function discussionMessage(message:ChannelMessage,state:MessengerState):MessengerMessage{const conversation=conversationKey('channel',message.channelId);return {conversation,conversationTitle:getChannel(message.channelId).name,id:message.id,author:message.authorName,authorIdentity:message.author,role:message.author.kind==='operator'?'user':'assistant',text:message.text,images:message.attachments?.filter(file=>file.kind==='image').map(file=>file.path)??[],files:message.attachments?.filter(file=>file.kind==='file'),createdAt:message.createdAt,preferences:state.messages[messageKey(conversation,message.id)]??{}}}

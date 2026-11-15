@@ -1,3 +1,4 @@
+import {knowledgeSource} from '../shared/knowledge-sources'
 import {CHANNEL_FETCH_APIS} from '../shared/channel-fetch'
 import {CHANNEL_FILTER_FIELDS,normalizeChannelFilter} from '../shared/channel-filter'
 import {appendChannelFilters,validateChannelSources} from './channel-filters'
@@ -22,7 +23,7 @@ import {createHash,randomBytes,randomUUID} from 'node:crypto'
 import type {SQLInputValue} from 'node:sqlite'
 import type {ChannelReadSummary,ChannelReadState,ChannelReadEntry,ChannelAcknowledgment} from '../shared/channels'
 import {authorize,requestContext,isAppAdministrator,requireAppAdministrator} from './authorization'
-import {CHANNEL_PLUGINS,CHANNEL_IMAGE_LIMIT,NEWS_RETENTION_MS,type ChannelSettings,type ChannelRecord,type ChannelSource,type ChannelPost,type ChannelView,type ChannelPostPage,type ChannelMedia,type ChannelSourceInput,type ChannelSourcePatch,type ChannelPublishInput,type ChannelPublishResult,type ChannelMediaInput,type ChannelCollector,type CollectorConfig,type ChannelEvent,type ChannelFileRef} from '../shared/channels'
+import {CHANNEL_PLUGINS,CHANNEL_PLATFORM_NAMES,CHANNEL_POLL_SECONDS,CHANNEL_IMAGE_LIMIT,NEWS_RETENTION_MS,type ChannelSettings,type ChannelRecord,type ChannelSource,type ChannelPost,type ChannelView,type ChannelPostPage,type ChannelMedia,type ChannelSourceInput,type ChannelSourcePatch,type ChannelPublishInput,type ChannelPublishResult,type ChannelMediaInput,type ChannelCollector,type CollectorConfig,type ChannelEvent,type ChannelFileRef} from '../shared/channels'
 
 import {directory,mediaDirectory,db,one,all,run,revision,transaction,changed,closeChannelStore,archiveSources,archiveAvatars,canonicalChannelId,type Row,channelMedia as media,projectChannelPost as projected,postSelect,liveChannelPost as livePost} from './channel-store'
 import {collectorReceived,collectorDelivery,acknowledgeSubscriptions,subscriptionStatus} from './channel-subscription-sync'
@@ -82,6 +83,7 @@ function acknowledgeChannel(args:Record<string,any>,notify=true,readAt=Date.now(
  return result
 }
 function sourceProfileUrl(row:Row){
+ if(row.plugin==='zhihu'||row.plugin==='linkedin')return knowledgeSource(row.plugin,row.locator).url
  if(row.plugin==='x')return 'https://x.com/'+sourceIdentity('x',row.locator)
  if(row.plugin==='youtube'){const target=sourceIdentity('youtube',row.locator);return 'https://www.youtube.com/'+(target.startsWith('UC')?'channel/'+target:target.startsWith('@')?target:'@'+target)}
  if(row.plugin==='telegram'){if(/^https:\/\/t\.me\//i.test(row.locator))return row.locator;if(/^@?[a-zA-Z_][a-zA-Z0-9_]*$/.test(row.locator))return 'https://t.me/'+row.locator.replace(/^@/,'')}
@@ -145,7 +147,7 @@ function updateConfiguredChannel(args:Record<string,any>){
  })
  changed('channels',{channelIds:[row.id]});controlChanged('channel:'+row.id);reconcileSchedules();return result
 }
-function defaultChannel(plugin:ChannelSourceInput['plugin'],name:string){return one('SELECT * FROM channels WHERE kind=? AND id NOT IN (SELECT alias FROM channel_aliases) ORDER BY created_at LIMIT 1',plugin)??createChannel(plugin==='x'?'X':plugin==='telegram'?'Telegram':'YouTube',plugin)}
+function defaultChannel(plugin:ChannelSourceInput['plugin'],name:string){return one('SELECT * FROM channels WHERE kind=? AND id NOT IN (SELECT alias FROM channel_aliases) ORDER BY created_at LIMIT 1',plugin)??createChannel(CHANNEL_PLATFORM_NAMES[plugin],plugin)}
 async function aggregateChannels(args:Record<string,any>){
  requireAppAdministrator();fields(args,['plugin'])
  if(!CHANNEL_PLUGINS.includes(args.plugin))throw fail('Choose a social platform')
@@ -161,13 +163,14 @@ async function aggregateChannels(args:Record<string,any>){
  transaction(()=>{
   run('INSERT INTO channel_read_access VALUES(?,?) ON CONFLICT(channel_id) DO UPDATE SET employee_ids=excluded.employee_ids',target.id,JSON.stringify(readers))
   for(const row of others){run('UPDATE sources SET channel_id=?,updated_at=? WHERE channel_id=?',target.id,Date.now(),row.id);run('INSERT INTO channel_aliases VALUES(?,?)',row.id,target.id);run('UPDATE channel_aliases SET channel_id=? WHERE channel_id=?',target.id,row.id)}
-  run('UPDATE channels SET name=?,revision=revision+1,updated_at=? WHERE id=?',args.plugin==='telegram'?'Telegram':args.plugin==='x'?'X':'YouTube',Date.now(),target.id)
+  run('UPDATE channels SET name=?,revision=revision+1,updated_at=? WHERE id=?',CHANNEL_PLATFORM_NAMES[args.plugin as ChannelSourceInput['plugin']],Date.now(),target.id)
  })
  invalidateChannelSummaries();if(channelStorageSettings())await refreshChannelSummaries(true)
  changed('sources',{channelIds:[target.id,...others.map(row=>row.id)]})
  return {channel:channelView(channelRow(target.id)),aliases:others.map(row=>row.id)}
 }
 function sourceIdentity(plugin:ChannelSourceInput['plugin'],locator:string){
+ if(plugin==='zhihu'||plugin==='linkedin')return knowledgeSource(plugin,locator).identity
  const value=locator.trim().replace(/\/+$/,'');if(plugin==='telegram'){const link=value.match(/^https?:\/\/(?:www\.)?(?:t\.me|telegram\.me)\/(?:s\/)?([a-z\d_]+)(?:\/\d+)?(?:[?#].*)?$/i);if(link&&!['c','joinchat','addlist'].includes(link[1].toLowerCase()))return link[1].toLowerCase();return /^@?[a-z\d_]+$/i.test(value)?value.replace(/^@/,'').toLowerCase():value}
  const url=value.match(/^https?:\/\/([^/?#]+)(\/[^?#]*)?(?:[?#].*)?$/i),hosts=plugin==='x'?['x.com','www.x.com','twitter.com','www.twitter.com','mobile.twitter.com']:['youtube.com','www.youtube.com','m.youtube.com']
  const invalid=()=>fail(plugin==='x'?'Use a valid X author handle or profile URL':'Use a YouTube author handle or channel homepage URL','INVALID_SOURCE_LOCATOR')
@@ -185,14 +188,14 @@ function sourceIdentity(plugin:ChannelSourceInput['plugin'],locator:string){
  return creator[1]?'@'+creator[1].toLowerCase():creator[2]??target
 }
 function addSource(args:ChannelSourceInput):ChannelSource{
- fields(args as any,['plugin','targetId','locator','name','enabled','pollSeconds','channelId']);if(!CHANNEL_PLUGINS.includes(args.plugin))throw fail('Use telegram, x or youtube')
+ fields(args as any,['plugin','targetId','locator','name','enabled','pollSeconds','channelId']);if(!CHANNEL_PLUGINS.includes(args.plugin))throw fail('Choose Telegram, X, YouTube, Zhihu or LinkedIn')
  const locator=text(args.locator,'source locator',4096),targetId=optionalText(args.targetId,'target ID',4096)??args.plugin+':'+locator.replace(/\/$/,''),name=optionalText(args.name,'source name')??locator
  if(args.enabled!==undefined&&typeof args.enabled!=='boolean')throw fail('enabled must be boolean')
  const identity=sourceIdentity(args.plugin,locator),existing=one('SELECT * FROM sources WHERE plugin=? AND target_id=?',args.plugin,targetId)??all('SELECT * FROM sources WHERE plugin=?',args.plugin).find(row=>sourceIdentity(args.plugin,row.locator)===identity)
  if(existing){if(sourceIdentity(args.plugin,existing.locator)!==identity)throw fail('An existing source cannot change authors; follow a new source instead','SOURCE_ID_CONFLICT',409);return updateSource(existing.id,{...(args.name!==undefined?{name}:{}),enabled:args.enabled??true,...(args.pollSeconds!==undefined?{pollSeconds:args.pollSeconds}:{}),...(args.channelId?{channelId:args.channelId}:{})})}
  if(one('SELECT id FROM sources WHERE target_id=?',targetId))throw fail('Target ID is already used by another source','SOURCE_ID_CONFLICT',409)
  if(args.channelId)assertExternalChannel(args.channelId)
- const row=transaction(()=>{const channel=args.channelId?channelRow(args.channelId):defaultChannel(args.plugin,name),now=Date.now(),id='ns_'+randomUUID();run('INSERT INTO sources VALUES(?,?,?,?,?,?,?,?,?,?)',id,args.plugin,targetId,locator,name,Number(args.enabled??true),args.pollSeconds===undefined?{telegram:300,x:3600,youtube:7200}[args.plugin]:positive(args.pollSeconds,'poll interval'),channel.id,now,now);return sourceRow(id)})
+ const row=transaction(()=>{const channel=args.channelId?channelRow(args.channelId):defaultChannel(args.plugin,name),now=Date.now(),id='ns_'+randomUUID();run('INSERT INTO sources VALUES(?,?,?,?,?,?,?,?,?,?)',id,args.plugin,targetId,locator,name,Number(args.enabled??true),args.pollSeconds===undefined?CHANNEL_POLL_SECONDS[args.plugin]:positive(args.pollSeconds,'poll interval'),channel.id,now,now);return sourceRow(id)})
  changed('sources',{channelIds:[row.channel_id]});return source(row)
 }
 function updateSource(id:unknown,patch:ChannelSourcePatch):ChannelSource{

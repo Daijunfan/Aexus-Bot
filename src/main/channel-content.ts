@@ -11,7 +11,7 @@ const bytes=new Map<string,{data:Buffer;mimeType:string}>(),pendingAssets=new Ma
 let routeKey=''
 let byteCount=0,ready:Promise<void>|undefined,hydrated=false,flushing:Promise<void>|undefined,lastError='',summaryAt=0,summaryPending:Promise<void>|undefined
 const LIMIT=32*1024*1024,touched=new Map<string,number>(),imageRequests=new Map<string,Promise<{data:Buffer;mimeType:string}>>(),postRequests=new Map<string,Promise<void>>()
-export const channelContentStatus=()=>({ready:hydrated,error:lastError||undefined,memoryBytes:byteCount,cachedPosts:Number(one('SELECT COUNT(*) n FROM posts')?.n??0),textBytes:Number(one('SELECT COALESCE(SUM(length(CAST(body AS BLOB))+length(CAST(title AS BLOB))),0) n FROM posts')?.n??0),rssBytes:process.memoryUsage().rss,policy:'memory-unless-saved',retentionDays:null,platformCapacityBytes:{telegram:1e12,x:1e12,youtube:1e12}})
+export const channelContentStatus=()=>({ready:hydrated,error:lastError||undefined,memoryBytes:byteCount,cachedPosts:Number(one('SELECT COUNT(*) n FROM posts')?.n??0),textBytes:Number(one('SELECT COALESCE(SUM(length(CAST(body AS BLOB))+length(CAST(title AS BLOB))),0) n FROM posts')?.n??0),rssBytes:process.memoryUsage().rss,policy:'memory-unless-saved',retentionDays:null,platformCapacityBytes:{telegram:1e12,x:1e12,youtube:1e12,zhihu:1e12,linkedin:1e12}})
 export function channelAsset(id:string){const value=bytes.get(id);if(value){bytes.delete(id);bytes.set(id,value)}return value}
 export function cacheChannelAsset(id:string,data:Buffer,mimeType:string,pending=false){
  if(pending&&channelStorageSettings()){pendingAssets.set(id,{data,mimeType});return}

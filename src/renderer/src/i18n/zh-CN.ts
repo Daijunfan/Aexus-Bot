@@ -3913,4 +3913,9 @@ export const zhCN:Record<string,string> = {
   "Choose a supervising Secretary.": "请选择负责督办的秘书。",
   "Use a reminder interval between 10 seconds and 365 days.": "提醒间隔须在 10 秒到 365 天之间。",
   "Choose an available employee for this task.": "请选择可用的负责员工。",
+  "Zhihu channel": "知乎频道",
+  "LinkedIn channel": "LinkedIn 频道",
+  "Add a Telegram, X, YouTube, Zhihu or LinkedIn subscription.": "添加 Telegram、X、YouTube、知乎或 LinkedIn 订阅。",
+  "Public Zhihu selections use https://daily.zhihu.com/. Author feeds require authorized access on the collector; adding a source does not imply that its content is available.": "公开精选使用 https://daily.zhihu.com/。作者动态需要采集端具备授权访问能力；添加来源不代表已成功读取其内容。",
+  "Only public original posts are collected. Reposts, short promotions and private member data are excluded. Restricted sources retain their access error.": "采集公开原创帖子，过滤转载和简短推广，不读取非公开会员信息。受限来源保留真实访问错误。",
 }

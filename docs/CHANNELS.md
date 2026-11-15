@@ -336,3 +336,8 @@ organization.
 ## Telegram wallpaper colors
 
 Messages settings exposes the original Telegram Web A light/dark gradients and all twelve solid color chips, plus pink/purple/blue/gray variants and custom one-to-four RGB colors with rotation. `settings.set {messageWallpaper:{pattern:"telegram",palette:"pink"}}` selects the same palette as the UI; use `palette:"custom",colors:["#c6c1ed","#edc7dd"],rotation:90` for a gradient. Channels reuse the original Telegram SVG; a static64x64 gradient uses the upstream resting blend with no animation loop or network request. These are bundled decoration/configuration, not a cache of channel content.
+
+
+## Zhihu and LinkedIn
+
+These platforms share the same authenticated subscription and reader interfaces. Zhihu currently covers public editorial originals and substantive public discussion; full-author access is not implied. LinkedIn reads substantive original posts from public guest pages with exact platform dates, without private member data or login automation. See [knowledge channel scope](KNOWLEDGE_CHANNELS.md) for collection, candidate and access-state boundaries.

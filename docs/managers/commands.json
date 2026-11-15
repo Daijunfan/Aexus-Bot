@@ -6778,7 +6778,7 @@
   },
   {
     "name": "channel.aggregate",
-    "args": "--plugin telegram|x|youtube",
+    "args": "--plugin telegram|x|youtube|zhihu|linkedin",
     "summary": "User-only: consolidate empty platform channel wrappers into one aggregate while retaining subscription and article identities; old channel links remain aliases",
     "gui": "Platform channel aggregation",
     "inputSchema": {
@@ -6789,7 +6789,9 @@
           "enum": [
             "telegram",
             "x",
-            "youtube"
+            "youtube",
+            "zhihu",
+            "linkedin"
           ]
         }
       },
@@ -7431,7 +7433,7 @@
   },
   {
     "name": "channel.sources",
-    "args": "[--channel ID] [--plugin telegram|x|youtube] [--query TEXT] [--include-disabled]",
+    "args": "[--channel ID] [--plugin telegram|x|youtube|zhihu|linkedin] [--query TEXT] [--include-disabled]",
     "summary": "Search subscribed authors by name/handle within authorized channels; Secretary sees all. Returns stable source IDs, original avatars and source order",
     "gui": "News subscriptions",
     "inputSchema": {
@@ -7446,7 +7448,9 @@
           "enum": [
             "telegram",
             "x",
-            "youtube"
+            "youtube",
+            "zhihu",
+            "linkedin"
           ]
         },
         "includeDisabled": {
@@ -7815,7 +7819,9 @@
           "enum": [
             "telegram",
             "x",
-            "youtube"
+            "youtube",
+            "zhihu",
+            "linkedin"
           ]
         },
         "targetId": {
@@ -8924,7 +8930,7 @@
   },
   {
     "name": "messenger.directory",
-    "args": "[--type all|outsource|private|groups|channels|telegram|x|youtube] [--query TEXT] [--folder ID] [--archived exclude|only|include] [--offset N] [--limit N]",
+    "args": "[--type all|outsource|private|groups|channels|telegram|x|youtube|zhihu|linkedin] [--query TEXT] [--folder ID] [--archived exclude|only|include] [--offset N] [--limit N]",
     "summary": "User or Secretary: query one category using folder ID from messenger.state.categories, or one type. No category means All. Archive filtering applies only to All; category queries include their archived conversations. No message bodies, read acknowledgements or execution.",
     "gui": "Message category filtering",
     "inputSchema": {
@@ -8940,7 +8946,9 @@
             "channels",
             "telegram",
             "x",
-            "youtube"
+            "youtube",
+            "zhihu",
+            "linkedin"
           ]
         },
         "query": {
@@ -8975,7 +8983,7 @@
   },
   {
     "name": "messenger.social",
-    "args": "[--platform telegram|x|youtube] [--include-disabled]",
+    "args": "[--platform telegram|x|youtube|zhihu|linkedin] [--include-disabled]",
     "summary": "User or Secretary: list each social element with stable source ID, parent channel, latest publication and per-source unread count; no reads acknowledged",
     "gui": "Social category picker",
     "inputSchema": {
@@ -8986,7 +8994,9 @@
           "enum": [
             "telegram",
             "x",
-            "youtube"
+            "youtube",
+            "zhihu",
+            "linkedin"
           ]
         },
         "includeDisabled": {
@@ -9541,7 +9551,7 @@
   },
   {
     "name": "messenger.folder-save",
-    "args": "--name NAME --conversations JSON [--include outsource|private|groups|channels|telegram|x|youtube|null] [--excluded JSON] [--id ID] [--expected-revision N]",
+    "args": "--name NAME --conversations JSON [--include outsource|private|groups|channels|telegram|x|youtube|zhihu|linkedin|null] [--excluded JSON] [--id ID] [--expected-revision N]",
     "summary": "User or Secretary: create or update a personal folder of private, group and channel conversations without moving their content",
     "gui": "Conversation folders",
     "inputSchema": {
@@ -9577,6 +9587,8 @@
             "telegram",
             "x",
             "youtube",
+            "zhihu",
+            "linkedin",
             "null",
             null
           ]

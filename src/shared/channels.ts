@@ -2,8 +2,11 @@ import type {MessageAttachment} from './message-attachments'
 import type {PrincipalRef} from './management'
 import type {ChatDelivery,ChatAcknowledgmentPolicy} from './chat-groups'
 /** Channel identity and administrator membership are independent of employee company roles. */
-export const CHANNEL_PLUGINS=['telegram','x','youtube'] as const
+export const CHANNEL_PLUGINS=['telegram','x','youtube','zhihu','linkedin'] as const
 export type ChannelSocialPlugin=typeof CHANNEL_PLUGINS[number]
+export const isChannelSocialPlugin=(value:unknown):value is ChannelSocialPlugin=>typeof value==='string'&&(CHANNEL_PLUGINS as readonly string[]).includes(value)
+export const CHANNEL_PLATFORM_NAMES:Record<ChannelSocialPlugin,string>={telegram:'Telegram',x:'X',youtube:'YouTube',zhihu:'知乎',linkedin:'LinkedIn'}
+export const CHANNEL_POLL_SECONDS:Record<ChannelSocialPlugin,number>={telegram:300,x:3600,youtube:7200,zhihu:1800,linkedin:7200}
 export type ChannelPlugin=ChannelSocialPlugin|'employee'|'process'
 /** Publishing membership uses the existing channel administrator list, never a second employee identity. */
 export type TelegramPostInfo={groupId?:string;views?:number;subscriberCount?:number;reactions?:{emoji:string;count:number}[]}

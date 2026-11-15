@@ -18,6 +18,7 @@ const coreDocuments=[
  ['core/message-collaboration','docs/MESSAGE_COLLABORATION.md'],
  ['core/bot-workers','docs/BOT_WORKERS.md'],['core/event-tasks','docs/EVENT_TASKS.md'],
  ['core/channels','docs/CHANNELS.md'],['core/channel-filters','docs/CHANNEL_FILTERS.md'],
+ ['core/knowledge-channels','docs/KNOWLEDGE_CHANNELS.md'],
  ['core/secretary-api','docs/SECRETARY_API_PARITY.md']
 ] as const
 
