@@ -36,7 +36,7 @@ npm run dev
 npm run app
 ```
 
-The native desktop still uses its local Core/IPC and existing data. Public distribution commands run the redistribution gate before packaging. macOS install uses `npm run install:mac -- --source '/path/to/Aexus Bot.app'` only after the old application is fully stopped. The installer keeps the previous bundle only during the installation transaction for failure rollback, then deletes it after successful verification and registration. It retains no permanent application copies and preserves user data, credentials and workspaces. Existing historical backups are not swept by the installer.
+The native desktop still uses its local Core/IPC and existing data. Public distribution commands run the redistribution gate before packaging. macOS install uses `npm run install:mac -- --source '/path/to/Aexus Bot.app'` only after the old application is fully stopped. The installer keeps the previous bundle only during the installation transaction for failure rollback. After successful verification and registration, it deletes the replaced bundles, consumes the source App (including the candidate under `release/mac-arm64`), and removes historical application bundles in the data directory's `backups` folder whose bundle ID matches this application. Removed candidates and historical bundles are unregistered from LaunchServices. Only the installed App remains; user data, credentials, workspaces, state backups and other applications are preserved. Failed installations keep the candidate for retry and restore the previous App.
 
 A native desktop shell can also connect to a remote authenticated Web Core:
 

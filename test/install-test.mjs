@@ -7,12 +7,12 @@ import assert from 'node:assert/strict'
 import {installApp,runningApp} from '../scripts/install-app.mjs'
 const require=createRequire(import.meta.url),asar=require('@electron/asar'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'ac-inst-'))
 const target=path.join(temp,'Aexus Bot.app'),legacy=path.join(temp,'Aexus.app'),source=path.join(temp,'candidate.app'),home=path.join(temp,'data')
-async function bundle(app,version){
+async function bundle(app,version,id='com.agentscompany.app'){
  const content=path.join(temp,'content-'+version);fs.mkdirSync(path.join(content,'out/renderer/assets'),{recursive:true})
  fs.writeFileSync(path.join(content,'out/renderer/index.html'),'<!doctype html><div id="root"></div><script src="./assets/app.js"></script>')
  fs.writeFileSync(path.join(content,'out/renderer/assets/app.js'),'window.version='+JSON.stringify(version))
  fs.mkdirSync(path.join(app,'Contents/Resources'),{recursive:true});fs.mkdirSync(path.join(app,'Contents/MacOS'))
- fs.writeFileSync(path.join(app,'Contents/Info.plist'),`<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.agentscompany.app</string><key>CFBundleShortVersionString</key><string>${version}</string></dict></plist>`)
+ fs.writeFileSync(path.join(app,'Contents/Info.plist'),`<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>${id}</string><key>CFBundleShortVersionString</key><string>${version}</string></dict></plist>`)
  await asar.createPackage(content,path.join(app,'Contents/Resources/app.asar'))
 }
 let process_
@@ -24,31 +24,48 @@ try{
  assert.ok(runningApp(target).length)
  assert.throws(()=>installApp({source,target,home}),/Running applications cannot be replaced/)
  assert.ok(fs.readFileSync(path.join(target,'Contents/Resources/app.asar')).equals(before))
+ assert.ok(fs.existsSync(source))
  assert.equal(fs.existsSync(path.join(home,'backups')),false)
  console.log('PASS installer refuses a running app before changing files or metadata')
  const ended=new Promise(r=>process_.once('exit',r));process_.kill();await ended;process_=undefined
- const result=installApp({source,target,home})
+ const candidate=fs.readFileSync(path.join(source,'Contents/Resources/app.asar')),result=installApp({source,target,home})
  assert.equal(result.version,'2');assert.equal(result.backup,null);assert.equal(result.legacyBackup,null)
  assert.equal(fs.readFileSync(path.join(home,'sessions.json'),'utf8'),'original data')
  // asar caches by pathname too: inspect via a fresh process/path-independent file read.
- assert.ok(fs.readFileSync(path.join(target,'Contents/Resources/app.asar')).equals(fs.readFileSync(path.join(source,'Contents/Resources/app.asar'))))
+ assert.ok(fs.readFileSync(path.join(target,'Contents/Resources/app.asar')).equals(candidate))
+ assert.equal(fs.existsSync(source),false)
  const noTemporaryBundles=()=>assert.deepEqual(fs.readdirSync(temp).filter(name=>name.startsWith('.Aexus-Bot-')),[])
  noTemporaryBundles()
  assert.ok(fs.readdirSync(path.join(home,'backups')).every(name=>name.endsWith('.json')))
- console.log('PASS stopped-app installation verifies the new app and removes the replaced bundle while preserving user data')
+ console.log('PASS stopped-app installation verifies the new app and removes both the replaced bundle and source candidate while preserving user data')
  const historical=path.join(home,'backups','user-managed-old.backup');fs.mkdirSync(historical);fs.writeFileSync(path.join(historical,'keep.txt'),'User handles existing backups')
+ const oldApp=path.join(home,'backups','AexusBot-before-1.backup'),otherApp=path.join(home,'backups','Other.app')
+ await bundle(oldApp,'old');await bundle(otherApp,'other','com.example.other');await bundle(source,'3')
+ process_=spawn('/bin/sleep',['30'],{argv0:path.join(oldApp,'Contents/MacOS/Aexus Bot')})
+ await new Promise(r=>process_.once('spawn',r))
+ assert.throws(()=>installApp({source,target,home}),/Running applications cannot be replaced/)
+ assert.ok(fs.existsSync(oldApp));assert.ok(fs.existsSync(source))
+ const historicalEnded=new Promise(r=>process_.once('exit',r));process_.kill();await historicalEnded;process_=undefined
+ console.log('PASS installation refuses a running historical App before consuming any bundle')
  installApp({source,target,home});noTemporaryBundles()
- assert.deepEqual(fs.readdirSync(path.join(home,'backups')).filter(name=>!name.endsWith('.json')),['user-managed-old.backup'])
+ assert.equal(fs.existsSync(source),false);assert.equal(fs.existsSync(oldApp),false)
+ assert.deepEqual(fs.readdirSync(path.join(home,'backups')).filter(name=>!name.endsWith('.json')).sort(),['Other.app','user-managed-old.backup'])
  assert.equal(fs.readFileSync(path.join(historical,'keep.txt'),'utf8'),'User handles existing backups')
- console.log('PASS repeated installation creates no permanent app copies and leaves existing user-managed backups untouched')
+ console.log('PASS repeated installation removes historical application copies while preserving state backups, user files and other applications')
+ const alias=path.join(temp,'installed-alias.app');fs.symlinkSync(target,alias)
+ assert.throws(()=>installApp({source:alias,target,home}),/Source and target must differ/)
+ assert.ok(fs.existsSync(target));fs.rmSync(alias)
+ console.log('PASS an alias of the installed App cannot be consumed as a source candidate')
+ await bundle(source,'4')
  const current=fs.readFileSync(path.join(target,'Contents/Resources/app.asar')),rename=fs.renameSync
  try{
   fs.renameSync=(from,to)=>{if(path.basename(from)==='next'&&to===target)throw Error('Simulated install failure');return rename(from,to)}
   assert.throws(()=>installApp({source,target,home}),/Simulated install failure/)
  }finally{fs.renameSync=rename}
  assert.ok(fs.readFileSync(path.join(target,'Contents/Resources/app.asar')).equals(current));noTemporaryBundles()
+ assert.ok(fs.existsSync(source))
  assert.equal(fs.readFileSync(path.join(home,'sessions.json'),'utf8'),'original data')
- console.log('PASS failed installation restores the previous app and removes its temporary transaction directory')
+ console.log('PASS failed installation restores the previous App, preserves the source for retry and removes temporary bundles')
  fs.renameSync(target,legacy)
  process_=spawn('/bin/sleep',['30'],{argv0:path.join(legacy,'Contents/MacOS/Aexus')})
  await new Promise(r=>process_.once('spawn',r))
@@ -57,17 +74,19 @@ try{
  const legacyEnded=new Promise(r=>process_.once('exit',r));process_.kill();await legacyEnded;process_=undefined
  const migrated=installApp({source,target,home})
  assert.ok(fs.existsSync(target));assert.equal(fs.existsSync(legacy),false);assert.equal(migrated.legacyBackup,null)
+ assert.equal(fs.existsSync(source),false)
  assert.equal(migrated.backup,null);noTemporaryBundles()
  assert.equal(fs.readFileSync(path.join(home,'sessions.json'),'utf8'),'original data')
  console.log('PASS Aexus Bot upgrade refuses a running legacy app and removes the stopped legacy bundle after installation')
  const renamed=path.join(temp,'Anexus.app'),otherLegacies=['Avalon.app','Agents Company.app'].map(name=>path.join(temp,name))
- fs.renameSync(target,renamed);for(const app of otherLegacies)await bundle(app,'1')
+ fs.renameSync(target,renamed);for(const app of otherLegacies)await bundle(app,'1');await bundle(source,'5')
  process_=spawn('/bin/sleep',['30'],{argv0:path.join(renamed,'Contents/MacOS/Anexus')})
  await new Promise(r=>process_.once('spawn',r))
  assert.throws(()=>installApp({source,target,home}),/Running applications cannot be replaced/)
  const renameEnded=new Promise(r=>process_.once('exit',r));process_.kill();await renameEnded;process_=undefined
  const upgraded=installApp({source,target,home})
  assert.ok(fs.existsSync(target));for(const app of [renamed,...otherLegacies])assert.equal(fs.existsSync(app),false)
+ assert.equal(fs.existsSync(source),false)
  assert.equal(upgraded.legacyBackup,null);assert.equal(fs.readFileSync(path.join(home,'sessions.json'),'utf8'),'original data');noTemporaryBundles()
  console.log('PASS Aexus Bot upgrade removes all replaced product-name variants and retains only the newly installed bundle')
 }finally{process_?.kill();fs.rmSync(temp,{recursive:true,force:true})}

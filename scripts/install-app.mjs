@@ -14,17 +14,20 @@ export function runningApp(target) {
 }
 export function installApp({source,target='/Applications/Aexus Bot.app',home=process.env.AGENTS_COMPANY_HOME||path.join(os.homedir(),'AgentsCompany')}) {
   source=path.resolve(source);target=path.resolve(target)
-  if(source===target)throw new Error('Source and target must differ')
+  const sourceReal=fs.realpathSync(source),targetReal=fs.existsSync(target)?fs.realpathSync(target):target
+  if(sourceReal===targetReal||sourceReal.startsWith(targetReal+path.sep)||targetReal.startsWith(sourceReal+path.sep))throw new Error('Source and target must differ and cannot contain one another')
+  const backups=path.join(home,'backups')
+  const historical=fs.existsSync(backups)?fs.readdirSync(backups,{withFileTypes:true}).filter(entry=>entry.isDirectory()&&/\.(app|backup)$/.test(entry.name)).map(entry=>path.join(backups,entry.name)).filter(app=>fs.existsSync(path.join(app,'Contents/Info.plist'))&&plist(app,'CFBundleIdentifier')===bundleId):[]
   const legacyNames=path.basename(target)==='Aexus Bot.app'?['Avalon.app','Anexus.app','Agents Company.app','Aexus.app']:path.basename(target)==='Avalon.app'?['Anexus.app','Agents Company.app']:path.basename(target)==='Anexus.app'?['Agents Company.app']:[]
   const legacies=legacyNames.map(name=>path.join(path.dirname(target),name))
   const replaced=[target,...legacies.filter(app=>app!==source)].filter(app=>fs.existsSync(app))
-  const stopped=()=>{if([...new Set([source,target,...replaced])].some(app=>runningApp(app).length))throw new Error('Close Aexus Bot and legacy application versions before installing. Running applications cannot be replaced; no app files were changed.')}
+  const stopped=()=>{if([...new Set([source,target,...replaced,...historical])].some(app=>runningApp(app).length))throw new Error('Close Aexus Bot and legacy application versions before installing. Running applications cannot be replaced; no app files were changed.')}
   stopped()
   if([source,...replaced].some(app=>plist(app,'CFBundleIdentifier')!==bundleId))throw new Error('Unexpected application identity')
   const archive=path.join(source,'Contents/Resources/app.asar'),html=asar.extractFile(archive,'out/renderer/index.html').toString('utf8')
   if(!html.startsWith('<!doctype html>')||!html.includes('id="root"'))throw new Error('Invalid renderer HTML')
   for(const [,file] of html.matchAll(/(?:src|href)="\.\/([^"?#]+)"/g))if(!asar.extractFile(archive,'out/renderer/'+file).length)throw new Error('Empty renderer asset: '+file)
-  const version=plist(source,'CFBundleShortVersionString'),stamp=Date.now().toString(),backups=path.join(home,'backups')
+  const version=plist(source,'CFBundleShortVersionString'),stamp=Date.now().toString()
   const work=fs.mkdtempSync(path.join(path.dirname(target),'.Aexus-Bot-install-')),stage=path.join(work,'next'),moved=[]
   fs.mkdirSync(backups,{recursive:true})
   try {
@@ -42,6 +45,11 @@ export function installApp({source,target='/Applications/Aexus Bot.app',home=pro
       if(path.dirname(target)==='/Applications')execFileSync('/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister',['-f',target])
     }catch(error){if(installed)fs.rmSync(target,{recursive:true,force:true});for(const {app,backup} of moved.reverse())fs.renameSync(backup,app);throw error}
     for(const {backup} of moved)fs.rmSync(backup,{recursive:true,force:true})
+    // A successful install consumes its candidate too; retaining it registers a second App.
+    for(const app of new Set([source,...historical])){
+      if(path.dirname(target)==='/Applications')execFileSync('/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister',['-u',app])
+      fs.rmSync(app,{recursive:true,force:true})
+    }
     return {version,target,backup:null,legacyBackup:null}
   }finally{
     fs.rmSync(stage,{recursive:true,force:true})
