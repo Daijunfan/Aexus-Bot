@@ -9697,7 +9697,7 @@
   {
     "name": "messenger.message",
     "args": "CONVERSATION [MESSAGE_ID | --ids JSON] --patch JSON",
-    "summary": "User or Secretary: save, pin, react to or hide an existing public message; native history stays intact",
+    "summary": "User or Secretary: save, pin, react to or hide an existing public message. Channel news accepts saved and personal reaction only; original content and platform reaction counts stay intact.",
     "gui": "Message actions",
     "inputSchema": {
       "type": "object",
@@ -9740,7 +9740,8 @@
                 "✅",
                 "👀",
                 "💡"
-              ]
+              ],
+              "description": "Personal Aexus annotation; does not post a reaction to an external platform."
             }
           },
           "required": []

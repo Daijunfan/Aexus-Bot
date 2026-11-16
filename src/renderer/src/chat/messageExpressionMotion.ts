@@ -16,7 +16,7 @@ export function useMessageExpression(root:RefObject<HTMLDivElement|null>,reactio
   useLayoutEffect(()=>{
     if(!acknowledgement||played.current===acknowledgement||reaction!==acknowledgement.emoji)return
     played.current=acknowledgement
-    const owner=root.current?.closest('[data-chat-item]'),target=owner?.querySelector<HTMLElement>('.message-reaction')
+    const owner=root.current?.closest('[data-chat-item],[data-news-id]'),target=owner&&[...owner.querySelectorAll<HTMLElement>('.message-reaction')].find(element=>element.dataset.emoji===acknowledgement.emoji)
     if(!target||!motionAllowed())return
     const box=target.getBoundingClientRect()
     if(box.bottom<=0||box.top>=innerHeight||box.right<=0||box.left>=innerWidth)return

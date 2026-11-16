@@ -13,9 +13,11 @@ export function QuoteSelection({container,messages,onQuote,identity,enabled=true
   const [value,setValue]=useState<{id:string;quote:MessageQuote;x:number;y:number}|null>(null)
   useEffect(()=>{
     setValue(null);cache.current=null;if(!enabled)return
-    let frame=0
+    let frame=0,selecting=false
     const read=()=>{
+      if(selecting){setValue(null);return}
       if(document.activeElement?.closest('.message-quote-selection'))return
+      if(document.querySelector('.messenger-menu:not([aria-hidden=true])')){setValue(null);return}
       const selection=getSelection(),el=container.current
       if(!el||!selection||selection.isCollapsed||selection.rangeCount!==1){setValue(null);return}
       const range=selection.getRangeAt(0),start=range.startContainer.nodeType===Node.ELEMENT_NODE?range.startContainer as Element:range.startContainer.parentElement,end=range.endContainer.nodeType===Node.ELEMENT_NODE?range.endContainer as Element:range.endContainer.parentElement
@@ -27,13 +29,17 @@ export function QuoteSelection({container,messages,onQuote,identity,enabled=true
       const quote=selectedQuote(row,message.source,range,cache.current.text)
       if(!quote){setValue(null);return}
       const rect=range.getBoundingClientRect(),bounds=el.getBoundingClientRect();if(rect.bottom<bounds.top||rect.top>bounds.bottom){setValue(null);return}
-      setValue({id:message!.id,quote,x:Math.max(8,Math.min(innerWidth-190,rect.left+rect.width/2-90)),y:Math.max(bounds.top+5,rect.top-43)})
+      const scale=parseFloat(getComputedStyle(document.documentElement).zoom)||1,above=rect.top-43*scale,y=above>=bounds.top+5*scale?above:rect.bottom+8*scale
+      setValue({id:message!.id,quote,x:Math.max(8,Math.min(innerWidth/scale-190,(rect.left+rect.width/2)/scale-90)),y:Math.max(8,Math.min(innerHeight/scale-43,y/scale))})
     }
     const update=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(read)}
-    const key=(event:KeyboardEvent)=>{if(event.key==='Escape'&&(document.activeElement?.closest('.message-quote-selection')||!getSelection()?.isCollapsed&&container.current?.contains(getSelection()?.anchorNode??null))){event.preventDefault();event.stopImmediatePropagation();getSelection()?.removeAllRanges();setValue(null);container.current?.focus({preventScroll:true})}}
-    document.addEventListener('selectionchange',update);container.current?.addEventListener('scroll',update);window.addEventListener('resize',update);window.addEventListener('keydown',key,true)
+    const start=(event:PointerEvent)=>{if(event.button===0&&event.target instanceof Element&&event.target.closest('.markdown')&&!event.target.closest('button,a')){selecting=true;setValue(null)}}
+    const end=()=>{if(selecting){selecting=false;update()}}
+    const key=(event:KeyboardEvent)=>{if(!document.querySelector('.messenger-menu:not([aria-hidden=true])')&&event.key==='Escape'&&(document.activeElement?.closest('.message-quote-selection')||!getSelection()?.isCollapsed&&container.current?.contains(getSelection()?.anchorNode??null))){event.preventDefault();event.stopImmediatePropagation();getSelection()?.removeAllRanges();setValue(null);container.current?.focus({preventScroll:true})}}
+    const context=()=>{cancelAnimationFrame(frame);setValue(null)}
+    document.addEventListener('selectionchange',update);container.current?.addEventListener('scroll',update);container.current?.addEventListener('contextmenu',context,true);container.current?.addEventListener('pointerdown',start);document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end);window.addEventListener('resize',update);window.addEventListener('keydown',key,true)
     const root=container.current
-    return()=>{cancelAnimationFrame(frame);document.removeEventListener('selectionchange',update);root?.removeEventListener('scroll',update);window.removeEventListener('resize',update);window.removeEventListener('keydown',key,true)}
+    return()=>{cancelAnimationFrame(frame);document.removeEventListener('selectionchange',update);root?.removeEventListener('scroll',update);root?.removeEventListener('contextmenu',context,true);root?.removeEventListener('pointerdown',start);document.removeEventListener('pointerup',end);document.removeEventListener('pointercancel',end);window.removeEventListener('resize',update);window.removeEventListener('keydown',key,true)}
   },[container,identity,enabled])
   if(!value)return null
   return createPortal(<SelectionToolbar x={value.x} y={value.y} onQuote={()=>{callback.current(value.id,value.quote);getSelection()?.removeAllRanges();setValue(null)}}/>,document.body)

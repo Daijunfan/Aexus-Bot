@@ -78,9 +78,9 @@ function listIdentity(value:unknown){
  const source=socialIdentity(value)
  return ['youtube','x','telegram','zhihu','linkedin'].includes(source.platform)?resolve('channel:'+source.channelId):source
 }
-function newsMessage(post:ChannelPost):MessengerMessage{return {conversation:conversationKey('channel',post.channelId),conversationTitle:getChannel(post.channelId).name,id:post.id,author:post.authorName??post.sourceName,role:'assistant',text:[post.title,post.body,post.url].filter(Boolean).join('\n\n'),images:post.media.map(media=>post.id+'/'+media.id),createdAt:post.publishedAt,preferences:{saved:post.saved},news:post}}
+function newsMessage(post:ChannelPost,state:MessengerState):MessengerMessage{const conversation=conversationKey('channel',post.channelId);return {conversation,conversationTitle:getChannel(post.channelId).name,id:post.id,author:post.authorName??post.sourceName,role:'assistant',text:[post.title,post.body,post.url].filter(Boolean).join('\n\n'),images:post.media.map(media=>post.id+'/'+media.id),createdAt:post.publishedAt,preferences:{saved:post.saved,reaction:state.messages[messageKey(conversation,post.id)]?.reaction},news:post}}
 function discussionMessage(message:ChannelMessage,state:MessengerState):MessengerMessage{const conversation=conversationKey('channel',message.channelId);return {conversation,conversationTitle:getChannel(message.channelId).name,id:message.id,author:message.authorName,authorIdentity:message.author,role:message.author.kind==='operator'?'user':'assistant',text:message.text,images:message.attachments?.filter(file=>file.kind==='image').map(file=>file.path)??[],files:message.attachments?.filter(file=>file.kind==='file'),createdAt:message.createdAt,preferences:state.messages[messageKey(conversation,message.id)]??{}}}
-function channelMessage(channelId:string,id:string,state:MessengerState){if(id.startsWith('cm_'))return discussionMessage(getChannelMessage(channelId,id),state);const post=getChannelPost(id);if(post.channelId!==channelId)throw Error('News item belongs to another channel');return newsMessage(post)}
+function channelMessage(channelId:string,id:string,state:MessengerState){if(id.startsWith('cm_'))return discussionMessage(getChannelMessage(channelId,id),state);const post=getChannelPost(id);if(post.channelId!==channelId)throw Error('News item belongs to another channel');return newsMessage(post,state)}
 const liveEpoch=randomUUID()
 function messageSource(ref:ReturnType<typeof resolve>):MessageSource{
  if(ref.kind==='channel')return channelMessageSources(ref.id)[0]
@@ -221,8 +221,8 @@ export async function messengerRequest(command:string,args:Record<string,any>={}
    const ids=args.ids??[args.id];if(!Array.isArray(ids)||!ids.length||ids.length>200||ids.some((id:unknown)=>typeof id!=='string'))throw Error('Choose 1–200 message IDs')
    if(ref.kind==='channel'){
     const selected=[...new Set<string>(ids)].map(id=>channelMessage(ref.id,id,state))
-    if(selected.some(message=>message.news)&&Object.keys(patch).some(key=>key!=='saved'))throw Error('Use news actions to manage a channel post')
-    for(const message of selected){if(message.news){channelRequest('channel.save',{id:message.id,saved:patch.saved});await saveChannelContent(message.id)}else {const key=messageKey(ref.key,message.id);state.messages[key]={...state.messages[key],...patch}}}
+    if(selected.some(message=>message.news)&&Object.keys(patch).some(key=>!['saved','reaction'].includes(key)))throw Error('Use news actions to manage a channel post')
+    for(const message of selected){if(message.news){if(patch.saved!==undefined){channelRequest('channel.save',{id:message.id,saved:patch.saved});await saveChannelContent(message.id)}if(patch.reaction!==undefined){const key=messageKey(ref.key,message.id);state.messages[key]={...state.messages[key],reaction:patch.reaction}}}else {const key=messageKey(ref.key,message.id);state.messages[key]={...state.messages[key],...patch}}}
     const result=write(state,ref.key);if(patch.saved!==undefined)for(const message of selected)if(!message.news)await saveChannelMessageContent(message.id,patch.saved);return result
    }
    const known=new Set(publicMessages(ref.key,state).map(message=>message.id));if(ids.some((id:string)=>!known.has(id)))throw Error('Unknown public message')
@@ -306,7 +306,7 @@ async function searchMessages(args:Record<string,any>,state:MessengerState){
    if(!selected||selected.kind==='channel')sources.push(...channelMessageSources(selected?.id))
    const queryResult=await indexedQuery('search',sources,state,{query:term,author,filter,offset:0,limit:offset+limit,topicId:args.topicId,authorId:args.authorId,from:args.from,to:args.to}),found=queryResult.result;state=queryResult.state
    const news=author==='all'&&(!selected||selected.kind==='channel')&&['all','saved','media','links'].includes(filter)?await queryChannelPostPrefix({...(selected?{channelId:selected.id}:{}),...(term?{query:term}:{}),...(filter==='saved'?{saved:true}:filter==='media'?{media:true}:filter==='links'?{links:true}:{}),messageOrder:true,limit:offset+limit}):{posts:[],total:0}
-   const combined=[...presentMessages(found.rows,state),...news.posts.map(newsMessage)].sort((a,b)=>(b.createdAt??0)-(a.createdAt??0)||a.conversation.localeCompare(b.conversation)||a.id.localeCompare(b.id)),total=found.total+news.total
+   const combined=[...presentMessages(found.rows,state),...news.posts.map(post=>newsMessage(post,state))].sort((a,b)=>(b.createdAt??0)-(a.createdAt??0)||a.conversation.localeCompare(b.conversation)||a.id.localeCompare(b.id)),total=found.total+news.total
    return {messages:combined.slice(offset,offset+limit),total,hasMore:offset+limit<total}
 }
 

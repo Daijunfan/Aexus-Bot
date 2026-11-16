@@ -31,7 +31,7 @@ export const Turn=memo(function Turn({ item,worker,replyId,messageEmployee,messa
 
   const messenger=useMessenger(),conversation=messageEmployee?conversationKey('employee',messageEmployee):undefined
   const selecting=!!conversation&&messenger?.selection?.conversation===conversation,selected=selecting&&messenger!.selection!.ids.includes(item.id)
-  const select=(event:React.MouseEvent)=>{if(selecting&&!(event.target as Element).closest('.message-select-toggle')){event.preventDefault();event.stopPropagation();messenger!.toggleSelection(conversation!,item.id)}}
+  const select=(event:React.MouseEvent)=>{if(selecting&&event.currentTarget.contains(event.target as Node)&&!(event.target as Element).closest('.message-select-toggle')){event.preventDefault();event.stopPropagation();messenger!.toggleSelection(conversation!,item.id)}}
   if(conversation&&messenger?.state.messages[messageKey(conversation,item.id)]?.hidden)return <div className="message-hidden" data-chat-item={item.id}><Icon name="eye-closed"/>{uiText("Message hidden for you")}<button onClick={()=>void messenger.message(conversation,item.id,{hidden:false})}>{uiText("Show message")}</button></div>
   const clock=timestamp?{dateTime:new Date(timestamp).toISOString(),title:formatMessageDateTime(timestamp,true),label:formatMessageClock(timestamp)}:null
   const time=clock?<time className="message-time" dateTime={clock.dateTime} title={clock.title}>{clock.label}</time>:null

@@ -3,6 +3,7 @@ import {useLayoutEffect,useRef,useSyncExternalStore} from 'react'
 export type SurfaceMotion='menu'|'file-menu'|'panel'|'dialog'|'strip'
 export const messageEase='cubic-bezier(.22,1,.36,1)'
 export const motionAllowed=()=>!document.hidden&&!matchMedia('(prefers-reduced-motion: reduce)').matches
+export function inheritSurfacePalette(element:HTMLElement,owner:HTMLElement){const style=getComputedStyle(owner);for(const name of ['--message-accent','--accent','--bg-elev','--bg-hover','--bg-alt','--fg','--fg-dim','--border','--border-soft']){const value=style.getPropertyValue(name);if(value)element.style.setProperty(name,value)}}
 
 const motionListeners=new Set<()=>void>();let removeMotionListeners:(()=>void)|undefined
 const subscribeMotion=(listener:()=>void)=>{motionListeners.add(listener);if(!removeMotionListeners){const media=matchMedia('(prefers-reduced-motion: reduce)'),update=()=>{for(const notify of motionListeners)notify()};media.addEventListener('change',update);document.addEventListener('visibilitychange',update);removeMotionListeners=()=>{media.removeEventListener('change',update);document.removeEventListener('visibilitychange',update)}}return()=>{motionListeners.delete(listener);if(!motionListeners.size){removeMotionListeners?.();removeMotionListeners=undefined}}}
@@ -26,23 +27,23 @@ export function playMessageMotion(element:Element,frames:Keyframe[],duration:num
 /** An inert, short-lived visual snapshot lets React close immediately and restore focus. */
 function exitSurface(node:HTMLElement,kind:SurfaceMotion){
   if(!node.isConnected||!motionAllowed())return
-  const rect=node.getBoundingClientRect(),style=getComputedStyle(node),copy=node.cloneNode(true) as HTMLElement
+  const rect=node.getBoundingClientRect(),style=getComputedStyle(node),copy=node.cloneNode(true) as HTMLElement,scale=parseFloat(getComputedStyle(document.documentElement).zoom)||1
   if(kind==='strip'){
-    const height=rect.height+parseFloat(style.marginTop)+parseFloat(style.marginBottom),spacer=document.createElement('div');spacer.dataset.messageSpacer='strip';spacer.setAttribute('aria-hidden','true');spacer.style.cssText=`height:${height}px;flex:none;pointer-events:none;overflow:hidden`
+    const height=rect.height/scale+parseFloat(style.marginTop)+parseFloat(style.marginBottom),spacer=document.createElement('div');spacer.dataset.messageSpacer='strip';spacer.setAttribute('aria-hidden','true');spacer.style.cssText=`height:${height}px;flex:none;pointer-events:none;overflow:hidden`
     node.before(spacer);playMessageMotion(spacer,[{height:height+'px'},{height:'0px'}],200,()=>spacer.remove())
   }
   copy.inert=true;copy.setAttribute('aria-hidden','true');copy.dataset.messageExit=kind
   // Exit snapshots are visual only; never reopen a released media grant or blob URL.
   for(const media of copy.querySelectorAll<HTMLMediaElement>('audio,video')){media.removeAttribute('src');media.removeAttribute('autoplay');media.preload='none';for(const source of media.querySelectorAll('source'))source.removeAttribute('src')}
-  for(const element of [copy,...copy.querySelectorAll('*')]){element.removeAttribute('id');element.removeAttribute('autofocus');element.removeAttribute('data-reply-id');element.removeAttribute('data-group-read')}
-  Object.assign(copy.style,{position:'fixed',inset:'auto',left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px',maxWidth:'none',maxHeight:'none',margin:'0',boxSizing:'border-box',pointerEvents:'none',animation:'none',transform:'none',opacity:style.opacity,zIndex:kind==='menu'||kind==='file-menu'?'10100':kind==='dialog'?'10055':kind==='panel'?'35':'3'})
+  for(const element of [copy,...copy.querySelectorAll<HTMLElement>('*')]){element.removeAttribute('id');element.removeAttribute('autofocus');element.removeAttribute('data-reply-id');element.removeAttribute('data-group-read');element.style.setProperty('pointer-events','none','important')}
+  Object.assign(copy.style,{position:'fixed',inset:'auto',left:rect.left/scale+'px',top:rect.top/scale+'px',width:rect.width/scale+'px',height:rect.height/scale+'px',maxWidth:'none',maxHeight:'none',margin:'0',boxSizing:'border-box',pointerEvents:'none',animation:'none',transform:'none',opacity:style.opacity,zIndex:style.zIndex!=='auto'?style.zIndex:kind==='menu'||kind==='file-menu'?'10100':kind==='dialog'?'10055':kind==='panel'?'35':'3'})
   copy.style.setProperty('--message-accent',style.getPropertyValue('--message-accent')||'#5873c7')
   document.body.append(copy)
   const sources=[node,...node.querySelectorAll<HTMLElement>('*')],targets=[copy,...copy.querySelectorAll<HTMLElement>('*')]
   sources.forEach((source,index)=>{if(source.scrollTop||source.scrollLeft){targets[index].scrollTop=source.scrollTop;targets[index].scrollLeft=source.scrollLeft}})
-  const transform=kind==='panel'?'translateX(18px)':'none'
+  const transform=kind==='panel'?'translateX(18px)':kind==='menu'?'translateY(3px) scale(.98)':'none'
   if(kind==='dialog'){const card=copy.querySelector('[role=dialog]');if(card)playMessageMotion(card,[{transform:'none'},{transform:'translateY(6px) scale(.98)'}],250)}
-  playMessageMotion(copy,[{opacity:Number(style.opacity),transform:'none'},{opacity:0,transform}],kind==='dialog'?250:kind==='menu'?200:150,()=>copy.remove())
+  playMessageMotion(copy,[{opacity:Number(style.opacity),transform:'none'},{opacity:0,transform}],kind==='dialog'?250:kind==='menu'?110:150,()=>copy.remove())
 }
 
 /** Shared timing and interruption behavior for menus, drawers and dialogs. */
@@ -53,11 +54,11 @@ export function useSurfaceMotion<T extends HTMLElement>(kind:SurfaceMotion){
     // Reopening a surface replaces its previous closing snapshot.
     document.querySelectorAll(`[data-message-exit="${kind}"],[data-message-spacer="${kind}"]`).forEach(element=>element.remove())
     node.dataset.messageSurface=kind
-    const transform=kind==='file-menu'?'translateY(-4px) scale(.98)':kind==='menu'?'scale(.1)':kind==='panel'?'translateX(24px)':'none'
+    const transform=kind==='file-menu'?'translateY(-4px) scale(.98)':kind==='menu'?'translateY(4px) scale(.96)':kind==='panel'?'translateX(24px)':'none'
     const animations:Animation[]=[]
     const style=getComputedStyle(node)
-    const frames=kind==='strip'?[{height:'0px',paddingTop:'0px',paddingBottom:'0px',marginTop:'0px',marginBottom:'0px',opacity:0},{height:node.getBoundingClientRect().height+'px',paddingTop:style.paddingTop,paddingBottom:style.paddingBottom,marginTop:style.marginTop,marginBottom:style.marginBottom,opacity:1}]:[{opacity:kind==='menu'?.1:0,transform},{opacity:1,transform:'none'}]
-    const enter=playMessageMotion(node,frames,kind==='file-menu'?150:kind==='panel'?250:200)
+    const frames=kind==='strip'?[{height:'0px',paddingTop:'0px',paddingBottom:'0px',marginTop:'0px',marginBottom:'0px',opacity:0},{height:node.offsetHeight+'px',paddingTop:style.paddingTop,paddingBottom:style.paddingBottom,marginTop:style.marginTop,marginBottom:style.marginBottom,opacity:1}]:[{opacity:kind==='menu'?.1:0,transform},{opacity:1,transform:'none'}]
+    const enter=playMessageMotion(node,frames,kind==='file-menu'?150:kind==='menu'?160:kind==='panel'?250:200)
     if(enter)animations.push(enter)
     if(kind==='dialog'){const card=node.querySelector('[role=dialog]');if(card){const animation=playMessageMotion(card,[{transform:'translateY(10px) scale(.96)'},{transform:'none'}],250);if(animation)animations.push(animation)}}
     return()=>{exitSurface(node,kind);animations.forEach(animation=>animation.cancel())}

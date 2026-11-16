@@ -20,6 +20,10 @@ Team 与员工可改显示名，既有目录与归属保持固定。所有管理
 
 # CLI and Core API
 
+## Message context actions
+
+`messenger.message` accepts `reaction` for a channel news item as a personal Aexus annotation, using the existing reaction enum; `""` removes it. It does not modify imported Telegram reaction counts, original content, source timestamps or read receipts. News still rejects personal hide/pin patches. `saved` continues to use canonical `channel.save` storage. The desktop and Web context menus use these same authenticated operations.
+
 ## 知乎与 LinkedIn 频道
 
 `channel.source-add/sources/source-update/source-remove` 和 `messenger.social/directory/folder-save` 接受 `zhihu`、`linkedin`，沿用原用户/Secretary 管理权限及频道读取授权。公开来源的真实采集范围、候选身份核验与访问错误见 [知识频道](../../docs/KNOWLEDGE_CHANNELS.md)。订阅确认不等于内容采集成功；新平台不借用其他平台凭据。
@@ -1716,8 +1720,10 @@ or an empty string to remove it. Reactions are the operator's annotations, never
 fabricated employee responses. Hiding is personal presentation and never deletes
 an already executed task or its native context. Hidden messages can be restored in
 place and are omitted from personal search results.
-For channel news (`np_`), `messenger.message` accepts only `saved` and delegates to
-`channel.save`; stable post IDs own the save rather than the current channel key.
+For channel news (`np_`), `messenger.message` accepts `saved` and `reaction`.
+Saving delegates to `channel.save`; personal reactions use `news:POST_ID` keys in
+`messenger.state.messages`. Both follow the stable post ID when an author moves
+to another channel. Reactions do not modify original platform counters or content.
 Channel discussion (`cm_`) supports the ordinary personal save/pin/hide/reaction
 annotations without rewriting its public text. Search, references and forwarding
 retain the real operator/administrator author. Other news actions use the channel API.
@@ -3814,7 +3820,7 @@ Engineering / Research 不再作为 Team 子页面。已有工程记录、关联
 | <code>agents messenger folder-save</code> | <code>--name NAME --conversations JSON [--include outsource&#124;private&#124;groups&#124;channels&#124;telegram&#124;x&#124;youtube&#124;zhihu&#124;linkedin&#124;null] [--excluded JSON] [--id ID] [--expected-revision N]</code> | User or Secretary: create or update a personal folder of private, group and channel conversations without moving their content | Conversation folders | operator |
 | <code>agents messenger folder-delete</code> | <code>ID [--expected-revision N]</code> | User or Secretary: remove a personal conversation folder while retaining every conversation and message | Conversation folders | operator |
 | <code>agents messenger conversation</code> | <code>--conversations JSON --patch JSON</code> | User or Secretary: pin, favorite, archive, mark unread or set local group notifications (all/direct/off) in one atomic update | Message list and bulk actions | operator |
-| <code>agents messenger message</code> | <code>CONVERSATION [MESSAGE_ID &#124; --ids JSON] --patch JSON</code> | User or Secretary: save, pin, react to or hide an existing public message; native history stays intact | Message actions | operator |
+| <code>agents messenger message</code> | <code>CONVERSATION [MESSAGE_ID &#124; --ids JSON] --patch JSON</code> | User or Secretary: save, pin, react to or hide an existing public message. Channel news accepts saved and personal reaction only; original content and platform reaction counts stay intact. | Message actions | operator |
 | <code>agents messenger draft</code> | <code>CONVERSATION --data JSON [--scope messages&#124;work&#124;topic&#124;thread&#124;form --topic-id ID --thread-id ID --form-id ID]</code> | User or Secretary: persist a draft and its send identity, or conditionally clear the matching draft; scope work separates Board/work drafts; group topic/thread/form drafts retain their own contents. Never sends or opens an engine | Message and work composers | operator |
 | <code>agents messenger search</code> | <code>[--conversation REF] [--query TEXT] [--filter all&#124;saved&#124;pinned&#124;media&#124;audio&#124;files&#124;links] [--author all&#124;you&#124;employee] [--offset N] [--limit N]</code> | User or Secretary: search full public histories and saved/media/link references without inference or read acknowledgements | Message search and shared content | operator |
 | <code>agents assets browse</code> | <code>[--root ID --query TEXT --view Company&#124;Messages&#124;Plan --team NAME --employee ID --conversation REF --host ID --kind TYPE --storage local&#124;remote&#124;cloud --sort name&#124;modified&#124;size --offset N --limit N --hidden]</code> | User-only: page real workspace shelves, one folder or recursive file/folder search with stable IDs and ownership; no implicit cloud download | File library | workspace |
