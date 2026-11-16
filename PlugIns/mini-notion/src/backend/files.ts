@@ -154,7 +154,7 @@ async function pdf(document: string | { workspace: Workspace; dataDirectory: str
     await new Promise<void>((resolve, reject) => {
       const child = spawn(
         executable,
-        [fs.existsSync(bundledApp) ? bundledApp : path.join(__dirname, '..'), '--mini-notion-pdf', input, output, directory],
+        [...(process.platform === 'linux' ? ['--ozone-platform=headless'] : []), fs.existsSync(bundledApp) ? bundledApp : path.join(__dirname, '..'), '--mini-notion-pdf', input, output, directory],
         { env, stdio: ['ignore', 'ignore', 'pipe'] },
       );
       let error = '';
