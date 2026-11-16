@@ -4,7 +4,8 @@ X logo: X Corp.
 Official download: https://about.x.com/content/dam/about-twitter/x/brand-toolkit/x-logo.zip
 Original file: logo.svg (white logo, unmodified)
 Guidelines: https://about.x.com/content/dam/about-twitter/x/brand-toolkit/x-brand-guidelines.pdf
-Displayed in its original white on a black background.
+Its original silhouette is rendered as a monochrome mask using the current surface text color.
+The SVG path and source file are unchanged; no background plate is added.
 
 YouTube icon: Google LLC / YouTube
 Official resource page: https://brand.youtube/youtube-icon/
@@ -22,3 +23,28 @@ review remains pending in licenses/release-review.json; this notice is not appro
 Telegram channel photos are independently fetched from each configured channel's
 own profile and are user data, not bundled artwork. They are not sourced from a
 forwarded message author and are not covered by the host application's license.
+
+Telegram logo: Telegram
+Official resource page: https://telegram.org/tour/screenshots
+Official archive: https://telegram.org/file/464001088/1/bI7AJLo7oX4.287931.zip/374fe3b0a59dc60005
+Original file: Logo.svg (unmodified; native circular gradient, no added rings).
+
+LinkedIn native application icon: LinkedIn Corporation
+Official application: https://apps.apple.com/us/app/linkedin-community-network/id288429040
+Publisher artwork: artworkUrl512 from https://itunes.apple.com/lookup?id=288429040&country=us
+Unmodified 512px JPEG, including native white in lettering and blue field.
+Brand resources: https://brand.linkedin.com/downloads
+
+Zhihu native application icon: Beijing Zhizhetianxia Technology Co., Ltd.
+Official application: https://apps.apple.com/cn/app/id432274380
+Publisher artwork: artworkUrl512 from https://itunes.apple.com/lookup?id=432274380&country=cn
+Unmodified 512px JPEG, retaining the official Zhihu lettering and gradient.
+
+Reddit icon: Reddit, Inc.
+Official brand page: https://redditinc.com/brand
+Official brand portal: https://redditbrand.lingoapp.com/s/Logo-d9x3n2
+Original brand portal avatar: https://static.lingoapp.com/avatar/s/75148/4D5390E4-1A1E-429A-8C24-73CF0F35EACD.png
+Unmodified 240px original, preserving the OrangeRed conversation-bubble tail and Snoo artwork.
+
+Artwork attribution records provenance only. Existing public redistribution review
+remains pending; this update does not mark trademark or redistribution terms approved.

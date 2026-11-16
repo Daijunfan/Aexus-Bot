@@ -79,6 +79,16 @@ try{
  await call('channel.collector-revoke',{id:other.collector.id});assert.equal((await request('channel.collector-ack',{revision:applied.revision},other.token)).status,401)
  pass('Receipts are collector-bound, monotonic and authenticated; operator forgery, future/undelivered revisions, extra fields and revoked credentials are rejected')
  await confirm(await receive());await expect(receipt()).toHaveAttribute('data-sync-state','synced');await page.screenshot({path:path.join(out,'subscriptions-applied.png'),animations:'disabled'});assert.deepEqual(errors,[])
+ await dialog.getByRole('button',{name:'Close channel management',exact:true}).click();await expect(dialog).toHaveCount(0)
+ const telegram=(await call('channel.sources',{plugin:'telegram'}))[0];await call('view.open',{kind:'messages',channelId:telegram.channelId})
+ await expect(page.locator('.channel-header-avatar .channel-brand-icon')).toBeVisible()
+ for(const theme of ['white','black']){
+  await call('settings.set',{viewAppearance:{messages:{theme}}});await expect(page.locator('html')).toHaveAttribute('data-theme',theme)
+  const icons=page.locator('.message-contact [data-avatar-kind=brand]');await expect(icons).toHaveCount(6)
+  for(const icon of await icons.all()){await expect(icon).toHaveCSS('border-radius','0px');await expect(icon).toHaveCSS('box-shadow','none');await expect(icon).toHaveCSS('background-color','rgba(0, 0, 0, 0)');await icon.locator('img').evaluateAll(async images=>{await Promise.all(images.map(image=>image.decode()))})}
+  await page.screenshot({path:path.join(out,'native-platform-sidebar-'+theme+'.png'),animations:'disabled'})
+ }
+ pass('Six native platform marks load in the real inbox and floating header without imposed frames, in light and dark themes')
  if(app)assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().every(window=>!window.isVisible())))
  fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({passed:true,checks,errors,providerCalls:0,application:application||'source'},null,2)+'\n')
 }finally{await app?.close();await browser?.close();await fixture?.close();fs.rmSync(temp,{recursive:true,force:true,maxRetries:10,retryDelay:100})}

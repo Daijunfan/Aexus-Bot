@@ -14,6 +14,11 @@ import {useMessageOwner,useMessageRowState} from '../chat/MessageViewport'
 import xLogo from '../assets/channel-icons/x.svg'
 import youtubeLogo from '../assets/channel-icons/youtube.png'
 import telegramLogo from '../assets/channel-icons/telegram.svg'
+import linkedinLogo from '../assets/channel-icons/linkedin.jpg'
+import zhihuLogo from '../assets/channel-icons/zhihu.jpg'
+import redditLogo from '../assets/channel-icons/reddit.png'
+
+const platformIcons={telegram:telegramLogo,x:xLogo,youtube:youtubeLogo,linkedin:linkedinLogo,zhihu:zhihuLogo,reddit:redditLogo}
 
 export const channelPlatform=(kind:ChannelView['kind'])=>isChannelSocialPlugin(kind)?CHANNEL_PLATFORM_NAMES[kind]:kind==='employee'?uiText('Employee'):kind==='process'?uiText('External process'):uiText('Channel')
 const imageCache=new Map<string,{src:string;bytes:number}>(),imagePending=new Map<string,Promise<string>>()
@@ -30,10 +35,10 @@ function readSourceImage(avatar:NonNullable<ChannelView['avatar']>){
 }
 export function ChannelAvatar({kind,avatar,name='',social=false}:{kind:ChannelView['kind'];avatar?:ChannelView['avatar'];name?:string;social?:boolean}){
  const box=useRef<HTMLSpanElement>(null)
- const custom=!!avatar?.channelId,identity=!!avatar||social||kind==='telegram',key=String(social)+':'+kind+':'+(avatar?(avatar.channelId??avatar.sourceId)+':'+avatar.sha256:''),[image,setImage]=useState({key:'',src:'',failed:false}),src=image.key===key?image.src:'',failed=image.key===key&&image.failed
+ const custom=!!avatar?.channelId,brand=!social&&!avatar&&isChannelSocialPlugin(kind),identity=!!avatar||social,key=String(social)+':'+kind+':'+(avatar?(avatar.channelId??avatar.sourceId)+':'+avatar.sha256:''),[image,setImage]=useState({key:'',src:'',failed:false}),src=image.key===key?image.src:'',failed=image.key===key&&image.failed
  useEffect(()=>{let active=true,visible=false,started=false;setImage({key,src:'',failed:false});if(!identity||!avatar)return;const observer=new IntersectionObserver(entries=>{visible=entries.some(entry=>entry.isIntersecting);if(!visible){started=false;setImage({key,src:'',failed:false});return}if(started)return;started=true;void readSourceImage(avatar).then(src=>{if(active&&visible)setImage({key,src,failed:false})}).catch(()=>{if(active&&visible)setImage({key,src:'',failed:true})})},{rootMargin:'160px'});if(box.current)observer.observe(box.current);return()=>{active=false;observer.disconnect()}},[key])
  const initials=name.trim().split(/\s+/).slice(0,2).map(part=>Array.from(part)[0]??'').join('')||'T'
- return <span ref={box} className="channel-avatar" data-platform={kind} data-avatar-state={identity?(src?'ready':avatar?(failed?'error':'loading'):'placeholder'):undefined} aria-hidden="true">{src?<img className="channel-identity-image" src={src} alt="" decoding="async" onError={()=>setImage({key,src:'',failed:true})}/>:identity&&avatar?<Icon name={failed?'error':'loading'}/>:!social&&(kind==='x'||kind==='youtube')?<img className="channel-brand-icon" src={kind==='x'?xLogo:youtubeLogo} alt=""/>:!social&&kind==='telegram'?<img className="channel-brand-icon" src={telegramLogo} alt="" draggable={false}/>:!social&&(kind==='zhihu'||kind==='linkedin'||kind==='reddit')?<span className="channel-platform-wordmark">{kind==='reddit'?'r/':kind==='zhihu'?'知':'in'}</span>:social||kind==='telegram'||kind==='employee'?<span className="channel-avatar-initials">{initials}</span>:<Icon name={kind==='process'?'server':'radio-tower'}/>}</span>
+ return <span ref={box} className="channel-avatar" data-platform={kind} data-avatar-kind={brand?'brand':custom?'custom':avatar?'photo':'placeholder'} data-avatar-state={identity?(src?'ready':avatar?(failed?'error':'loading'):'placeholder'):undefined} aria-hidden="true">{src?<img className="channel-identity-image" src={src} alt="" decoding="async" draggable={false} onError={()=>setImage({key,src:'',failed:true})}/>:identity&&avatar?<Icon name={failed?'error':'loading'}/>:brand?kind==='x'?<span className="channel-brand-icon channel-brand-x" style={{maskImage:`url("${xLogo}")`,WebkitMaskImage:`url("${xLogo}")`}}/>:<img className="channel-brand-icon" src={platformIcons[kind]} alt="" draggable={false}/>:social||kind==='employee'?<span className="channel-avatar-initials">{initials}</span>:<Icon name={kind==='process'?'server':'radio-tower'}/>}</span>
 }
 export async function readChannelImage(channelId:string,postId:string,mediaId:string,maxEdge?:number){return cachedImage(channelId+':'+postId+':'+mediaId+':'+(maxEdge??0),()=>api.call<{data:string;mimeType:string}>('channel.image',{channelId,postId,mediaId,...(maxEdge?{maxEdge}:{})}))}
 /** Only published local media is read, and only as a card reaches the viewport. */

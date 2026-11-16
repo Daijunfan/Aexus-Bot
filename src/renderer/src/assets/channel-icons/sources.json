@@ -7,7 +7,8 @@
       "archivePath": "logo.svg",
       "guidelines": "https://about.x.com/content/dam/about-twitter/x/brand-toolkit/x-brand-guidelines.pdf",
       "sha256": "dd46f96b6f47fcd33683b79ddfaf3daca1d4f8aeba3c0f2bde1584c69cc699d4",
-      "modified": false
+      "modified": false,
+      "display": "Original monochrome silhouette, rendered with the surface text color for light, dark and selected states"
     },
     {
       "file": "youtube.png",
@@ -17,6 +18,48 @@
       "guidelines": "https://brand.youtube/youtube-icon/",
       "sha256": "1027b1b0517727adb9697155a270744381c3ce9b047b1c8bd8a9389dc7d07a83",
       "modified": false
+    },
+    {
+      "file": "telegram.svg",
+      "owner": "Telegram",
+      "source": "https://telegram.org/file/464001088/1/bI7AJLo7oX4.287931.zip/374fe3b0a59dc60005",
+      "archivePath": "Logo.svg",
+      "guidelines": "https://telegram.org/tour/screenshots",
+      "sha256": "54842d414c100f0110f90caf09ff58cd0d229629820e4576bd70befca88befd5",
+      "modified": false,
+      "retrievedAt": "2026-11-16"
+    },
+    {
+      "file": "linkedin.jpg",
+      "owner": "LinkedIn Corporation",
+      "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/2c/4d/11/2c4d11e7-c7b9-a735-90d7-49f34e4c9ce8/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg",
+      "sourcePage": "https://apps.apple.com/us/app/linkedin-community-network/id288429040?uo=4",
+      "metadataSource": "https://itunes.apple.com/lookup?id=288429040&country=us",
+      "sha256": "36968f3ef37c8caee406e6a8934266949e91c85401584df5912d0abb78362ad4",
+      "modified": false,
+      "retrievedAt": "2026-11-16",
+      "purpose": "Publisher-provided native application icon; full opaque glyph colors remain legible on dark surfaces"
+    },
+    {
+      "file": "zhihu.jpg",
+      "owner": "Beijing Zhizhetianxia Technology Co., Ltd.",
+      "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/6c/52/cf/6c52cf80-3df8-9705-d792-c5aa66de4570/AppIcon-0-0-1x_U007emarketing-0-7-0-sRGB-85-220.png/512x512bb.jpg",
+      "sourcePage": "https://apps.apple.com/cn/app/%E7%9F%A5%E4%B9%8E/id432274380?uo=4",
+      "metadataSource": "https://itunes.apple.com/lookup?id=432274380&country=cn",
+      "sha256": "840158a1130640a90db787a1ffeb8882b7a5503dba96f21c251707dc375356be",
+      "modified": false,
+      "retrievedAt": "2026-11-16",
+      "purpose": "Publisher-provided native application icon; full opaque glyph colors remain legible on dark surfaces"
+    },
+    {
+      "file": "reddit.png",
+      "owner": "Reddit, Inc.",
+      "source": "https://static.lingoapp.com/avatar/s/75148/4D5390E4-1A1E-429A-8C24-73CF0F35EACD.png",
+      "sourcePage": "https://redditbrand.lingoapp.com/s/Logo-d9x3n2",
+      "guidelines": "https://redditinc.com/brand",
+      "sha256": "cbdf9e59bf07a26ea9345ddf00849ee0be99826361da444050f86e996f632476",
+      "modified": false,
+      "retrievedAt": "2026-11-16"
     }
   ],
   "purpose": "Identify the original source of collected content. No endorsement or redistribution clearance is implied.",

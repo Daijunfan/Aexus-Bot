@@ -17,3 +17,19 @@
 
 .group-avatar:is(.group-portrait-single,.group-portrait-grid){background:transparent!important;border:0!important;box-shadow:none!important}
 .message-list-heading>.message-profile-open:has(.employee-portrait){background:transparent!important;border:0!important;box-shadow:none!important}
+
+/* Official artwork owns its silhouette; source photos keep the platform's native shape. */
+:root .channel-avatar{border:0;box-shadow:none;padding:0}
+:root .channel-avatar:is([data-avatar-kind=brand],[data-avatar-kind=custom]){border-radius:0;background:transparent;overflow:visible}
+:root .channel-avatar[data-avatar-kind=photo]{border-radius:50%;background:transparent}
+:root .channel-avatar[data-avatar-kind=photo][data-platform=linkedin]{border-radius:0}
+:root .channel-avatar>.channel-brand-icon{pointer-events:none;object-fit:contain;max-width:none;max-height:none}
+:root .channel-avatar>.channel-brand-x{width:82%;height:82%;background:var(--fg);mask-size:contain;mask-repeat:no-repeat;mask-position:center}
+.app .message-contact.selected .channel-brand-x{background:var(--button-ink,#fff)}
+:root .channel-avatar[data-platform=youtube]>.channel-brand-icon{width:145%;height:145%}
+:root .channel-author-avatar{background:transparent;border:0;box-shadow:none;border-radius:50%}
+:root .channel-author-avatar>.channel-local-image{background:transparent;border-radius:inherit}
+:root .channel-author-avatar>.channel-local-image img{object-fit:contain}
+:root [data-platform=linkedin] .channel-author-avatar{border-radius:0}
+:root :is(.channel-author-avatar,.channel-profile-avatar,.channel-profile-picture):has(>.channel-avatar){background:transparent;border:0;border-radius:0;box-shadow:none;overflow:visible}
+:root .channel-source-avatar:has(>.channel-avatar[data-avatar-kind=brand]){border-radius:0;overflow:visible}
