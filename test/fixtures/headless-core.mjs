@@ -6,15 +6,21 @@ import {spawn,execFile} from 'node:child_process'
 import {promisify} from 'node:util'
 import assert from 'node:assert/strict'
 import {createRequire} from 'node:module'
+import {nativeFixtureEnvironment} from './native-profiles.mjs'
 const {controlEndpoint}=createRequire(import.meta.url)('../../bin/platform.cjs')
 export async function fixtureCore(overrides={},entry=process.env.AGENTS_COMPANY_TEST_CORE_ENTRY){
   const root=path.resolve(import.meta.dirname,'../..'),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-layout-read-'))),control=path.join(temp,'fixture')
   fs.mkdirSync(control);fs.writeFileSync(path.join(control,'release-all'),'')
   // Message lists account metadata on mount; never read real native accounts from disposable UI tests.
-  const env={...process.env,AGENTS_COMPANY_TEST_BOTS_URL:process.env.AGENTS_COMPANY_TEST_BOTS_URL??'http://127.0.0.1:1',AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_SHARED_DIR:path.join(temp,'shared'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_BUILTIN_PLUGINS:process.env.AGENTS_COMPANY_TEST_BUILTIN_PLUGINS??path.join(root,'build/plugins'),CODEX_BIN:path.join(root,'test/fixtures/initialization-codex.cjs'),CODEX_HOME:path.join(temp,'codex'),AC_INIT_FIXTURE:control,CLAUDE_CONFIG_DIR:path.join(temp,'claude'),CLINE_DATA_DIR:path.join(temp,'native-cline/data'),PI_CODING_AGENT_DIR:path.join(temp,'native-pi'),DSH_HOME:path.join(temp,'native-deepseek'),...overrides}
+  const env={...nativeFixtureEnvironment(process.env),AGENTS_COMPANY_TEST_BOTS_URL:process.env.AGENTS_COMPANY_TEST_BOTS_URL??'http://127.0.0.1:1',AGENTS_COMPANY_HOME:path.join(temp,'state'),AGENTS_COMPANY_SHARED_DIR:path.join(temp,'shared'),AGENTS_COMPANY_PROJECTS:path.join(temp,'projects'),AGENTS_COMPANY_WORKSPACES:path.join(temp,'work'),AGENTS_COMPANY_BUILTIN_PLUGINS:process.env.AGENTS_COMPANY_TEST_BUILTIN_PLUGINS??path.join(root,'build/plugins'),CODEX_BIN:path.join(root,'test/fixtures/initialization-codex.cjs'),CODEX_HOME:path.join(temp,'codex'),AC_INIT_FIXTURE:control,CLAUDE_CONFIG_DIR:path.join(temp,'claude'),CLINE_DATA_DIR:path.join(temp,'native-cline/data'),PI_CODING_AGENT_DIR:path.join(temp,'native-pi'),DSH_HOME:path.join(temp,'native-deepseek'),...overrides}
   for(const key of Object.keys(env))if(key.startsWith('AGENTS_COMPANY_TOKEN')||['AGENTS_COMPANY_EMPLOYEE','AGENTS_COMPANY_SOCKET','AGENTS_COMPANY_PORT','AGENTS_COMPANY_URL','AGENTS_COMPANY_CLIENT','AGENTS_COMPANY_ALLOW_INSECURE'].includes(key))delete env[key]
   let service,ended,log=''
-  const raw=async(token,...args)=>{let stdout;try{stdout=(await promisify(execFile)(process.execPath,[root+'/bin/agents',...args,'--json'],{env:{...env,...(token?{AGENTS_COMPANY_TOKEN:token}:{})},timeout:20000,maxBuffer:8e6})).stdout}catch(error){stdout=error.stdout;if(!stdout)throw error}return JSON.parse(stdout)}
+  const raw=async(token,...args)=>{
+    let result
+    try{result=await promisify(execFile)(process.execPath,[root+'/bin/agents',...args,'--json'],{env:{...env,...(token?{AGENTS_COMPANY_TOKEN:token}:{})},timeout:20000,maxBuffer:8e6})}catch(error){result=error;if(!error.stdout)throw Error('CLI produced no JSON (exit '+error.code+', signal '+error.signal+').\n'+String(error.stderr??'').slice(-4000)+'\nCore exit: '+service?.exitCode+'; signal: '+service?.signalCode+'\n'+log,{cause:error})}
+    if(!result.stdout.trim())throw Error('CLI produced no JSON (exit '+(result.code??0)+').\n'+String(result.stderr??'').slice(-4000)+'\nCore exit: '+service?.exitCode+'; signal: '+service?.signalCode+'\n'+log)
+    return JSON.parse(result.stdout)
+  }
   const call=async(token,...args)=>{const value=await raw(token,...args);assert.ok(value.ok,[value.error,log&&'Core diagnostics: '+log].filter(Boolean).join('\n'));return value.data}
   const cli=(...args)=>call(null,...args)
   const until=async(check,label)=>{for(let i=0;i<250;i++){const result=await check();if(result)return result;await new Promise(resolve=>setTimeout(resolve,40))}throw Error('Timeout '+label+' '+log)}
@@ -24,7 +30,7 @@ export async function fixtureCore(overrides={},entry=process.env.AGENTS_COMPANY_
   const stop=async()=>{if(service&&service.exitCode===null&&service.signalCode===null){
     const child=service;let timer
     if(child.connected)child.send({type:'agents-company:shutdown'});else child.kill('SIGTERM')
-    try{await Promise.race([ended,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Disposable Core did not shut down gracefully: '+log)),20000)})])}
+    try{await Promise.race([ended,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Disposable Core did not shut down gracefully: '+log)),20000)})]);if(child.exitCode!==0||child.signalCode!==null)throw Error('Disposable Core exited during shutdown (code '+child.exitCode+', signal '+child.signalCode+'): '+log)}
     catch(error){child.kill('SIGKILL');await ended;throw error}finally{clearTimeout(timer)}
   }}
   const create=async(title,group='A',role='employee')=>{const card=await cli('card','create','--title',title,'--group',group,'--management-role',role,'--engine','codex','--model','gpt-6-luna','--effort','low');await ready(card.id);return card}

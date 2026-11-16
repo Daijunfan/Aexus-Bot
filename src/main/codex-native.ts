@@ -73,7 +73,7 @@ export async function startNativeCodexSession(binary:string,args:Args){
 }
 async function connect(binary:string,initial:Args){
   const profile=initial.employeeId?readStore().sessions.find(card=>card.id===initial.employeeId)?.nativeConfigRoot:undefined
-  const releaseStartup=await acquireCodexStartup(initial.nativeRemote,profile)
+  const releaseStartup=await acquireCodexStartup(initial.nativeRemote,profile,initial.signal)
   try{
   let args=initial,threadId=initial.resumeId??'',turnId='',loaded=false,working=false,sequence=0,stderr='',dead=false,compact=false
   let loadedInstructions='',loadedPolicy='',loadedPhase='work',configuredModel=initial.nativeWorker?undefined:initial.model
@@ -165,18 +165,18 @@ async function connect(binary:string,initial:Args){
     if(initial.nativeWorker)await finish();else await closeWorkerProcesses([child],finish)
     for(const item of pending.values())clearTimeout(item.timer);pending.clear();await executor?.close()
   })()
-  const abortStartup=()=>void close();if(initial.nativeWorker)initial.signal.addEventListener('abort',abortStartup,{once:true})
-  try{await call('initialize',{clientInfo:{name:'agents_company',version:'1'},capabilities:{experimentalApi:true,mcpServerOpenaiFormElicitation:true}});child.stdin.write(protocolJson({method:'initialized'})+'\n');releaseStartup()}
-  catch(error){await close();throw error}finally{if(initial.nativeWorker)initial.signal.removeEventListener('abort',abortStartup)}
+  const abortStartup=()=>void close();initial.signal.addEventListener('abort',abortStartup,{once:true})
   let nativeConfig:Record<string,any>
   try{
+  initial.signal.throwIfAborted()
+  await call('initialize',{clientInfo:{name:'agents_company',version:'1'},capabilities:{experimentalApi:true,mcpServerOpenaiFormElicitation:true}});child.stdin.write(protocolJson({method:'initialized'})+'\n');releaseStartup()
   nativeConfig=(await call('config/read',{includeLayers:false,cwd:initial.nativeRemote?initial.cwd:codexControlCwd(initial.cwd,initial.remote)})).config??{}
   if(!configuredModel){
     configuredModel=nativeConfig.model
     if(!configuredModel){const catalog=await call('model/list',{limit:100});const model=(catalog.data??[]).find((item:any)=>item.isDefault)??catalog.data?.[0];configuredModel=model?.model??model?.id}
   }
   if(!configuredModel)throw Error('Codex 未返回可用默认模型；请在引擎设置中选择账户可用的模型')
-  }catch(error){await close();throw error}
+  }catch(error){await close();throw error}finally{initial.signal.removeEventListener('abort',abortStartup)}
   return {close,call,threadId:()=>threadId,turnId:()=>turnId,alive:()=>!dead&&child.exitCode==null&&child.signalCode==null&&(!executor||executor.connected()),busy:()=>working,
     async run(next:Args){
       args=next;let killTimer:NodeJS.Timeout|undefined

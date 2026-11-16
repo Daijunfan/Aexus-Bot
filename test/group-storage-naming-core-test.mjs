@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import {fixtureCore} from './fixtures/headless-core.mjs'
 import {localTunnel} from './fixtures/local-tunnel.mjs'
 const fixtureOS=process.platform==='win32'?'windows':process.platform==='darwin'?'macos':'linux',contains=(base,file)=>file===base||file.startsWith(base+path.sep)
-const root=process.cwd(),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-bound-naming-'))),shared=path.join(temp,'shared'),localParent=path.join(shared,'用户父目录'),local=path.join(localParent,'自定群文件'),remoteRoot=path.join(temp,'云端项目'),remote=path.join(remoteRoot,'自定云群文件')
+const root=process.cwd(),temp=fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(),'ac-bound-naming-'))),shared=path.join(temp,'shared'),localParent=path.join(shared,'用户父目录'),local=path.join(localParent,'自定群文件'),remoteRoot=path.join(temp,'云端项目'),remote=path.join(remoteRoot,'自定云群文件')
 for(const directory of [local,remote,path.join(shared,'可整理资料'),path.join(remoteRoot,'可整理资料')])fs.mkdirSync(directory,{recursive:true})
 fs.writeFileSync(path.join(local,'原始.txt'),'Local original');fs.writeFileSync(path.join(remote,'原始.txt'),'Remote original');const foreign=JSON.stringify({owner:'An unrelated parent application',preserve:true});fs.writeFileSync(path.join(localParent,'workspace.json'),foreign);fs.writeFileSync(path.join(shared,'可整理资料','keep.txt'),'Unrelated local bytes');fs.writeFileSync(path.join(remoteRoot,'可整理资料','keep.txt'),'Unrelated remote bytes')
 const f=await fixtureCore({AGENTS_COMPANY_SHARED_DIR:shared,AGENTS_COMPANY_TUNNEL_DIR:localTunnel(path.join(temp,'tunnel'),root)}),rpc=async(cmd,args={},token=null)=>{const value=await f.request(token,cmd,args);assert.ok(value.ok,cmd+': '+value.error);return value.data}

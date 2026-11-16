@@ -8,6 +8,15 @@ import path from 'node:path'
 /** The only credential value test fixtures may use. */
 export const FIXTURE_SECRET = 'fixture-only-not-real'
 
+/** Native fixture files win over the invoking shell; explicit caller overrides still apply last. */
+export function nativeFixtureEnvironment(base) {
+  const env = {...base}
+  for (const name of Object.keys(env)) {
+    if (/^(ANTHROPIC_|OPENAI_|CLAUDE_CODE_USE_)/.test(name) || ['CLAUDE_API_KEY','CLAUDE_CODE_API_KEY','CLINE_PROVIDER_SETTINGS_PATH','CLINE_API_KEY','PI_API_KEY','DEEPSEEK_API_KEY','GEMINI_API_KEY'].includes(name)) delete env[name]
+  }
+  return env
+}
+
 const realDefaults = {
   CLAUDE_CONFIG_DIR: path.join(os.homedir(), '.claude'),
   CLINE_DATA_DIR: path.join(os.homedir(), '.cline', 'data'),

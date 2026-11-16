@@ -22,7 +22,7 @@ try{
  source=source.replace(marker,`}else{if(fs.existsSync(file('.fetch-request.json'))){const result=await nativeTool('agents_company_api',JSON.parse(fs.readFileSync(file('.fetch-request.json'),'utf8')));note('fetch-result',result)}const post=workPostArgs`);fs.writeFileSync(sdk,source)
  f=await fixtureCore({CODEX_BIN:codex,CLINE_BIN:processPeer,PI_BIN:processPeer,CLAUDE_CONFIG_DIR:path.join(temp,'claude')},entry)
  const rpc=async(cmd,args={})=>{const value=await f.request(null,cmd,args);assert.ok(value.ok,value.error);return value.data}
- await rpc('engine.configure',{engine:'claude',patch:{path:'/usr/bin/true',sdkPath:sdk}})
+ await rpc('engine.configure',{engine:'claude',patch:{path:process.execPath,sdkPath:sdk}})
  writeNativeProfiles(f.env,{engines:['cline','pi']})
  await rpc('group.add',{name:'Native readers'})
  const src=await rpc('channel.source-add',{plugin:'x',locator:'@nativefetch',name:'Native original author'}),pixel='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP+kAAAAASUVORK5CYII=',publishedAt=Date.now()-1000

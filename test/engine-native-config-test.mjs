@@ -6,9 +6,11 @@ import assert from 'node:assert/strict'
 import {createRequire} from 'node:module'
 import {DatabaseSync} from 'node:sqlite'
 import {build} from 'esbuild'
+import {nativeFixtureEnvironment} from './fixtures/native-profiles.mjs'
 const root=path.resolve(import.meta.dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'aexus-native-config-')),previous={...process.env},home=path.join(temp,'home')
 const write=(file,value)=>{fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,typeof value==='string'?value:JSON.stringify(value),{mode:0o600})}
-process.env.HOME=home;process.env.AGENTS_COMPANY_HOME=path.join(temp,'state');process.env.CLAUDE_CONFIG_DIR=path.join(home,'.claude');process.env.CLINE_DATA_DIR=path.join(home,'.cline/data');process.env.PI_CODING_AGENT_DIR=path.join(home,'.pi/agent');process.env.CODEX_HOME=path.join(home,'.codex')
+const isolated=nativeFixtureEnvironment(process.env);for(const key of Object.keys(process.env))if(!(key in isolated))delete process.env[key]
+process.env.HOME=home;process.env.USERPROFILE=home;process.env.AGENTS_COMPANY_HOME=path.join(temp,'state');process.env.CLAUDE_CONFIG_DIR=path.join(home,'.claude');process.env.CLINE_DATA_DIR=path.join(home,'.cline/data');process.env.PI_CODING_AGENT_DIR=path.join(home,'.pi/agent');process.env.CODEX_HOME=path.join(home,'.codex');assert.equal(os.homedir(),home)
 fs.mkdirSync(home,{recursive:true});fs.symlinkSync(path.join(root,'node_modules'),path.join(temp,'node_modules'),'dir')
 let core
 try{
@@ -34,6 +36,7 @@ try{
  write(path.join(process.env.AGENTS_COMPANY_HOME,'engines/settings.json'),{claude:{inheritNative:false,baseUrl:'https://stale.invalid',model:'old-model',secret:'retired-cipher'},cline:{inheritNative:false,baseUrl:'https://stale.invalid',secret:'retired-cipher'}})
  assert.equal(core.publicEngineConfiguration('claude').inheritNative,true);assert.equal(core.publicEngineConfiguration('claude').baseUrl,undefined);assert.equal(core.engineEnvironment('claude').ANTHROPIC_BASE_URL,undefined)
  assert.equal(core.defaultEmployeeModel('claude'),'deepseek-flash[1m]');assert.equal(core.defaultEmployeeModel('codex'),'codex-current');assert.equal(core.defaultEmployeeModel('cline'),'deepseek-v4-pro');assert.equal(core.defaultEmployeeModel('pi'),'gpt-b')
+ process.env.ANTHROPIC_MODEL='explicit-fixture-model';assert.equal(core.defaultEmployeeModel('claude'),'explicit-fixture-model','an explicitly configured process model keeps its documented priority');delete process.env.ANTHROPIC_MODEL
  assert.equal((await core.engineProviderCatalog('claude')).source,'native');assert.equal(core.engineEnvironment('cline').CLINE_API_KEY,clineKey)
  assert.throws(()=>core.configureEngine('cline',{baseUrl:'https://private.invalid/v1',model:'private-model',apiKey:'PRIVATE_KEY'}),/native CLI configuration/)
  for(const engine of ['codex','claude','cline','pi','opencode','kilo'])assert.throws(()=>core.configureEngine(engine,{inheritNative:false}),/native CLI configuration/)

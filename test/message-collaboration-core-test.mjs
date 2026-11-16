@@ -6,11 +6,13 @@ import assert from 'node:assert/strict'
 import {createHash,randomBytes} from 'node:crypto'
 import {build} from 'esbuild'
 import {fixtureCore} from './fixtures/headless-core.mjs'
-const root=path.resolve(import.meta.dirname,'..'),temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ac-message-collaboration-'))),entry=path.join(temp,'daemon.cjs'),cloud=path.join(temp,'cloud'),bin=path.join(temp,'bin'),out=path.join(root,'artifacts/message-collaboration')
-fs.mkdirSync(cloud);fs.mkdirSync(bin);fs.symlinkSync(path.join(root,'node_modules'),path.join(temp,'node_modules'),'dir')
-fs.writeFileSync(path.join(bin,'ssh'),"#!/usr/bin/env python3\nimport os,sys\nos.execv('/bin/sh',['sh','-c',sys.argv[-1]])\n",{mode:0o755})
+import {localTunnel} from './fixtures/local-tunnel.mjs'
+const fixtureOS=process.platform==='win32'?'windows':process.platform==='darwin'?'macos':'linux'
+const root=path.resolve(import.meta.dirname,'..'),temp=fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(),'ac-message-collaboration-'))),entry=path.join(temp,'daemon.cjs'),cloud=path.join(temp,'cloud'),out=path.join(root,'artifacts/message-collaboration')
+const inside=(base,file)=>{const relative=path.relative(fs.realpathSync.native(base),fs.realpathSync.native(file));return !!relative&&relative!=='..'&&!relative.startsWith('..'+path.sep)&&!path.isAbsolute(relative)}
+fs.mkdirSync(cloud);fs.symlinkSync(path.join(root,'node_modules'),path.join(temp,'node_modules'),'dir')
 await build({entryPoints:[path.join(root,'src/main/daemon.ts')],outfile:entry,bundle:true,platform:'node',format:'cjs',packages:'external',define:{__AGENTS_PROJECT_ROOT__:JSON.stringify(root)},logLevel:'silent'})
-const f=await fixtureCore({PATH:bin+':'+process.env.PATH},entry),report={passed:false,checks:[],paidModelCalls:0,productionDataUsed:false},pass=text=>{report.checks.push(text);console.log('PASS '+text)}
+const f=await fixtureCore({AGENTS_COMPANY_TUNNEL_DIR:localTunnel(path.join(temp,'tunnel'),root)},entry),report={passed:false,checks:[],paidModelCalls:0,productionDataUsed:false},pass=text=>{report.checks.push(text);console.log('PASS '+text)}
 const rpc=async(cmd,args={},token=null)=>{const value=await f.request(token,cmd,args);assert.ok(value.ok,cmd+': '+value.error);return value.data}
 const deny=async(cmd,args,token)=>{const value=await f.request(token,cmd,args);assert.equal(value.ok,false,cmd+' should reject');return value.error}
 const policy=(conversation,token)=>rpc('conversation.policy',{conversation},token)
@@ -42,7 +44,7 @@ try{
  for(const target of ['../escape.txt',notes+'/../../escape.txt','/tmp/escape.txt',notes+'/.agents-company/secret'])await deny('conversation.file',{conversation:g,operation:'write',path:target,content:'no'},rt)
  await deny('conversation.file',{conversation:g,operation:'trash',path:'.'},rt)
  pass('Every group peer and Secretary can edit, trash and restore shared files; shared root identity and path boundaries remain protected.')
- const host=await rpc('host.create',{name:'Fixture document host',host:'fixture',os:'linux',defaultDirectory:cloud}),collector=await rpc('channel.collector-add',{name:'Fixture document source',sourceIds:[source.id]})
+ const host=await rpc('host.create',{name:'Fixture document host',host:'fixture',os:fixtureOS,defaultDirectory:cloud}),collector=await rpc('channel.collector-add',{name:'Fixture document source',sourceIds:[source.id]})
  await rpc('channel.update',{id:channelId,engine:{kind:'external',location:'remote',name:'Fixture collector',host:'fixture',endpoint:'http://127.0.0.1:5152/api/channels/collector',collectorId:collector.collector.id,fileStorage:{hostId:host.id,directory:cloud}}})
  const bytes=Buffer.concat([Buffer.from('%PDF-1.7\n'),randomBytes(650000)]),sha256=createHash('sha256').update(bytes).digest('hex'),physical=path.join(cloud,sha256.slice(0,2),sha256)
  fs.mkdirSync(path.dirname(physical),{recursive:true});fs.writeFileSync(physical,bytes)
@@ -53,8 +55,8 @@ try{
  const full=await rpc('conversation.entry',{conversation:c,id:post.id},rt);assert.equal(full.entry.body,'Full text and https://example.org/article');assert.equal(full.attachments.length,2);assert.equal(full.links.length,2);assert.equal((await rpc('channel.image',{channelId,postId:post.id,mediaId:image.id},rt)).data,png)
  await deny('conversation.entry',{conversation:g,id:post.id},rt)
  const download=async(attachmentId,workspace,key,token=rt,extra={})=>{const job=await rpc('conversation.download',{conversation:c,entryId:post.id,attachmentId,clientRequestId:key,...(workspace?{workspace}:{}),...extra},token);const done=await f.until(async()=>{const s=await rpc('conversation.download-status',{id:job.id},token);return !['running','queued'].includes(s.state)&&s},'attachment copy');assert.equal(done.state,'completed',done.error);return done}
- const copy=await download('document:magazine',undefined,'own-message');assert.equal(copy.workspace,'company:'+reader.id);assert.ok(copy.absolutePath.startsWith(reader.cwd+'/'));assert.ok(fs.readFileSync(copy.absolutePath).equals(bytes));assert.ok(!fs.existsSync(path.join(rw.root,doc.name)))
- const company=await download('document:magazine','company:'+reader.id,'own-company');assert.ok(fs.readFileSync(company.absolutePath).equals(bytes));assert.ok(company.absolutePath.startsWith(reader.cwd+'/'))
+ const copy=await download('document:magazine',undefined,'own-message');assert.equal(copy.workspace,'company:'+reader.id);assert.ok(inside(reader.cwd,copy.absolutePath));assert.ok(fs.readFileSync(copy.absolutePath).equals(bytes));assert.ok(!fs.existsSync(path.join(rw.root,doc.name)))
+ const company=await download('document:magazine','company:'+reader.id,'own-company');assert.ok(fs.readFileSync(company.absolutePath).equals(bytes));assert.ok(inside(reader.cwd,company.absolutePath))
  const duplicate=await rpc('conversation.download',{conversation:c,entryId:post.id,attachmentId:'document:magazine',clientRequestId:'own-message'},rt);assert.equal(duplicate.id,copy.id)
  await deny('conversation.download-status',{id:copy.id},st);await deny('conversation.download',{conversation:c,entryId:post.id,attachmentId:'document:magazine',clientRequestId:'escape',workspace:'company:'+secretary.id},rt)
  const second=await download('document:magazine',undefined,'second-copy');assert.notEqual(second.absolutePath,copy.absolutePath)

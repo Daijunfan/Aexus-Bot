@@ -12,7 +12,7 @@ try{
  f=await fixtureCore(process.env.AGENTS_COMPANY_TEST_APP?{AGENTS_COMPANY_BUILTIN_PLUGINS:path.join(process.env.AGENTS_COMPANY_TEST_APP,'Contents/Resources/plugins')}:{})
  const rpc=async(cmd,args={},token=null)=>{const r=await f.request(token,cmd,args);assert.ok(r.ok,cmd+': '+r.error);return r.data},deny=async(cmd,args,token=null)=>{const r=await f.request(token,cmd,args);assert.equal(r.ok,false,cmd+' must reject');return r.error}
  await f.stop();f.env.AGENTS_COMPANY_TUNNEL_DIR=localTunnel(path.join(f.temp,'tunnel'),root,'offline');await f.start()
- const localParent=path.join(f.temp,'local-storage'),hostAPath=path.join(f.temp,'host-a'),hostBPath=path.join(f.temp,'host-b');for(const folder of [localParent,hostAPath,hostBPath])fs.mkdirSync(folder)
+ const fixtureRoot=fs.realpathSync.native(f.temp),localParent=path.join(fixtureRoot,'local-storage'),hostAPath=path.join(fixtureRoot,'host-a'),hostBPath=path.join(fixtureRoot,'host-b');for(const folder of [localParent,hostAPath,hostBPath])fs.mkdirSync(folder)
  await deny('host.create',{name:'Mismatched path syntax',host:'fixture-invalid',os:fixtureOS==='windows'?'linux':'windows',defaultDirectory:hostAPath})
  const hostA=await rpc('host.create',{name:'Storage A',host:'fixture-a',os:fixtureOS,defaultDirectory:hostAPath}),hostB=await rpc('host.create',{name:'Execution B',host:'fixture-b',os:fixtureOS,defaultDirectory:hostBPath})
  await rpc('group.add',{name:'Studio',folderName:'Source code',parentDirectory:localParent,directoryMode:'default'});assert.equal((await rpc('group.list',{details:true})).find(team=>team.name==='Studio').root,path.join(localParent,'Source code'))

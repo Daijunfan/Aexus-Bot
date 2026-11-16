@@ -152,6 +152,9 @@ function send(req, { stream = false } = {}) {
       }
     })
     sock.on('error', (e) => reject(e))
+    sock.once('close', () => {
+      if (first) reject(new Error('Connection interrupted before the response; operation result is unknown. Query the server before repeating a mutation.'))
+    })
   })
 }
 
