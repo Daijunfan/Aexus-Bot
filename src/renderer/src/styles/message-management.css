@@ -108,3 +108,4 @@
 .conversation-membership-history>summary>.icon:last-child{margin-left:auto}
 
 .channel-platform-wordmark{display:grid;place-items:center;width:100%;height:100%;border-radius:inherit;background:#066fdb;color:#fff;font-family:system-ui,sans-serif;font-size:1em;font-weight:750;line-height:1}.channel-avatar[data-platform=linkedin] .channel-platform-wordmark{background:#0a66c2;letter-spacing:-.045em}
+.channel-avatar[data-platform=reddit] .channel-platform-wordmark{background:#e84313;color:#fff;font-size:.9em}

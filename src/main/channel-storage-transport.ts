@@ -8,13 +8,13 @@ export type ChannelStorageSettings={collectorId:string;hostId:string;directory:s
 type Job={id:string;operation:string;args:Record<string,any>;collector:string;state:'queued'|'sent';resolve:(result:any)=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}
 const jobs=new Map<string,Job>(),listeners=new Set<()=>void>()
 const fail=(text:string,code='CHANNEL_STORAGE_UNAVAILABLE',status=503)=>Object.assign(Error(text),{code,status})
-export function channelStorageSettings():ChannelStorageSettings|undefined{const value=one("SELECT value FROM metadata WHERE key='content_storage'")?.value;return value?{...JSON.parse(value),retentionDays:null,platformCapacityBytes:{telegram:1e12,x:1e12,youtube:1e12,zhihu:1e12,linkedin:1e12}}:undefined}
+export function channelStorageSettings():ChannelStorageSettings|undefined{const value=one("SELECT value FROM metadata WHERE key='content_storage'")?.value;return value?{...JSON.parse(value),retentionDays:null,platformCapacityBytes:{telegram:1e12,x:1e12,youtube:1e12,zhihu:1e12,linkedin:1e12,reddit:1e12}}:undefined}
 export function configureChannelStorage(patch?:Record<string,any>){
  requireAppAdministrator()
  if(patch){
   if(Object.keys(patch).some(key=>!['collectorId','hostId','directory'].includes(key))||!one("SELECT id FROM collectors WHERE id=? AND revoked_at IS NULL AND source_ids='\"all\"'",patch.collectorId))throw fail('Choose an active storage collector','INVALID_CHANNEL_STORAGE',400)
   const target=cloudHostTarget(patch.hostId,patch.directory)
-  const value:ChannelStorageSettings={collectorId:patch.collectorId,hostId:patch.hostId,directory:target.directory,retentionDays:null,platformCapacityBytes:{telegram:1e12,x:1e12,youtube:1e12,zhihu:1e12,linkedin:1e12}}
+  const value:ChannelStorageSettings={collectorId:patch.collectorId,hostId:patch.hostId,directory:target.directory,retentionDays:null,platformCapacityBytes:{telegram:1e12,x:1e12,youtube:1e12,zhihu:1e12,linkedin:1e12,reddit:1e12}}
   run("INSERT INTO metadata VALUES('content_storage',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",JSON.stringify(value))
  }
  return {policy:'memory-unless-saved',storage:channelStorageSettings()??null}

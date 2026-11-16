@@ -83,7 +83,7 @@ function acknowledgeChannel(args:Record<string,any>,notify=true,readAt=Date.now(
  return result
 }
 function sourceProfileUrl(row:Row){
- if(row.plugin==='zhihu'||row.plugin==='linkedin')return knowledgeSource(row.plugin,row.locator).url
+ if(row.plugin==='zhihu'||row.plugin==='linkedin'||row.plugin==='reddit')return knowledgeSource(row.plugin,row.locator).url
  if(row.plugin==='x')return 'https://x.com/'+sourceIdentity('x',row.locator)
  if(row.plugin==='youtube'){const target=sourceIdentity('youtube',row.locator);return 'https://www.youtube.com/'+(target.startsWith('UC')?'channel/'+target:target.startsWith('@')?target:'@'+target)}
  if(row.plugin==='telegram'){if(/^https:\/\/t\.me\//i.test(row.locator))return row.locator;if(/^@?[a-zA-Z_][a-zA-Z0-9_]*$/.test(row.locator))return 'https://t.me/'+row.locator.replace(/^@/,'')}
@@ -170,7 +170,7 @@ async function aggregateChannels(args:Record<string,any>){
  return {channel:channelView(channelRow(target.id)),aliases:others.map(row=>row.id)}
 }
 function sourceIdentity(plugin:ChannelSourceInput['plugin'],locator:string){
- if(plugin==='zhihu'||plugin==='linkedin')return knowledgeSource(plugin,locator).identity
+ if(plugin==='zhihu'||plugin==='linkedin'||plugin==='reddit')return knowledgeSource(plugin,locator).identity
  const value=locator.trim().replace(/\/+$/,'');if(plugin==='telegram'){const link=value.match(/^https?:\/\/(?:www\.)?(?:t\.me|telegram\.me)\/(?:s\/)?([a-z\d_]+)(?:\/\d+)?(?:[?#].*)?$/i);if(link&&!['c','joinchat','addlist'].includes(link[1].toLowerCase()))return link[1].toLowerCase();return /^@?[a-z\d_]+$/i.test(value)?value.replace(/^@/,'').toLowerCase():value}
  const url=value.match(/^https?:\/\/([^/?#]+)(\/[^?#]*)?(?:[?#].*)?$/i),hosts=plugin==='x'?['x.com','www.x.com','twitter.com','www.twitter.com','mobile.twitter.com']:['youtube.com','www.youtube.com','m.youtube.com']
  const invalid=()=>fail(plugin==='x'?'Use a valid X author handle or profile URL':'Use a YouTube author handle or channel homepage URL','INVALID_SOURCE_LOCATOR')
@@ -188,7 +188,7 @@ function sourceIdentity(plugin:ChannelSourceInput['plugin'],locator:string){
  return creator[1]?'@'+creator[1].toLowerCase():creator[2]??target
 }
 function addSource(args:ChannelSourceInput):ChannelSource{
- fields(args as any,['plugin','targetId','locator','name','enabled','pollSeconds','channelId']);if(!CHANNEL_PLUGINS.includes(args.plugin))throw fail('Choose Telegram, X, YouTube, Zhihu or LinkedIn')
+ fields(args as any,['plugin','targetId','locator','name','enabled','pollSeconds','channelId']);if(!CHANNEL_PLUGINS.includes(args.plugin))throw fail('Choose Telegram, X, YouTube, Zhihu, LinkedIn or Reddit')
  const locator=text(args.locator,'source locator',4096),targetId=optionalText(args.targetId,'target ID',4096)??args.plugin+':'+locator.replace(/\/$/,''),name=optionalText(args.name,'source name')??locator
  if(args.enabled!==undefined&&typeof args.enabled!=='boolean')throw fail('enabled must be boolean')
  const identity=sourceIdentity(args.plugin,locator),existing=one('SELECT * FROM sources WHERE plugin=? AND target_id=?',args.plugin,targetId)??all('SELECT * FROM sources WHERE plugin=?',args.plugin).find(row=>sourceIdentity(args.plugin,row.locator)===identity)

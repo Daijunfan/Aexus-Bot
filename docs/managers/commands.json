@@ -6778,7 +6778,7 @@
   },
   {
     "name": "channel.aggregate",
-    "args": "--plugin telegram|x|youtube|zhihu|linkedin",
+    "args": "--plugin telegram|x|youtube|zhihu|linkedin|reddit",
     "summary": "User-only: consolidate empty platform channel wrappers into one aggregate while retaining subscription and article identities; old channel links remain aliases",
     "gui": "Platform channel aggregation",
     "inputSchema": {
@@ -6791,7 +6791,8 @@
             "x",
             "youtube",
             "zhihu",
-            "linkedin"
+            "linkedin",
+            "reddit"
           ]
         }
       },
@@ -7433,7 +7434,7 @@
   },
   {
     "name": "channel.sources",
-    "args": "[--channel ID] [--plugin telegram|x|youtube|zhihu|linkedin] [--query TEXT] [--include-disabled]",
+    "args": "[--channel ID] [--plugin telegram|x|youtube|zhihu|linkedin|reddit] [--query TEXT] [--include-disabled]",
     "summary": "Search subscribed authors by name/handle within authorized channels; Secretary sees all. Returns stable source IDs, original avatars and source order",
     "gui": "News subscriptions",
     "inputSchema": {
@@ -7450,7 +7451,8 @@
             "x",
             "youtube",
             "zhihu",
-            "linkedin"
+            "linkedin",
+            "reddit"
           ]
         },
         "includeDisabled": {
@@ -7809,7 +7811,7 @@
   {
     "name": "channel.source-add",
     "args": "--data JSON|@file",
-    "summary": "User or Secretary: follow a source; Telegram, X and YouTube each default to one platform aggregate",
+    "summary": "User or Secretary: follow a source; Social sources default to their platform aggregate",
     "gui": "News subscriptions",
     "inputSchema": {
       "type": "object",
@@ -7821,7 +7823,8 @@
             "x",
             "youtube",
             "zhihu",
-            "linkedin"
+            "linkedin",
+            "reddit"
           ]
         },
         "targetId": {
@@ -8930,7 +8933,7 @@
   },
   {
     "name": "messenger.directory",
-    "args": "[--type all|outsource|private|groups|channels|telegram|x|youtube|zhihu|linkedin] [--query TEXT] [--folder ID] [--archived exclude|only|include] [--offset N] [--limit N]",
+    "args": "[--type all|outsource|private|groups|channels|telegram|x|youtube|zhihu|linkedin|reddit] [--query TEXT] [--folder ID] [--archived exclude|only|include] [--offset N] [--limit N]",
     "summary": "User or Secretary: query one category using folder ID from messenger.state.categories, or one type. No category means All. Archive filtering applies only to All; category queries include their archived conversations. No message bodies, read acknowledgements or execution.",
     "gui": "Message category filtering",
     "inputSchema": {
@@ -8948,7 +8951,8 @@
             "x",
             "youtube",
             "zhihu",
-            "linkedin"
+            "linkedin",
+            "reddit"
           ]
         },
         "query": {
@@ -8983,7 +8987,7 @@
   },
   {
     "name": "messenger.social",
-    "args": "[--platform telegram|x|youtube|zhihu|linkedin] [--include-disabled]",
+    "args": "[--platform telegram|x|youtube|zhihu|linkedin|reddit] [--include-disabled]",
     "summary": "User or Secretary: list each social element with stable source ID, parent channel, latest publication and per-source unread count; no reads acknowledged",
     "gui": "Social category picker",
     "inputSchema": {
@@ -8996,7 +9000,8 @@
             "x",
             "youtube",
             "zhihu",
-            "linkedin"
+            "linkedin",
+            "reddit"
           ]
         },
         "includeDisabled": {
@@ -9551,7 +9556,7 @@
   },
   {
     "name": "messenger.folder-save",
-    "args": "--name NAME --conversations JSON [--include outsource|private|groups|channels|telegram|x|youtube|zhihu|linkedin|null] [--excluded JSON] [--id ID] [--expected-revision N]",
+    "args": "--name NAME --conversations JSON [--include outsource|private|groups|channels|telegram|x|youtube|zhihu|linkedin|reddit|null] [--excluded JSON] [--id ID] [--expected-revision N]",
     "summary": "User or Secretary: create or update a personal folder of private, group and channel conversations without moving their content",
     "gui": "Conversation folders",
     "inputSchema": {
@@ -9589,6 +9594,7 @@
             "youtube",
             "zhihu",
             "linkedin",
+            "reddit",
             "null",
             null
           ]

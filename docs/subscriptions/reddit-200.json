@@ -1,0 +1,3610 @@
+{
+  "reviewedAt": "2026-11-16",
+  "selection": "Editorial selection for a personal intelligence team; not an official ranking or endorsement of every post.",
+  "sources": [
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/machinelearning/",
+      "targetId": "reddit:r/machinelearning",
+      "name": "r/MachineLearning",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/MachineLearning/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "readable",
+        "lastPostAt": "2026-11-16T01:07:01+00:00"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/localllama/",
+      "targetId": "reddit:r/localllama",
+      "name": "r/LocalLLaMA",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/LocalLLaMA/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/artificial/",
+      "targetId": "reddit:r/artificial",
+      "name": "r/artificial",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/artificial/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/deeplearning/",
+      "targetId": "reddit:r/deeplearning",
+      "name": "r/deeplearning",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/deeplearning/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/languagetechnology/",
+      "targetId": "reddit:r/languagetechnology",
+      "name": "r/LanguageTechnology",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/LanguageTechnology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/computervision/",
+      "targetId": "reddit:r/computervision",
+      "name": "r/computervision",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/computervision/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/reinforcementlearning/",
+      "targetId": "reddit:r/reinforcementlearning",
+      "name": "r/reinforcementlearning",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/reinforcementlearning/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/datascience/",
+      "targetId": "reddit:r/datascience",
+      "name": "r/datascience",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/datascience/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/dataengineering/",
+      "targetId": "reddit:r/dataengineering",
+      "name": "r/dataengineering",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/dataengineering/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/statistics/",
+      "targetId": "reddit:r/statistics",
+      "name": "r/statistics",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/statistics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/askstatistics/",
+      "targetId": "reddit:r/askstatistics",
+      "name": "r/AskStatistics",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/AskStatistics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/rstats/",
+      "targetId": "reddit:r/rstats",
+      "name": "r/rstats",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/rstats/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/julia/",
+      "targetId": "reddit:r/julia",
+      "name": "r/Julia",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Julia/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/mlops/",
+      "targetId": "reddit:r/mlops",
+      "name": "r/MLOps",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/MLOps/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/rag/",
+      "targetId": "reddit:r/rag",
+      "name": "r/RAG",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/RAG/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/llmdevs/",
+      "targetId": "reddit:r/llmdevs",
+      "name": "r/LLMDevs",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/LLMDevs/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/ollama/",
+      "targetId": "reddit:r/ollama",
+      "name": "r/ollama",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ollama/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/comfyui/",
+      "targetId": "reddit:r/comfyui",
+      "name": "r/ComfyUI",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ComfyUI/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/huggingface/",
+      "targetId": "reddit:r/huggingface",
+      "name": "r/huggingface",
+      "pollSeconds": 1800,
+      "category": "ai_ml",
+      "categoryLabel": "人工智能与数据",
+      "rationale": "研究论文、开源模型、工程实践与可复现经验",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/huggingface/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/programming/",
+      "targetId": "reddit:r/programming",
+      "name": "r/programming",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/programming/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/compsci/",
+      "targetId": "reddit:r/compsci",
+      "name": "r/compsci",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/compsci/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/experienceddevs/",
+      "targetId": "reddit:r/experienceddevs",
+      "name": "r/ExperiencedDevs",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ExperiencedDevs/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/softwarearchitecture/",
+      "targetId": "reddit:r/softwarearchitecture",
+      "name": "r/softwarearchitecture",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/softwarearchitecture/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/programminglanguages/",
+      "targetId": "reddit:r/programminglanguages",
+      "name": "r/ProgrammingLanguages",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ProgrammingLanguages/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "readable",
+        "lastPostAt": "2026-11-15T18:30:16+00:00"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/rust/",
+      "targetId": "reddit:r/rust",
+      "name": "r/Rust",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Rust/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/python/",
+      "targetId": "reddit:r/python",
+      "name": "r/Python",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Python/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/golang/",
+      "targetId": "reddit:r/golang",
+      "name": "r/golang",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/golang/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/cpp/",
+      "targetId": "reddit:r/cpp",
+      "name": "r/cpp",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/cpp/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/c_programming/",
+      "targetId": "reddit:r/c_programming",
+      "name": "r/C_Programming",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/C_Programming/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/java/",
+      "targetId": "reddit:r/java",
+      "name": "r/java",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/java/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/javascript/",
+      "targetId": "reddit:r/javascript",
+      "name": "r/javascript",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/javascript/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/typescript/",
+      "targetId": "reddit:r/typescript",
+      "name": "r/typescript",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/typescript/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "readable",
+        "lastPostAt": "2026-11-15T20:25:33+00:00"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/kotlin/",
+      "targetId": "reddit:r/kotlin",
+      "name": "r/kotlin",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/kotlin/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/swift/",
+      "targetId": "reddit:r/swift",
+      "name": "r/swift",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/swift/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "readable",
+        "lastPostAt": "2026-11-16T02:44:35+00:00"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/csharp/",
+      "targetId": "reddit:r/csharp",
+      "name": "r/csharp",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/csharp/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/dotnet/",
+      "targetId": "reddit:r/dotnet",
+      "name": "r/dotnet",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/dotnet/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/elixir/",
+      "targetId": "reddit:r/elixir",
+      "name": "r/elixir",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/elixir/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/erlang/",
+      "targetId": "reddit:r/erlang",
+      "name": "r/erlang",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/erlang/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/haskell/",
+      "targetId": "reddit:r/haskell",
+      "name": "r/haskell",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/haskell/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/scala/",
+      "targetId": "reddit:r/scala",
+      "name": "r/scala",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/scala/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/ocaml/",
+      "targetId": "reddit:r/ocaml",
+      "name": "r/ocaml",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ocaml/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/lisp/",
+      "targetId": "reddit:r/lisp",
+      "name": "r/lisp",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/lisp/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/clojure/",
+      "targetId": "reddit:r/clojure",
+      "name": "r/clojure",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/clojure/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/zig/",
+      "targetId": "reddit:r/zig",
+      "name": "r/Zig",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Zig/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/sql/",
+      "targetId": "reddit:r/sql",
+      "name": "r/SQL",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/SQL/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/postgresql/",
+      "targetId": "reddit:r/postgresql",
+      "name": "r/PostgreSQL",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/PostgreSQL/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/sqlite/",
+      "targetId": "reddit:r/sqlite",
+      "name": "r/SQLite",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/SQLite/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/webdev/",
+      "targetId": "reddit:r/webdev",
+      "name": "r/webdev",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "语言生态、架构权衡、工程经验与工具发布",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/webdev/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/linux/",
+      "targetId": "reddit:r/linux",
+      "name": "r/linux",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/linux/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/linuxadmin/",
+      "targetId": "reddit:r/linuxadmin",
+      "name": "r/linuxadmin",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/linuxadmin/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/linuxquestions/",
+      "targetId": "reddit:r/linuxquestions",
+      "name": "r/linuxquestions",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/linuxquestions/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/sysadmin/",
+      "targetId": "reddit:r/sysadmin",
+      "name": "r/sysadmin",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/sysadmin/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/devops/",
+      "targetId": "reddit:r/devops",
+      "name": "r/devops",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/devops/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/sre/",
+      "targetId": "reddit:r/sre",
+      "name": "r/sre",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/sre/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/kubernetes/",
+      "targetId": "reddit:r/kubernetes",
+      "name": "r/kubernetes",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/kubernetes/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/docker/",
+      "targetId": "reddit:r/docker",
+      "name": "r/docker",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/docker/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/selfhosted/",
+      "targetId": "reddit:r/selfhosted",
+      "name": "r/selfhosted",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/selfhosted/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/homelab/",
+      "targetId": "reddit:r/homelab",
+      "name": "r/homelab",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/homelab/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/networking/",
+      "targetId": "reddit:r/networking",
+      "name": "r/networking",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/networking/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/netsec/",
+      "targetId": "reddit:r/netsec",
+      "name": "r/netsec",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/netsec/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/cybersecurity/",
+      "targetId": "reddit:r/cybersecurity",
+      "name": "r/cybersecurity",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/cybersecurity/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/security/",
+      "targetId": "reddit:r/security",
+      "name": "r/security",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/security/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/reverseengineering/",
+      "targetId": "reddit:r/reverseengineering",
+      "name": "r/reverseengineering",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/reverseengineering/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/asknetsec/",
+      "targetId": "reddit:r/asknetsec",
+      "name": "r/AskNetsec",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/AskNetsec/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/embedded/",
+      "targetId": "reddit:r/embedded",
+      "name": "r/embedded",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/embedded/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/riscv/",
+      "targetId": "reddit:r/riscv",
+      "name": "r/RISCV",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/RISCV/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/opensource/",
+      "targetId": "reddit:r/opensource",
+      "name": "r/opensource",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/opensource/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/commandline/",
+      "targetId": "reddit:r/commandline",
+      "name": "r/commandline",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/commandline/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/bash/",
+      "targetId": "reddit:r/bash",
+      "name": "r/bash",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "操作系统、运维、云计算、可靠性与自托管实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/bash/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/science/",
+      "targetId": "reddit:r/science",
+      "name": "r/science",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/science/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/askscience/",
+      "targetId": "reddit:r/askscience",
+      "name": "r/askscience",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/askscience/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/asksciencediscussion/",
+      "targetId": "reddit:r/asksciencediscussion",
+      "name": "r/AskScienceDiscussion",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/AskScienceDiscussion/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/physics/",
+      "targetId": "reddit:r/physics",
+      "name": "r/Physics",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Physics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/askphysics/",
+      "targetId": "reddit:r/askphysics",
+      "name": "r/AskPhysics",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/AskPhysics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/math/",
+      "targetId": "reddit:r/math",
+      "name": "r/math",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/math/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/mathematics/",
+      "targetId": "reddit:r/mathematics",
+      "name": "r/mathematics",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/mathematics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/chemistry/",
+      "targetId": "reddit:r/chemistry",
+      "name": "r/chemistry",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/chemistry/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/biology/",
+      "targetId": "reddit:r/biology",
+      "name": "r/biology",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/biology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/neuroscience/",
+      "targetId": "reddit:r/neuroscience",
+      "name": "r/neuroscience",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/neuroscience/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/cognitivescience/",
+      "targetId": "reddit:r/cognitivescience",
+      "name": "r/CognitiveScience",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/CognitiveScience/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/genetics/",
+      "targetId": "reddit:r/genetics",
+      "name": "r/genetics",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/genetics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/bioinformatics/",
+      "targetId": "reddit:r/bioinformatics",
+      "name": "r/bioinformatics",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/bioinformatics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/microbiology/",
+      "targetId": "reddit:r/microbiology",
+      "name": "r/microbiology",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/microbiology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/biochemistry/",
+      "targetId": "reddit:r/biochemistry",
+      "name": "r/Biochemistry",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Biochemistry/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/quantumcomputing/",
+      "targetId": "reddit:r/quantumcomputing",
+      "name": "r/QuantumComputing",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/QuantumComputing/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/space/",
+      "targetId": "reddit:r/space",
+      "name": "r/space",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/space/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/astronomy/",
+      "targetId": "reddit:r/astronomy",
+      "name": "r/astronomy",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/astronomy/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/astrophysics/",
+      "targetId": "reddit:r/astrophysics",
+      "name": "r/astrophysics",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/astrophysics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/cosmology/",
+      "targetId": "reddit:r/cosmology",
+      "name": "r/cosmology",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/cosmology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/geology/",
+      "targetId": "reddit:r/geology",
+      "name": "r/geology",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/geology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/oceanography/",
+      "targetId": "reddit:r/oceanography",
+      "name": "r/oceanography",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/oceanography/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/ecology/",
+      "targetId": "reddit:r/ecology",
+      "name": "r/ecology",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ecology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/evolution/",
+      "targetId": "reddit:r/evolution",
+      "name": "r/Evolution",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Evolution/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/paleontology/",
+      "targetId": "reddit:r/paleontology",
+      "name": "r/paleontology",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/paleontology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/anthropology/",
+      "targetId": "reddit:r/anthropology",
+      "name": "r/anthropology",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/anthropology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/archaeology/",
+      "targetId": "reddit:r/archaeology",
+      "name": "r/Archaeology",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Archaeology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/linguistics/",
+      "targetId": "reddit:r/linguistics",
+      "name": "r/linguistics",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/linguistics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/academia/",
+      "targetId": "reddit:r/academia",
+      "name": "r/academia",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "研究成果、专家问答、证据与科学方法",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/academia/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/engineering/",
+      "targetId": "reddit:r/engineering",
+      "name": "r/engineering",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/engineering/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/askengineers/",
+      "targetId": "reddit:r/askengineers",
+      "name": "r/AskEngineers",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/AskEngineers/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/mechanicalengineering/",
+      "targetId": "reddit:r/mechanicalengineering",
+      "name": "r/MechanicalEngineering",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/MechanicalEngineering/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/electricalengineering/",
+      "targetId": "reddit:r/electricalengineering",
+      "name": "r/ElectricalEngineering",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ElectricalEngineering/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/ece/",
+      "targetId": "reddit:r/ece",
+      "name": "r/ECE",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ECE/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/robotics/",
+      "targetId": "reddit:r/robotics",
+      "name": "r/robotics",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/robotics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/controltheory/",
+      "targetId": "reddit:r/controltheory",
+      "name": "r/ControlTheory",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ControlTheory/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/aerospace/",
+      "targetId": "reddit:r/aerospace",
+      "name": "r/aerospace",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/aerospace/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/civilengineering/",
+      "targetId": "reddit:r/civilengineering",
+      "name": "r/CivilEngineering",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/CivilEngineering/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/chemicalengineering/",
+      "targetId": "reddit:r/chemicalengineering",
+      "name": "r/ChemicalEngineering",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ChemicalEngineering/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/materials/",
+      "targetId": "reddit:r/materials",
+      "name": "r/materials",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/materials/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/batteries/",
+      "targetId": "reddit:r/batteries",
+      "name": "r/batteries",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/batteries/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/energy/",
+      "targetId": "reddit:r/energy",
+      "name": "r/energy",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/energy/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/renewableenergy/",
+      "targetId": "reddit:r/renewableenergy",
+      "name": "r/renewableenergy",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/renewableenergy/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/solar/",
+      "targetId": "reddit:r/solar",
+      "name": "r/solar",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/solar/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/nuclear/",
+      "targetId": "reddit:r/nuclear",
+      "name": "r/nuclear",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/nuclear/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/fusion/",
+      "targetId": "reddit:r/fusion",
+      "name": "r/fusion",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/fusion/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/semiconductors/",
+      "targetId": "reddit:r/semiconductors",
+      "name": "r/semiconductors",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/semiconductors/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/fpga/",
+      "targetId": "reddit:r/fpga",
+      "name": "r/FPGA",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/FPGA/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/chipdesign/",
+      "targetId": "reddit:r/chipdesign",
+      "name": "r/chipdesign",
+      "pollSeconds": 1800,
+      "category": "engineering",
+      "categoryLabel": "工程与技术前沿",
+      "rationale": "硬件设计、机器人、制造与能源工程",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/chipdesign/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/productmanagement/",
+      "targetId": "reddit:r/productmanagement",
+      "name": "r/ProductManagement",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ProductManagement/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/userexperience/",
+      "targetId": "reddit:r/userexperience",
+      "name": "r/userexperience",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/userexperience/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/uxresearch/",
+      "targetId": "reddit:r/uxresearch",
+      "name": "r/UXResearch",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/UXResearch/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/uxdesign/",
+      "targetId": "reddit:r/uxdesign",
+      "name": "r/UXDesign",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/UXDesign/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/ui_design/",
+      "targetId": "reddit:r/ui_design",
+      "name": "r/UI_Design",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/UI_Design/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/web_design/",
+      "targetId": "reddit:r/web_design",
+      "name": "r/web_design",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/web_design/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/design/",
+      "targetId": "reddit:r/design",
+      "name": "r/design",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/design/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/designsystems/",
+      "targetId": "reddit:r/designsystems",
+      "name": "r/DesignSystems",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/DesignSystems/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/accessibility/",
+      "targetId": "reddit:r/accessibility",
+      "name": "r/accessibility",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/accessibility/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/saas/",
+      "targetId": "reddit:r/saas",
+      "name": "r/SaaS",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/SaaS/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/startups/",
+      "targetId": "reddit:r/startups",
+      "name": "r/startups",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/startups/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/entrepreneur/",
+      "targetId": "reddit:r/entrepreneur",
+      "name": "r/Entrepreneur",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Entrepreneur/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/smallbusiness/",
+      "targetId": "reddit:r/smallbusiness",
+      "name": "r/smallbusiness",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/smallbusiness/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/marketing/",
+      "targetId": "reddit:r/marketing",
+      "name": "r/marketing",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/marketing/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/seo/",
+      "targetId": "reddit:r/seo",
+      "name": "r/SEO",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/SEO/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/analytics/",
+      "targetId": "reddit:r/analytics",
+      "name": "r/analytics",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/analytics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/businessintelligence/",
+      "targetId": "reddit:r/businessintelligence",
+      "name": "r/BusinessIntelligence",
+      "pollSeconds": 1800,
+      "category": "product_design",
+      "categoryLabel": "产品与设计",
+      "rationale": "用户研究、产品决策、交互与设计系统",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/BusinessIntelligence/about/",
+      "publicReading": true,
+      "postingRestricted": true,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/economics/",
+      "targetId": "reddit:r/economics",
+      "name": "r/Economics",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Economics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/askeconomics/",
+      "targetId": "reddit:r/askeconomics",
+      "name": "r/AskEconomics",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/AskEconomics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/finance/",
+      "targetId": "reddit:r/finance",
+      "name": "r/finance",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/finance/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/financialcareers/",
+      "targetId": "reddit:r/financialcareers",
+      "name": "r/FinancialCareers",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/FinancialCareers/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/investing/",
+      "targetId": "reddit:r/investing",
+      "name": "r/investing",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/investing/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/securityanalysis/",
+      "targetId": "reddit:r/securityanalysis",
+      "name": "r/SecurityAnalysis",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/SecurityAnalysis/about/",
+      "publicReading": true,
+      "postingRestricted": true,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/valueinvesting/",
+      "targetId": "reddit:r/valueinvesting",
+      "name": "r/ValueInvesting",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ValueInvesting/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/bogleheads/",
+      "targetId": "reddit:r/bogleheads",
+      "name": "r/Bogleheads",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Bogleheads/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/personalfinance/",
+      "targetId": "reddit:r/personalfinance",
+      "name": "r/personalfinance",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/personalfinance/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/financialindependence/",
+      "targetId": "reddit:r/financialindependence",
+      "name": "r/financialindependence",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/financialindependence/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/financialplanning/",
+      "targetId": "reddit:r/financialplanning",
+      "name": "r/FinancialPlanning",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/FinancialPlanning/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/cfa/",
+      "targetId": "reddit:r/cfa",
+      "name": "r/CFA",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/CFA/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/accounting/",
+      "targetId": "reddit:r/accounting",
+      "name": "r/Accounting",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Accounting/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/econometrics/",
+      "targetId": "reddit:r/econometrics",
+      "name": "r/econometrics",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/econometrics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/supplychain/",
+      "targetId": "reddit:r/supplychain",
+      "name": "r/supplychain",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/supplychain/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/logistics/",
+      "targetId": "reddit:r/logistics",
+      "name": "r/logistics",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/logistics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/business/",
+      "targetId": "reddit:r/business",
+      "name": "r/business",
+      "pollSeconds": 1800,
+      "category": "finance_economics",
+      "categoryLabel": "经济金融与商业",
+      "rationale": "宏观解释、长期投资、公司分析与财务知识",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/business/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/fitness/",
+      "targetId": "reddit:r/fitness",
+      "name": "r/Fitness",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Fitness/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/advancedfitness/",
+      "targetId": "reddit:r/advancedfitness",
+      "name": "r/AdvancedFitness",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/AdvancedFitness/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/weightroom/",
+      "targetId": "reddit:r/weightroom",
+      "name": "r/weightroom",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/weightroom/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/bodyweightfitness/",
+      "targetId": "reddit:r/bodyweightfitness",
+      "name": "r/bodyweightfitness",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/bodyweightfitness/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/running/",
+      "targetId": "reddit:r/running",
+      "name": "r/running",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/running/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/advancedrunning/",
+      "targetId": "reddit:r/advancedrunning",
+      "name": "r/AdvancedRunning",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/AdvancedRunning/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/swimming/",
+      "targetId": "reddit:r/swimming",
+      "name": "r/swimming",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/swimming/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/cycling/",
+      "targetId": "reddit:r/cycling",
+      "name": "r/cycling",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/cycling/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/nutrition/",
+      "targetId": "reddit:r/nutrition",
+      "name": "r/nutrition",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/nutrition/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/scientificnutrition/",
+      "targetId": "reddit:r/scientificnutrition",
+      "name": "r/ScientificNutrition",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ScientificNutrition/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/publichealth/",
+      "targetId": "reddit:r/publichealth",
+      "name": "r/PublicHealth",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/PublicHealth/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/epidemiology/",
+      "targetId": "reddit:r/epidemiology",
+      "name": "r/epidemiology",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/epidemiology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/medicine/",
+      "targetId": "reddit:r/medicine",
+      "name": "r/medicine",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/medicine/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/sleep/",
+      "targetId": "reddit:r/sleep",
+      "name": "r/sleep",
+      "pollSeconds": 1800,
+      "category": "health_fitness",
+      "categoryLabel": "健康与运动科学",
+      "rationale": "运动训练、营养与公共卫生讨论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/sleep/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/askhistorians/",
+      "targetId": "reddit:r/askhistorians",
+      "name": "r/AskHistorians",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/AskHistorians/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/history/",
+      "targetId": "reddit:r/history",
+      "name": "r/history",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/history/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/askphilosophy/",
+      "targetId": "reddit:r/askphilosophy",
+      "name": "r/AskPhilosophy",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/AskPhilosophy/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/philosophy/",
+      "targetId": "reddit:r/philosophy",
+      "name": "r/philosophy",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/philosophy/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/sociology/",
+      "targetId": "reddit:r/sociology",
+      "name": "r/sociology",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/sociology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/asksocialscience/",
+      "targetId": "reddit:r/asksocialscience",
+      "name": "r/AskSocialScience",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/AskSocialScience/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/politicalscience/",
+      "targetId": "reddit:r/politicalscience",
+      "name": "r/politicalscience",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/politicalscience/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/irstudies/",
+      "targetId": "reddit:r/irstudies",
+      "name": "r/IRstudies",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/IRstudies/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/geopolitics/",
+      "targetId": "reddit:r/geopolitics",
+      "name": "r/geopolitics",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/geopolitics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/neutralpolitics/",
+      "targetId": "reddit:r/neutralpolitics",
+      "name": "r/NeutralPolitics",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/NeutralPolitics/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/neutralnews/",
+      "targetId": "reddit:r/neutralnews",
+      "name": "r/NeutralNews",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/NeutralNews/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/education/",
+      "targetId": "reddit:r/education",
+      "name": "r/education",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/education/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/highereducation/",
+      "targetId": "reddit:r/highereducation",
+      "name": "r/HigherEducation",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/HigherEducation/about/",
+      "publicReading": true,
+      "postingRestricted": true,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/urbanplanning/",
+      "targetId": "reddit:r/urbanplanning",
+      "name": "r/urbanplanning",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/urbanplanning/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/transit/",
+      "targetId": "reddit:r/transit",
+      "name": "r/transit",
+      "pollSeconds": 1800,
+      "category": "humanities_society",
+      "categoryLabel": "人文与社会",
+      "rationale": "严肃历史、哲学、社会学与公共政策问答",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/transit/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/obsidianmd/",
+      "targetId": "reddit:r/obsidianmd",
+      "name": "r/ObsidianMD",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/ObsidianMD/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/zotero/",
+      "targetId": "reddit:r/zotero",
+      "name": "r/Zotero",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Zotero/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/latex/",
+      "targetId": "reddit:r/latex",
+      "name": "r/LaTeX",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/LaTeX/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/notion/",
+      "targetId": "reddit:r/notion",
+      "name": "r/Notion",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/Notion/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/pkms/",
+      "targetId": "reddit:r/pkms",
+      "name": "r/PKMS",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/PKMS/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/gis/",
+      "targetId": "reddit:r/gis",
+      "name": "r/GIS",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/GIS/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/qgis/",
+      "targetId": "reddit:r/qgis",
+      "name": "r/QGIS",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/QGIS/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/remotesensing/",
+      "targetId": "reddit:r/remotesensing",
+      "name": "r/RemoteSensing",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/RemoteSensing/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/dataisbeautiful/",
+      "targetId": "reddit:r/dataisbeautiful",
+      "name": "r/dataisbeautiful",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/dataisbeautiful/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/datasets/",
+      "targetId": "reddit:r/datasets",
+      "name": "r/datasets",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/datasets/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/visualization/",
+      "targetId": "reddit:r/visualization",
+      "name": "r/visualization",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/visualization/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/hpc/",
+      "targetId": "reddit:r/hpc",
+      "name": "r/HPC",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/HPC/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/privacy/",
+      "targetId": "reddit:r/privacy",
+      "name": "r/privacy",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/privacy/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/cryptography/",
+      "targetId": "reddit:r/cryptography",
+      "name": "r/cryptography",
+      "pollSeconds": 1800,
+      "category": "research_tools",
+      "categoryLabel": "研究工具与方法",
+      "rationale": "文献、知识管理、统计分析、开源工作流与隐私",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/cryptography/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/technology/",
+      "targetId": "reddit:r/technology",
+      "name": "r/technology",
+      "pollSeconds": 1800,
+      "category": "frontier_news",
+      "categoryLabel": "前沿资讯与深度讨论",
+      "rationale": "科技产业、计算、航天与产业变化线索",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/technology/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/hardware/",
+      "targetId": "reddit:r/hardware",
+      "name": "r/hardware",
+      "pollSeconds": 1800,
+      "category": "frontier_news",
+      "categoryLabel": "前沿资讯与深度讨论",
+      "rationale": "科技产业、计算、航天与产业变化线索",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/hardware/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/firefox/",
+      "targetId": "reddit:r/firefox",
+      "name": "r/firefox",
+      "pollSeconds": 1800,
+      "category": "systems",
+      "categoryLabel": "系统与基础设施",
+      "rationale": "浏览器平台、开放网络与隐私保护实践",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/firefox/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/reactjs/",
+      "targetId": "reddit:r/reactjs",
+      "name": "r/reactjs",
+      "pollSeconds": 1800,
+      "category": "software",
+      "categoryLabel": "软件开发",
+      "rationale": "React 工程实践、生态更新与复杂前端设计",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/reactjs/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "rate-limited"
+      }
+    },
+    {
+      "plugin": "reddit",
+      "locator": "https://www.reddit.com/r/climate/",
+      "targetId": "reddit:r/climate",
+      "name": "r/climate",
+      "pollSeconds": 1800,
+      "category": "science",
+      "categoryLabel": "基础科学与研究",
+      "rationale": "气候研究、能源转型与科学证据；社区规则拒绝科学否认和阴谋论",
+      "reviewedAt": "2026-11-16",
+      "referenceUrl": "https://www.reddit.com/r/climate/about/",
+      "publicReading": true,
+      "postingRestricted": false,
+      "verificationScope": "Community about page; feed delivery is verified separately",
+      "feedAudit": {
+        "state": "not-yet-collected"
+      }
+    }
+  ]
+}

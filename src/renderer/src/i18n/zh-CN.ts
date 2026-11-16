@@ -2,6 +2,9 @@
 import {engineeringZh} from './engineering.ts'
 import {botManagementZh} from './bot-management.ts'
 export const zhCN:Record<string,string> = {
+  "Reddit channel": "Reddit 频道",
+  "Community or user URL": "社区或用户主页链接",
+  "Follow source": "订阅来源",
   'Choose employee type':'选择员工类型',
   'Secretary is always authorized.':'Secretary 始终拥有访问权限。',
   'Choose files to share':'选择要共享的文件',
@@ -3925,7 +3928,7 @@ export const zhCN:Record<string,string> = {
   "Personal reaction in Aexus": "Aexus 中的个人表情标记",
   "Zhihu channel": "知乎频道",
   "LinkedIn channel": "LinkedIn 频道",
-  "Add a Telegram, X, YouTube, Zhihu or LinkedIn subscription.": "添加 Telegram、X、YouTube、知乎或 LinkedIn 订阅。",
+  "Add a Telegram, X, YouTube, Zhihu, LinkedIn or Reddit subscription.": "添加 Telegram、X、YouTube、知乎、LinkedIn 或 Reddit 订阅。",
   "Public Zhihu selections use https://daily.zhihu.com/. Author feeds require authorized access on the collector; adding a source does not imply that its content is available.": "公开精选使用 https://daily.zhihu.com/。作者动态需要采集端具备授权访问能力；添加来源不代表已成功读取其内容。",
   "Only public original posts are collected. Reposts, short promotions and private member data are excluded. Restricted sources retain their access error.": "采集公开原创帖子，过滤转载和简短推广，不读取非公开会员信息。受限来源保留真实访问错误。",
 }
