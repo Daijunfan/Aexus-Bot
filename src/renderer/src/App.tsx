@@ -1,4 +1,5 @@
 import {readingPosition,useReadingPosition} from './chat/useReadingPosition'
+import {useMessageChrome} from './chat/useMessageChrome'
 import {PrivateMessageRow} from './components/MessageIdentity'
 import {readSnapshot} from './readSnapshot'
 import {SlashCommandMenu} from './components/SlashCommandMenu'
@@ -220,6 +221,7 @@ export default function App() {
   const authorNames=useMemo(()=>Object.fromEntries(store.sessions.map(card=>[card.id,card.title])),[store.sessions])
   useComposerHeight(composer,input,true,view.kind+':'+(active?.id??''),messageMode)
   const displayItems=visibleItems
+  useMessageChrome(transcript,active?.id,messageMode&&!editingEmployee&&!view.tools,()=>transcriptScroll.current.follow,()=>{transcriptScroll.current.follow=false})
   const reading=useReadingPosition({identity:readingKey,initial:savedReading,ready:messageMode&&privateMessages.ready&&!opening&&employee?.id===view.employee,items:displayItems,root:transcript,viewport:messageViewport,skip:messenger.jump?.conversation===readingKey,onRestore:following=>{privatePositioned.current=true;transcriptScroll.current.follow=following}})
   const searchItems=useMemo(()=>displayItems.filter(item=>item.role!=='notice').map(item=>({id:item.id,images:item.role==='user'?[...item.images??[],...(item.files??[]).map(file=>file.path)]:[],text:item.role==='assistant'?item.blocks.filter(block=>block.kind==='text').map(block=>block.text).join('\n'):item.text})),[displayItems])
   const galleryImages=useMemo(()=>displayItems.flatMap(item=>item.role!=='notice'&&employee&&!messenger.state.messages[messageKey(conversationKey('employee',employee.id),item.id)]?.hidden?messageGalleryItems({employee:employee.id,messageId:item.id},item.images??[],item.role==='user'?item.text:item.blocks.filter(b=>b.kind==='text').map(b=>b.text).join('\n'),item.imageNames):[]),[displayItems,employee?.id,messenger.state.messages])

@@ -29,6 +29,7 @@ import {QuoteSelection} from '../chat/QuoteSelection'
 import {highlightQuote} from '../chat/quoteTextRange'
 import {validateQuote,type MessageQuote} from '../../../shared/message-quotes'
 import {useComposerHeight} from '../chat/useComposerHeight'
+import {useMessageChrome} from '../chat/useMessageChrome'
 import {MotionStrip} from '../chat/MotionStrip'
 import {messageGroups,messageLayout,useMessageMotion} from '../chat/messagePresentation'
 import {ConversationNoticeBadge} from './ConversationNotice'
@@ -107,6 +108,7 @@ function GroupConversationBody({group,store,sessions,drafts,onBack,onPrivate,top
  const localQuoteChanged=useMemo(()=>{if(replyOrigin.conversation||!replyQuote||!localReplySource)return false;try{validateQuote(localReplySource.text,replyQuote);return false}catch{return true}},[replyOrigin.conversation,replyQuote,localReplySource?.text])
  const names=useMemo(()=>Object.fromEntries(store.sessions.map(card=>[card.id,card.title])),[store.sessions])
  const viewport=useRef<MessageViewportHandle|null>(null),transcript=useRef<HTMLDivElement>(null),composer=useRef<HTMLTextAreaElement>(null),follow=useRef(savedReading?.following??true),scrollTarget=useRef<number|null>(null),sendingRef=useRef(false),pendingSend=useRef<GroupSend|null>(null),loadedInitial=useRef(false)
+ useMessageChrome(transcript,draftKey,true,()=>follow.current,()=>{follow.current=false})
  const reading=useReadingPosition({identity:draftKey,initial:savedReading,ready:!loading,items:history,root:transcript,viewport,skip:messenger.jump?.conversation===conversation,onRestore:following=>{positioned.current=true;follow.current=following}})
  const picker=useMentionPicker(composer,text,mentionLabels(mentions,group.members)),mentionMenu=picker.open,mentionIndex=picker.index,setMentionIndex=picker.setIndex
  useEffect(()=>{if(!messenger.ready||drafts[draftSlot])return;const saved=messenger.getDraft(draftKey);if(saved){setImages(saved.images??[]);setFiles(saved.files??[]);setText(saved.text);setMentions(saved.mentions??[]);setReplyTo(saved.replyTo);setReplyQuote(saved.replyQuote);setReplyOrigin({conversation:saved.replyConversation,textOnly:saved.replyTextOnly});drafts[draftSlot]={...saved,mentions:saved.mentions??[],clientMessageId:saved.clientMessageId??crypto.randomUUID()}}},[messenger.ready,group.id,messenger.state.drafts,text,images.length,files.length,replyTo])
@@ -191,7 +193,7 @@ function GroupConversationBody({group,store,sessions,drafts,onBack,onPrivate,top
   if(loading||positioned.current||!history.length)return
   if(!firstUnread||conversationJump){positioned.current=true;reading.remember();return}
   const controller=new AbortController();follow.current=false
-  void viewport.current?.scrollToMessage(firstUnread,{block:'start',signal:controller.signal}).then(row=>{const el=transcript.current;if(controller.signal.aborted||!row||!el)return;const marker=(row.closest('.group-message-row')??row).previousElementSibling;if(marker?.matches('[data-unread-boundary]'))el.scrollTop+=marker.getBoundingClientRect().top-el.getBoundingClientRect().top-14;scrollTarget.current=el.scrollTop;positioned.current=true;setAwayFromLatest(el.scrollHeight-el.clientHeight-el.scrollTop>80);reading.remember()})
+  void viewport.current?.scrollToMessage(firstUnread,{block:'start',signal:controller.signal}).then(row=>{const el=transcript.current;if(controller.signal.aborted||!row||!el)return;const marker=(row.closest('.group-message-row')??row).previousElementSibling;if(marker?.matches('[data-unread-boundary]')){const box=el.getBoundingClientRect(),style=getComputedStyle(el),scale=box.height/el.offsetHeight||1;el.scrollTop+=(marker.getBoundingClientRect().top-box.top)/scale-(parseFloat(style.getPropertyValue('--message-read-inset'))||0)-14}scrollTarget.current=el.scrollTop;positioned.current=true;setAwayFromLatest(el.scrollHeight-el.clientHeight-el.scrollTop>80);reading.remember()})
   return()=>controller.abort()
  },[loading,firstUnread,!!history.length,conversationJump])
  useLayoutEffect(()=>{const el=transcript.current;if(!el)return;if(follow.current)viewport.current?.scrollToEnd();setAwayFromLatest(el.scrollHeight-el.clientHeight-el.scrollTop>80)},[history,loading,thinkingKey])

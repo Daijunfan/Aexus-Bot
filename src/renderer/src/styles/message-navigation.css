@@ -16,5 +16,24 @@
 .group-conversation>.message-thread-header .message-thread-actions>button:hover,.group-conversation>.message-thread-header .message-thread-actions>button[aria-expanded=true]{background:color-mix(in srgb,var(--message-accent) 10%,transparent);color:var(--message-accent)}
 .group-conversation>.message-thread-header .message-thread-actions .codicon{font-size:19px}
 .message-stage .message-thread-header{border:0;background:color-mix(in srgb,var(--bg-elev) 90%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 3px 14px color-mix(in srgb,var(--accent) 5%,transparent)}
-.message-view .message-stage :is(.transcript,.group-transcript){--message-read-inset:22px;--message-read-bottom-inset:28px;padding-bottom:calc(var(--message-read-bottom-inset) + 12px);mask-image:linear-gradient(to bottom,transparent,#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent,#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),transparent 100%)}
+.message-view .message-stage{--message-read-inset:22px;--message-read-bottom-inset:28px}
+.message-view .message-stage :is(.transcript,.group-transcript){padding-bottom:calc(var(--message-read-bottom-inset) + 12px);mask-image:linear-gradient(to bottom,transparent,#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent,#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),transparent 100%)}
+/* Messages continue around the rounded bars; soft glass stays above the real scrolling feed. */
+.message-view [data-floating-messages]{position:relative;isolation:isolate}
+.message-view [data-floating-messages] :is(.transcript,.group-transcript){position:absolute;inset:0;z-index:-1;box-sizing:border-box;padding-top:var(--message-read-inset);padding-bottom:var(--message-read-bottom-inset);scroll-padding-block:var(--message-read-inset) var(--message-read-bottom-inset)}
+.message-view [data-floating-messages] :is(.transcript,.group-transcript)::before{min-height:var(--message-leading-space,4px)}
+.message-view [data-floating-messages] .message-chat-body{pointer-events:none}
+.message-view [data-floating-messages] .message-chat-body>*{pointer-events:auto}
+.message-view [data-floating-messages] :is(.composer,.group-composer){margin-top:auto;z-index:3;pointer-events:none}
+.message-view [data-floating-messages] :is(.composer,.group-composer)>*{pointer-events:auto}
+.message-view [data-floating-messages] :is(.message-thread-header,.message-pin-strip,.message-selection-bar,.conversation-search,.group-topics,.pending-questions){position:relative;z-index:3}
+.message-view .channel-conversation[data-feed-view]{--message-read-inset:var(--channel-header-height,124px)}
+.message-view :is([data-floating-messages],.channel-conversation[data-feed-view])::before,
+.message-view :is([data-floating-messages],.channel-conversation[data-feed-view])::after{content:'';position:absolute;left:0;right:0;z-index:1;pointer-events:none;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.message-view :is([data-floating-messages],.channel-conversation[data-feed-view])::before{top:0;height:var(--message-read-inset);mask-image:linear-gradient(#000,transparent);-webkit-mask-image:linear-gradient(#000,transparent)}
+.message-view :is([data-floating-messages],.channel-conversation[data-feed-view])::after{bottom:0;height:var(--message-read-bottom-inset);mask-image:linear-gradient(transparent,#000);-webkit-mask-image:linear-gradient(transparent,#000)}
+.message-view [data-floating-messages] :is(.transcript,.group-transcript),.message-view .channel-conversation[data-feed-view] .channel-feed{mask-image:linear-gradient(to bottom,#0008,#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),#0008);-webkit-mask-image:linear-gradient(to bottom,#0008,#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),#0008)}
+.message-view .channel-conversation[data-feed-view] .channel-reader-header{background:transparent}
+.message-view .channel-conversation[data-feed-view] .channel-feed{--message-read-inset:inherit;--message-read-bottom-inset:inherit}
+.message-view .channel-conversation .channel-reader-controls{z-index:3}
 @media(prefers-reduced-motion:reduce){.channel-source-chip,.message-category-chip,.channel-all-sources,.message-category-all{transition:none;transform:none}}

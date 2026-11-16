@@ -17,7 +17,7 @@ export function useReadAtBottom(root:RefObject<HTMLDivElement|null>,key:string,e
     const visible=()=>{
       if(!current.current.enabled||document.visibilityState!=='visible'||!document.hasFocus()||!area.clientHeight||area.scrollHeight-area.clientHeight-area.scrollTop>4)return false
       for(const overlay of document.querySelectorAll<HTMLElement>('[aria-modal="true"],.messenger-menu,.app-select-menu'))if(!overlay.closest('[aria-hidden="true"],[inert]')&&overlay.getBoundingClientRect().height)return false
-      const box=area.getBoundingClientRect(),hit=document.elementFromPoint(box.left+box.width/2,Math.min(innerHeight-1,box.bottom-8))
+      const box=area.getBoundingClientRect(),style=getComputedStyle(area),scale=box.height/area.offsetHeight||1,bottom=(parseFloat(style.getPropertyValue('--message-read-bottom-inset'))||0)*scale,hit=document.elementFromPoint(box.left+box.width/2,Math.min(innerHeight-1,box.bottom-bottom-8))
       return !!hit&&area.contains(hit)
     }
     const check=()=>{

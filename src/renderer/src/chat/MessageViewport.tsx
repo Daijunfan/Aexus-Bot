@@ -59,9 +59,10 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
   if(callbacks.current.following())for(let index=Math.max(0,items.length-6);index<items.length;index++)result.add(index)
   return [...result].sort((a,b)=>a-b)
  },[items,indices,ownerVersion,activeOwners,renderAllBelow])
+ const selection=getSelection(),readingSelection=!!selection&&!selection.isCollapsed&&!!scrollRef.current?.contains(selection.anchorNode)&&!!scrollRef.current?.contains(selection.focusNode)
  const virtual=useVirtualizer<HTMLDivElement,HTMLDivElement>({
   count:items.length,getScrollElement:()=>scrollElement,getItemKey:useCallback((index:number)=>items[index].id,[items]),estimateSize:()=>180,
-  enabled,overscan:8,rangeExtractor,scrollMargin:margin,anchorTo:'end',followOnAppend:callbacks.current.following(),useFlushSync:false,
+  enabled,overscan:8,rangeExtractor,scrollMargin:margin,anchorTo:readingSelection?'start':'end',followOnAppend:!readingSelection&&callbacks.current.following(),useFlushSync:false,
   scrollToFn:(offset,options,instance)=>{
    // A previous scrollToEnd may still reconcile measurements after a real gesture.
    // Rebase that command before it can pull them back; ordinary anchor corrections
@@ -115,7 +116,7 @@ export function MessageViewport<T extends{id:string}>({items,scrollRef,apiRef,re
      const message=wrapper?.matches('[data-chat-item]')?wrapper:wrapper?.querySelector<HTMLElement>('[data-chat-item]')
      if(wrapper&&!message){finish(null);return}
      if(wrapper&&message){
-      const rect=(offset===undefined?wrapper:message).getBoundingClientRect(),box=scroll.getBoundingClientRect(),scale=box.height/parseFloat(getComputedStyle(scroll).height)||1,top=box.top+scroll.clientTop*scale,bottom=top+scroll.clientHeight*scale,position=[rect.top,rect.height,scroll.scrollTop]
+      const rect=(offset===undefined?wrapper:message).getBoundingClientRect(),box=scroll.getBoundingClientRect(),style=getComputedStyle(scroll),scale=box.height/parseFloat(style.height)||1,top=box.top+(scroll.clientTop+(offset===undefined?parseFloat(style.getPropertyValue('--message-read-inset'))||0:0))*scale,bottom=box.top+(scroll.clientTop+scroll.clientHeight-(offset===undefined?parseFloat(style.getPropertyValue('--message-read-bottom-inset'))||0:0))*scale,position=[rect.top,rect.height,scroll.scrollTop]
       stable=last&&position.every((value,index)=>Math.abs(value-last![index])<.5)?stable+1:0;last=position
       if(stable>=2){
        const remembered=offset!==undefined&&offset<=-rect.height/scale?(parseFloat(getComputedStyle(scroll).getPropertyValue('--message-read-inset'))||0):offset
