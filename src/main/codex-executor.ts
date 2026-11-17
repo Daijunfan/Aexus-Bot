@@ -47,8 +47,9 @@ export async function openCodexExecutor(target: RemoteTarget) {
       const stopping = [...children].map(child => {
         const done = once(child, 'close').catch(() => {})
         child.stdin.end()
-        const timer = setTimeout(() => child.kill('SIGTERM'), 1500); timer.unref()
-        return done.finally(() => clearTimeout(timer))
+        const timer = setTimeout(() => child.kill('SIGTERM'), 150); timer.unref()
+        const force = setTimeout(() => child.kill('SIGKILL'), 400); force.unref()
+        return done.finally(() => { clearTimeout(timer); clearTimeout(force) })
       })
       for (const client of server.clients) client.terminate()
       await new Promise<void>(resolve => server.close(() => resolve()))

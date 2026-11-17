@@ -284,8 +284,14 @@ app.on('before-quit', event => {
   event.preventDefault()
   if(preparingQuit)return
   preparingQuit=true
+  for(const window of BrowserWindow.getAllWindows()){
+    if(!window.isDestroyed()&&window.webContents.getBackgroundThrottling())window.webContents.setBackgroundThrottling(false)
+  }
   const visible=BrowserWindow.getAllWindows().filter(window=>window.isVisible())
-  const saved=()=>{for(const window of BrowserWindow.getAllWindows())if(!window.isDestroyed())window.hide()}
+  const saved=()=>{
+    for(const window of BrowserWindow.getAllWindows())if(!window.isDestroyed())window.hide()
+    if(process.platform==='darwin')app.dock?.hide()
+  }
   const feedback=(phase:'saving'|'stopping'|'blocked',message?:string)=>{for(const window of BrowserWindow.getAllWindows())if(!window.isDestroyed())window.webContents.send('desktop:quit-state',{phase,message})}
   void (async()=>{
     feedback('saving')
@@ -293,6 +299,6 @@ app.on('before-quit', event => {
     feedback('stopping')
     if(stop)await stop(saved);else saved()
     pluginDesktop?.dispose();quitting=true;app.quit()
-  })().catch(error=>{preparingQuit=false;for(const window of visible)if(!window.isDestroyed()&&!window.isVisible())window.showInactive();feedback('blocked',error.message);console.error('Could not quit:',error.message)})
+  })().catch(error=>{preparingQuit=false;if(process.platform==='darwin'&&!HEADLESS&&!HIDDEN&&!BACKGROUND_START)void app.dock?.show();for(const window of visible)if(!window.isDestroyed()&&!window.isVisible())window.showInactive();feedback('blocked',error.message);console.error('Could not quit:',error.message)})
 })
 process.on('SIGTERM', () => app.quit())

@@ -144,7 +144,7 @@ exports.createPlugin = async ({ workspace }) => {
       }
       return () => { events.off('change', listener); if (!events.listenerCount('change')) { watcher?.close(); watcher = null; clearTimeout(debounce); } };
     },
-    async close() { closed = true; watcher?.close(); clearTimeout(debounce); events.removeAllListeners(); await previews.close(); await localReading.close(); await studies.close(); await store.flush(); }
+    async close() { closed = true; watcher?.close(); clearTimeout(debounce); events.removeAllListeners(); await Promise.all([previews.close(), localReading.close(), studies.close()]); await store.flush(); }
   };
 };
 // Host mailboxes persist events.json after every emitted change. Watching that

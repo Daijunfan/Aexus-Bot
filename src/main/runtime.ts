@@ -133,6 +133,7 @@ export function startRuntime(notify: (channel: string, payload: any) => void = (
     // before awaiting drains: those drains may themselves be waiting on an engine.
     await closePluginWindows()
     saved?.()
+    setDesktopEvent(()=>{})
     stopPlanRetention();stopQuestions();stopConversationNotices();stopGroupRetention();stopExports()
     setConversationPolicyEmitter(()=>{});setConversationFilesEmitter(()=>{})
     unwindows();unsubscribe();unview();stopServer()
@@ -142,9 +143,20 @@ export function startRuntime(notify: (channel: string, payload: any) => void = (
     // first close was in flight. No producers remain after the drain above.
     await Promise.all([closeWorkers(),closeAll(),closeTerminals()])
     setWorkerEmitter();closeAllMedia();closeEngineLogins();closeConversationDownloads();resetManagementActivity()
-    await Promise.all([closeChannelIngress(),closeInstallations(),closeWorkspacePdfs(),closeUploads(),closeTransfers()])
-    closeRemoteFiles();closeChannelStorageTransport();closeMissionNotebook();await closeLibraryReader();await closePlugins();await closeChannels()
-    await Promise.all([closeMessageIndex(),closeAssetPreviews()]);await assetIndex.close()
-    setDesktopEvent(()=>{});setChatEmitter(()=>{});setPlanEmitter(()=>{});setNotebookEmitter(()=>{});setMessengerEmitter(()=>{});setChannelsEmitter(()=>{});releaseLock()
+    closeRemoteFiles();closeChannelStorageTransport();closeMissionNotebook()
+    await Promise.all([
+      closeChannelIngress(),
+      closeInstallations(),
+      closeWorkspacePdfs(),
+      closeUploads(),
+      closeTransfers(),
+      closeLibraryReader(),
+      closePlugins(),
+      Promise.resolve().then(()=>closeChannels()),
+      closeMessageIndex(),
+      closeAssetPreviews(),
+      assetIndex.close()
+    ])
+    setChatEmitter(()=>{});setPlanEmitter(()=>{});setNotebookEmitter(()=>{});setMessengerEmitter(()=>{});setChannelsEmitter(()=>{});releaseLock()
   }
 }

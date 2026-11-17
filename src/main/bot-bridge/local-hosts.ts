@@ -23,7 +23,7 @@ type Entry={value:BotLocalComputer;life:AbortController;opening?:Promise<void>;c
 /** One Core-owned native executor per provider; message delivery never waits for process startup. */
 export function createBotLocalHosts(start:LocalHostStarter,changed:(provider:BotProvider)=>void=()=>{}){
  const entries=new Map<BotProvider,Entry>();let revision=0,closed=false
- const stop=(provider:BotProvider)=>{const entry=entries.get(provider);if(!entry)return Promise.resolve();return entry.closing??=(async()=>{entry.life.abort();await entry.opening;await entry.runtime?.close();if(entries.get(provider)===entry)entries.delete(provider);changed(provider)})()}
+ const stop=(provider:BotProvider)=>{const entry=entries.get(provider);if(!entry)return Promise.resolve();return entry.closing??=(async()=>{entry.life.abort();if(entry.opening){let timer:NodeJS.Timeout|undefined;await Promise.race([entry.opening,new Promise<void>(resolve=>{timer=setTimeout(resolve,250);timer.unref()})]).finally(()=>clearTimeout(timer))}await entry.runtime?.close();if(entries.get(provider)===entry)entries.delete(provider);changed(provider)})()}
  const ensure=async(providers:BotProvider[])=>{
   if(closed)return
   const version=++revision,wanted=new Set(providers);await Promise.all([...entries.keys()].filter(provider=>!wanted.has(provider)).map(stop));if(version!==revision||closed)return
@@ -61,7 +61,7 @@ function nativeProcess(name:BotProvider,command:string,args:string[],env:NodeJS.
  const retire=()=>{if(retired)return;retired=true;fs.unwatchFile(logFile,tail);try{cleanup()}catch(error){if(!closing)update('error',safeError(error))}}
  const exit=new Promise<void>(resolve=>{child.once('error',error=>{lastError=safeError(error);ended=true;retire();if(!closing)update('error',lastError);resolve()});child.once('exit',code=>{tail();ended=true;retire();if(!closing)update('error',code===0?'Native computer connection ended':lastError);resolve()})})
  if(onSpawn)child.once('spawn',()=>{if(!closing)onSpawn(child)})
- const close=()=>closePromise??=(async()=>{closing=true;signal.removeEventListener('abort',abort);if(ended)return;if(keep()){retire();child.unref();return}child.stdin?.end();terminateTree(child);const force=setTimeout(()=>terminateTree(child,true),3000);try{await exit}finally{clearTimeout(force)}})()
+ const close=()=>closePromise??=(async()=>{closing=true;signal.removeEventListener('abort',abort);if(ended)return;if(keep()){retire();child.unref();return}child.stdin?.end();terminateTree(child);const force=setTimeout(()=>terminateTree(child,true),200);force.unref();try{await exit}finally{clearTimeout(force)}})()
  const abort=()=>{void close()};signal.addEventListener('abort',abort,{once:true})
  if(signal.aborted)void close()
  return {running:()=>!ended,close}
@@ -80,7 +80,7 @@ async function dotPlugins(binary:string,env:NodeJS.ProcessEnv,signal:AbortSignal
   lines.on('line',line=>{let reply:any;try{reply=JSON.parse(line)}catch{return}if(reply.error){fail(Error(reply.error.message));return}if(reply.id===1){child.stdin.write(protocolJson({method:'initialized'})+'\n');child.stdin.write(protocolJson({id:2,method:'plugin/installed',params:{}})+'\n')}else if(reply.id===2)resolve(reply.result)})
   child.stdin.write(protocolJson({id:1,method:'initialize',params:{clientInfo:{name:'aexus_native_computer',version:'1'},capabilities:{experimentalApi:true}}})+'\n')
   if(signal.aborted)abort()
- })}finally{clearTimeout(timer);signal.removeEventListener('abort',abort);lines.close();child.stdin.end();terminateTree(child);const force=setTimeout(()=>terminateTree(child,true),1500);try{await ended}finally{clearTimeout(force)}}
+ })}finally{clearTimeout(timer);signal.removeEventListener('abort',abort);lines.close();child.stdin.end();terminateTree(child);const force=setTimeout(()=>terminateTree(child,true),200);force.unref();try{await ended}finally{clearTimeout(force)}}
 }
 
 async function startDot(signal:AbortSignal,update:Update):Promise<Runtime>{

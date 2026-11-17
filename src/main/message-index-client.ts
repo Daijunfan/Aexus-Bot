@@ -40,8 +40,10 @@ export function removeIndexedConversation(id:string){
 }
 export function closeMessageIndex():Promise<void>{
  return closing??=(async()=>{
-  await Promise.allSettled([...active]);if(!worker)return
-  const target=worker;await request('close');if(worker===target)worker=undefined
+  if(!worker)return
+  const target=worker;let timer:NodeJS.Timeout|undefined
+  await Promise.race([request('close').catch(()=>{}),new Promise<void>(resolve=>{timer=setTimeout(resolve,150);timer.unref()})]).finally(()=>clearTimeout(timer))
+  if(worker===target)worker=undefined
   await target.terminate()
  })().finally(()=>{closing=undefined})
 }

@@ -10,6 +10,9 @@ export class DraftCheckpoint {
   private running?: Promise<void>;
   private timer?: ReturnType<typeof setTimeout>;
   constructor(private write: (value: Draft | []) => Promise<unknown>, private onError: (error: unknown) => void) {}
+  hasPending(): boolean {
+    return Boolean(this.timer || this.running || this.saved < this.version);
+  }
   update(draft: Draft) {
     if (draft.error === this.desired.error && draft.conflictId === this.desired.conflictId && draft.patches.length === this.desired.patches.length && draft.patches.every((patch, i) => patch === this.desired.patches[i])) return;
     this.desired = { ...draft, patches: [...draft.patches] }; this.version++;

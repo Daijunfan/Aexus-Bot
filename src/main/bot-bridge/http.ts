@@ -80,6 +80,13 @@ function makeProxyAgent(proxyUrl, stream=false) {
     createConnection(options, callback) {
       const targetHost = options.host;
       const targetPort = Number(options.port) || 443;
+      let settled = false;
+      const done = (err, sock) => {
+        if (settled) return;
+        settled = true;
+        options.signal?.removeEventListener?.('abort', onAbort);
+        callback(err, sock);
+      };
       const connectReq = http.request({
         host: proxy.hostname,
         port: proxyPort,
@@ -89,21 +96,31 @@ function makeProxyAgent(proxyUrl, stream=false) {
         agent: false,
         timeout: 15_000,
       });
+      const onAbort = () => {
+        const abortErr = Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
+        connectReq.destroy(abortErr);
+        done(abortErr);
+      };
+      if (options.signal?.aborted) {
+        onAbort();
+        return;
+      }
+      options.signal?.addEventListener?.('abort', onAbort, { once: true });
       connectReq.once('timeout', () => {
         connectReq.destroy(new Error(`Proxy CONNECT timed out (${proxy.host})`));
       });
-      connectReq.once('error', (err) => callback(err));
+      connectReq.once('error', (err) => done(err));
       connectReq.once('connect', (res, socket) => {
         if (res.statusCode !== 200) {
           socket.destroy();
-          callback(new Error(`Proxy CONNECT failed: ${res.statusCode} ${res.statusMessage}`));
+          done(new Error(`Proxy CONNECT failed: ${res.statusCode} ${res.statusMessage}`));
           return;
         }
         const tlsSocket = tls.connect(
           { socket, servername: targetHost, ALPNProtocols: ['http/1.1'] },
-          () => callback(null, tlsSocket),
+          () => done(null, tlsSocket),
         );
-        tlsSocket.once('error', (err) => callback(err));
+        tlsSocket.once('error', (err) => done(err));
       });
       connectReq.end();
     }

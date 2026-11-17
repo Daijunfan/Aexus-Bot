@@ -4,11 +4,24 @@ export const token = location.pathname.split('/')[1];
 // Identify this renderer so its frequent reading-position saves need no full UI refresh.
 const clientOrigin = crypto.randomUUID();
 const pending = new Set();
+const READ_ONLY_METHODS = new Set([
+  'document.preview',
+  'document.list',
+  'document.get',
+  'study.list',
+  'study.get',
+  'settings.get',
+  'system.info',
+  'system.fonts',
+  'library.search',
+]);
 export function api(method, params = {}) {
   const work=requestRpc(new URL('rpc',base),method,params,{origin:clientOrigin});
-  // Disposable cover rendering must not hold up the host's save-before-close handshake.
-  if (method !== 'document.preview') pending.add(work);
-  work.then(() => pending.delete(work), () => pending.delete(work));
+  // Disposable cover rendering and read-only queries must not hold up the host's save-before-close handshake.
+  if (!READ_ONLY_METHODS.has(method)) {
+    pending.add(work);
+    work.then(() => pending.delete(work), () => pending.delete(work));
+  }
   return work;
 }
 export async function flushRequests() {

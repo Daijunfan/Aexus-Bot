@@ -8,6 +8,7 @@ function processTable(){
 }
 export async function closeWorkerProcesses(children:ChildProcess[],close:()=>Promise<unknown>){
  const roots=children.filter(child=>child.pid&&child.exitCode===null&&child.signalCode===null).map(child=>child.pid!)
+ if(!roots.length){await close().catch(()=>{});return}
  if(process.platform==='win32'){
   const killers=roots.map(pid=>new Promise<void>((resolve,reject)=>{const child=spawn('taskkill.exe',['/PID',String(pid),'/T','/F'],{windowsHide:true,stdio:'ignore'});child.once('error',reject);child.once('close',code=>code===0?resolve():reject(Error('Worker processes have not exited. The Worker was not removed.')))}))
   // taskkill must still see each native parent to discover its descendants.
@@ -24,10 +25,10 @@ export async function closeWorkerProcesses(children:ChildProcess[],close:()=>Pro
  // Do not await a protocol's `close` before enforcing termination: inherited stdio
  // can keep its close event pending until a stubborn descendant has been killed.
  const closing=close().catch(error=>{closeError=error}).finally(()=>{closed=true})
- await Promise.race([closing,new Promise(resolve=>setTimeout(resolve,150))]);await signal();let until=Date.now()+1500
- while((!closed||(await remaining()).length)&&Date.now()<until)await new Promise(resolve=>setTimeout(resolve,40))
+ await Promise.race([closing,new Promise(resolve=>setTimeout(resolve,80))]);await signal();let until=Date.now()+600
+ while((!closed||(await remaining()).length)&&Date.now()<until)await new Promise(resolve=>setTimeout(resolve,30))
  if((await remaining()).length)await signal(true)
- until=Date.now()+2000;while((!closed||(await remaining()).length)&&Date.now()<until)await new Promise(resolve=>setTimeout(resolve,40))
+ until=Date.now()+2000;while((!closed||(await remaining()).length)&&Date.now()<until)await new Promise(resolve=>setTimeout(resolve,30))
  if((await remaining()).length||!closed)throw Error('Worker processes have not exited. The Worker was not removed.')
  await closing
  // The OS exit check is authoritative even when a closed native pipe rejects its last control reply.

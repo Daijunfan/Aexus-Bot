@@ -216,6 +216,9 @@ function useStore() {
     const stopFlush = window.native?.onFlush(async () => {
       const engine = sync.current;
       if (checkpoint.current && engine) {
+        if (!engine.pending.length && !engine.conflictId && !engine.error && !checkpoint.current.hasPending()) {
+          return;
+        }
         // First make pending edits recoverable, then wait briefly for the main
         // commit. A retained conflict/draft is recovered on the next open.
         checkpoint.current.update({patches:engine.pending,conflictId:engine.conflictId,error:engine.error});
