@@ -23,19 +23,19 @@ async function command(engine:EngineId,args:string[],timeout=12000){
     child.once('error',error=>finish(error));child.once('close',code=>finish(undefined,code))
   })
 }
-export async function checkEngine(engine:EngineId,options:{team?:string;force?:boolean}={}):Promise<EngineHealth>{
+export async function checkEngine(engine:EngineId,options:{hostId?:string;force?:boolean}={}):Promise<EngineHealth>{
   if(!isEngine(engine))throw Error('Unknown Coding Agent engine')
-  const key=engine+':'+(options.team??'core'),existing=pending.get(key)
+  const key=engine+':'+(options.hostId??'core'),existing=pending.get(key)
   if(existing)return existing
   const cached=cache.get(key);if(!options.force&&cached&&cached.expires>Date.now())return cached.value
   const work=(async()=>{
     const definition=ENGINE_DEFINITIONS[engine],configuration=engineConfiguration(engine)
-    const result:EngineHealth={engine,label:definition.label,target:options.team??os.hostname(),installed:false,protocol:'unchecked',authentication:'unknown',ready:false,checkedAt:Date.now(),managed:!!configuration.managedPath,hasApiKey:publicEngineConfiguration(engine).hasApiKey,capabilities:{...definition.capabilities}}
+    const result:EngineHealth={engine,label:definition.label,target:options.hostId??os.hostname(),installed:false,protocol:'unchecked',authentication:'unknown',ready:false,checkedAt:Date.now(),managed:!!configuration.managedPath,hasApiKey:publicEngineConfiguration(engine).hasApiKey,capabilities:{...definition.capabilities}}
     try{
-      if(options.team){
+      if(options.hostId){
         if(isNativeAcp(engine))throw Error(definition.label+' currently requires a Core-local workspace')
-        if(engine==='cline'||engine==='pi')throw Error('Cline/Pi run on the Core host; check without --team and use kind:worker for Tunnel cloud workspaces')
-        const remote=await checkCloudNative(options.team,engine)
+        if(engine==='cline'||engine==='pi')throw Error('Cline/Pi run on the Core host; check without --host-id and use kind:worker for Tunnel cloud workspaces')
+        const remote=await checkCloudNative(options.hostId,engine)
         Object.assign(result,{installed:true,protocol:'compatible',authentication:remote.authentication,target:remote.host,version:remote.version,ready:remote.authentication==='configured'})
       }else{
         result.path=engineExecutable(engine)

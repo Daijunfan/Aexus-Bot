@@ -1,7 +1,7 @@
 import {useLayoutEffect,useRef,useSyncExternalStore} from 'react'
 
 export type SurfaceMotion='menu'|'file-menu'|'panel'|'dialog'|'strip'
-export const messageEase='cubic-bezier(.22,1,.36,1)'
+export const messageEase='cubic-bezier(.2,.9,.24,1)'
 export const motionAllowed=()=>!document.hidden&&!matchMedia('(prefers-reduced-motion: reduce)').matches
 export function inheritSurfacePalette(element:HTMLElement,owner:HTMLElement){const style=getComputedStyle(owner);for(const name of ['--message-accent','--accent','--bg-elev','--bg-hover','--bg-alt','--fg','--fg-dim','--border','--border-soft']){const value=style.getPropertyValue(name);if(value)element.style.setProperty(name,value)}}
 
@@ -42,8 +42,8 @@ function exitSurface(node:HTMLElement,kind:SurfaceMotion){
   const sources=[node,...node.querySelectorAll<HTMLElement>('*')],targets=[copy,...copy.querySelectorAll<HTMLElement>('*')]
   sources.forEach((source,index)=>{if(source.scrollTop||source.scrollLeft){targets[index].scrollTop=source.scrollTop;targets[index].scrollLeft=source.scrollLeft}})
   const transform=kind==='panel'?'translateX(18px)':kind==='menu'?'translateY(3px) scale(.98)':'none'
-  if(kind==='dialog'){const card=copy.querySelector('[role=dialog]');if(card)playMessageMotion(card,[{transform:'none'},{transform:'translateY(6px) scale(.98)'}],250)}
-  playMessageMotion(copy,[{opacity:Number(style.opacity),transform:'none'},{opacity:0,transform}],kind==='dialog'?250:kind==='menu'?110:150,()=>copy.remove())
+  if(kind==='dialog'){const card=copy.querySelector('[role=dialog]');if(card)playMessageMotion(card,[{transform:'none'},{transform:'translateY(6px) scale(.98)'}],210)}
+  playMessageMotion(copy,[{opacity:Number(style.opacity),transform:'none'},{opacity:0,transform}],kind==='dialog'?210:kind==='menu'?95:140,()=>copy.remove())
 }
 
 /** Shared timing and interruption behavior for menus, drawers and dialogs. */
@@ -58,7 +58,7 @@ export function useSurfaceMotion<T extends HTMLElement>(kind:SurfaceMotion){
     const animations:Animation[]=[]
     const style=getComputedStyle(node)
     const frames=kind==='strip'?[{height:'0px',paddingTop:'0px',paddingBottom:'0px',marginTop:'0px',marginBottom:'0px',opacity:0},{height:node.offsetHeight+'px',paddingTop:style.paddingTop,paddingBottom:style.paddingBottom,marginTop:style.marginTop,marginBottom:style.marginBottom,opacity:1}]:[{opacity:kind==='menu'?.1:0,transform},{opacity:1,transform:'none'}]
-    const enter=playMessageMotion(node,frames,kind==='file-menu'?150:kind==='menu'?160:kind==='panel'?250:200)
+    const enter=playMessageMotion(node,frames,kind==='file-menu'?130:kind==='menu'?135:kind==='panel'?220:190)
     if(enter)animations.push(enter)
     if(kind==='dialog'){const card=node.querySelector('[role=dialog]');if(card){const animation=playMessageMotion(card,[{transform:'translateY(10px) scale(.96)'},{transform:'none'}],250);if(animation)animations.push(animation)}}
     return()=>{exitSurface(node,kind);animations.forEach(animation=>animation.cancel())}

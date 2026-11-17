@@ -26,7 +26,7 @@ npm run build:server
 npm run build:web
 ```
 
-The source distribution includes Cloud Hosts, MiniNotion and Margin Reader. `plugins.lock.json` pins the required plugin versions. Missing plugin source fails the build; it is never silently omitted.
+The source distribution builds the built-in Mission Super-Notion Notebook alongside Cloud Hosts and Margin Reader. `plugins.lock.json` pins the required external plugin versions. Missing plugin source fails the build; it is never silently omitted.
 
 ## Mac and Windows desktop
 

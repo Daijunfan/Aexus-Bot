@@ -51,11 +51,11 @@ function GroupThreadBody({group,messageId,store,onClose,initialPage}:Props&{init
  const send=async()=>{
   if(!page?.canReply||inFlight.current||uploads.pending||!current.current.text?.trim()&&!images.length&&!files.length)return
   inFlight.current=true;setBusy(true);setError('');following.current=true
-  const value=reuseDraft({...current.current,text:current.current.text??'',replyTo:page.root.id,viewId:current.current.viewId??store.activeTeamViewId??'all'},messenger.getDraft(key),'group')
+  const value=reuseDraft({...current.current,text:current.current.text??'',replyTo:page.root.id},messenger.getDraft(key),'group')
   let cancelMotion:(()=>void)|undefined
   try{
    await messenger.prepareSend(key,value);cancelMotion=prepareSendMotion(value.text)
-   await api.call('chat.send',{id:group.id,text:value.text.trim(),images:value.images,files:value.files,replyTo:page.root.id,clientMessageId:value.clientMessageId,viewId:value.viewId,...(page.root.topicId?{topicId:page.root.topicId}:{})})
+   await api.call('chat.send',{id:group.id,text:value.text.trim(),images:value.images,files:value.files,replyTo:page.root.id,clientMessageId:value.clientMessageId,...(page.root.topicId?{topicId:page.root.topicId}:{})})
    cancelMotion=undefined
    const clearing=messenger.clearDraft(key,value.clientMessageId),remaining=messenger.getDraft(key)
    if(alive.current){current.current=remaining??{text:''};setDraft(current.current)}

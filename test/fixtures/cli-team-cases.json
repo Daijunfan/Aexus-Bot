@@ -30,71 +30,55 @@
   },
   {
     "args": [
-      "room",
-      "place",
-      "Studio",
-      "--slot",
-      "2"
+      "settings",
+      "set",
+      "--employee-workspaces-root",
+      "/tmp/aexus-workspaces"
     ],
     "expected": {
-      "cmd": "room.place",
+      "cmd": "settings.set",
       "args": {
-        "name": "Studio",
-        "slot": 2
+        "employeeWorkspacesRoot": "/tmp/aexus-workspaces"
       }
     }
   },
   {
     "args": [
-      "room",
-      "bounds",
-      "Studio",
-      "--columns",
-      "4",
-      "--rows",
-      "3"
+      "workspace",
+      "suggest",
+      "--title",
+      "Local Analyst",
+      "--folder-name",
+      "analyst-folder"
     ],
     "expected": {
-      "cmd": "room.bounds",
+      "cmd": "workspace.suggest",
       "args": {
-        "name": "Studio",
-        "columns": 4,
-        "rows": 3
+        "title": "Local Analyst",
+        "folderName": "analyst-folder"
       }
     }
   },
   {
     "args": [
       "card",
-      "place",
-      "employee-id",
-      "--seat",
-      "4"
+      "create",
+      "--title",
+      "Cloud Analyst",
+      "--host-id",
+      "host-1",
+      "--remote-dir",
+      "/home/agent/analyst",
+      "--engine",
+      "claude"
     ],
     "expected": {
-      "cmd": "card.place",
+      "cmd": "card.create",
       "args": {
-        "id": "employee-id",
-        "seat": 4
-      }
-    }
-  },
-  {
-    "args": [
-      "room",
-      "place",
-      "Studio",
-      "--column",
-      "-4",
-      "--row",
-      "3"
-    ],
-    "expected": {
-      "cmd": "room.place",
-      "args": {
-        "name": "Studio",
-        "column": -4,
-        "row": 3
+        "title": "Cloud Analyst",
+        "hostId": "host-1",
+        "remoteDir": "/home/agent/analyst",
+        "engine": "claude"
       }
     }
   }

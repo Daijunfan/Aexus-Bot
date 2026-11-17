@@ -6,7 +6,7 @@ import {unified} from 'unified'
 import remarkParse from 'remark-parse'
 
 const root=path.resolve(import.meta.dirname,'..')
-const tracked=execFileSync('git',['ls-files','-z'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean)
+const tracked=execFileSync('git',['ls-files','-z'],{cwd:root,encoding:'utf8'}).split('\0').filter(file=>Boolean(file)&&fs.existsSync(path.join(root,file)))
 const versioned=new Set(tracked),documents=tracked.filter(file=>file.endsWith('.md')&&(!file.includes('/')||file.startsWith('docs/')))
 const parser=unified().use(remarkParse),failures=[]
 let checked=0

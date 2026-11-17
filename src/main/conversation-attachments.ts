@@ -95,7 +95,7 @@ export function downloadStatus(args:Record<string,any>){
 }
 export async function downloadAttachment(args:Record<string,any>,resolve:(ref:FileLocation,destination:boolean)=>FileEndpoint){
  const scope=publishedScope(args.conversation),principal=requestContext().principal,employee=args.employee??(principal.kind==='agent'?principal.employeeId:scope.kind==='employee'?scope.id:undefined),context=requestContext()
- const workspaceId=args.workspace??'company:'+employee,workspace=workspaceCatalog({employee}).workspaces.find(w=>w.id===workspaceId)
+ const workspaceId=args.workspace??'workspace:'+employee,workspace=workspaceCatalog({employee}).workspaces.find(w=>w.id===workspaceId)
  if(!workspace)throw Error('Choose one of your workspace.catalog IDs')
  const validate=()=>{if(downloadsClosing)throw Error('Core is stopping; this copy will not be replayed');authorize('conversation.download');const currentScope=publishedScope(scope.conversation);if(currentScope.kind!=='employee'&&!isAppAdministrator()&&!currentScope.members.includes(employee))throw Error('The selected employee must belong to the source conversation');const current=workspaceCatalog({employee}).workspaces.find(w=>w.id===workspaceId);if(!current||current.path!==workspace.path)throw Error('Destination workspace changed or membership was removed')}
  validate()

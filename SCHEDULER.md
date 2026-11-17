@@ -12,9 +12,8 @@ workspace: employee
 ## Purpose
 
 持久化地安排某个员工在指定时间使用指定模型、思考程度执行任务。调度器属于
-Aexus Bot Core，不依赖窗口或任何插件。CLI、Mission 视图与插件使用同一个
-`schedule.*` 协议。**本版本未向 MiniNotion 接入此调度器**；MiniNotion 原有的页面
-提醒/重复事项是另一项领域功能。
+Aexus Bot Core，不依赖窗口或任何外部插件。CLI、Mission 排期面板、Mission 超级笔记本 `/workflow` 按钮与插件共用同一个
+`schedule.*` 协议；内置笔记本原有的页面文档内部提醒/循环事项仍独立保存在笔记本页面引擎中。
 
 `action.prompt` 是发给员工的完整指令，可以包含要执行的 CLI 命令，例如
 “运行 npm test，将失败原因写入 test-report.md”。调度器不会把文本直接交给本机 shell，
@@ -159,8 +158,8 @@ Governor 目标还必须提供 `--view VIEW_ID`，见下文“Governor 任务的
 
 ## Compatibility
 
-契约为宿主 `schedule.*` v1；通过宿主 CLI/socket 使用，不依赖 MiniNotion 或 Electron。
-未来插件复用此接口，不能为宿主员工再创建自己的隐藏会话或绕过员工目录权限。
+契约为宿主 `schedule.*` v1；通过宿主 CLI/socket 使用，不依赖 Electron 或外部插件。
+内置 Mission 超级笔记本可通过 `/workflow` 直接编排 `schedule.create`；未来插件复用此接口，不能为宿主员工再创建自己的隐藏会话或绕过员工目录权限。
 插件自有的文档提醒可以继续独立存在。Plan 提供 Table、Board、Timeline、Calendar、Planner、List、Gallery、Chart、Feed、Form 十种调度数据库界面，仍使用同一套 API。
 
 验证：`npm run test:scheduler`。测试使用隔离数据与确定性引擎替身，Codex 参数固定
@@ -197,7 +196,7 @@ agents schedule create --name "研发视图检查" --employee GOVERNOR_ID --view
 
 ## Detailed scenario checks
 
-Saved-job preview accepts `{id,patch?,after?,count?}`. A patch is temporary and follows the update replacement rules; it is never persisted. Moving the preview cursor or calendar range does not reset a finite remaining quota. Notes-only edits preserve the next scheduled instant and can annotate a completed one-shot without replaying it. UI fields retain unchanged absolute seconds/milliseconds and the recurrence timezone's cutoff. See `docs/PLAN_SCENARIOS.md` for practical case-by-case assertions, including actual scheduled MiniNotion writes and rich database rendering.
+Saved-job preview accepts `{id,patch?,after?,count?}`. A patch is temporary and follows the update replacement rules; it is never persisted. Moving the preview cursor or calendar range does not reset a finite remaining quota. Notes-only edits preserve the next scheduled instant and can annotate a completed one-shot without replaying it. UI fields retain unchanged absolute seconds/milliseconds and the recurrence timezone's cutoff. See `docs/PLAN_SCENARIOS.md` for practical case-by-case assertions, including actual scheduled Mission notebook writes and rich database rendering.
 
 ## Plan extension (additive v1)
 

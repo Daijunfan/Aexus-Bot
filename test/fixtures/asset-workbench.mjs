@@ -13,10 +13,9 @@ export async function assetWorkbenchFixture(application,extra={}){
  const f=await fixtureCore({AGENTS_COMPANY_SHARED_DIR:shared,AGENTS_COMPANY_TUNNEL_DIR:localTunnel(path.join(temp,'tunnel'),root),...extra},path.join(application,'out/main/daemon.js'))
  const rpc=async(command,args={},token=null)=>{const result=await f.request(token,command,args);assert.ok(result.ok,command+': '+result.error);return result.data}
  try{
-  await rpc('settings.set',{language:'en',viewAppearance:{messages:{theme:'white'}}});await f.cli('group','add','Product team');await f.cli('group','add','Research team')
-  const a=await f.create('Alex','Product team'),b=await f.create('Alex','Research team')
-  await rpc('workspace.write',{team:'Product team',path:'team-overview.md',content:'# Product team originals',create:true})
-  await rpc('workspace.write',{employee:a.id,path:'personal.txt',content:'Alex Product personal',create:true});await rpc('workspace.write',{employee:b.id,path:'personal.txt',content:'Alex Research personal',create:true})
+  await rpc('settings.set',{language:'en',viewAppearance:{messages:{theme:'white'}}})
+  const a=await f.create('Alex'),b=await f.create('Bailey'),remoteWorker=await f.create('Remote worker')
+  await rpc('workspace.write',{employee:a.id,path:'personal.txt',content:'Alex personal',create:true});await rpc('workspace.write',{employee:b.id,path:'personal.txt',content:'Bailey personal',create:true})
   const group=await rpc('chat.create',{name:'项目评审',members:[a.id,b.id]}),conversation='group:'+group.id,workspace=await rpc('conversation.workspace',{conversation}),member={directory:'Drafts'},peer={directory:'Reviews'}
   for(const [file,content] of [['brief.md','Shared group user original'],[member.directory+'/draft.md','Shared draft'],[peer.directory+'/peer.txt','Shared review']])await rpc('conversation.file',{conversation,operation:'write',path:file,content,create:true})
   const source=await rpc('channel.source-add',{plugin:'telegram',locator:'asset_workspace_fixtures',name:'资料频道'})
@@ -27,7 +26,8 @@ export async function assetWorkbenchFixture(application,extra={}){
   const image=await sharp(fs.readFileSync(path.join(root,'app_icon.png'))).png().toBuffer(),externalId='published-image',publishedAt=Date.now(),upload=await rpc('channel.media-put',{sourceId:source.id,externalId,publishedAt,mediaKey:'poster',name:'reference.png',mimeType:'image/png',data:image.toString('base64')})
   const post=await rpc('channel.publish',{sourceId:source.id,externalId,publishedAt,title:'Reference image',body:'Fixture publication',mediaIds:[upload.media.id]})
   await rpc('channel.save',{id:post.id,saved:true})
-  const host=await rpc('host.create',{name:'Fixture remote',host:'fixture',os:process.platform==='darwin'?'macos':process.platform==='win32'?'windows':'linux',defaultDirectory:remote});await f.cli('group','add','Remote team','--mode','cloud','--host-id',host.id,'--remote-dir',remote);fs.writeFileSync(path.join(remote,'remote.txt'),'Remote protocol original')
+  const host=await rpc('host.create',{name:'Fixture remote',host:'fixture',os:process.platform==='darwin'?'macos':process.platform==='win32'?'windows':'linux',defaultDirectory:remote});fs.writeFileSync(path.join(remote,'remote.txt'),'Remote protocol original')
+  await f.stop();const stateFile=path.join(f.env.AGENTS_COMPANY_HOME,'sessions.json'),state=JSON.parse(fs.readFileSync(stateFile));const remoteRow=state.sessions.find(s=>s.id===remoteWorker.id);remoteRow.workspaceMode='cloud';remoteRow.hostId=host.id;remoteRow.cwd=remote;remoteWorker.cwd=remote;fs.writeFileSync(stateFile,JSON.stringify(state));await f.start()
   const collector=await rpc('channel.collector-add',{name:'Fixture collector',sourceIds:[source.id]});await rpc('channel.update',{id:source.channelId,engine:{kind:'external',location:'remote',name:'Local protocol fixture',host:'fixture',endpoint:'http://127.0.0.1:5152',collectorId:collector.collector.id,fileStorage:{hostId:host.id,directory:remote}}})
   const document=Buffer.from('Original cloud document 原文'),hash=crypto.createHash('sha256').update(document).digest('hex');fs.mkdirSync(path.join(remote,hash.slice(0,2)),{recursive:true});fs.writeFileSync(path.join(remote,hash.slice(0,2),hash),document)
   const cloudPost=await rpc('channel.publish',{sourceId:source.id,externalId:'cloud-document',publishedAt:Date.now(),title:'Source document',body:'File fixture',files:[{id:'doc',name:'cloud-source.txt',mimeType:'text/plain',bytes:document.length,sha256:hash}]})
@@ -35,6 +35,6 @@ export async function assetWorkbenchFixture(application,extra={}){
   await rpc('assets.file',{id:'plan:exports',operation:'write',path:'weekly-review.md',content:'# Plan output',create:true})
   const legacy=path.join(f.env.AGENTS_COMPANY_HOME,'chats','media',group.id);fs.mkdirSync(legacy,{recursive:true});fs.writeFileSync(path.join(legacy,'legacy.png'),image)
   const settled=async(args={})=>{await rpc('assets.search',{refresh:true,limit:1});return f.until(async()=>{const page=await rpc('assets.search',{limit:500,...args});return !page.indexing&&page},'asset indexing')}
-  return {...f,root,temp,shared,remote,rpc,a,b,group,conversation,workspace,member,peer,source,channel,channelWorkspace,post,mediaId:upload.media.id,image,cloudPost,document,settled,close:async()=>{await f.close();fs.rmSync(temp,{recursive:true,force:true})}}
+  return {...f,root,temp,shared,remote,rpc,a,b,remoteWorker,host,group,conversation,workspace,member,peer,source,channel,channelWorkspace,post,mediaId:upload.media.id,image,cloudPost,document,settled,close:async()=>{await f.close();fs.rmSync(temp,{recursive:true,force:true})}}
  }catch(error){await f.close();fs.rmSync(temp,{recursive:true,force:true});throw error}
 }

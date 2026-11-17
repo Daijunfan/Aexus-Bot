@@ -7,6 +7,7 @@ import {ChannelAvatar} from './ChannelNewsCard'
 import {Icon} from './Icon'
 import {useSortableList} from '../chat/useSortableList'
 import {mergeOrder} from '../../../shared/messenger-order'
+import '../styles/channel-posts.css'
 
 export function ChannelSourceTabs({channelId,sources,values,onChange,onAll,onAuthor}:{channelId:string;sources:SocialElement[];values:string[];onChange:(ids:string[])=>void;onAll:()=>void;onAuthor:(id:string)=>void}){
  const [order,setOrder]=useState<ChannelSourceOrder>(),[query,setQuery]=useState(''),[searching,setSearching]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),search=useRef<HTMLDivElement>(null),searchInput=useRef<HTMLInputElement>(null),searchButton=useRef<HTMLButtonElement>(null)

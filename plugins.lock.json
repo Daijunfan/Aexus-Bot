@@ -1,17 +1,4 @@
 {
   "schemaVersion": 1,
-  "plugins": [
-    {
-      "directory": "cloud-hosts",
-      "version": "2.0.0"
-    },
-    {
-      "directory": "mini-notion",
-      "version": "1.26.48"
-    },
-    {
-      "directory": "margin-reader",
-      "version": "0.11.1"
-    }
-  ]
+  "plugins": []
 }

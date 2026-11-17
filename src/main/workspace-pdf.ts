@@ -3,7 +3,7 @@ import path from 'node:path'
 import {createHash} from 'node:crypto'
 import {Worker} from 'node:worker_threads'
 import {authorize,requestContext} from './authorization'
-import {requirePlugin,pluginFile} from './plugins/registry'
+import {libraryReaderPreviewWorkerPath} from './library-reader/paths'
 import {temporaryFile} from './file-snapshots'
 import {workspacePath} from './files'
 import {downloadInfo,downloadChunk,beginUpload,uploadChunk,commitUpload,abortUpload} from './uploads'
@@ -19,7 +19,7 @@ async function readPdf(local:FileEndpoint,args:Record<string,any>){
   if(closed)throw Error('PDF service is closed')
   const file=workspacePath(local.root,local.path),stat=fs.statSync(file)
   if(!stat.isFile()||stat.size>512*1024*1024)throw Error('Choose a PDF up to 512 MiB')
-  const workerPath=pluginFile(requirePlugin('margin-reader').directory,'lib/preview-worker.cjs'),signal=requestContext().signal
+  const workerPath=libraryReaderPreviewWorkerPath(),signal=requestContext().signal
   signal?.throwIfAborted()
   return await new Promise<any>((resolve,reject)=>{
    const worker=new Worker(workerPath,{workerData:{workspace:local.root,filename:local.path,format:'pdf',expectedVersion:stamp(stat),pdfOperation:args.operation??'info',page:args.page??1,limit:args.limit??4,width:args.width??1600,password:args.password},stdout:true,stderr:true,resourceLimits:{maxOldGenerationSizeMb:512,stackSizeMb:8}})

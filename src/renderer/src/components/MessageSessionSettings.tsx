@@ -13,7 +13,8 @@ const fields:Record<string,[string,string,string]>={
  'remote-admin':['Remote administration','remote','Administration applies to the existing remote host.'],
  fast:['Fast mode','zap','The provider’s native speed and usage setting.'],
  workspace:['Execution scope','folder','The employee’s current execution scope.'],
- directory:['Team workspace','folder-opened','The personal workspace assigned to this employee.']
+ directory:['Agent workspace','folder-opened','The personal workspace assigned to this employee.'],
+ 'private-storage':['Private storage','archive','Stored locally on this Mac, independent of the employee’s workspace.']
 }
 
 /** Reuse the exact native controls; only their Message presentation changes. */

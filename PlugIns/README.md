@@ -1,21 +1,11 @@
-# Bundled plugins
+# Plugins
 
-The first source and desktop/server distribution includes all three maintained plugins:
+All three first-release workspaces/utilities have been promoted directly into Aexus Bot Core and main views:
 
-| Plugin | Directory | License |
+| Capability | Built-in Location | CLI / Core Surface |
 | --- | --- | --- |
-| Cloud Hosts | `cloud-hosts/` | Apache-2.0 |
-| MiniNotion | `mini-notion/` | GPL-3.0-only |
-| Margin Reader | `margin-reader/` | MIT |
+| Mission Workflow Notebook | `Mission` (`src/main/mission-notebook/`) | `notebook.*` |
+| Study Reader & Mindmaps | `Library -> Study Reader` (`resources/library-reader/`, `src/main/library-reader/`) | `reader.*` |
+| Cloud Hosts & SFTP / SSH | `Library -> Cloud Hosts` (`src/main/cloud-hosts.ts`, `src/main/host-access.ts`) | `host.*` |
 
-All source trees are part of the host checkout. MiniNotion 1.26.47 and Margin Reader 0.11.0 contain the complete migrated desktop project implementations. Cloud Hosts 2.0.0 provides SSH management and terminals. Runtime workspaces, dependency directories and build outputs remain excluded. `plugins.lock.json` pins the versions expected by the host.
-
-```sh
-npm ci
-npm run setup
-npm run build:plugins
-# Portable release artifacts omit developer-machine source paths:
-npm run build:plugins:release
-```
-
-The builder fails if a required plugin is missing or has an unreviewed version mismatch. Each plugin keeps its documented CLI, runtime, UI, schema and license. New public-release workspaces live under Core data storage; existing Team/workspace bindings are not moved. See `PLUGIN_SPEC.md`, `LICENSING.md` and `docs/DEPLOYMENT.md`.
+`plugins.lock.json` pins `"plugins": []` with 0 bundled third-party plugin directories required at build time. Custom and external CLI-first plugins (starting from [`examples/plugin-starter`](../examples/plugin-starter)) remain supported through `agents plugin install`, `$AGENTS_COMPANY_HOME/plugins/`, and the documented `plugin.*` Core APIs. See `PLUGIN_SPEC.md`, `LICENSING.md` and `docs/DEPLOYMENT.md`.

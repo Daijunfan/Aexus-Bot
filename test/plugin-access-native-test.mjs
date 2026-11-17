@@ -22,17 +22,16 @@ try{
  const rpc=async(cmd,args={})=>{const value=await f.request(null,cmd,args);assert.ok(value.ok,value.error);return value.data}
  await rpc('engine.configure',{engine:'claude',patch:{path:'/usr/bin/true',sdkPath:sdk}})
  for(const engine of ['cline','pi'])await rpc('engine.configure',{engine,patch:{apiKey:'fixture-only-not-real'}})
- await rpc('group.add',{name:'Native readers'})
- const plug=(method,params={})=>rpc('plugin.call',{id:'mininotion',method,params});const page=await plug('page.create',{title:'Native scoped note',color:'white'});await plug('page.write-markdown',{pageId:page.id,markdown:'NATIVE_PLUGIN_SCOPE_TEXT'});
+ const notebook=(method,params={})=>rpc('notebook.call',{method,params});const page=await notebook('page.create',{title:'Native scoped note',color:'white'});await notebook('page.write-markdown',{pageId:page.id,markdown:'NATIVE_PLUGIN_SCOPE_TEXT'});
  for(const engine of ['codex','claude','cline','pi']){
-  const card=await rpc('card.create',{title:engine+' scoped editor',group:'Native readers',engine,model:engine==='codex'?'gpt-6-luna':engine==='claude'?'fixture-claude':'deepseek-flash'});await f.ready(card.id)
-  const acl=await rpc('plugin.access',{id:'mininotion'});await rpc('plugin.access',{id:'mininotion',resourceIds:[page.id],employees:[{employeeId:card.id,read:true,write:true,create:false}],expectedRevision:acl.revision});
+  const card=await rpc('card.create',{title:engine+' scoped editor',engine,model:engine==='codex'?'gpt-6-luna':engine==='claude'?'fixture-claude':'deepseek-flash'});await f.ready(card.id)
+  const acl=await rpc('notebook.access');await rpc('notebook.access',{resourceIds:[page.id],employees:[{employeeId:card.id,read:true,write:true,create:false}],expectedRevision:acl.revision});
   const {sessionId}=await rpc('session.open',{cardId:card.id});await rpc('config.permission',{id:sessionId,mode:'dontAsk'});
   const requestFile=path.join(f.control,card.id+'.fetch-request.json'),output=path.join(f.control,card.id+'-fetch-result.json');
-  const call=async(command,args)=>{fs.rmSync(output,{force:true});fs.writeFileSync(requestFile,JSON.stringify({command,args}));await rpc('session.send',{id:sessionId,text:'Use the granted plugin content for the requested task.'});await f.until(()=>fs.existsSync(output),engine+' plugin API response');await f.until(async()=>!(await f.status(card.id)).busy,'native plugin idle');const result=JSON.parse(fs.readFileSync(output));assert.ok(!result.isError,JSON.stringify(result));return JSON.parse(result.content[0].text).data;};
-  assert.ok((await call('plugin.resources',{id:'mininotion'})).resources.some(r=>r.id===page.id));assert.ok((await call('plugin.call',{id:'mininotion',method:'page.read-markdown',params:{pageId:page.id}})).markdown.includes('NATIVE_PLUGIN_SCOPE_TEXT'));
-  await rpc('config.permission',{id:sessionId,mode:'bypassPermissions'});await call('plugin.call',{id:'mininotion',method:'page.update',params:{pageId:page.id,title:engine+' native edit'}});assert.equal((await plug('page.get',{pageId:page.id})).title,engine+' native edit');
-  checks.push(engine+': actual native API transport reads granted plugin pages without write approval, then edits through the same page authorization in Full access; no plugin Team');
+  const call=async(command,args)=>{fs.rmSync(output,{force:true});fs.writeFileSync(requestFile,JSON.stringify({command,args}));await rpc('session.send',{id:sessionId,text:'Use the granted Mission Notebook content for the requested task.'});await f.until(()=>fs.existsSync(output),engine+' notebook API response');await f.until(async()=>!(await f.status(card.id)).busy,'native notebook idle');const result=JSON.parse(fs.readFileSync(output));assert.ok(!result.isError,JSON.stringify(result));return JSON.parse(result.content[0].text).data;};
+  assert.ok((await call('notebook.resources',{})).resources.some(r=>r.id===page.id));assert.ok((await call('notebook.call',{method:'page.read-markdown',params:{pageId:page.id}})).markdown.includes('NATIVE_PLUGIN_SCOPE_TEXT'));
+  await rpc('config.permission',{id:sessionId,mode:'bypassPermissions'});await call('notebook.call',{method:'page.update',params:{pageId:page.id,title:engine+' native edit'}});assert.equal((await notebook('page.get',{pageId:page.id})).title,engine+' native edit');
+  checks.push(engine+': actual native API transport reads granted Mission Notebook pages without write approval, then edits through the same page authorization in Full access');
  }
  const out=path.join(root,'artifacts/plugin-page-access');fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'native-result.json'),JSON.stringify({passed:true,checks,modelCalls:0},null,2)+'\n');for(const check of checks)console.log('PASS '+check)
 }finally{await f?.close();fs.rmSync(temp,{recursive:true,force:true})}

@@ -3,20 +3,7 @@
   "platform": "darwin",
   "arch": "arm64",
   "candidate": true,
-  "plugins": [
-    {
-      "directory": "cloud-hosts",
-      "version": "2.0.0"
-    },
-    {
-      "directory": "mini-notion",
-      "version": "1.26.48"
-    },
-    {
-      "directory": "margin-reader",
-      "version": "0.11.1"
-    }
-  ],
+  "plugins": [],
   "pendingReviews": [
     "official-pet-art",
     "fate-fan-art",

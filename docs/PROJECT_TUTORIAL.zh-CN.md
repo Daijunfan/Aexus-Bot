@@ -409,7 +409,7 @@ Work 文件边界、Cloud 工具路由和公司管理权限也独立检查。Clo
 | 插件领域操作 | 插件自身 CLI，或 `agents plugin call PLUGIN METHOD` | 插件 schema、工作区及 hosted runtime |
 | Cloud Tunnel 工具 | MCP `execute/read_file/write_file/edit_file/list_files` | Tunnel、SSH 和远端执行工具 |
 
-比如 MiniNotion 创建页面的具体方法不需要都注册成公司顶层命令。公司提供 `plugin.call`，领域参数和方法说明留在插件自己的 API/schema 中。`pluginRuntime()` 只允许声明过的方法，并对非全局员工检查方法是否声明 `agentAccess: "workspace"`。
+比如外部插件 Margin Reader / Cloud Hosts 创建具体条目的方法不需要都注册成公司顶层命令。公司提供 `plugin.call`，领域参数和方法说明留在插件自己的 API/schema 中；内置 Mission 超级笔记本的方法则通过 `notebook.call` 统一调度。`pluginRuntime()` 只允许声明过的方法，并对非全局员工检查方法是否声明 `agentAccess: "workspace"`。
 
 Tunnel 的 MCP 调用则可能直接进入协议桥，不是每一次都启动 `agents`。特定远端公司 CLI 返回链路还有一个例外：远端 Python launcher 把 argv 和输入文件内容传回 Core，复用本机 CLI 的 **parse-only** 模式，再把解析结果以员工身份交给 Core；这一模式不能启动服务或读取未提供的宿主输入文件。
 

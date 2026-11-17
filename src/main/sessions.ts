@@ -1,5 +1,7 @@
 import {isAppAdministrator} from './application-authority'
 import { attachmentPaths,attachmentInfo } from '../shared/message-attachments'
+import { DIRECT_ATTACHMENT_PREFIX,DIRECT_UPLOAD_PREFIX } from '../shared/direct-messages'
+import { directFileEndpoint,directUploadEndpoint } from './direct-messages'
 import type { MessageReply } from '../shared/types'
 import type { MessageQuote } from '../shared/message-quotes'
 import { isEngine,assertEngineWorkspace } from '../shared/engines'
@@ -7,7 +9,6 @@ import { assertEngineExecutable } from './engines/registry'
 import { openEngine } from './engines/runtime'
 import type { EngineDriver } from './engines/contract'
 import { AsyncQueue } from './engines/session-support'
-import { taskViewId,taskViewPrompt } from './task-view'
 import {messageSourceView,SOURCE_VIEW_LABELS,type MessageSourceView} from '../shared/message-source'
 import {employeeContextPrompt,confirmEmployeeContext,type PendingInstructions} from './employee-context'
 import {messageSourcePrompt} from './message-source'
@@ -48,15 +49,12 @@ import {catalog as chatCatalog} from './chat-group-store'
 import type {NativeInputContext} from '../shared/message-source'
 import { conversation,forget,restoreTranscript,saveTranscript,resolveMessageReply } from './transcripts'
 import { approvalsFor,cancelApprovals } from './approvals'
-import { teamSettings,employeeSettings,nativeSessionRefs,type Session,type StoredSession } from '../shared/types'
-import { employeeRoot,employeeWorkspace,executionEmployee,cloudRelative } from './workspaces'
+import { employeeSettings,nativeSessionRefs,type Session,type StoredSession } from '../shared/types'
+import { centralizedWorkspacesRoot,employeeRoot,employeeWorkspace,executionEmployee,cloudRelative } from './workspaces'
 import { provisionEmployee,ensureEmployeeBootstrap,employeeInstructions } from './plugins/documents'
 import { checkCloudNative,cloudNativeTarget } from './cloud-native'
 
-const removingEmployees=new Set<string>(),removingTeams=new Set<string>()
-export function assertTeamAvailable(name?:string){if(name&&removingTeams.has(name))throw new Error('Team 正在删除中，暂时不能创建或调整员工')}
-export function beginTeamRemoval(name:string){assertTeamAvailable(name);removingTeams.add(name)}
-export function endTeamRemoval(name:string){removingTeams.delete(name)}
+const removingEmployees=new Set<string>()
 export function beginEmployeeRemoval(id:string){if(removingEmployees.has(id))throw new Error('员工正在移除中');removingEmployees.add(id)}
 export function endEmployeeRemoval(id:string){removingEmployees.delete(id)}
 export function assertNotRemoving(id?:string){if(id&&(removingEmployees.has(id)||readStore().sessions.find(c=>c.id===id)?.deleting))throw new Error('员工正在移除中，无法打开会话')}
@@ -102,7 +100,7 @@ export type Live = {
   queueDispatching?: boolean
   nativeTasks?:Record<string,{processId:string;command:string;cwd:string;status:string}>
   nativeContinuation?:boolean
-  pendingMessages?: {id:string;text:string;images?:string[];files?:string[];delegation?:Delegation;viewId?:string;sourceView?:MessageSourceView;chat?:ChatTaskContext;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
+  pendingMessages?: {id:string;text:string;images?:string[];files?:string[];delegation?:Delegation;sourceView?:MessageSourceView;chat?:ChatTaskContext;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
   queue: {text:string;images?:ImageInput[];taskId?:string}[]
   abort?: AbortController
   finished?: Promise<void>
@@ -120,7 +118,7 @@ function nativeInputContext(state:Live,prompt:string,directOverride?:string,sour
  if(directId)origin={kind:'direct',name,id:state.cardId,messageId:directId}
  else if(sourceOverride===undefined&&task?.chat&&'groupId' in task.chat)origin={kind:'group',id:task.chat.groupId,messageId:task.chat.messageId,name:chatCatalog().groups.find(g=>g.id===(task.chat as any).groupId)?.name??'Former group'}
  else if(sourceOverride===undefined&&task?.chat&&'channelId' in task.chat)origin={kind:'channel',id:task.chat.channelId,messageId:task.chat.entryId,name:'Channel'}
- else origin={kind:source==='plan'?'plan':'company',name:SOURCE_VIEW_LABELS[source??'company']}
+ else origin={kind:source==='plan'?'plan':'company',name:SOURCE_VIEW_LABELS[source??'messages']}
  return {origin,phase:state.acknowledging?'read':'work',prompt}
 }
 let broadcast: Emitter = () => {}
@@ -146,7 +144,6 @@ export function reserveEmployee(cardId: string, owner: string) {
   assertEmployeeControl(cardId)
   const card = readStore().sessions.find(c => c.id === cardId)
   if (!card) throw new Error('Unknown employee')
-  assertTeamAvailable(card.group)
   if ([...live].some(([id,s]) => s.cardId === cardId && (s.running||s.acknowledging||s.queueDispatching||s.pendingMessages?.length||approvalsFor(id).length))) throw new Error('Employee is busy')
   taskOwners.set(cardId, owner)
   return () => { if (taskOwners.get(cardId) === owner){taskOwners.delete(cardId);for(const [id,state] of live)if(state.cardId===cardId)dispatchQueued(state,id)} }
@@ -175,12 +172,11 @@ export type StartArgs = {
   delegation?:Delegation
   cardId?: string
   kind?:EmployeeKind
-  workEnvironment?:import('../shared/types').WorkEnvironment
   remote?:RemoteTarget|null
+  hostId?: string
+  remoteDir?: string
   title?: string
   directoryMode?: string
-  group?: string
-  seat?: string
   engine?: Engine
   cwd?: string
   model?: string
@@ -208,7 +204,6 @@ async function startSessionInner(args: StartArgs = {}, owner?: string): Promise<
   const openingDelegation=args.delegation
   assertNotRemoving(args.cardId)
   let card = args.cardId ? readStore().sessions.find((c) => c.id === args.cardId) : undefined
-  assertTeamAvailable(card?.group??args.group)
   if (args.cardId && !card) throw new Error(`no such card ${args.cardId}`)
   if (card && card.kind!=='cloud-native-worker' && card.engine === 'codex' && employeeSettings(readStore(),card).mode === 'cloud' && card.codexExecution !== 'native-v1') {
     // Old MCP instructions/tools are already in native history. Start a clean context,
@@ -221,33 +216,35 @@ async function startSessionInner(args: StartArgs = {}, owner?: string): Promise<
     ensureEmployeeBootstrap(card,readStore())
     if(card.accessMode==='isolated')employeeProcessOptions(card.id)
     if(card.kind==='cloud-native-worker')cloudNativeTarget(card)
-    employeeWorkspace(readStore(),card.group,card.cwd,card.id)
+    employeeWorkspace(readStore(),card.cwd,card.id)
     const existing = [...live.entries()].find(([, s]) => s.cardId === card.id)
     if(existing){if(existing[1].engine===card.engine&&existing[1].kind===(card.kind??'worker')&&JSON.stringify(existing[1].remote??null)===JSON.stringify(executionEmployee(readStore(),card).remote))return {sessionId:existing[0],cwd:existing[1].remote?.directory??existing[1].cwd,engine:existing[1].engine};await closeSession(existing[0])}
     assertEmployeeControl(card.id, owner)
     args = { ...card, cardId: card.id }
   }
   const sessionId = newSessionId()
-  const identity={group:args.group??'',workEnvironment:card?.workEnvironment??args.workEnvironment,localWorkspaceRoot:card?.localWorkspaceRoot},config=employeeSettings(readStore(),identity),root=employeeRoot(readStore(),identity)
-  if(args.remote!==undefined&&args.remote!==null)throw new Error('云主机连接由 Team 统一配置')
-  const cwd = card?employeeWorkspace(readStore(),card.group,card.cwd,card.id):await resolveEmployeeWorkspace(readStore(),args.group??'',args.title||`New ${args.engine==='codex'?'Codex':'Claude'} session`,args.cwd,args.directoryMode,undefined,false,args.workEnvironment)
+  const storeValue=readStore()
+  const config=card?employeeSettings(storeValue,card):employeeSettings(storeValue,{workspaceMode:args.hostId?'cloud':'local',hostId:args.hostId,remoteRoot:args.remoteDir,directoryMode:args.directoryMode as any})
+  const root=card?employeeRoot(storeValue,card):config.mode==='cloud'?config.directory:centralizedWorkspacesRoot(storeValue)
+  if(args.remote!==undefined&&args.remote!==null)throw new Error('云主机连接请通过 hostId 指定已登记的云主机')
+  const resolved=!card?await resolveEmployeeWorkspace(storeValue,{title:args.title||`New ${args.engine==='codex'?'Codex':'Claude'} session`,cwd:args.cwd,directoryMode:args.directoryMode,hostId:args.hostId,remoteDir:args.remoteDir}):undefined
+  const cwd = card?employeeWorkspace(storeValue,card.cwd,card.id):resolved!.cwd
   assertEngineWorkspace(card?.engine??args.engine??'claude',config.mode,card?.kind??args.kind??'worker')
-  const remote=config.mode==='cloud'?{...config.remote!,directory:cwd}:null
+  const remote=config.mode==='cloud'?{...(resolved?.remote??config.remote!),directory:cwd}:null
   const kind=card?.kind??'worker',nativeRemote=kind==='cloud-native-worker'?cloudNativeTarget(card!).target:undefined
-  if(nativeRemote)await checkCloudNative(card!.group,card!.engine,cloudRelative(config,cwd))
+  if(nativeRemote&&card)await checkCloudNative(card.hostId!,card.engine,cloudRelative(config,cwd))
   if(!remote)provisionEmployee(cwd,root!,config)
   const workRoot=config.mode==='work'?root:undefined,permissionRoot=workRoot?dirname(workRoot):undefined
   if(workRoot)await prepareWorkspacePlugins(cwd,config.pluginId!,card?.id??sessionId)
   const controlBin=remote&&card?await prepareRemoteAgentAccess(card.id,remote):undefined
   if(remote&&card&&!controlBin)await prepareRemoteEmployeeDocuments(card.id,remote)
   const remoteLaunch=remote&&!nativeRemote?(await checkRemote(remote),['claude','cline','pi'].includes(args.engine??'claude')?await prepareRemote(card?.id??sessionId,'claude',{...remote,cliBin:controlBin}):undefined):undefined
-  assertTeamAvailable(args.group)
-  const latest=readStore(),latestConfig=employeeSettings(latest,identity)
-  if(employeeRoot(latest,identity)!==root||latestConfig.mode!==config.mode||latestConfig.pluginId!==config.pluginId||JSON.stringify(latestConfig.remote)!==JSON.stringify(config.remote))throw new Error('Team 配置已变更，请重新打开会话')
-  if(card&&!latest.sessions.some(c=>c.id===card.id&&c.cwd===card.cwd&&c.group===card.group&&c.engine===card.engine&&JSON.stringify(executionEmployee(latest,c).remote)===JSON.stringify(remote)))throw new Error('员工已被移除或调整目录，请重新打开会话')
+  const latest=readStore(),latestConfig=card?employeeSettings(latest,card):config
+  if(card&&(employeeRoot(latest,card)!==root||latestConfig.mode!==config.mode||latestConfig.pluginId!==config.pluginId||JSON.stringify(latestConfig.remote)!==JSON.stringify(config.remote)))throw new Error('工作区配置已变更，请重新打开会话')
+  if(card&&!latest.sessions.some(c=>c.id===card.id&&c.cwd===card.cwd&&c.engine===card.engine&&JSON.stringify(executionEmployee(latest,c).remote)===JSON.stringify(remote)))throw new Error('员工已被移除或调整目录，请重新打开会话')
   if(card){const existing=[...live.entries()].find(([,s])=>s.cardId===card.id);if(existing)return {sessionId:existing[0],cwd:existing[1].remote?.directory??existing[1].cwd,engine:existing[1].engine}}
   assertNotRemoving(card?.id)
-  if(!remote)employeeWorkspace(readStore(),args.group??'',cwd,card?.id,false,undefined,identity.workEnvironment)
+  if(!remote)employeeWorkspace(readStore(),cwd,card?.id,false)
   const engine: Engine = args.engine ?? 'claude'
   if(!nativeRemote)await assertEngineExecutable(engine)
   if (!isEngine(engine)) throw new Error(`Unknown engine: ${engine}`)
@@ -258,7 +255,7 @@ async function startSessionInner(args: StartArgs = {}, owner?: string): Promise<
   const cardId = card?.id ?? sessionId
   validateDelegation(openingDelegation,cardId)
   patchSession(cardId, {
-    ...card,...(!card?{initialization:pendingInitialization(),createdBy:requestContext().principal,managementRole:'employee' as const,accessMode:'trusted' as const}:{}), engine, cwd,workEnvironment:identity.workEnvironment,localWorkspaceRoot:identity.workEnvironment==='local'&&teamSettings(readStore(),identity.group).mode==='cloud'?root:undefined, remote:undefined, group: args.group ?? '', seat: args.seat,
+    ...card,...(!card?{initialization:pendingInitialization(),createdBy:requestContext().principal,managementRole:'employee' as const,accessMode:'trusted' as const}:{}), engine, cwd, workspaceMode: card?.workspaceMode ?? (config.mode === 'build' ? 'local' : config.mode), ...(card?.hostId ?? config.hostId ? { hostId: card?.hostId ?? config.hostId } : {}), ...(card?.remoteRoot ?? resolved?.remoteRoot ?? config.directory ? { remoteRoot: card?.remoteRoot ?? resolved?.remoteRoot ?? config.directory } : {}), ...(card?.pluginId ?? config.pluginId ? { pluginId: card?.pluginId ?? config.pluginId } : {}), remote:undefined,
     threadId:args.threadId,claudeSessionId:args.claudeSessionId,
     title: args.title || `New ${engine === 'codex' ? 'Codex' : 'Claude'} session`,
     createdAt: card?.createdAt ?? Date.now(), model: args.model, effort: args.effort,
@@ -279,12 +276,13 @@ async function startSessionInner(args: StartArgs = {}, owner?: string): Promise<
 
 const queuedPrivateSends=new Map<string,PrivateSendAttempt>()
 export function privateSendQueued(employeeId:string,queueId:string){return [...live.values()].some(state=>state.cardId===employeeId&&(state.pendingMessages?.some(message=>message.id===queueId)||state.privateSend?.queueId===queueId))}
+export function isSessionQueueing(employeeId:string){return taskOwners.has(employeeId)||[...live.values()].some(state=>state.cardId===employeeId&&(state.running||state.acknowledging||state.queueDispatching||!!state.pendingMessages?.length))}
 function interruptQueuedPrivateSend(id:string,reason:string){const attempt=queuedPrivateSends.get(id);try{attempt?.interrupted(reason)}catch(error){return error}finally{queuedPrivateSends.delete(id)}}
 function dispatchQueued(s:Live,id:string){
   if(!live.has(id)||taskOwners.has(s.cardId)||s.running||s.acknowledging||s.queueDispatching||!s.pendingMessages?.length)return
   s.queueDispatching=true
   const next=s.pendingMessages.shift()!,privateSend=queuedPrivateSends.get(next.id);queuedPrivateSends.delete(next.id);rememberMeta(id,{pendingMessages:[...s.pendingMessages]})
-  void sendMessage(id,next.text,undefined,next.images,next.delegation,next.viewId,next.chat,next.replyTo,next.replyQuote,next.crossReply,next.files,privateSend,next.sourceView).then(sent=>{if(!sent)privateSend?.interrupted('Private message preparation was interrupted. It was not replayed.')}).catch(error=>{try{privateSend?.failed(error)}catch(saveError){emit('session:error',{sessionId:id,message:String(saveError)})};updateChatDelivery(s.cardId,next.chat,{status:'failed',error:String(error)});if(!next.delegation?.groupNotice&&!next.delegation?.channelNotice)emit('session:error',{sessionId:id,message:String(error)})}).finally(()=>{s.queueDispatching=false;if(!s.running)queueMicrotask(()=>dispatchQueued(s,id))})
+  void sendMessage(id,next.text,undefined,next.images,next.delegation,next.chat,next.replyTo,next.replyQuote,next.crossReply,next.files,privateSend,next.sourceView).then(sent=>{if(!sent)privateSend?.interrupted('Private message preparation was interrupted. It was not replayed.')}).catch(error=>{try{privateSend?.failed(error)}catch(saveError){emit('session:error',{sessionId:id,message:String(saveError)})};updateChatDelivery(s.cardId,next.chat,{status:'failed',error:String(error)});if(!next.delegation?.groupNotice&&!next.delegation?.channelNotice)emit('session:error',{sessionId:id,message:String(error)})}).finally(()=>{s.queueDispatching=false;if(!s.running)queueMicrotask(()=>dispatchQueued(s,id))})
 }
 function isGroupNotice(delegation:Delegation,chat:ChatTaskContext|undefined,employeeId:string){
   const notice=delegation.groupNotice??delegation.channelNotice
@@ -292,7 +290,7 @@ function isGroupNotice(delegation:Delegation,chat:ChatTaskContext|undefined,empl
   if(chat&&(chatAcknowledgmentPolicy(chat,employeeId).mode==='awareness')!==!!notice)throw Error('Shared delivery mode does not match its delegation')
   return !!notice
 }
-export function enqueueMessage(id:string,text:string,images:string[]=[],delegation?:Delegation,viewId?:string,chat?:ChatTaskContext,replyTo?:string,replyQuote?:MessageQuote,crossReply?:MessageReply,filePaths:string[]=[],privateSend?:PrivateSendAttempt,sourceView?:MessageSourceView){
+export function enqueueMessage(id:string,text:string,images:string[]=[],delegation?:Delegation,chat?:ChatTaskContext,replyTo?:string,replyQuote?:MessageQuote,crossReply?:MessageReply,filePaths:string[]=[],privateSend?:PrivateSendAttempt,sourceView?:MessageSourceView){
   const s=require_(id);assertNotRemoving(s.cardId);assertEmployeeReady(s.cardId)
   if(!Array.isArray(images)||images.some(p=>typeof p!=='string'))throw new Error('images 必须是工作目录内的图片路径数组')
   filePaths=attachmentPaths(filePaths)
@@ -302,10 +300,9 @@ export function enqueueMessage(id:string,text:string,images:string[]=[],delegati
   const nativeControl=!chat&&!privateSend?.directMessageId&&(s.engine==='claude'&&text.startsWith('/')||s.engine==='codex'&&/^\/(compact|review)(?:\s|$)/.test(text)||s.engine==='antigravity'&&!!sessionInfo(id)?.commands?.some(command=>command.name===text.match(/^\/([^\s]+)/)?.[1]))
   if(!notice&&!privateSend?.directMessageId)authorizeSlash(text,s.cardId,delegation)
   sourceView=messageSourceView(sourceView)
-  viewId=notice?undefined:taskViewId(s.cardId,viewId)
   if(crossReply){if(!isAppAdministrator(delegation.requestedBy))throw Error('Only the user or Secretary may quote another conversation')}else resolveMessageReply(id,replyTo,replyQuote)
   if(replyTo!==undefined&&text.startsWith('/'))throw Error('Replies require a regular message, not a slash command')
-  const entry={id:newSessionId(),text,images,...(filePaths.length?{files:filePaths}:{}),delegation,viewId,...(sourceView?{sourceView}:{}),chat,...(replyTo!==undefined?{replyTo,replyQuote,...(crossReply?{crossReply}:{})}:{})}
+  const entry={id:newSessionId(),text,images,...(filePaths.length?{files:filePaths}:{}),delegation,...(sourceView?{sourceView}:{}),chat,...(replyTo!==undefined?{replyTo,replyQuote,...(crossReply?{crossReply}:{})}:{})}
   if(privateSend){privateSend.queued(entry.id);queuedPrivateSends.set(entry.id,privateSend)}
   ;(s.pendingMessages??=[]).push(entry)
   rememberMeta(id,{pendingMessages:[...s.pendingMessages]});dispatchQueued(s,id);return entry
@@ -315,7 +312,7 @@ export async function steerMessage(id:string,text:string,sourceView?:MessageSour
   const s=require_(id);assertEmployeeControl(s.cardId)
   if(s.acknowledging)throw Error('Wait for group acknowledgment, or queue this message instead.')
   if(!s.running||!text.trim())throw new Error('请在任务运行时追加非空指令')
-  const engineText=taskViewPrompt(s.currentTask?.viewId,messageSourcePrompt(sourceView,text))
+  const engineText=messageSourcePrompt(sourceView,text)
   const prepared=employeeContextPrompt(s,engineText,s.currentTask?.messageId)
   await s.driver.steer(prepared.text)
   if(prepared.pending)confirmEmployeeContext(s,prepared.pending)
@@ -344,7 +341,7 @@ function require_(id: string): Live {
 }
 
 /** Deterministic slash commands never become model prompts. */
-async function runSessionCommand(id:string,text:string,owner?:string,delegation?:Delegation,viewId?:string,sourceView?:MessageSourceView):Promise<boolean>{
+async function runSessionCommand(id:string,text:string,owner?:string,delegation?:Delegation,sourceView?:MessageSourceView):Promise<boolean>{
   const match=text.trim().match(/^\/(\S+)(?:\s+([\s\S]*))?$/);if(!match)return false
   const s=require_(id),meta=sessionInfo(id)!,name=match[1],value=match[2]?.trim()??''
   if(s.engine==='codex'&&['compact','review'].includes(name)){if(name==='compact'&&(!s.threadId||value))throw new Error('用法：/compact，需要已有会话内容');return false}
@@ -364,7 +361,7 @@ async function runSessionCommand(id:string,text:string,owner?:string,delegation?
       result='已开始新的上下文，员工和工作目录保持不变。';break
     }
     case 'fork':{if(!value){result='用法：/fork 新员工名称。也可点击上方「克隆员工」选择工作目录。';break}if(owner)throw new Error('请通过 card.clone 在任务外克隆员工');const clone=await import('./employees').then(m=>m.cloneEmployee(s.cardId,{title:value}));result=`已克隆员工：${clone.title}\n员工 ID：${clone.id}\n工作目录：${clone.cwd}`;break}
-    case 'plan':{await setPlanMode(id,true,owner);if(value)return sendMessage(id,value,owner,[],delegation,viewId,undefined,undefined,undefined,undefined,[],undefined,sourceView);result='计划模式已开启。使用 /normal 返回执行模式。';break}
+    case 'plan':{await setPlanMode(id,true,owner);if(value)return sendMessage(id,value,owner,[],delegation,undefined,undefined,undefined,undefined,[],undefined,sourceView);result='计划模式已开启。使用 /normal 返回执行模式。';break}
     case 'normal':await setPlanMode(id,false,owner);result='已返回执行模式。';break
     case 'ps':result=JSON.stringify(await backgroundProcesses(id),null,2);break
     case 'stop':await backgroundProcesses(id,undefined,true);result='已停止此员工的后台终端。';break
@@ -400,7 +397,7 @@ export async function setFastMode(id:string,enabled:boolean,owner?:string){
   return true
 }
 
-export async function sendMessage(sessionId: string, text: string, owner?: string,imagePaths:string[]=[],delegation?:Delegation,viewId?:string,chat?:ChatTaskContext,replyTo?:string,replyQuote?:MessageQuote,crossReply?:MessageReply,filePaths:string[]=[],privateSend?:PrivateSendAttempt,sourceView?:MessageSourceView): Promise<boolean> {
+export async function sendMessage(sessionId: string, text: string, owner?: string,imagePaths:string[]=[],delegation?:Delegation,chat?:ChatTaskContext,replyTo?:string,replyQuote?:MessageQuote,crossReply?:MessageReply,filePaths:string[]=[],privateSend?:PrivateSendAttempt,sourceView?:MessageSourceView): Promise<boolean> {
   const s = require_(sessionId)
   assertEmployeeControl(s.cardId, owner)
   delegation??=delegationFor(s.cardId);validateDelegation(delegation,s.cardId)
@@ -409,11 +406,10 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
   const nativeControl=!chat&&!privateSend?.directMessageId&&(s.engine==='claude'&&text.startsWith('/')||s.engine==='codex'&&/^\/(compact|review)(?:\s|$)/.test(text)||s.engine==='antigravity'&&!!sessionInfo(sessionId)?.commands?.some(command=>command.name===text.match(/^\/([^\s]+)/)?.[1]))
   sourceView=messageSourceView(sourceView)
   const store=readStore(), card=executionEmployee(store,store.sessions.find(c=>c.id===s.cardId)!)
-  viewId=notice||nativeControl||privateTurns.has(sessionId)?undefined:taskViewId(card.id,viewId,!!owner)
   if(s.kind==='cloud-native-worker'&&JSON.stringify(cloudNativeTarget(card).origin)!==JSON.stringify(s.nativeOrigin))throw new Error('云主机身份已变化；不会在本机或其他云主机执行')
   if(card.engine!==s.engine)throw new Error('引擎配置已变更，请重新打开会话')
   if(JSON.stringify(card.remote??null)!==JSON.stringify(s.remote??null))throw new Error('云主机配置已变更，请重新打开会话')
-  const cwd=card.remote?card.cwd:employeeWorkspace(store,card.group,card.cwd,card.id)
+  const cwd=card.remote?card.cwd:employeeWorkspace(store,card.cwd,card.id)
   if(cwd!==s.cwd) throw new Error('工作空间已变更，请重新打开员工会话')
   if(!Array.isArray(imagePaths)||imagePaths.some(p=>typeof p!=='string'))throw new Error('images 必须是工作目录内的图片路径数组')
   filePaths=attachmentPaths(filePaths)
@@ -424,7 +420,7 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
   if(crossReply&&!isAppAdministrator(delegation.requestedBy))throw Error('Only the user or Secretary may quote another conversation')
   const reply=crossReply??resolveMessageReply(sessionId,replyTo,replyQuote)
   if(!privateSend?.directMessageId&&!notice&&(imagePaths.length||filePaths.length)&&text.startsWith('/'))throw new Error('请使用普通消息发送图片附件')
-  if(!privateSend?.directMessageId&&!chat&&text.startsWith('/')&&await runSessionCommand(sessionId,text,owner,delegation,viewId,sourceView)){s.currentTask={messageId:newSessionId(),delegation,startedAt:Date.now(),runId:owner,viewId,...(sourceView?{sourceView}:{}),chat};rememberMeta(sessionId,{currentTask:s.currentTask});return true}
+  if(!privateSend?.directMessageId&&!chat&&text.startsWith('/')&&await runSessionCommand(sessionId,text,owner,delegation,sourceView)){s.currentTask={messageId:newSessionId(),delegation,startedAt:Date.now(),runId:owner,...(sourceView?{sourceView}:{}),chat};rememberMeta(sessionId,{currentTask:s.currentTask});return true}
   if(privateSend)s.privateSend=privateSend
   try{
   let images:ImageInput[]=[]
@@ -432,8 +428,16 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
   if(imagePaths.length||filePaths.length){
     const modalities=activeModel(sessionInfo(sessionId)?.models??[],s.model)?.inputModalities
     if(imagePaths.length&&modalities&&!modalities.includes('image'))throw new Error('当前模型不支持图片输入')
+    const readInputAttachment=async(filePath:string,op:'read-image'|'copy-info')=>{
+      if(filePath.startsWith(DIRECT_UPLOAD_PREFIX)||filePath.startsWith(DIRECT_ATTACHMENT_PREFIX)){
+        const end=filePath.startsWith(DIRECT_UPLOAD_PREFIX)?directUploadEndpoint(card.id,filePath):directFileEndpoint(card.id,filePath)
+        await end.validate?.(op,{path:end.path})
+        return end.remote?await remoteFiles(card.id,end.remote,op,{path:end.path}):workspaceFiles(end.root,op,{path:end.path})
+      }
+      return card.remote?await remoteFiles(card.id,card.remote,op,{path:filePath}):workspaceFiles(cwd,op,{path:filePath})
+    }
     const cancel=new AbortController();s.abort=cancel;s.running=true;rememberMeta(sessionId,{busy:true})
-    try{for(const image of imagePaths)images.push(card.remote?await remoteFiles(card.id,card.remote,'read-image',{path:image}):workspaceFiles(cwd,'read-image',{path:image}) as ImageInput);for(const path of filePaths){const info=card.remote?await remoteFiles(card.id,card.remote,'copy-info',{path}):workspaceFiles(cwd,'copy-info',{path});files.push(attachmentInfo(path,info))}}
+    try{for(const image of imagePaths)images.push(await readInputAttachment(image,'read-image') as ImageInput);for(const path of filePaths){const info=await readInputAttachment(path,'copy-info');files.push(attachmentInfo(path,info))}}
     finally{s.running=false;s.abort=undefined;rememberMeta(sessionId,{busy:false})}
     if(cancel.signal.aborted||!live.has(sessionId))return false
   }
@@ -446,11 +450,15 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
   }
   validateDelegation(delegation,s.cardId)
   const replyText=reply?'[Reply to a previous message in this conversation]\n'+JSON.stringify(reply)+'\n\n[Current user request]\n'+text:text
-  const attachmentText=files.length?replyText+'\n\n[Attached files in this employee workspace]\n'+JSON.stringify(files)+'\nRead these files when relevant; attaching a file does not execute it.':replyText
+  const workspaceAttachments=files.filter(file=>!file.path.startsWith(DIRECT_UPLOAD_PREFIX)&&!file.path.startsWith(DIRECT_ATTACHMENT_PREFIX))
+  const privateAttachments=files.filter(file=>file.path.startsWith(DIRECT_UPLOAD_PREFIX)||file.path.startsWith(DIRECT_ATTACHMENT_PREFIX))
+  let attachmentText=replyText
+  if(workspaceAttachments.length)attachmentText+='\n\n[Attached files in this employee workspace]\n'+JSON.stringify(workspaceAttachments)+'\nRead these files when relevant; attaching a file does not execute it.'
+  if(privateAttachments.length)attachmentText+='\n\n[Attached files in Mac-local private chat storage]\n'+JSON.stringify(privateAttachments)+'\nInspect with workspace.read / workspace.image, direct.files, or copy to your workspace with conversation.download.'
   const acceptedDelegation=delegation
   // Validate before acknowledging, and rebuild this projection again at actual work dispatch.
   const acknowledgmentText=chatTaskPrompt(chat,s.cardId,acceptedDelegation,attachmentText,true)
-  if(!privateTurns.has(sessionId)){s.currentTask={messageId:newSessionId(),delegation,startedAt:Date.now(),runId:owner,viewId,...(sourceView?{sourceView}:{}),...(privateSend?.directMessageId?{directMessageId:privateSend.directMessageId}:{}),chat};rememberMeta(sessionId,{currentTask:s.currentTask})}
+  if(!privateTurns.has(sessionId)){s.currentTask={messageId:newSessionId(),delegation,startedAt:Date.now(),runId:owner,...(sourceView?{sourceView}:{}),...(privateSend?.directMessageId?{directMessageId:privateSend.directMessageId}:{}),chat};rememberMeta(sessionId,{currentTask:s.currentTask})}
   const taskId=privateTurns.has(sessionId)?undefined:s.currentTask?.messageId
   nativeInputs.set(sessionId,{text,images:imagePaths,files,author:delegation.requestedBy,reply,taskId,sourceView})
   privateSend?.dispatching(taskId!)
@@ -463,7 +471,7 @@ export async function sendMessage(sessionId: string, text: string, owner?: strin
     validateDelegation(acceptedDelegation,s.cardId)
     if(chat&&!chatAcknowledgmentPolicy(chat,s.cardId).acknowledged)throw Error('Group acknowledgment is required before work can begin')
     if(notice){finishNotice('completed');return}
-    const engineText=nativeControl?text:taskViewPrompt(viewId,!chat&&!s.privateInitialization&&!privateTurns.has(sessionId)?messageSourcePrompt(sourceView,attachmentText):chatTaskPrompt(chat,s.cardId,acceptedDelegation,attachmentText))
+    const engineText=nativeControl?text:!chat&&!s.privateInitialization&&!privateTurns.has(sessionId)?messageSourcePrompt(sourceView,attachmentText):chatTaskPrompt(chat,s.cardId,acceptedDelegation,attachmentText)
     s.bootstrapInstructions=bootstrap
     const closePublication=chat?openDiscussionTool(s,chat):undefined
     const prepared=nativeControl?{text:engineText,pending:undefined}:employeeContextPrompt(s,engineText,taskId)
@@ -618,7 +626,7 @@ export type SessionInfo = {
   effort?: EffortLevel
   permissionMode: PermissionMode
   usage?:Record<string,unknown>
-  pendingMessages?:{id:string;text:string;images?:string[];files?:string[];delegation?:Delegation;viewId?:string;sourceView?:MessageSourceView;chat?:ChatTaskContext;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
+  pendingMessages?:{id:string;text:string;images?:string[];files?:string[];delegation?:Delegation;sourceView?:MessageSourceView;chat?:ChatTaskContext;replyTo?:string;replyQuote?:MessageQuote;crossReply?:MessageReply}[]
   commands: SlashCommand[]
   /** Commands bound to a local terminal, which a GUI should hide. */
   terminalCommands?: string[]
@@ -650,7 +658,7 @@ export function sessionSnapshot(sessionId: string,summary=false,store=readStore(
   const card = store.sessions.find((c) => c.id === s.cardId)!
   const content=conversation(sessionId)
   return { ...content, ...sessionInfo(sessionId,card),items:summary?[]:content.items, cardId: s.cardId,
-    cwd:s.remote?.directory??s.cwd, title: card?.title ?? '', group: card?.group ?? '', createdAt: card?.createdAt ?? 0,
+    cwd:s.remote?.directory??s.cwd, title: card?.title ?? '', createdAt: card?.createdAt ?? 0,
     approvals: approvalsFor(sessionId) } as Session
 }
 

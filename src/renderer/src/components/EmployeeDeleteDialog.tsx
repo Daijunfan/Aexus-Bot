@@ -4,7 +4,7 @@ import {createPortal} from 'react-dom'
 import type {StoredSession} from '../../../shared/types'
 import {useDialogFocus} from '../office/useDialogFocus'
 
-export function EmployeeDeleteDialog({employee,employees,teams,onRemove,onCancel}:{employee?:StoredSession;employees?:StoredSession[];teams?:string[];onRemove:(deleteWorkspace:boolean)=>Promise<void>;onCancel:()=>void}){
+export function EmployeeDeleteDialog({employee,employees,onRemove,onCancel}:{employee?:StoredSession;employees?:StoredSession[];onRemove:(deleteWorkspace:boolean)=>Promise<void>;onCancel:()=>void}){
   useI18n()
 
   const [busy,setBusy]=useState(false),[error,setError]=useState('')
@@ -16,11 +16,10 @@ export function EmployeeDeleteDialog({employee,employees,teams,onRemove,onCancel
   return createPortal(<div className="office-panel-wrap employee-delete-layer" onKeyDown={event=>{if(event.key==='Escape'&&!busy){event.stopPropagation();onCancel()}}}>
     <div className="panel-backdrop"/>
     <section className="office-panel employee-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="employee-delete-title" aria-describedby="employee-delete-description">
-      <h2 id="employee-delete-title">{employee?uiText("Delete {0} and their conversation",[employee.title]):teams?uiText("Delete {0} teams and {1} employees",[teams.length,cards.length]):uiText("Delete {0} employees",[cards.length])}</h2>
+      <h2 id="employee-delete-title">{employee?uiText("Delete {0} and their conversation",[employee.title]):uiText("Delete {0} employees",[cards.length])}</h2>
       <p id="employee-delete-description">{batch?uiText("The selection is handled together with a single confirmation."):''}{uiText("Removing employees also clears their associated conversations. Also delete")}{batch?uiText("all selected employees’"):''}{uiText("working folders and all files and subfolders inside?")}</p>
-      {teams&&<p className="employee-delete-teams">{teams.join('、')}</p>}
       <div className="employee-delete-list">{cards.map(card=><div key={card.id}>
-        {batch&&<strong>{card.group} / {card.title}</strong>}
+        {batch&&<strong>{card.title}</strong>}
         {card.remote&&<small>{uiText("Cloud host:")}{card.remote.host}</small>}
         <code className="employee-delete-path">{card.remote?.directory??card.cwd}</code>
       </div>)}</div>

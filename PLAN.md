@@ -120,7 +120,7 @@ Calendar output is bounded: default 500/max 2000 events, up to 100 future dates 
 Schedules remain in `schedules.json` v1 with additive optional fields. Existing jobs, identities, workspaces, model settings, native histories and permissions are not migrated to a second store. Saved presentation definitions live in `plan-views.json`; transient UI state remains client-specific. `schedule:changed` and `plan:changed` notify views, without polling every transcript or rewriting employee state. Plan API documentation is shared through the current Core document catalog.
 The Core process must remain running and the computer awake. `agents serve` works without a desktop window. This feature does not install a login service, power on a host or wake macOS from sleep. Busy employees are skipped rather than interrupting manual work. Late runs beyond grace are skipped; a backlog is never replayed in a burst. A run claim is persisted before external execution, and a restart marks unfinished runs interrupted rather than replaying them. This is not a claim of exactly-once external side effects: inspect the employee's actual history/files after an uncertain failure.
 
-Calendar calculations reuse the existing Temporal-based scheduler. Plan borrows database presentation patterns from MiniNotion but does not replace that plugin's document data or reminders. Existing `schedule.*`, `view.*`, message/group APIs, shared read receipts and management bindings remain available.
+Calendar calculations reuse the existing Temporal-based scheduler. Plan shares database presentation patterns with the built-in Mission Workflow Notebook (`notebook.*`), without replacing notebook document data or page reminders. Existing `schedule.*`, `view.*`, message/group APIs, shared read receipts and management bindings remain available.
 
 ## Portrait framing
 
@@ -142,12 +142,12 @@ Table exposes the actual **Last run** outcome alongside scheduling state. Board 
 
 Calendar offers a display-timezone selector. Crowded days show three entries and a **+N more** button opening a **Day agenda**, with full titles, employees, times and recorded/upcoming status. Changing display timezone never changes the schedule. Forecasts assume a continuously running Core; they do not claim historical execution. Extremely distant finite previews beyond 10,000 calendar/window steps fail explicitly and should be narrowed.
 
-Detailed reproducible workflows and acceptance criteria: [Plan and MiniNotion scenarios](docs/PLAN_SCENARIOS.md).
+Detailed reproducible workflows and acceptance criteria: [Plan and Mission notebook scenarios](docs/PLAN_SCENARIOS.md).
 
 
 ## Complete layout catalog and read-model APIs
 
-Plan now covers every database layout ID in the source-versioned MiniNotion plugin. `plan.timeline` supplies estimated and actual run spans, `plan.analytics` aggregates full authorized record sets, and `plan.feed` supplies actual execution activity with cursor pagination. `plan.durationMinutes` / `--duration-minutes` is optional planning metadata, independent of timeout and actual run duration. Saved `options` preserve timezone, timeline scale, planner mode and chart choices. Form submits through `schedule.create`; future one-time timeline moves require confirmation and `expectedRevision`.
+Plan covers every database layout ID defined in the built-in Mission notebook catalog (`src/shared/mission-notebook/database/viewTypes.ts`). `plan.timeline` supplies estimated and actual run spans, `plan.analytics` aggregates full authorized record sets, and `plan.feed` supplies actual execution activity with cursor pagination. `plan.durationMinutes` / `--duration-minutes` is optional planning metadata, independent of timeout and actual run duration. Saved `options` preserve timezone, timeline scale, planner mode and chart choices. Form submits through `schedule.create`; future one-time timeline moves require confirmation and `expectedRevision`.
 
 The full layout mapping, schemas, examples, architectural decisions and step-by-step interactive casebook are in [Mission view parity](docs/PLAN_VIEW_PARITY.md). Automated regressions lock the observed failures after the interactive exploration, rather than standing in for it.
 

@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {execFileSync} from 'node:child_process'
 export const root=path.resolve(import.meta.dirname,'..')
-const topDirectories=['src','bin','scripts','test','Modules','examples','docs','licenses','.github']
+const topDirectories=['src','bin','scripts','test','Modules','examples','docs','licenses','.github','resources']
 const rootFiles=new Set(['AGENTS.md','API.md','ARCHITECTURE.md','Aexus-bot.png','app_icon.png','build.py','CHANGELOG.md','CONTRIBUTING.md','COVERAGE.md','ENGINE_CAPABILITIES.md','LICENSING.md','PERMISSIONS.md','PLAN.md','PLUGIN_SPEC.md','README.md','README.en.md','SCHEDULER.md','SECURITY.md','THIRD_PARTY_NOTICES.md','electron.vite.config.ts','engine-downloads.json','package.json','package-lock.json','plugins.lock.json','tsconfig.json','vite.web.config.ts','LICENSE','NOTICE','.gitignore','.dockerignore','.env.example','.gitattributes','.editorconfig','Dockerfile'])
 const excluded=new Set(['.git','node_modules','out','release','release.noindex','dist','dist-cli','dist-plugin','build','artifacts','workspaces','.local-data','.agents-company','.tunnel','__pycache__','.pytest_cache','test-results','playwright-report','REPAIR_STATUS.md','VERIFICATION.md'])
 function walk(directory,result){
@@ -11,6 +11,7 @@ function walk(directory,result){
     if(excluded.has(entry.name)||entry.name==='.DS_Store'||entry.name.startsWith('._')||entry.name.endsWith('.tsbuildinfo')||entry.name.startsWith('.env')&&entry.name!=='.env.example')continue
     const file=path.join(directory,entry.name)
     if(entry.isSymbolicLink())continue
+    if(path.relative(root,file).split(path.sep).join('/')==='resources/library-reader/ui/vendor')continue
     if(entry.isDirectory())walk(file,result)
     else if(entry.isFile())result.push(file)
   }

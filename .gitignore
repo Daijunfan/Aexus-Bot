@@ -6,6 +6,7 @@ artifacts/
 build/plugins/
 build/cli/
 build/Source.zip
+resources/library-reader/ui/vendor/
 PlugIns/*/node_modules/
 PlugIns/*/dist/
 PlugIns/*/dist-cli/

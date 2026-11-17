@@ -1,12 +1,12 @@
 import type {Store,StoredSession} from './types'
 export type StoreChanges={baseRevision:number;revision:number;fields:string[];employeeIds:string[];authority:boolean;members:boolean;inbox:boolean}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b)
-const visual=new Set(['title','role','avatar','accessory','desk','seat','seatNumber','position','lastReply','createdBy','createdAt'])
-const authority=(store:Store)=>({access:store.access,groups:store.groups,teamSettings:store.teamSettings,teamRoots:store.teamRoots,sessions:store.sessions.map(card=>Object.fromEntries(Object.entries(card).filter(([key])=>!visual.has(key))))})
-const members=(cards:StoredSession[])=>cards.map(({id,title,group,managementRole,avatar,engine,deleting})=>({id,title,group,managementRole,avatar,engine,deleting}))
+const visual=new Set(['title','role','avatar','accessory','lastReply','createdBy','createdAt'])
+const authority=(store:Store)=>({access:store.access,sessions:store.sessions.map(card=>Object.fromEntries(Object.entries(card).filter(([key])=>!visual.has(key))))})
+const members=(cards:StoredSession[])=>cards.map(({id,title,managementRole,avatar,engine,deleting})=>({id,title,managementRole,avatar,engine,deleting}))
 /** Conservative: new execution fields invalidate authority unless explicitly presentation-only. */
 export function storeChanges(previous:Store|undefined,next:Store):StoreChanges{
- const before=previous??{sessions:[],groups:[],rooms:{}},prior=new Map(before.sessions.map(card=>[card.id,card])),current=new Map(next.sessions.map(card=>[card.id,card]))
+ const before=previous??{sessions:[]},prior=new Map(before.sessions.map(card=>[card.id,card])),current=new Map(next.sessions.map(card=>[card.id,card]))
  const fields=[...new Set([...Object.keys(before),...Object.keys(next)])].filter(key=>key!=='revision'&&!equal((before as any)[key],(next as any)[key]))
  const employeeIds=[...new Set([...prior.keys(),...current.keys()])].filter(id=>!equal(prior.get(id),current.get(id)))
  const memberChange=!equal(members(before.sessions),members(next.sessions))

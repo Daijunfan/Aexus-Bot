@@ -511,46 +511,5 @@
         "expectedRevision": 2
       }
     }
-  },
-  {
-    "args": [
-      "view",
-      "select",
-      "company",
-      "--team-tab",
-      "engineering",
-      "--engineering",
-      "eng_1"
-    ],
-    "expected": {
-      "cmd": "view.select",
-      "args": {
-        "id": "company",
-        "teamTab": "engineering",
-        "engineeringId": "eng_1"
-      }
-    }
-  },
-  {
-    "args": [
-      "team-view",
-      "create",
-      "--name",
-      "Background engineering scope",
-      "--teams",
-      "[\"Team A\"]",
-      "--select",
-      "false"
-    ],
-    "expected": {
-      "cmd": "team-view.create",
-      "args": {
-        "name": "Background engineering scope",
-        "teams": [
-          "Team A"
-        ],
-        "select": false
-      }
-    }
   }
 ]

@@ -14,7 +14,6 @@ import {createHash,randomUUID} from 'node:crypto'
 import {one,all,run,transaction,changed,liveChannelPost,projectChannelPost,revision,canonicalChannelId,type Row} from './channel-store'
 import {authorize,requestContext,operatorContext,withCaller,callerEmployee,delegationFor,validateDelegation,isAppAdministrator,requireAppAdministrator} from './authorization'
 import {readStore} from './store'
-import {taskViewId} from './task-view'
 import {employeeReady} from '../shared/types'
 import type {PrincipalRef,Delegation,RequestContext} from '../shared/management'
 import type {ChannelMessage,ChannelHistory,ChannelTaskContext} from '../shared/channels'
@@ -23,7 +22,7 @@ import {emptyAgentPost,type ChatDelivery,type ChatAcknowledgmentPolicy} from '..
 const fields=(args:Record<string,any>,keys:string[])=>{for(const key of Object.keys(args))if(args[key]!==undefined&&!keys.includes(key))throw Error('Unknown channel discussion field: '+key)}
 const key=(value:unknown,label:string)=>{if(typeof value!=='string'||!value.trim()||value!==value.trim())throw Error('Provide a valid '+label);return value}
 const sameAuthor=(a:PrincipalRef,b:PrincipalRef)=>a.kind===b.kind&&(a.kind==='operator'||b.kind==='agent'&&a.employeeId===b.employeeId)
-export const CHANNEL_DISCUSSION_POLICY={maxCharacters:2000,guidance:'Channels are read-only information feeds. Use the current source and history IDs to read authorized material. Results belong to Team or the explicitly requested private/group destination; channel publication is unavailable.'}
+export const CHANNEL_DISCUSSION_POLICY={maxCharacters:2000,guidance:'Channels are read-only information feeds. Use the current source and history IDs to read authorized material. Results belong to the explicitly requested private or group destination; channel publication is unavailable.'}
 function channel(id:unknown){const row=one('SELECT * FROM channels WHERE id=?',canonicalChannelId(key(id,'channel ID')));if(!row)throw Error('Unknown news channel');return row}
 export function channelAdminIds(id:string){return channelOffices(id).adminIds}
 function readable(id:unknown,administrative=false){const row=channel(id),principal=requestContext().principal;requireChannelReader(row.id);return row}
@@ -59,10 +58,10 @@ export function recordChannelDelivery(employeeId:string,context:ChannelTaskConte
  changed(row.kind==='news'?'posts':'messages',{channelIds:[context.channelId],...(row.kind==='news'?{postIds:[context.entryId]}:{messageIds:[context.entryId]})})
 }
 const routing=new SingleFlight<void>()
-function route(context:ChannelTaskContext,caller:RequestContext,workScopes=new Map<string,{delegation:Delegation;viewId?:string}>()){
+function route(context:ChannelTaskContext,caller:RequestContext,workScopes=new Map<string,{delegation:Delegation}>()){
  const key=context.channelId+'/'+context.entryId
  return routing.run(key,()=>withCaller(caller,()=>routeRecipients({context,recipients:channelDeliveries(context.channelId,context.entryId).filter(target=>target.status==='pending'),concurrency:1,
-  scope:target=>{const accepted=workScopes.get(target.employeeId);return {delegation:target.mode==='work'?accepted!.delegation:{requestedBy:caller.principal,requestId:caller.requestId,credentialHash:caller.credentialHash,channelNotice:{...context,employeeId:target.employeeId}},viewId:accepted?.viewId}},
+  scope:target=>{const accepted=workScopes.get(target.employeeId);return {delegation:target.mode==='work'?accepted!.delegation:{requestedBy:caller.principal,requestId:caller.requestId,credentialHash:caller.credentialHash,channelNotice:{...context,employeeId:target.employeeId}}}},
   validate:(id,delegation)=>{validateDelegation(delegation,id);channelAcknowledgmentPolicy(context,id)},
   input:()=>{requireSavedChannelEntry(context.channelId,context.entryId);const value=entry(context);return {text:value.kind==='news'?'[Channel news reference '+context.entryId+']':sharedUploadNotice(value.message.text,value.message.attachments)}},
   update:(id,patch,onlyPending)=>recordChannelDelivery(id,context,patch,onlyPending)
@@ -78,7 +77,7 @@ async function publishMessage(args:Record<string,any>,workTargets:string[],ackno
  const clientMessageId=args.clientMessageId===undefined?requestContext().requestId:key(args.clientMessageId,'client message ID');if(clientMessageId.length>160)throw Error('Client message ID too long')
  const mentions=args.mentions==='all'?channelMemberIds(row.id):args.mentions??[],fingerprint=createHash('sha256').update(JSON.stringify([text,kind,args.mentions??[],args.replyTo??null,...(attachments.length?[attachments.map(file=>[file.path,file.bytes,file.kind])]:[])])).digest('hex'),prior=all('SELECT * FROM channel_messages WHERE channel_id=? AND client_message_id=?',row.id,clientMessageId).find(item=>sameAuthor(JSON.parse(item.author),principal));if(prior){if(prior.fingerprint!==fingerprint)throw Error('Client message ID already used with different content');return message(prior)}
  let requestId:string|undefined;if(principal.kind==='agent'&&!administrativeSend){if(!args.replyTo||args.replyTo.startsWith('np_'))throw Error('Administrators may reply only to a received user or Secretary discussion');requestId=rootRequest(row.id,args.replyTo,principal.employeeId)}else if(args.replyTo)entry({channelId:row.id,entryId:args.replyTo})
- const workScopes=new Map(workTargets.map(id=>[id,{delegation:delegationFor(id),viewId:taskViewId(id)}] as const)),id='cm_'+randomUUID(),sequence=Number(one('SELECT COALESCE(MAX(sequence),0)+1 AS value FROM channel_messages WHERE channel_id=?',row.id)!.value),now=Date.now(),recipients=channelMemberIds(row.id).filter(id=>principal.kind!=='agent'||id!==principal.employeeId)
+ const workScopes=new Map(workTargets.map(id=>[id,{delegation:delegationFor(id)}] as const)),id='cm_'+randomUUID(),sequence=Number(one('SELECT COALESCE(MAX(sequence),0)+1 AS value FROM channel_messages WHERE channel_id=?',row.id)!.value),now=Date.now(),recipients=channelMemberIds(row.id).filter(id=>principal.kind!=='agent'||id!==principal.employeeId)
  transaction(()=>{run('INSERT INTO channel_messages VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',id,row.id,sequence,now,JSON.stringify(principal),callerEmployee()?.title??'You',text,kind,JSON.stringify(mentions),args.replyTo??null,requestId??(principal.kind==='operator'||administrativeSend?id:null),acknowledgment?args.replyTo:null,clientMessageId,fingerprint);if(attachments.length)run('INSERT INTO channel_message_attachments VALUES(?,?)',id,JSON.stringify(attachments));freeze(row.id,id,'message',recipients,workTargets)})
  if(principal.kind==='agent'&&args.replyTo&&one('SELECT 1 FROM channel_deliveries WHERE channel_id=? AND entry_id=? AND employee_id=?',row.id,args.replyTo,principal.employeeId))acknowledge({channelId:row.id,entryId:args.replyTo},principal.employeeId,id)
  changed('messages',{channelIds:[row.id],messageIds:[id]});void route({channelId:row.id,entryId:id},requestContext(),workScopes).catch(cause=>console.error('[Channel discussion delivery]',(cause as Error).message));return message(messageRow(row.id,id))

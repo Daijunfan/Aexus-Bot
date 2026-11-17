@@ -1,26 +1,26 @@
 import {readStore} from './store'
-import {teamSettings,type Engine,type NativeOrigin,type StoredSession,type Item} from '../shared/types'
-import {getCloudHost} from './cloud-hosts'
-import {remoteFiles,teamConnectionId} from './tunnel'
+import {employeeSettings,type Engine,type NativeOrigin,type StoredSession,type Item} from '../shared/types'
+import {cloudHostTarget,getCloudHost} from './cloud-hosts'
+import {remoteFiles,hostConnectionId} from './tunnel'
 import {remoteAgentCommand,readRemoteClaudeSession,listRemoteClaudeSessions} from './remote-agent-process'
 import {withCodexSessionApi} from './native-sessions'
 import {cloudDirectory} from './workspaces'
 import type {RemoteTarget} from '../shared/remote'
 
 export function cloudNativeTarget(card:StoredSession):{target:RemoteTarget;origin:NativeOrigin}{
-  const settings=teamSettings(readStore(),card.group)
-  if(card.kind!=='cloud-native-worker'||settings.mode!=='cloud'||!settings.hostId||!settings.remote)throw new Error('Cloud Native Worker 必须属于已绑定主机的 Cloud Team')
-  const target={...settings.remote,directory:card.cwd},origin:NativeOrigin={kind:'cloud',hostId:settings.hostId,host:settings.remote.host,os:settings.remote.os,directory:card.cwd}
+  const settings=employeeSettings(readStore(),card),hostId=settings.hostId??card.hostId
+  const remote=settings.remote??(hostId?cloudHostTarget(hostId,card.remoteRoot??card.cwd):undefined)
+  if(card.kind!=='cloud-native-worker'||settings.mode!=='cloud'||!hostId||!remote)throw new Error('Cloud Native Worker 必须绑定已注册的云主机')
+  const target={...remote,directory:card.cwd},origin:NativeOrigin={kind:'cloud',hostId,host:remote.host,os:remote.os,directory:card.cwd}
   if(card.nativeOrigin&&JSON.stringify(card.nativeOrigin)!==JSON.stringify(origin))throw new Error('云主机身份已变化；旧原生会话不会连接到另一台主机')
   return {target,origin}
 }
 
-export async function checkCloudNative(team:string,engine:Engine,directory?:string){
-  const store=readStore(),settings=teamSettings(store,team)
-  if(!store.groups.includes(team)||settings.mode!=='cloud'||!settings.hostId||!settings.remote)throw new Error('请先选择已绑定云主机的 Cloud Team')
+export async function checkCloudNative(hostId:string,engine:Engine,directory?:string){
+  if(!hostId)throw new Error('请先选择已注册的云主机')
   if(engine!=='codex'&&engine!=='claude')throw new Error('请选择 Codex 或 Claude Code')
-  const host=getCloudHost(settings.hostId),target={...settings.remote,directory:settings.remote.directory}
-  const scope=await remoteFiles(teamConnectionId(team),target,'directory',{path:directory??'.'})
+  const host=getCloudHost(hostId),target=cloudHostTarget(hostId,directory)
+  const scope=await remoteFiles(hostConnectionId(hostId),target,'directory',{path:'.'})
   const version=await remoteAgentCommand({...target,directory:scope.path},engine,['--version'])
   if(version.code!==0)throw new Error(`该云主机未找到 ${engine==='codex'?'Codex':'Claude Code'}：${version.stderr||version.stdout||'CLI 不可执行'}`)
   if(engine==='codex')await withCodexSessionApi(call=>call('model/list',{limit:1}),{nativeRemote:{...target,directory:scope.path}})
@@ -33,19 +33,18 @@ export async function checkCloudNative(team:string,engine:Engine,directory?:stri
   if(auth.code===0){try{const value=JSON.parse(auth.stdout);authentication=value.loggedIn===false?'not-signed-in':'configured'}catch{authentication='configured'}}
   else if(/not logged|not authenticated|未登录|not signed|login required/i.test(auth.stdout+' '+auth.stderr))authentication='not-signed-in'
   if(authentication==='not-signed-in')throw new Error(`云端 ${engine==='codex'?'Codex':'Claude Code'} 尚未登录；请在该主机配置认证`)
-  return {team,hostId:settings.hostId,host:host.name,engine,version:version.stdout||version.stderr,directory:scope.path,authentication,protocol:'stdio'}
+  return {hostId,host:host.name,engine,version:version.stdout||version.stderr,directory:scope.path,authentication,protocol:'stdio'}
 }
 
-export async function listCloudNativeSessions(team:string,engine:Engine){
-  const store=readStore(),settings=teamSettings(store,team)
-  if(!store.groups.includes(team)||settings.mode!=='cloud'||!settings.remote)throw new Error('请选择 Cloud Team')
-  await checkCloudNative(team,engine)
-  const inScope=(cwd:string|null|undefined)=>{if(!cwd)return false;try{return cloudDirectory(settings,cwd)===cwd}catch{return false}}
+export async function listCloudNativeSessions(hostId:string,engine:Engine,directory?:string){
+  const target=cloudHostTarget(hostId,directory),settings={mode:'cloud' as const,hostId,directory:target.directory,remote:target}
+  await checkCloudNative(hostId,engine,target.directory)
+  const inScope=(cwd:string|null|undefined)=>{if(!cwd)return false;try{return directory?cloudDirectory(settings,cwd)===cwd:true}catch{return false}}
   if(engine==='codex'){
-    const result=await withCodexSessionApi(call=>call('thread/list',{limit:100}),{nativeRemote:settings.remote})
+    const result=await withCodexSessionApi(call=>call('thread/list',{limit:100}),{nativeRemote:target})
     return {sessions:(result.data??[]).filter((thread:any)=>inScope(thread.cwd)).map((thread:any)=>({id:thread.id,cwd:thread.cwd,preview:String(thread.name??thread.preview??''),updatedAt:thread.updatedAt,engine}))}
   }
-  const result=await listRemoteClaudeSessions(settings.remote)
+  const result=await listRemoteClaudeSessions(target)
   return {sessions:result.sessions.filter(session=>inScope(session.cwd)).map(session=>({...session,engine}))}
 }
 

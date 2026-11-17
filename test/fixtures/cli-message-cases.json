@@ -69,27 +69,6 @@
       "send",
       "session1",
       "消息 with --ordinary words",
-      "--view",
-      "all"
-    ],
-    "input": {
-      "files.json": "[\"report.txt\"]"
-    },
-    "expected": {
-      "cmd": "session.send",
-      "args": {
-        "id": "session1",
-        "text": "消息 with --ordinary words",
-        "viewId": "all"
-      }
-    }
-  },
-  {
-    "args": [
-      "session",
-      "send",
-      "session1",
-      "消息 with --ordinary words",
       "--reply-to",
       "m1"
     ],
@@ -196,54 +175,6 @@
       "session",
       "send",
       "session1",
-      "消息 with --ordinary words",
-      "--images",
-      "[\"photo.png\"]",
-      "--files",
-      "@files.json",
-      "--view",
-      "all",
-      "--reply-to",
-      "m1",
-      "--reply-quote",
-      "{\"text\":\"中文😀\",\"offset\":0}",
-      "--reply-conversation",
-      "group:cg_x",
-      "--client-message-id",
-      "send-key",
-      "--reply-text-only"
-    ],
-    "input": {
-      "files.json": "[\"report.txt\"]"
-    },
-    "expected": {
-      "cmd": "session.send",
-      "args": {
-        "id": "session1",
-        "text": "消息 with --ordinary words",
-        "images": [
-          "photo.png"
-        ],
-        "files": [
-          "report.txt"
-        ],
-        "viewId": "all",
-        "replyTo": "m1",
-        "replyQuote": {
-          "text": "中文😀",
-          "offset": 0
-        },
-        "replyConversation": "group:cg_x",
-        "replyTextOnly": true,
-        "clientMessageId": "send-key"
-      }
-    }
-  },
-  {
-    "args": [
-      "session",
-      "send",
-      "session1",
       "Task",
       "--images"
     ],
@@ -314,43 +245,6 @@
         "files": [
           "report.txt"
         ]
-      }
-    }
-  },
-  {
-    "args": [
-      "session",
-      "send",
-      "session1",
-      "Task",
-      "--view"
-    ],
-    "input": {},
-    "expected": {
-      "ok": false,
-      "error": "--view requires a view ID"
-    }
-  },
-  {
-    "args": [
-      "session",
-      "send",
-      "session1",
-      "--view",
-      "all",
-      "--view",
-      "all",
-      "Task"
-    ],
-    "input": {
-      "files.json": "[\"report.txt\"]"
-    },
-    "expected": {
-      "cmd": "session.send",
-      "args": {
-        "id": "session1",
-        "text": "--view all Task",
-        "viewId": "all"
       }
     }
   },
@@ -614,27 +508,6 @@
       "enqueue",
       "session1",
       "消息 with --ordinary words",
-      "--view",
-      "all"
-    ],
-    "input": {
-      "files.json": "[\"report.txt\"]"
-    },
-    "expected": {
-      "cmd": "session.enqueue",
-      "args": {
-        "id": "session1",
-        "text": "消息 with --ordinary words",
-        "viewId": "all"
-      }
-    }
-  },
-  {
-    "args": [
-      "session",
-      "enqueue",
-      "session1",
-      "消息 with --ordinary words",
       "--reply-to",
       "m1"
     ],
@@ -741,54 +614,6 @@
       "session",
       "enqueue",
       "session1",
-      "消息 with --ordinary words",
-      "--images",
-      "[\"photo.png\"]",
-      "--files",
-      "@files.json",
-      "--view",
-      "all",
-      "--reply-to",
-      "m1",
-      "--reply-quote",
-      "{\"text\":\"中文😀\",\"offset\":0}",
-      "--reply-conversation",
-      "group:cg_x",
-      "--client-message-id",
-      "send-key",
-      "--reply-text-only"
-    ],
-    "input": {
-      "files.json": "[\"report.txt\"]"
-    },
-    "expected": {
-      "cmd": "session.enqueue",
-      "args": {
-        "id": "session1",
-        "text": "消息 with --ordinary words",
-        "images": [
-          "photo.png"
-        ],
-        "files": [
-          "report.txt"
-        ],
-        "viewId": "all",
-        "replyTo": "m1",
-        "replyQuote": {
-          "text": "中文😀",
-          "offset": 0
-        },
-        "replyConversation": "group:cg_x",
-        "replyTextOnly": true,
-        "clientMessageId": "send-key"
-      }
-    }
-  },
-  {
-    "args": [
-      "session",
-      "enqueue",
-      "session1",
       "Task",
       "--images"
     ],
@@ -859,43 +684,6 @@
         "files": [
           "report.txt"
         ]
-      }
-    }
-  },
-  {
-    "args": [
-      "session",
-      "enqueue",
-      "session1",
-      "Task",
-      "--view"
-    ],
-    "input": {},
-    "expected": {
-      "ok": false,
-      "error": "--view requires a view ID"
-    }
-  },
-  {
-    "args": [
-      "session",
-      "enqueue",
-      "session1",
-      "--view",
-      "all",
-      "--view",
-      "all",
-      "Task"
-    ],
-    "input": {
-      "files.json": "[\"report.txt\"]"
-    },
-    "expected": {
-      "cmd": "session.enqueue",
-      "args": {
-        "id": "session1",
-        "text": "--view all Task",
-        "viewId": "all"
       }
     }
   },
@@ -1117,14 +905,14 @@
       "--text",
       "Assigned context",
       "--source-view",
-      "company"
+      "plan"
     ],
     "expected": {
       "cmd": "session.send",
       "args": {
         "employee": "employee-fixture",
         "text": "Assigned context",
-        "sourceView": "company",
+        "sourceView": "plan",
         "thinking": false,
         "raw": false
       }
@@ -1141,7 +929,7 @@
     ],
     "expected": {
       "ok": false,
-      "error": "--source-view requires company, messages or plan"
+      "error": "--source-view requires messages or plan"
     }
   },
   {
@@ -1172,14 +960,14 @@
       "--text",
       "Assigned context",
       "--source-view",
-      "company"
+      "plan"
     ],
     "expected": {
       "cmd": "session.enqueue",
       "args": {
         "employee": "employee-fixture",
         "text": "Assigned context",
-        "sourceView": "company",
+        "sourceView": "plan",
         "thinking": false,
         "raw": false
       }
@@ -1196,7 +984,7 @@
     ],
     "expected": {
       "ok": false,
-      "error": "--source-view requires company, messages or plan"
+      "error": "--source-view requires messages or plan"
     }
   },
   {
@@ -1227,14 +1015,14 @@
       "--text",
       "Assigned context",
       "--source-view",
-      "company"
+      "plan"
     ],
     "expected": {
       "cmd": "session.steer",
       "args": {
         "employee": "employee-fixture",
         "text": "Assigned context",
-        "sourceView": "company",
+        "sourceView": "plan",
         "thinking": false,
         "raw": false
       }
@@ -1251,7 +1039,7 @@
     ],
     "expected": {
       "ok": false,
-      "error": "--source-view requires company, messages or plan"
+      "error": "--source-view requires messages or plan"
     }
   },
   {

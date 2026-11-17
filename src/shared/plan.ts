@@ -3,7 +3,7 @@ import type {PrincipalRef} from './management'
 
 export const PLAN_STATES=['scheduled','running','paused','completed','attention'] as const
 export const PLAN_PRIORITIES=['low','normal','high','urgent'] as const
-/** Same layout IDs as the source-versioned MiniNotion database catalog. */
+/** Same layout IDs as the Mission notebook database catalog. */
 export const PLAN_LAYOUTS=['table','board','timeline','calendar','plan','list','gallery','chart','feed','form'] as const
 export const PLAN_LAYOUT_CATALOG=[
   {id:'table',label:'Table',icon:'table',description:'All schedule properties in rows and columns.'},
@@ -25,7 +25,7 @@ export const PLAN_TABLE_PROPERTIES=[
  {id:'nextAt',label:'Next run'},{id:'lastRun',label:'Last run'},{id:'priority',label:'Priority'},{id:'tags',label:'Tags'}
 ] as const
 export type PlanTableProperty=typeof PLAN_TABLE_PROPERTIES[number]['id']
-export type PlanFilterClause={kind?:'all'|'mission'|'schedule';recurring?:'all'|'once'|'repeating';archived?:'active'|'archived'|'all';excludeIds?:string[];search?:string;employee?:string;team?:string;channel?:string;states?:PlanState[];priorities?:typeof PLAN_PRIORITIES[number][];tags?:string[]}
+export type PlanFilterClause={kind?:'all'|'mission'|'schedule';recurring?:'all'|'once'|'repeating';archived?:'active'|'archived'|'all';excludeIds?:string[];search?:string;employee?:string;channel?:string;states?:PlanState[];priorities?:typeof PLAN_PRIORITIES[number][];tags?:string[]}
 export type PlanFilter=PlanFilterClause&{allOf?:PlanFilterClause[]}
 export function planFilterCount(value:PlanFilter):number{return Object.entries(value).reduce((count,[key,entry])=>count+(key==='allOf'?(entry as PlanFilterClause[]).reduce((sum,clause)=>sum+planFilterCount(clause),0):Array.isArray(entry)?Number(entry.length>0):Number(entry!==undefined&&entry!==''&&(key==='archived'||entry!=='all'))),0)}
 export type PlanViewOptions={
@@ -35,13 +35,13 @@ export type PlanViewOptions={
   timelineScale?:'day'|'week'|'month'
   plannerMode?:'day'|'week'|'agenda'
   chartMetric?:'schedules'|'runs'
-  chartGroupBy?:'status'|'employee'|'team'|'priority'
+  chartGroupBy?:'status'|'employee'|'priority'
   chartType?:'bar'|'horizontal'|'line'|'donut'
 }
 export type PlanViewSpec={name:string;layout:PlanLayout;groupBy:'status'|'employee'|'priority';filter:PlanFilter;sort:'nextAt'|'name'|'updatedAt'|'priority';direction:'asc'|'desc';options?:PlanViewOptions}
 export type PlanView=PlanViewSpec&{id:string;owner?:PrincipalRef;revision:number;builtin?:boolean}
-export type PlanEmployee={id:string;title:string;team:string;avatar?:string;color?:string;engine:string;role?:import('./roles').ManagementRole}
-export type PlanRow=ScheduledJob&{status:PlanState;employee:PlanEmployee|null;assignees?:PlanEmployee[];lastRun?:ScheduleRun;target?:{id:string;exists:boolean;role:string|null;title:string|null;team:string|null;engine:string};timing?:{timezone:string|null;kind:ScheduledJob['rule']['kind'];nextAt:string|null;until:string|null;window:ScheduledJob['window']};allowedActions?:string[];blockedActions?:Record<string,string>}
+export type PlanEmployee={id:string;title:string;avatar?:string;color?:string;engine:string;role?:import('./roles').ManagementRole}
+export type PlanRow=ScheduledJob&{status:PlanState;employee:PlanEmployee|null;assignees?:PlanEmployee[];lastRun?:ScheduleRun;target?:{id:string;exists:boolean;role:string|null;title:string|null;engine:string};timing?:{timezone:string|null;kind:ScheduledJob['rule']['kind'];nextAt:string|null;until:string|null;window:ScheduledJob['window']};allowedActions?:string[];blockedActions?:Record<string,string>}
 export type PlanQuery={now?:string;hostTimezone?:string;rows:PlanRow[];total:number;offset:number;hasMore:boolean;counts:Record<PlanState,number>;facets?:{tags:string[]}}
 export type PlanTimeEvent={
   id:string;jobId:string;runId?:string;name:string;employeeId:string;employee:PlanEmployee|null
@@ -53,7 +53,7 @@ export type PlanTimeEvent={
 export type PlanTimeline={events:PlanTimeEvent[];timezone:string;from:string;to:string;truncated:boolean;retainedHistoryLimit:number}
 export type PlanFeedEntry=ScheduleRun&{activity?:'mission-reminder';employee:PlanEmployee|null;jobAvailable:boolean;plan?:ScheduledJob['plan']}
 export type PlanFeed={entries:PlanFeedEntry[];hasMore:boolean;nextCursor:string|null;retainedHistoryLimit:number}
-export type PlanAnalytics={metric:'schedules'|'runs';groupBy:'status'|'employee'|'team'|'priority';total:number;buckets:{key:string;label:string;value:number}[];scope:string;retainedHistoryLimit?:number}
+export type PlanAnalytics={metric:'schedules'|'runs';groupBy:'status'|'employee'|'priority';total:number;buckets:{key:string;label:string;value:number}[];scope:string;retainedHistoryLimit?:number}
 export function planState(job:ScheduledJob,run?:ScheduleRun):PlanState{
   if(job.mission?.engineering){const project=job.mission.engineering;return project.status==='completed'?'completed':['blocked','setup_failed'].includes(project.status)?'attention':project.status==='running'?'running':project.status==='paused'||project.status==='draft'?'paused':'scheduled'}
   if(job.mission)return job.mission.status==='succeeded'?'completed':job.mission.status==='failed'||job.mission.deliveryError?'attention':'scheduled'

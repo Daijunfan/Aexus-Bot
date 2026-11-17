@@ -6,6 +6,9 @@ const root=path.resolve(import.meta.dirname,'..')
 const electron=spawn.sync(process.execPath,[path.join(root,'node_modules/electron/install.js')],{stdio:'inherit'})
 if(electron.error)throw electron.error
 if(electron.status!==0)process.exit(electron.status??1)
+const readerBuild=spawn.sync(process.execPath,[path.join(root,'scripts/build-library-reader.mjs')],{stdio:'inherit'})
+if(readerBuild.error)throw readerBuild.error
+if(readerBuild.status!==0)process.exit(readerBuild.status??1)
 const lock=JSON.parse(fs.readFileSync(path.join(root,'plugins.lock.json'),'utf8'))
 for(const item of lock.plugins){
   const directory=path.join(root,'PlugIns',item.directory),manifest=path.join(directory,'package.json')

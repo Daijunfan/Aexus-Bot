@@ -3,7 +3,6 @@ import {validateScheduleChannels} from './channel-policy'
 import {validateEventAccess} from './event-access'
 import {reserveEmployee,getLive} from '../sessions'
 import {scheduleAccess} from './access'
-import {taskViewId} from '../task-view'
 import {beginManagementInteraction} from '../management-activity'
 import {assertEmployeeReady} from '../initialization-state'
 import {authorize,requestContext,delegationFor,validateDelegation} from '../authorization'
@@ -59,7 +58,7 @@ function validate(input: ScheduleSpec,orphan=false): ScheduleSpec {
   const rule=validateRule(input.rule)
   if(rule.kind==='event'&&rule.event==='message.received'&&rule.conversation?.startsWith('employee:')&&chatCatalog().groups.some(g=>g.id===rule.conversation!.slice(9)&&g.bot))rule.conversation='group:'+rule.conversation.slice(9)
   if(card){validateScheduleChannels(card.id,scheduleScope({channelId},rule),requestContext().principal);validateEventAccess(card.id,rule,requestContext().principal)}
-  const action: ScheduledAction = { ...(channelId?{channelId}:{}),type: 'agent', employeeId: card?.id??a.employeeId, engine: card?.engine??a.engine, prompt: a.prompt, model: a.model, effort: a.effort, thinking: a.thinking, viewId:card?taskViewId(card.id,a.viewId,true):a.viewId }
+  const action: ScheduledAction = { ...(channelId?{channelId}:{}),type: 'agent', employeeId: card?.id??a.employeeId, engine: card?.engine??a.engine, prompt: a.prompt, model: a.model, effort: a.effort, thinking: a.thinking }
   const timeoutSeconds = input.timeoutSeconds ?? 1800, graceSeconds = input.graceSeconds ?? 60
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 1 || timeoutSeconds > 86400) throw new Error('timeoutSeconds must be 1..86400')
   if (!Number.isInteger(graceSeconds) || graceSeconds < 1 || graceSeconds > 86400) throw new Error('graceSeconds must be 1..86400')
@@ -271,11 +270,11 @@ export async function stopScheduler() {
 
 export async function scheduleRequest(method: string, args: Record<string, any>) {
   if (method === 'schema') return {
-    version: 1, inputSchema:SCHEDULE_SPEC_SCHEMA,hostTimezone:Intl.DateTimeFormat().resolvedOptions().timeZone,now:stamp(),selfScheduling:'Every role manages its assigned tasks regardless of creator. Manager manages lower-role Employees in its Team; Governor manages lower-role Employees/Managers globally. Secretary manages all legal targets, including peer Secretaries. Other peers/superiors remain forbidden.',relativeTime:'afterSeconds is resolved by Core once; use clientRequestId for retry-safe creation',maxOccurrences:'Optional limit on scheduled occurrences including skips; manual runs do not consume it',action: { type: 'agent', employeeId: 'required saved employee ID', engine: 'inferred on create, pinned afterwards', prompt: 'required instruction; shell/CLI commands are performed by this employee', model: 'optional engine model ID', effort: ['none','low','medium','high','xhigh','max'], thinking: 'optional boolean, Claude only', viewId:'required for Governor tasks; explicit stable Team view ID, never resolved from the active tab at execution' },
+    version: 1, inputSchema:SCHEDULE_SPEC_SCHEMA,hostTimezone:Intl.DateTimeFormat().resolvedOptions().timeZone,now:stamp(),selfScheduling:'Every role manages its assigned tasks regardless of creator. Manager manages Employees; Governor manages Employees and Managers. Secretary manages all legal targets, including peer Secretaries. Other peers/superiors remain forbidden.',relativeTime:'afterSeconds is resolved by Core once; use clientRequestId for retry-safe creation',maxOccurrences:'Optional limit on scheduled occurrences including skips; manual runs do not consume it',action: { type: 'agent', employeeId: 'required saved employee ID', engine: 'inferred on create, pinned afterwards', prompt: 'required instruction; shell/CLI commands are performed by this employee', model: 'optional engine model ID', effort: ['none','low','medium','high','xhigh','max'], thinking: 'optional boolean, Claude only' },
     rule: { once: {at:'ISO timestamp with offset'}, interval:{everySeconds:'integer 1..31536000',anchor:'ISO timestamp with offset'}, weekly:{time:'HH:mm',days:'1=Monday..7=Sunday; all days means daily',timezone:'IANA zone'},monthly:{time:'HH:mm',day:'1..31 or last; missing dates skip that month',timezone:'IANA zone'},event:{event:'signal, channel.posted, message.received, session.completed, monitor.output or monitor.exited',conversation:'required for message.received',employeeId:'required for session.completed',monitorId:'required for monitor.*',channelId:'required only for channel.posted',cooldownSeconds:'0..86400; default 60; nextAt is null while waiting; use schedule.trigger only for signal'} },
     window: {start:'HH:mm inclusive',end:'HH:mm exclusive; may cross midnight',days:'optional weekdays of window start',timezone:'IANA zone'},
     defaults:{timeoutSeconds:1800,graceSeconds:60,enabled:true}, source:'optional plugin/caller namespace', until:'optional exclusive ISO end time',
-    policies:{busy:'skip, never interrupt manual work',late:'skip outside grace; never replay a backlog',restart:'interrupted runs are not replayed',manual:'run ignores calendar/window, keeps timeout',window:'scheduled turns stop when their window or until ends',permission:'inherits employee and Team; never escalated',overrides:'temporary model/effort/thinking, original preferences restored'},
+    policies:{busy:'skip, never interrupt manual work',late:'skip outside grace; never replay a backlog',restart:'interrupted runs are not replayed',manual:'run ignores calendar/window, keeps timeout',window:'scheduled turns stop when their window or until ends',permission:'inherits employee permissionMode; never escalated',overrides:'temporary model/effort/thinking, original preferences restored'},
     commands:['status','list','get','create','update','pause','resume','delete','preview','run','history','cancel','trigger'], documentation:'SCHEDULER.md'
   }
   if(method==='preview'&&args.id!==undefined&&args.spec!==undefined)throw Error('Choose a saved schedule ID or a spec, not both')

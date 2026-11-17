@@ -22,7 +22,7 @@ export async function publishEngineeringArtifacts(item:Engineering,key:string,fi
 async function fileOperation(artifact:EngineeringArtifact,operation:string,offset=0){
  const store=readStore(),card=store.sessions.find(card=>card.id===artifact.employeeId&&!card.deleting);if(!card)throw Error('Delivery owner was removed')
  const current=executionEmployee(store,card);if((current.remote?.host??undefined)!==artifact.host)throw Error('Delivery execution host changed; no other host was used')
- const paths=current.remote?.os==='windows'?path.win32:current.remote?path.posix:path,root=current.remote?current.cwd:employeeWorkspace(store,card.group,card.cwd,card.id),directory=current.remote?artifact.cwd:fs.realpathSync(artifact.cwd),relative=paths.relative(root,directory)
+ const paths=current.remote?.os==='windows'?path.win32:current.remote?path.posix:path,root=current.remote?current.cwd:employeeWorkspace(store,card.cwd,card.id),directory=current.remote?artifact.cwd:fs.realpathSync(artifact.cwd),relative=paths.relative(root,directory)
  if(relative==='..'||relative.startsWith('..'+paths.sep)||paths.isAbsolute(relative))throw Error('Delivery folder is outside its actual Employee workspace')
  const args={path:artifact.path,offset,length:262144},op=({info:'copy-info',image:'read-image',chunk:'copy-read'} as Record<string,string>)[operation]??operation
  return current.remote?remoteFiles('engineering-'+artifact.employeeId,{...current.remote,directory},op,args):workspaceFiles(directory,op,args)

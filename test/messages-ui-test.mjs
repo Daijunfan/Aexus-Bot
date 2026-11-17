@@ -18,16 +18,15 @@ const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCA
 const composer=page.locator('.message-conversation .composer textarea')
 
 try{
- await page.locator('.agent-board').waitFor();await call('settings.set',{theme:'white'})
- await call('group.add',{name:'Product Studio'});await call('group.add',{name:'Engineering'})
+ await page.locator('.message-view').waitFor();await call('settings.set',{theme:'white'})
  const people=[]
- for(const [title,group,avatar,profession] of [['Aster','Product Studio','fate-saber-chibi','Product designer'],['Rowan','Engineering','byte','Software engineer'],['Nova','Product Studio','fate-gilgamesh-chibi','Research analyst'],['Mira','Engineering','marmalade','Code reviewer']])people.push(await createReady(call,{title,group,avatar,profession,engine:'codex',model:'gpt-6-luna'}))
+ for(const [title,avatar,profession] of [['Aster','fate-saber-chibi','Product designer'],['Rowan','byte','Software engineer'],['Nova','fate-gilgamesh-chibi','Research analyst'],['Mira','marmalade','Product reviewer']])people.push(await createReady(call,{title,avatar,profession,engine:'codex',model:'gpt-6-luna'}))
  const [aster,rowan,nova]=people
  for(const [card,text,reply] of [[rowan,'How is the new workspace coming along?','The navigation is ready. I am checking the smaller screen layouts next.'],[nova,'Review the product notes.','I found three opportunities to simplify the onboarding. The notes are ready for you.'],[aster,'Let’s make the workspace feel a little more human.','Absolutely. I put together a calmer direction for the workspace.\n\n**A little more space. A lot more focus.**\n\nThe conversation stays at the center, with clear typography and a quieter background. Your employees keep their own character, and everything you already built stays connected.\n\nShall I refine the small-screen layout next?']]){
   fs.writeFileSync(path.join(control,card.id+'.reply.txt'),reply);await call('session.send',{employee:card.id,text:'NATIVE_ONLY_MESSAGES_SENTINEL '+card.title});await acceptedMessage(call,card.id,'NATIVE_ONLY_MESSAGES_SENTINEL '+card.title);assert.equal((await call('direct.history',{employee:card.id})).items.length,0);await call('direct.send',{employee:card.id,text,clientMessageId:'messages-initial-'+card.id});await acceptedMessage(call,card.id,text);await publish(card,reply,'messages-published-'+card.id)
  }
  const records=await call('session.list'),refs=records.sessions.map(c=>({id:c.id,cwd:c.cwd,engine:c.engine,threadId:c.threadId}))
- await page.getByRole('button',{name:'Message',exact:true}).click();await expect(page.locator('.message-contact')).toHaveCount(4)
+ await expect(page.locator('.message-contact')).toHaveCount(4)
  await expect(page.locator('.message-welcome')).toContainText('Choose a conversation');await page.screenshot({animations:'disabled',path:path.join(output,'messages-welcome.png')})
  assert.deepEqual(await call('terminal.list'),[],'Messages home never opens a terminal')
  await page.getByRole('button',{name:'Message Aster',exact:true}).click();await expect(page.locator('.message-thread-header')).toContainText('Aster');await expect(composer).toBeEnabled();await expect(page.locator('.message-conversation .transcript')).toContainText('A lot more focus.');await expect(page.locator('.message-conversation .transcript')).not.toContainText('NATIVE_ONLY_MESSAGES_SENTINEL')
@@ -45,11 +44,11 @@ try{
  await messageAction(assistant,'Reply');await expect(page.getByRole('region',{name:'Conversation with Aster'}).getByLabel('Reply preview')).toContainText('Absolutely');await expect(composer).toHaveValue('');await expect(composer).toBeFocused();await page.getByRole('button',{name:'Cancel reply',exact:true}).click()
  await expect(page.locator('.message-date')).toContainText('Today')
  await composer.evaluate(el=>el.blur());await page.mouse.move(320,100)
- for(const theme of ['white','black']){await call('settings.set',{theme,viewAppearance:{company:{theme},messages:{theme},plan:{theme}}});await expect(page.locator('html')).toHaveAttribute('data-theme',theme);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.screenshot({animations:'disabled',path:path.join(output,'messages-'+theme+'.png')})}
+ for(const theme of ['white','black']){await call('settings.set',{theme,viewAppearance:{messages:{theme},plan:{theme}}});await expect(page.locator('html')).toHaveAttribute('data-theme',theme);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.screenshot({animations:'disabled',path:path.join(output,'messages-'+theme+'.png')})}
  await call('settings.set',{theme:'white'})
  await composer.fill('Aster draft stays here');await page.getByRole('button',{name:'Message Rowan',exact:true}).click();await expect(page.locator('.message-thread-header')).toContainText('Rowan');await expect(composer).toHaveValue('')
  await composer.fill('Rowan draft stays here');await page.getByRole('button',{name:'Message Aster',exact:true}).click();await expect(page.locator('.message-thread-header')).toContainText('Aster');await expect(composer).toHaveValue('Aster draft stays here')
- await page.getByRole('textbox',{name:'Search conversations'}).fill('Engineering');await expect(page.locator('.message-contact')).toHaveCount(2)
+ await page.getByRole('textbox',{name:'Search conversations'}).fill('Product');await expect(page.locator('.message-contact')).toHaveCount(2)
  await page.getByRole('button',{name:'Clear search'}).click();await expect(page.locator('.message-contact')).toHaveCount(4)
  await expect(page.locator('.message-contact[data-unread=true]')).toHaveCount(3);await expect(page.getByRole('tab',{name:'All',exact:true})).toHaveCount(0)
  await page.getByRole('button',{name:'Conversation settings',exact:true}).click();await expect(page.getByRole('dialog',{name:'Conversation settings',exact:true})).toBeVisible();await expect(page.getByRole('dialog',{name:'Conversation settings',exact:true})).toContainText('Reasoning')
@@ -59,7 +58,7 @@ try{
  await expect(page.locator('.message-conversation .transcript')).toContainText('A new message from the messenger')
  assert.ok((await call('session.transcript',{id:aster.id})).text.includes('A new message from the messenger'))
  // Synthetic Cline configuration was written into the isolated native profile before startup.
- const cline=await createReady(call,{title:'Cline QA',group:'Engineering',engine:'cline',avatar:'hoots',model:'deepseek-flash'})
+ const cline=await createReady(call,{title:'Cline QA',engine:'cline',avatar:'hoots',model:'deepseek-flash'})
  await expect(page.locator('.message-contact')).toHaveCount(5);await page.getByRole('button',{name:'Message Cline QA',exact:true}).click();await expect(page.locator('.message-thread-header')).toContainText('Cline QA');await expect(composer).toBeEnabled()
  await composer.evaluate((element,base64)=>{const transfer=new DataTransfer();transfer.items.add(new File([Uint8Array.from(atob(base64),c=>c.charCodeAt(0))],'screen.png',{type:'image/png'}));element.dispatchEvent(new ClipboardEvent('paste',{clipboardData:transfer,bubbles:true,cancelable:true}))},png)
  await expect(page.locator('.attachment-chips button')).toHaveCount(1);await composer.fill('Inspect the screenshot');await composer.press('Enter')
@@ -71,8 +70,9 @@ try{
  await composer.fill('Cline pending upload draft');await page.evaluate(()=>{window.messageTestRead=Blob.prototype.arrayBuffer;Blob.prototype.arrayBuffer=async function(){const read=window.messageTestRead;await new Promise(resolve=>setTimeout(resolve,450));return read.call(this)}})
  await composer.evaluate((element,base64)=>{const transfer=new DataTransfer();transfer.items.add(new File([Uint8Array.from(atob(base64),c=>c.charCodeAt(0))],'delayed.png',{type:'image/png'}));element.dispatchEvent(new ClipboardEvent('paste',{clipboardData:transfer,bubbles:true,cancelable:true}))},png)
  await page.getByRole('button',{name:'Message Rowan',exact:true}).click();await expect(page.locator('.app-error').filter({hasText:'Finish or cancel attachment transfers before leaving.'})).toBeVisible();await expect(page.locator('.message-thread-header')).toContainText('Cline QA');await expect(composer).toHaveValue('Cline pending upload draft')
- await expect.poll(()=>fs.readdirSync(path.join(cline.cwd,'.agents-attachments')).length).toBe(2)
- await expect.poll(async()=>(await call('messenger.state')).drafts['employee:'+cline.id]?.images?.length).toBe(1);const pendingImage=(await call('messenger.state')).drafts['employee:'+cline.id].images[0];assert.equal(Buffer.from((await call('workspace.image',{employee:cline.id,path:pendingImage})).data,'base64').equals(Buffer.from(png,'base64')),true);await page.evaluate(()=>{Blob.prototype.arrayBuffer=window.messageTestRead;delete window.messageTestRead});await page.getByRole('button',{name:'Message Rowan',exact:true}).click();await expect(page.locator('.message-thread-header')).toContainText('Rowan');await expect(page.locator('.attachment-chips button')).toHaveCount(0);assert.equal(fs.existsSync(path.join(rowan.cwd,'.agents-attachments')),false)
+ await expect.poll(()=>fs.existsSync(path.join(f.env.AGENTS_COMPANY_HOME,'direct','uploads',cline.id))?fs.readdirSync(path.join(f.env.AGENTS_COMPANY_HOME,'direct','uploads',cline.id)).length:0).toBe(2)
+ assert.equal(fs.existsSync(path.join(cline.cwd,'.agents-attachments')),false)
+ await expect.poll(async()=>(await call('messenger.state')).drafts['employee:'+cline.id]?.images?.length).toBe(1);const pendingImage=(await call('messenger.state')).drafts['employee:'+cline.id].images[0];assert.ok(pendingImage.startsWith('@direct-upload/'));assert.equal(Buffer.from((await call('workspace.image',{employee:cline.id,path:pendingImage})).data,'base64').equals(Buffer.from(png,'base64')),true);await page.evaluate(()=>{Blob.prototype.arrayBuffer=window.messageTestRead;delete window.messageTestRead});await page.getByRole('button',{name:'Message Rowan',exact:true}).click();await expect(page.locator('.message-thread-header')).toContainText('Rowan');await expect(page.locator('.attachment-chips button')).toHaveCount(0);assert.equal(fs.existsSync(path.join(rowan.cwd,'.agents-attachments')),false)
  await page.getByRole('button',{name:'Message Cline QA',exact:true}).click();await expect(page.locator('.message-thread-header')).toContainText('Cline QA')
  await expect(page.locator('.attachment-chips button')).toHaveCount(1);await expect(composer).toHaveValue('Cline pending upload draft');assert.ok(!(await call('session.transcript',{employee:cline.id})).text.includes('Cline pending upload draft'));await page.locator('.attachment-chips button').click()
 
@@ -82,15 +82,15 @@ try{
  await page.getByRole('button',{name:'Remove queued message',exact:true}).click();await expect(page.locator('.task-queue')).toHaveCount(0)
  await page.getByRole('button',{name:'Stop',exact:true}).click();await expect.poll(async()=>(await call('session.status',{employee:aster.id}))[0].busy).toBe(false)
  const nativeBefore=(await call('session.status',{employee:aster.id}))[0].threadId
- await page.getByRole('button',{name:'Open workspace',exact:true}).click();await expect(page.locator('.employee-workbench')).toBeVisible();await expect(page.locator('.conversation-dialog .transcript')).toContainText('A new message from the messenger');await expect(page.locator('.conversation-dialog .transcript')).toContainText('NATIVE_ONLY_MESSAGES_SENTINEL')
+ await page.getByRole('button',{name:'Agent conversation',exact:true}).click();await expect(page.locator('.message-view .message-sidebar')).toBeVisible();await expect(page.locator('.message-stage .message-agent-conversation .employee-workbench')).toBeVisible();await expect(page.locator('.conversation-dialog .transcript')).toContainText('A new message from the messenger');await expect(page.locator('.conversation-dialog .transcript')).toContainText('NATIVE_ONLY_MESSAGES_SENTINEL')
  await call('view.close');await expect(page.locator('.message-view')).toBeVisible();assert.equal((await call('session.status',{employee:aster.id}))[0].threadId,nativeBefore)
  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(720,900))
  await expect(page.locator('.message-back')).toBeVisible();await expect(page.locator('.message-sidebar')).toBeHidden();await page.screenshot({animations:'disabled',path:path.join(output,'messages-compact.png')})
  await page.getByRole('button',{name:'Back to conversations',exact:true}).click();await expect(page.locator('.message-sidebar')).toBeVisible();await expect(page.locator('.message-stage')).toBeHidden()
  for(const width of [540,720,1024,1440]){await app.evaluate(({BrowserWindow},width)=>BrowserWindow.getAllWindows()[0].setSize(width,1000),width);const fit=await page.locator('.company-header').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth}));assert.ok(fit.scroll<=fit.width,'header does not overflow at '+width)}
  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1440,1000))
- await page.getByRole('button',{name:'Team',exact:true}).click();await expect(page.locator('.company-view-menu')).toHaveCount(0)
- await expect(page.locator('.agent-board')).toBeVisible();await expect(page.locator('.message-view')).toHaveCount(0)
+ await page.getByRole('button',{name:'Mission',exact:true}).click();await expect(page.locator('.company-view-menu')).toHaveCount(0)
+ await expect(page.locator('.plan-view')).toBeVisible();await expect(page.locator('.message-view')).toHaveCount(0)
  await page.getByRole('button',{name:'Message',exact:true}).click();await page.getByRole('button',{name:'Message Cline QA',exact:true}).click();await expect(page.locator('.message-thread-header')).toContainText('Cline QA');await expect(composer).toBeEnabled()
  await call('card.remove',{id:cline.id});await expect(page.locator('.message-contact')).toHaveCount(4);await expect(page.locator('.message-welcome')).toBeVisible()
  const after=await call('session.list');assert.deepEqual(after.sessions.map(c=>({id:c.id,cwd:c.cwd,engine:c.engine,threadId:c.threadId})),refs)

@@ -187,7 +187,7 @@ ledger entry, and retrying any call with its original ID returns that same entry
 
 ## Scope and authority
 
-Message groups use the independent offices `owner`, `admin`, and `member`. These offices do not change an employee's Team role, engine permissions, credentials or Mission authority. `group.*` addresses Teams; `chat.*` addresses Message groups. Always use the exact returned IDs.
+Message groups use the independent offices `owner`, `admin`, and `member`. These offices do not change an employee's `managementRole`, engine permissions, credentials or Mission authority. Message groups use `chat.*`. Always use the exact returned IDs.
 
 For a group, `conversation.policy {conversation:"group:ID"}` supplies current members, offices, moderation state, revisions and `allowedActions`. Owner/Admin manage members, Admin appointments, mute and fixed-text announcements. An Admin cannot remove, demote or individually mute Owner. Ownership transfer makes the target Owner and the former Owner Admin; transfer before removing the Owner. The user and Secretary retain application-administration access without acquiring an Owner/Admin office.
 
@@ -210,7 +210,7 @@ See [Conversation controls](CONVERSATION_CONTROLS.md) for group announcement tim
 
 ## Workspace discovery
 
-`workspace.catalog {employee?:"self"|EMPLOYEE_ID}` returns exactly the employee's assigned Team execution workspace. An ordinary Agent queries itself; the user or Secretary can select an employee explicitly. The query creates no directory, changes no working directory and invokes no model.
+`workspace.catalog {employee?:"self"|EMPLOYEE_ID}` returns the employee's centralized local or configured cloud execution workspace. An ordinary Agent queries itself; the user or Secretary can select an employee explicitly. The query creates no directory, changes no working directory and invokes no model.
 
 ```json
 {
@@ -346,8 +346,8 @@ These reads use the existing historical scope: user/Secretary administration or 
 
 ## Verification
 
-`node test/message-collaboration-core-test.mjs` exercises authenticated Core/CLI with disposable native/filesystem fixtures: group offices and shared file rights, assigned Team workspaces, complete published entries, exact PDF/image transfers, idempotency, collision/hash rejection, reading-grant revocation and Mission isolation.
+`node test/message-collaboration-core-test.mjs` exercises authenticated Core/CLI with disposable native/filesystem fixtures: group offices and shared file rights, centralized/cloud employee workspaces, complete published entries, exact PDF/image transfers, idempotency, collision/hash rejection, reading-grant revocation and Mission isolation.
 
-`node test/message-collaboration-ui-test.mjs` uses disposable state with the real browser and hidden Electron UI. It verifies group member/role/Owner/mute operations, static announcements and draft protection; channel access grant/revocation with Secretary always authorized; exact remote PDF copies into the employee Team workspace and explicit user channel download; rejected retired writes with unchanged histories/no dispatch; Chinese dark compact layout and empty Mission records. It reuses the local tunnel protocol fixture with the current host OS. `AGENTS_COMPANY_PROFILE_APPLICATION` can select existing build output without rebuilding it. Fixtures call no paid providers or production hosts; source validation is separate from installed-app validation.
+`node test/message-collaboration-ui-test.mjs` uses disposable state with the real browser and hidden Electron UI. It verifies group member/role/Owner/mute operations, static announcements and draft protection; channel access grant/revocation with Secretary always authorized; exact remote PDF copies into the employee workspace and explicit user channel download; rejected retired writes with unchanged histories/no dispatch; Chinese dark compact layout and empty Mission records. It reuses the local tunnel protocol fixture with the current host OS. `AGENTS_COMPANY_PROFILE_APPLICATION` can select existing build output without rebuilding it. Fixtures call no paid providers or production hosts; source validation is separate from installed-app validation.
 
 Magazine PDF reading, original-page PNG export and ordered text/images use the same identities and workspace boundary. See [MAGAZINE_READING.md](MAGAZINE_READING.md).

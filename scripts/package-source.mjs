@@ -33,4 +33,4 @@ await listTar({file:archive,onentry(entry){
 if(expected.size)throw Error('Source archive is incomplete: '+[...expected].join(', '))
 const hash=createHash('sha256').update(fs.readFileSync(archive)).digest('hex')
 fs.writeFileSync(archive+'.sha256',hash+'  '+path.basename(archive)+'\n')
-console.log(JSON.stringify({archive,sha256:hash,files:manifest.length,notes:'Contains all three plugin sources, not their private Git histories. Run release:check before public redistribution.'},null,2))
+console.log(JSON.stringify({archive,sha256:hash,files:manifest.length,notes:'Built-in Mission Notebook, Study Reader and Cloud Hosts are included directly in source. Run release:check before public redistribution.'},null,2))

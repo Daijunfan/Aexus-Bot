@@ -52,7 +52,7 @@ Claude Agent uses allowed API-key/provider configuration; this application does 
 
 The public distribution contains the adapters, not the Claude Agent SDK/native runtime. SDK types are a development dependency only. `claude-sdk.ts` resolves an explicitly configured or managed SDK, then an existing development/global installation; compatible paired native programs are also detected. This keeps Codex and non-engine company/plugin operations available before any engine is installed.
 
-The installer retrieves both the SDK controller and matching native executable from `engine-downloads.json`, verifies official npm origin and SHA-512, preserves their legal notices, and activates them only after both complete. Cancellation preserves the previous configuration. `engine.configure` optionally accepts an absolute `sdkPath`; hosted MiniNotion reuses the same user-owned SDK and executable through process-local discovery. Neither runtime bytes nor credentials are copied into public release artifacts.
+The installer retrieves both the SDK controller and matching native executable from `engine-downloads.json`, verifies official npm origin and SHA-512, preserves their legal notices, and activates them only after both complete. Cancellation preserves the previous configuration. `engine.configure` optionally accepts an absolute `sdkPath`; neither runtime bytes nor credentials are copied into public release artifacts.
 
 `engine.check` reports executable/protocol/auth configuration without inference. `engine.probe --engine ID --confirm [--model ID]` is a separate, potentially billed OK-only call on the Core host, with a temporary directory and 45-second timeout. It does not create a company employee or a persistent native session.
 

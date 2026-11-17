@@ -26,6 +26,9 @@
 .creation-team-types button[aria-pressed=true] .creation-type-icon{background:color-mix(in srgb,var(--button-ink) 16%,transparent);color:inherit}
 .creation-team-types button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .creation-workspace{background:var(--creation-muted);padding:16px;border-radius:14px;border:1px solid var(--border-soft)}
+.workspace-unified-root{display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--fg) 4%,var(--bg-elev));border:1px solid var(--border-soft);min-width:0}
+.workspace-unified-root small{flex:none;font-size:11px;color:var(--fg-dim);font-weight:500}
+.workspace-unified-root code{font-size:11px;color:var(--fg);overflow-wrap:anywhere;word-break:break-all}
 .creation-workspace>label:last-child,.creation-workspace .remote-fields>label:last-of-type{margin-bottom:0}
 .creation-form .directory-mode-options{margin:0 0 14px;gap:6px;padding:4px;background:color-mix(in srgb,var(--fg) 7%,var(--bg-elev));border-radius:10px}
 .creation-form .directory-mode-options button{padding:8px 10px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--fg-dim);font-family:inherit;font-weight:500;font-size:12px;line-height:1.4;min-height:34px}

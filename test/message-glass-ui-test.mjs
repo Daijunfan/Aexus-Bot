@@ -14,7 +14,7 @@ let f,app,browser,page
 try{
  f=await fixtureCore(native?{}:{AGENTS_COMPANY_WEB:'1',AGENTS_COMPANY_WEB_PORT:String(port)})
  const core=async(cmd,args={},auth=null)=>{const r=await f.request(auth,cmd,args);assert.ok(r.ok,cmd+': '+r.error);return r.data}
- await core('settings.set',{language:'en',viewAppearance:{messages:{theme:'violet'}}});await f.cli('group','add','Glass studio');const employee=await f.create('Mira','Glass studio'),token=await f.token(employee.id),group=await core('chat.create',{name:'Field notes',members:[employee.id]})
+ await core('settings.set',{language:'en',viewAppearance:{messages:{theme:'violet'}}});const employee=await f.create('Mira','employee'),token=await f.token(employee.id),group=await core('chat.create',{name:'Field notes',members:[employee.id]})
  const text=Array.from({length:70},(_,i)=>'Paragraph '+(i+1)+'. Keep the evidence in view, including the corners behind the floating controls. 浮动栏两侧仍然可见消息，正文保持清晰。').join('\n\n')
  await core('direct.post',{text,clientMessageId:'glass-private'},token);await core('chat.post',{id:group.id,text,clientMessageId:'glass-group'},token)
  const source=await core('channel.source-add',{plugin:'telegram',locator:'glass_fixture',name:'Everything English fixture'})

@@ -1047,6 +1047,28 @@
   {
     "args": [
       "messenger",
+      "upload-begin",
+      "employee:employee_a",
+      "--name",
+      "sample.png",
+      "--bytes",
+      "7",
+      "--scope",
+      "work"
+    ],
+    "expected": {
+      "cmd": "messenger.upload-begin",
+      "args": {
+        "conversation": "employee:employee_a",
+        "name": "sample.png",
+        "bytes": 7,
+        "scope": "work"
+      }
+    }
+  },
+  {
+    "args": [
+      "messenger",
       "reference"
     ],
     "expected": {
@@ -1401,8 +1423,6 @@
       "create",
       "--name",
       "sample",
-      "--team",
-      "sample",
       "--members",
       "[\"one\",\"two\"]"
     ],
@@ -1410,7 +1430,6 @@
       "cmd": "chat.create",
       "args": {
         "name": "sample",
-        "team": "sample",
         "members": [
           "one",
           "two"
@@ -2909,119 +2928,6 @@
   },
   {
     "args": [
-      "team-view",
-      "list"
-    ],
-    "expected": {
-      "cmd": "team-view.list",
-      "args": {}
-    }
-  },
-  {
-    "args": [
-      "team-view",
-      "list",
-      "sample",
-      "value",
-      "ignored"
-    ],
-    "expected": {
-      "cmd": "team-view.list",
-      "args": {}
-    }
-  },
-  {
-    "args": [
-      "team-view",
-      "list",
-      "--looks-like-a-flag",
-      "off"
-    ],
-    "expected": {
-      "cmd": "team-view.list",
-      "args": {}
-    }
-  },
-  {
-    "args": [
-      "team-view",
-      "remove"
-    ],
-    "expected": {
-      "cmd": "team-view.remove",
-      "args": {}
-    }
-  },
-  {
-    "args": [
-      "team-view",
-      "remove",
-      "sample",
-      "value",
-      "ignored"
-    ],
-    "expected": {
-      "cmd": "team-view.remove",
-      "args": {
-        "id": "sample"
-      }
-    }
-  },
-  {
-    "args": [
-      "team-view",
-      "remove",
-      "--looks-like-a-flag",
-      "off"
-    ],
-    "expected": {
-      "cmd": "team-view.remove",
-      "args": {
-        "id": "--looks-like-a-flag"
-      }
-    }
-  },
-  {
-    "args": [
-      "team-view",
-      "select"
-    ],
-    "expected": {
-      "cmd": "team-view.select",
-      "args": {}
-    }
-  },
-  {
-    "args": [
-      "team-view",
-      "select",
-      "sample",
-      "value",
-      "ignored"
-    ],
-    "expected": {
-      "cmd": "team-view.select",
-      "args": {
-        "id": "sample"
-      }
-    }
-  },
-  {
-    "args": [
-      "team-view",
-      "select",
-      "--looks-like-a-flag",
-      "off"
-    ],
-    "expected": {
-      "cmd": "team-view.select",
-      "args": {
-        "id": "--looks-like-a-flag"
-      }
-    }
-  },
-  {
-    "args": [
       "terminal",
       "close"
     ],
@@ -4116,125 +4022,6 @@
   },
   {
     "args": [
-      "group",
-      "migrate"
-    ],
-    "expected": {
-      "cmd": "group.migrate",
-      "args": {}
-    }
-  },
-  {
-    "args": [
-      "group",
-      "migrate",
-      "sample",
-      "value",
-      "ignored"
-    ],
-    "expected": {
-      "cmd": "group.migrate",
-      "args": {
-        "name": "sample"
-      }
-    }
-  },
-  {
-    "args": [
-      "group",
-      "migrate",
-      "--looks-like-a-flag",
-      "off"
-    ],
-    "expected": {
-      "cmd": "group.migrate",
-      "args": {
-        "name": "--looks-like-a-flag"
-      }
-    }
-  },
-  {
-    "args": [
-      "room",
-      "layout"
-    ],
-    "expected": {
-      "cmd": "room.layout",
-      "args": {}
-    }
-  },
-  {
-    "args": [
-      "room",
-      "layout",
-      "sample",
-      "value",
-      "ignored"
-    ],
-    "expected": {
-      "cmd": "room.layout",
-      "args": {
-        "name": "sample"
-      }
-    }
-  },
-  {
-    "args": [
-      "room",
-      "layout",
-      "--looks-like-a-flag",
-      "off"
-    ],
-    "expected": {
-      "cmd": "room.layout",
-      "args": {
-        "name": "--looks-like-a-flag"
-      }
-    }
-  },
-  {
-    "args": [
-      "group",
-      "rename"
-    ],
-    "expected": {
-      "cmd": "group.rename",
-      "args": {}
-    }
-  },
-  {
-    "args": [
-      "group",
-      "rename",
-      "sample",
-      "value",
-      "ignored"
-    ],
-    "expected": {
-      "cmd": "group.rename",
-      "args": {
-        "name": "sample",
-        "nextName": "value"
-      }
-    }
-  },
-  {
-    "args": [
-      "group",
-      "rename",
-      "--looks-like-a-flag",
-      "off"
-    ],
-    "expected": {
-      "cmd": "group.rename",
-      "args": {
-        "name": "--looks-like-a-flag",
-        "nextName": "off"
-      }
-    }
-  },
-  {
-    "args": [
       "card",
       "native-bind"
     ],
@@ -5116,8 +4903,6 @@
       "search",
       "--view",
       "Messages",
-      "--team",
-      "Team",
       "--employee",
       "worker",
       "--kind",
@@ -5129,7 +4914,6 @@
       "cmd": "assets.search",
       "args": {
         "view": "Messages",
-        "team": "Team",
         "employee": "worker",
         "kind": "image",
         "sort": "modified"
@@ -5736,12 +5520,12 @@
       "plugin",
       "resources",
       "--id",
-      "mininotion"
+      "margin-reader"
     ],
     "expected": {
       "cmd": "plugin.resources",
       "args": {
-        "id": "mininotion"
+        "id": "margin-reader"
       }
     }
   },
@@ -5750,12 +5534,12 @@
       "plugin",
       "access",
       "--id",
-      "mininotion"
+      "margin-reader"
     ],
     "expected": {
       "cmd": "plugin.access",
       "args": {
-        "id": "mininotion"
+        "id": "margin-reader"
       }
     }
   },
@@ -5764,9 +5548,9 @@
       "plugin",
       "access",
       "--id",
-      "mininotion",
+      "margin-reader",
       "--resources",
-      "[\"PAGE\"]",
+      "[\"document:DOC\"]",
       "--employees",
       "[{\"employeeId\":\"E\",\"read\":true,\"write\":false,\"create\":false}]",
       "--expected-revision",
@@ -5775,9 +5559,9 @@
     "expected": {
       "cmd": "plugin.access",
       "args": {
-        "id": "mininotion",
+        "id": "margin-reader",
         "resourceIds": [
-          "PAGE"
+          "document:DOC"
         ],
         "employees": [
           {
@@ -6030,6 +5814,104 @@
       "args": {
         "employee": "employee_a",
         "clientMessageId": "send-1"
+      }
+    }
+  },
+  {
+    "args": [
+      "direct",
+      "files",
+      "--employee",
+      "employee_a",
+      "--query",
+      "brief",
+      "--kind",
+      "file",
+      "--author",
+      "you",
+      "--sort",
+      "name",
+      "--offset",
+      "0",
+      "--limit",
+      "20"
+    ],
+    "expected": {
+      "cmd": "direct.files",
+      "args": {
+        "employee": "employee_a",
+        "query": "brief",
+        "kind": "file",
+        "author": "you",
+        "sort": "name",
+        "offset": 0,
+        "limit": 20
+      }
+    }
+  },
+  {
+    "args": [
+      "direct",
+      "search",
+      "--employee",
+      "employee_a",
+      "--query",
+      "hello",
+      "--filter",
+      "links",
+      "--author",
+      "employee",
+      "--from",
+      "0",
+      "--to",
+      "9999999999999",
+      "--offset",
+      "0",
+      "--limit",
+      "20"
+    ],
+    "expected": {
+      "cmd": "direct.search",
+      "args": {
+        "employee": "employee_a",
+        "query": "hello",
+        "filter": "links",
+        "author": "employee",
+        "from": 0,
+        "to": 9999999999999,
+        "offset": 0,
+        "limit": 20
+      }
+    }
+  },
+  {
+    "args": [
+      "direct",
+      "storage",
+      "--employee",
+      "employee_a"
+    ],
+    "expected": {
+      "cmd": "direct.storage",
+      "args": {
+        "employee": "employee_a"
+      }
+    }
+  },
+  {
+    "args": [
+      "direct",
+      "clear",
+      "--employee",
+      "employee_a",
+      "--scope",
+      "files"
+    ],
+    "expected": {
+      "cmd": "direct.clear",
+      "args": {
+        "employee": "employee_a",
+        "scope": "files"
       }
     }
   },
@@ -6379,6 +6261,340 @@
         "path": "before.txt",
         "to": "after.txt",
         "expectedVersion": "opaque-version"
+      }
+    }
+  },
+  {
+    "args": [
+      "notebook",
+      "status"
+    ],
+    "expected": {
+      "cmd": "notebook.status",
+      "args": {}
+    }
+  },
+  {
+    "args": [
+      "notebook",
+      "guide",
+      "workflows"
+    ],
+    "expected": {
+      "cmd": "notebook.guide",
+      "args": {
+        "topic": "workflows"
+      }
+    }
+  },
+  {
+    "args": [
+      "notebook",
+      "methods",
+      "button"
+    ],
+    "expected": {
+      "cmd": "notebook.methods",
+      "args": {
+        "query": "button"
+      }
+    }
+  },
+  {
+    "args": [
+      "notebook",
+      "resources"
+    ],
+    "expected": {
+      "cmd": "notebook.resources",
+      "args": {}
+    }
+  },
+  {
+    "args": [
+      "notebook",
+      "access",
+      "--resources",
+      "[\"page_1\"]",
+      "--employees",
+      "[{\"employeeId\":\"emp_1\",\"read\":true,\"write\":true,\"create\":false}]",
+      "--expected-revision",
+      "3"
+    ],
+    "expected": {
+      "cmd": "notebook.access",
+      "args": {
+        "resourceIds": [
+          "page_1"
+        ],
+        "employees": [
+          {
+            "employeeId": "emp_1",
+            "read": true,
+            "write": true,
+            "create": false
+          }
+        ],
+        "expectedRevision": 3
+      }
+    }
+  },
+  {
+    "args": [
+      "notebook",
+      "call",
+      "page.create",
+      "--params",
+      "{\"title\":\"Spec\",\"color\":\"white\"}",
+      "--state-mode",
+      "none"
+    ],
+    "expected": {
+      "cmd": "notebook.call",
+      "args": {
+        "method": "page.create",
+        "params": {
+          "title": "Spec",
+          "color": "white"
+        },
+        "stateMode": "none"
+      }
+    }
+  },
+  {
+    "args": [
+      "notebook",
+      "asset",
+      "asset/demo.png"
+    ],
+    "expected": {
+      "cmd": "notebook.asset",
+      "args": {
+        "path": "asset/demo.png"
+      }
+    }
+  },
+  {
+    "args": [
+      "library",
+      "overview",
+      "--refresh"
+    ],
+    "expected": {
+      "cmd": "library.overview",
+      "args": {
+        "refresh": true
+      }
+    }
+  },
+  {
+    "args": [
+      "library",
+      "search",
+      "attention",
+      "--domains",
+      "[\"reader\",\"messages\"]",
+      "--kind",
+      "pdf",
+      "--sort",
+      "recent",
+      "--limit",
+      "25"
+    ],
+    "expected": {
+      "cmd": "library.search",
+      "args": {
+        "query": "attention",
+        "domains": [
+          "reader",
+          "messages"
+        ],
+        "kind": "pdf",
+        "sort": "recent",
+        "limit": 25
+      }
+    }
+  },
+  {
+    "args": [
+      "reader",
+      "status"
+    ],
+    "expected": {
+      "cmd": "reader.status",
+      "args": {}
+    }
+  },
+  {
+    "args": [
+      "reader",
+      "guide",
+      "excerpts"
+    ],
+    "expected": {
+      "cmd": "reader.guide",
+      "args": {
+        "topic": "excerpts"
+      }
+    }
+  },
+  {
+    "args": [
+      "reader",
+      "methods",
+      "document"
+    ],
+    "expected": {
+      "cmd": "reader.methods",
+      "args": {
+        "query": "document"
+      }
+    }
+  },
+  {
+    "args": [
+      "reader",
+      "resources"
+    ],
+    "expected": {
+      "cmd": "reader.resources",
+      "args": {}
+    }
+  },
+  {
+    "args": [
+      "reader",
+      "access",
+      "--resources",
+      "[\"document:DOC\"]",
+      "--employees",
+      "[{\"employeeId\":\"emp_1\",\"read\":true,\"write\":false,\"create\":false}]",
+      "--expected-revision",
+      "2"
+    ],
+    "expected": {
+      "cmd": "reader.access",
+      "args": {
+        "resourceIds": [
+          "document:DOC"
+        ],
+        "employees": [
+          {
+            "employeeId": "emp_1",
+            "read": true,
+            "write": false,
+            "create": false
+          }
+        ],
+        "expectedRevision": 2
+      }
+    }
+  },
+  {
+    "args": [
+      "reader",
+      "call",
+      "document.list",
+      "--params",
+      "{}",
+      "--state-mode",
+      "none"
+    ],
+    "expected": {
+      "cmd": "reader.call",
+      "args": {
+        "method": "document.list",
+        "params": {},
+        "stateMode": "none"
+      }
+    }
+  },
+  {
+    "args": [
+      "reader",
+      "open",
+      "--document-id",
+      "DOC",
+      "--import-to-library"
+    ],
+    "expected": {
+      "cmd": "reader.open",
+      "args": {
+        "documentId": "DOC",
+        "importToLibrary": true
+      }
+    }
+  },
+  {
+    "args": [
+      "reader",
+      "close",
+      "reader_1"
+    ],
+    "expected": {
+      "cmd": "reader.close",
+      "args": {
+        "id": "reader_1"
+      }
+    }
+  },
+  {
+    "args": [
+      "host",
+      "resources"
+    ],
+    "expected": {
+      "cmd": "host.resources",
+      "args": {}
+    }
+  },
+  {
+    "args": [
+      "host",
+      "access",
+      "--resources",
+      "[\"host:prod\"]",
+      "--employees",
+      "[{\"employeeId\":\"emp_1\",\"read\":true,\"write\":true,\"create\":false}]",
+      "--expected-revision",
+      "1"
+    ],
+    "expected": {
+      "cmd": "host.access",
+      "args": {
+        "resourceIds": [
+          "host:prod"
+        ],
+        "employees": [
+          {
+            "employeeId": "emp_1",
+            "read": true,
+            "write": true,
+            "create": false
+          }
+        ],
+        "expectedRevision": 1
+      }
+    }
+  },
+  {
+    "args": [
+      "host",
+      "files",
+      "host_1",
+      "--operation",
+      "list",
+      "--path",
+      "/var/log",
+      "--hidden"
+    ],
+    "expected": {
+      "cmd": "host.files",
+      "args": {
+        "id": "host_1",
+        "operation": "list",
+        "path": "/var/log",
+        "hidden": true
       }
     }
   }

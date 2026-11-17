@@ -2,7 +2,7 @@
   {
     "name": "engineering.create",
     "args": "--spec JSON|@file [--client-request-id KEY]",
-    "summary": "User/Secretary: create one Engineering, its independent Team, explicit role hierarchy, DAG and one Mission. Stable retries resume partial provisioning without duplicating identities.",
+    "summary": "User/Secretary: create one Engineering with explicit role hierarchy, DAG, centralized Agent workspaces (or chosen cloud host) and one Mission. Stable retries resume partial provisioning without duplicating identities.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -21,38 +21,13 @@
               "minLength": 1,
               "maxLength": 64000
             },
-            "team": {
+            "hostId": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 160
+              "minLength": 1
             },
-            "createTeam": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "hostId": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "directory": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "directoryMode": {
-                  "enum": [
-                    "default",
-                    "bind"
-                  ]
-                },
-                "folderName": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "parentDirectory": {
-                  "type": "string",
-                  "minLength": 1
-                }
-              }
+            "remoteDirectory": {
+              "type": "string",
+              "minLength": 1
             },
             "roles": {
               "type": "array",
@@ -257,7 +232,6 @@
           "required": [
             "name",
             "goal",
-            "team",
             "roles",
             "tasks",
             "dependencies"
@@ -273,7 +247,7 @@
         "spec"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -295,7 +269,7 @@
         }
       }
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": true,
     "permission": "schedule",
     "target": "request"
@@ -317,7 +291,7 @@
         "id"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": true,
     "permission": "schedule",
     "target": "request"
@@ -339,7 +313,7 @@
         "id"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": true,
     "permission": "schedule",
     "target": "request"
@@ -361,7 +335,7 @@
         "id"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": true,
     "permission": "schedule",
     "target": "request"
@@ -400,7 +374,7 @@
         "artifactId"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": true,
     "permission": "schedule",
     "target": "request"
@@ -435,38 +409,13 @@
               "minLength": 1,
               "maxLength": 64000
             },
-            "team": {
+            "hostId": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 160
+              "minLength": 1
             },
-            "createTeam": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "hostId": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "directory": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "directoryMode": {
-                  "enum": [
-                    "default",
-                    "bind"
-                  ]
-                },
-                "folderName": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "parentDirectory": {
-                  "type": "string",
-                  "minLength": 1
-                }
-              }
+            "remoteDirectory": {
+              "type": "string",
+              "minLength": 1
             },
             "roles": {
               "type": "array",
@@ -676,7 +625,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -684,7 +633,7 @@
   {
     "name": "engineering.retry",
     "args": "--id ID --expected-revision N",
-    "summary": "Resume failed Engineering provisioning using the same Team, employees, Mission and request identities.",
+    "summary": "Resume failed Engineering provisioning using the same employees, Mission and request identities.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -703,7 +652,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -730,7 +679,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -757,7 +706,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -784,7 +733,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -815,7 +764,7 @@
         "archived"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -823,7 +772,7 @@
   {
     "name": "engineering.layout",
     "args": "--id ID --graph topology|dag --positions JSON --expected-revision N",
-    "summary": "User/Secretary: save free engineering graph node positions; Characters numbered seats and Aexus geometry remain unchanged.",
+    "summary": "User/Secretary: save free engineering graph node positions.",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -873,7 +822,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -903,7 +852,7 @@
         "source"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": true,
     "permission": "schedule",
     "target": "request"
@@ -932,7 +881,7 @@
         "graph"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": true,
     "permission": "schedule",
     "target": "request"
@@ -972,7 +921,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -1006,7 +955,7 @@
         "id"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -1066,7 +1015,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -1098,7 +1047,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -1135,7 +1084,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -1200,7 +1149,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -1242,7 +1191,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -1280,7 +1229,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -1318,7 +1267,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -1351,7 +1300,7 @@
         "expectedRevision"
       ]
     },
-    "gui": "Team / Engineering",
+    "gui": "Mission / Engineering",
     "readOnly": false,
     "permission": "schedule",
     "target": "request"
@@ -1402,10 +1351,6 @@
               "minimum": 10,
               "maximum": 31536000,
               "default": 1800
-            },
-            "viewId": {
-              "type": "string",
-              "minLength": 1
             },
             "plan": {
               "type": "object",
@@ -1515,10 +1460,6 @@
               "minimum": 10,
               "maximum": 31536000,
               "default": 1800
-            },
-            "viewId": {
-              "type": "string",
-              "minLength": 1
             },
             "plan": {
               "type": "object",
@@ -1890,11 +1831,6 @@
             "optionId"
           ]
         },
-        "viewId": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Explicit fixed task view for a Governor asking outside a running task"
-        },
         "clientRequestId": {
           "type": "string",
           "minLength": 1,
@@ -2122,10 +2058,6 @@
                   "minLength": 1,
                   "description": "Employee ID or self"
                 },
-                "team": {
-                  "type": "string",
-                  "minLength": 1
-                },
                 "channel": {
                   "type": "string",
                   "minLength": 1,
@@ -2207,10 +2139,6 @@
                         "type": "string",
                         "minLength": 1,
                         "description": "Employee ID or self"
-                      },
-                      "team": {
-                        "type": "string",
-                        "minLength": 1
                       },
                       "channel": {
                         "type": "string",
@@ -2361,64 +2289,588 @@
     "target": "request"
   },
   {
-    "name": "board.categories",
+    "name": "notebook.status",
     "args": "",
-    "summary": "User or Secretary: list saved Board categories without starting sessions or acknowledging messages",
-    "gui": "Board categories",
+    "summary": "Read the Mission Super-Notion Notebook workspace path, revision and authorized page counts.",
+    "gui": "Mission 笔记本状态",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
-      "properties": {}
+      "properties": {},
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "notebook.guide",
+    "args": "[TOPIC]",
+    "summary": "Read the Mission Super-Notion Notebook API handbook by optional topic (workflow, files, database, views, relations, templates, blocks).",
+    "gui": "Mission 笔记本手册",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "topic": {
+          "type": "string"
+        }
+      },
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "notebook.methods",
+    "args": "[QUERY]",
+    "summary": "Search or list available Mission Notebook method schemas (page, block, database, record, button, automation, fs, assistant).",
+    "gui": "Mission 笔记本方法目录",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "notebook.resources",
+    "args": "",
+    "summary": "List Mission Notebook pages/databases and effective rights; employees see only authorized resources, Secretary sees all.",
+    "gui": "Mission 笔记本页面权限目录",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {},
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "notebook.access",
+    "args": "[--resources JSON --employees JSON --updates JSON --expected-revision N]",
+    "summary": "User or Secretary: read or replace per-employee read/write/create rights on selected Mission Notebook pages; Secretary always has full access.",
+    "gui": "Mission 笔记本页面授权",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 1000,
+          "uniqueItems": true
+        },
+        "employees": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "employeeId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read": {
+                "type": "boolean"
+              },
+              "write": {
+                "type": "boolean"
+              },
+              "create": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "employeeId",
+              "read",
+              "write",
+              "create"
+            ]
+          }
+        },
+        "updates": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "employeeId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read": {
+                "type": "boolean"
+              },
+              "write": {
+                "type": "boolean"
+              },
+              "create": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "employeeId",
+              "resourceId",
+              "read",
+              "write",
+              "create"
+            ]
+          }
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": []
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "notebook.call",
+    "args": "<method> [--params JSON] [--state-mode full|delta|none] [--include-envelope]",
+    "summary": "Execute a Mission Notebook operation (page, block, database, automation, button or fs) under current identity and per-page access grants.",
+    "gui": "Mission 笔记本核心操作",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "stateMode": {
+          "enum": [
+            "full",
+            "delta",
+            "none"
+          ]
+        },
+        "includeEnvelope": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "method"
+      ]
+    },
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "notebook.asset",
+    "args": "<asset/...|workspace/...>",
+    "summary": "Read a scoped attachment or workspace export file inside the Mission Notebook directory (user only).",
+    "gui": "Mission 笔记本附件",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "path"
+      ]
     },
     "readOnly": true,
     "permission": "operator",
     "target": "request"
   },
   {
-    "name": "board.category-save",
-    "args": "ID --name NAME --employees JSON [--workers JSON] --expected-revision N",
-    "summary": "Create or replace a Board category with an explicit multi-selection. expectedRevision=0 creates; unchanged retries are idempotent.",
-    "gui": "Create/edit Board category",
+    "name": "library.overview",
+    "args": "[--refresh]",
+    "summary": "User or Secretary: inspect unified visual storage metrics, recent/largest files, Study Reader and Cloud Hosts summaries across all storage domains.",
+    "gui": "资料库全景统计",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^bc_[a-zA-Z0-9_-]{1,100}$"
+        "refresh": {
+          "type": "boolean"
+        }
+      },
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "library.search",
+    "args": "[--query TEXT] [--domains JSON] [--kind TYPE] [--employee ID] [--host ID] [--min-bytes N] [--max-bytes N] [--updated-after N] [--sort relevance|recent|largest|name] [--limit N]",
+    "summary": "User or Secretary: super-search filenames, full-text content snippets, conversation attachments, Mission Notebook pages, Study Reader documents/cards/mindmaps and Cloud Hosts.",
+    "gui": "资料库超级搜索",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string"
         },
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 80
+        "domains": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "files",
+              "content",
+              "conversations",
+              "notebook",
+              "reader",
+              "hosts"
+            ]
+          },
+          "maxItems": 6
         },
-        "employeeIds": {
+        "kind": {
+          "enum": [
+            "all",
+            "folder",
+            "document",
+            "image",
+            "audio",
+            "video",
+            "code",
+            "archive",
+            "other"
+          ]
+        },
+        "employeeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hostId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "updatedAfter": {
+          "type": "number",
+          "minimum": 0
+        },
+        "sort": {
+          "enum": [
+            "relevance",
+            "recent",
+            "largest",
+            "name"
+          ]
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        }
+      },
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "reader.status",
+    "args": "[--workspace PATH]",
+    "summary": "Read the built-in Library Study Reader path, document/study-set/card counts and access revision.",
+    "gui": "精读工作台状态",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workspace": {
+          "type": "string"
+        }
+      },
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "reader.guide",
+    "args": "[TOPIC]",
+    "summary": "Read the built-in Study Reader API manual by optional topic.",
+    "gui": "精读工作台手册",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "topic": {
+          "type": "string"
+        }
+      },
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "reader.methods",
+    "args": "[QUERY]",
+    "summary": "Search or list declared Study Reader method schemas (documents, outlines, ink, study sets, cards, FSRS review, mindmaps).",
+    "gui": "精读工作台方法目录",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "reader.resources",
+    "args": "[--workspace PATH]",
+    "summary": "List Study Reader documents and study sets with effective employee read/write/create rights.",
+    "gui": "精读文献权限目录",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workspace": {
+          "type": "string"
+        }
+      },
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "reader.access",
+    "args": "[--workspace PATH] [--resources JSON --employees JSON --updates JSON --expected-revision N]",
+    "summary": "User or Secretary: inspect or atomically update per-employee read/write/create grants on Study Reader documents and study sets.",
+    "gui": "精读文献授权管理",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workspace": {
+          "type": "string"
+        },
+        "resourceIds": {
           "type": "array",
           "items": {
             "type": "string",
             "minLength": 1
           },
-          "maxItems": 5000
+          "minItems": 1,
+          "maxItems": 1000,
+          "uniqueItems": true
         },
-        "workerIds": {
+        "employees": {
           "type": "array",
+          "maxItems": 200,
           "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "maxItems": 5000,
-          "description": "Native Worker members in the same Team board. Category membership never grants Worker access."
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "employeeId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read": {
+                "type": "boolean"
+              },
+              "write": {
+                "type": "boolean"
+              },
+              "create": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "employeeId",
+              "read",
+              "write",
+              "create"
+            ]
+          }
+        },
+        "updates": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "employeeId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read": {
+                "type": "boolean"
+              },
+              "write": {
+                "type": "boolean"
+              },
+              "create": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "employeeId",
+              "resourceId",
+              "read",
+              "write",
+              "create"
+            ]
+          }
         },
         "expectedRevision": {
           "type": "integer",
           "minimum": 0
         }
       },
+      "required": []
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "reader.call",
+    "args": "<method> [--workspace PATH] [--params JSON] [--state-mode full|delta|none] [--include-envelope]",
+    "summary": "Execute a built-in Study Reader operation (document, outline, annotation, study set, card, mindmap, FSRS review or fs) under caller permissions.",
+    "gui": "精读核心操作",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspace": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "origin": {
+          "type": "string"
+        },
+        "stateMode": {
+          "enum": [
+            "full",
+            "delta",
+            "none"
+          ]
+        },
+        "includeEnvelope": {
+          "type": "boolean"
+        },
+        "viewId": {
+          "type": "string"
+        }
+      },
       "required": [
-        "id",
-        "name",
-        "employeeIds",
-        "expectedRevision"
+        "method"
+      ]
+    },
+    "readOnly": false,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "reader.open",
+    "args": "[--workspace PATH] [--path PATH] [--document-id ID] [--study-set-id ID] [--import-to-library]",
+    "summary": "User or Secretary: open or reuse an internal Study Reader webview/frame session and optionally open a document or study set.",
+    "gui": "在精读工作台打开",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workspace": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "documentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "studySetId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "importToLibrary": {
+          "type": "boolean"
+        }
+      },
+      "required": []
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "reader.close",
+    "args": "ID",
+    "summary": "User or Secretary: close an open Study Reader HTTP session and release any temporary cached document copies.",
+    "gui": "关闭精读会话",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id"
       ]
     },
     "readOnly": false,
@@ -2426,59 +2878,173 @@
     "target": "request"
   },
   {
-    "name": "board.category-delete",
-    "args": "ID --expected-revision N",
-    "summary": "Delete a Board category; retain employees, Workers, tasks and histories",
-    "gui": "Delete Board category",
+    "name": "host.resources",
+    "args": "",
+    "summary": "List registered Cloud Hosts and effective employee read/write/create rights.",
+    "gui": "云主机权限目录",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {},
+      "required": []
+    },
+    "readOnly": true,
+    "permission": "schedule",
+    "target": "request"
+  },
+  {
+    "name": "host.access",
+    "args": "[--resources JSON --employees JSON --updates JSON --expected-revision N]",
+    "summary": "User or Secretary: inspect or atomically update per-employee read/write/create grants on Cloud Hosts.",
+    "gui": "云主机授权管理",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^bc_[a-zA-Z0-9_-]{1,100}$"
+        "resourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 1000,
+          "uniqueItems": true
+        },
+        "employees": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "employeeId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read": {
+                "type": "boolean"
+              },
+              "write": {
+                "type": "boolean"
+              },
+              "create": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "employeeId",
+              "read",
+              "write",
+              "create"
+            ]
+          }
+        },
+        "updates": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "employeeId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "resourceId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read": {
+                "type": "boolean"
+              },
+              "write": {
+                "type": "boolean"
+              },
+              "create": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "employeeId",
+              "resourceId",
+              "read",
+              "write",
+              "create"
+            ]
+          }
         },
         "expectedRevision": {
           "type": "integer",
           "minimum": 0
         }
       },
-      "required": [
-        "id",
-        "expectedRevision"
-      ]
+      "required": []
     },
     "readOnly": false,
     "permission": "operator",
     "target": "request"
   },
   {
-    "name": "board.category-order",
-    "args": "--order JSON --expected-order JSON",
-    "summary": "Reorder category tabs with optimistic concurrency; never reorder employees or Team geometry",
-    "gui": "Reorder Board categories",
+    "name": "host.files",
+    "args": "ID --operation list|read|image|info|chunk|write|mkdir|move|trash|restore [--directory DIR] [--path PATH] [--to PATH] [--content TEXT] [--hash HASH] [--create] [--hidden] [--offset N] [--trash-id ID]",
+    "summary": "Browse, read, edit, organize, or trash files directly on an authorized registered SSH Cloud Host.",
+    "gui": "云主机远端文件管理",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "order": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^bc_[a-zA-Z0-9_-]{1,100}$"
-          }
+        "id": {
+          "type": "string",
+          "minLength": 1
         },
-        "expectedOrder": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^bc_[a-zA-Z0-9_-]{1,100}$"
-          }
+        "directory": {
+          "type": "string"
+        },
+        "operation": {
+          "enum": [
+            "list",
+            "read",
+            "image",
+            "info",
+            "chunk",
+            "write",
+            "mkdir",
+            "move",
+            "trash",
+            "restore"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 4194304
+        },
+        "hash": {
+          "type": "string"
+        },
+        "create": {
+          "type": "boolean"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "trashId": {
+          "type": "string"
         }
       },
       "required": [
-        "order",
-        "expectedOrder"
+        "id",
+        "operation"
       ]
     },
     "readOnly": false,
@@ -2503,7 +3069,7 @@
   {
     "name": "plan.query",
     "args": "[--filter JSON|@file --sort nextAt|name|updatedAt|priority --direction asc|desc --offset N --limit N]",
-    "summary": "Find real task IDs/revisions, assigned people/roles/Teams, complete rules/times and allowedActions; includes removed-target records for Secretary",
+    "summary": "Find real task IDs/revisions, assigned people/roles, complete rules/times and allowedActions; includes removed-target records for Secretary",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -2549,10 +3115,6 @@
               "type": "string",
               "minLength": 1,
               "description": "Employee ID or self"
-            },
-            "team": {
-              "type": "string",
-              "minLength": 1
             },
             "channel": {
               "type": "string",
@@ -2635,10 +3197,6 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Employee ID or self"
-                  },
-                  "team": {
-                    "type": "string",
-                    "minLength": 1
                   },
                   "channel": {
                     "type": "string",
@@ -2777,10 +3335,6 @@
               "minLength": 1,
               "description": "Employee ID or self"
             },
-            "team": {
-              "type": "string",
-              "minLength": 1
-            },
             "channel": {
               "type": "string",
               "minLength": 1,
@@ -2862,10 +3416,6 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Employee ID or self"
-                  },
-                  "team": {
-                    "type": "string",
-                    "minLength": 1
                   },
                   "channel": {
                     "type": "string",
@@ -2989,10 +3539,6 @@
               "minLength": 1,
               "description": "Employee ID or self"
             },
-            "team": {
-              "type": "string",
-              "minLength": 1
-            },
             "channel": {
               "type": "string",
               "minLength": 1,
@@ -3074,10 +3620,6 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Employee ID or self"
-                  },
-                  "team": {
-                    "type": "string",
-                    "minLength": 1
                   },
                   "channel": {
                     "type": "string",
@@ -3139,7 +3681,7 @@
   },
   {
     "name": "plan.analytics",
-    "args": "[--metric schedules|runs --group-by status|employee|team|priority --filter JSON --outcomes JSON --from ISO --to ISO]",
+    "args": "[--metric schedules|runs --group-by status|employee|priority --filter JSON --outcomes JSON --from ISO --to ISO]",
     "summary": "Aggregate the complete authorized data set, never just the current UI page; explicitly distinguish schedules and retained runs",
     "inputSchema": {
       "type": "object",
@@ -3156,7 +3698,6 @@
           "enum": [
             "status",
             "employee",
-            "team",
             "priority"
           ],
           "default": "status"
@@ -3202,10 +3743,6 @@
               "type": "string",
               "minLength": 1,
               "description": "Employee ID or self"
-            },
-            "team": {
-              "type": "string",
-              "minLength": 1
             },
             "channel": {
               "type": "string",
@@ -3288,10 +3825,6 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Employee ID or self"
-                  },
-                  "team": {
-                    "type": "string",
-                    "minLength": 1
                   },
                   "channel": {
                     "type": "string",
@@ -3418,10 +3951,6 @@
               "minLength": 1,
               "description": "Employee ID or self"
             },
-            "team": {
-              "type": "string",
-              "minLength": 1
-            },
             "channel": {
               "type": "string",
               "minLength": 1,
@@ -3503,10 +4032,6 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Employee ID or self"
-                  },
-                  "team": {
-                    "type": "string",
-                    "minLength": 1
                   },
                   "channel": {
                     "type": "string",
@@ -3694,10 +4219,6 @@
                   "minLength": 1,
                   "description": "Employee ID or self"
                 },
-                "team": {
-                  "type": "string",
-                  "minLength": 1
-                },
                 "channel": {
                   "type": "string",
                   "minLength": 1,
@@ -3779,10 +4300,6 @@
                         "type": "string",
                         "minLength": 1,
                         "description": "Employee ID or self"
-                      },
-                      "team": {
-                        "type": "string",
-                        "minLength": 1
                       },
                       "channel": {
                         "type": "string",
@@ -3896,7 +4413,6 @@
                   "enum": [
                     "status",
                     "employee",
-                    "team",
                     "priority"
                   ]
                 },
@@ -4008,10 +4524,6 @@
                   "minLength": 1,
                   "description": "Employee ID or self"
                 },
-                "team": {
-                  "type": "string",
-                  "minLength": 1
-                },
                 "channel": {
                   "type": "string",
                   "minLength": 1,
@@ -4093,10 +4605,6 @@
                         "type": "string",
                         "minLength": 1,
                         "description": "Employee ID or self"
-                      },
-                      "team": {
-                        "type": "string",
-                        "minLength": 1
                       },
                       "channel": {
                         "type": "string",
@@ -4210,7 +4718,6 @@
                   "enum": [
                     "status",
                     "employee",
-                    "team",
                     "priority"
                   ]
                 },
@@ -4765,9 +5272,9 @@
   },
   {
     "name": "worker.create",
-    "args": "[--employee ID] --engine codex|claude|cline|pi|opencode|kilo|deepseek|antigravity [--title NAME --team TEAM --cwd PATH --client-request-id ID]",
+    "args": "[--employee ID] --engine codex|claude|cline|pi|opencode|kilo|deepseek|antigravity [--title NAME --cwd PATH --client-request-id ID]",
     "summary": "Create a clean native Worker. An unchanged clientRequestId retries the same caller-owned record. User/Secretary may omit employee with an existing local cwd. No inference, role prompt or Aexus tools.",
-    "gui": "Team / Add employee / Worker",
+    "gui": "Agent Workers",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4775,11 +5282,6 @@
         "employee": {
           "type": "string",
           "minLength": 1
-        },
-        "team": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Presentation Team only; it does not supply a role prompt, tools or execution authority."
         },
         "engine": {
           "enum": [
@@ -4819,7 +5321,7 @@
     "name": "worker.list",
     "args": "[--employee ID]",
     "summary": "List directly owned native Workers (user/Secretary may administer all); user and Secretary may list all",
-    "gui": "Team members",
+    "gui": "Agent Workers",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -5506,6 +6008,168 @@
       "required": [
         "employee",
         "messageId"
+      ]
+    },
+    "readOnly": false,
+    "permission": "operator",
+    "target": "request"
+  },
+  {
+    "name": "direct.files",
+    "args": "[--employee ID --query TEXT --kind all|image|file --author all|you|employee --sort newest|name|size --offset N --limit N]",
+    "summary": "List and search files and images stored locally on Mac in a private chat (decoupled from employee workspace). Agents may omit --employee to inspect their own private chat.",
+    "gui": "Private chat files",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "all",
+            "image",
+            "file"
+          ]
+        },
+        "author": {
+          "type": "string",
+          "enum": [
+            "all",
+            "you",
+            "employee"
+          ]
+        },
+        "sort": {
+          "type": "string",
+          "enum": [
+            "newest",
+            "name",
+            "size"
+          ]
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    },
+    "readOnly": true,
+    "permission": "employee.read",
+    "target": "request"
+  },
+  {
+    "name": "direct.search",
+    "args": "[--employee ID --query TEXT --filter all|media|audio|files|links --author all|you|employee --from N --to N --offset N --limit N]",
+    "summary": "Search published private chat messages, media, files and links stored locally on Mac without marking messages read. Agents may omit --employee for their own private chat.",
+    "gui": "Search private chat",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "filter": {
+          "type": "string",
+          "enum": [
+            "all",
+            "media",
+            "audio",
+            "files",
+            "links"
+          ]
+        },
+        "author": {
+          "type": "string",
+          "enum": [
+            "all",
+            "you",
+            "employee"
+          ]
+        },
+        "from": {
+          "type": "number",
+          "minimum": 0
+        },
+        "to": {
+          "type": "number",
+          "minimum": 0
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    },
+    "readOnly": true,
+    "permission": "employee.read",
+    "target": "request"
+  },
+  {
+    "name": "direct.storage",
+    "args": "[--employee ID]",
+    "summary": "Inspect local Mac disk usage and message/file counts for a private chat (independent of employee workspace).",
+    "gui": "Private chat storage",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "readOnly": true,
+    "permission": "employee.read",
+    "target": "request"
+  },
+  {
+    "name": "direct.clear",
+    "args": "--employee ID [--scope all|files]",
+    "summary": "User/Secretary: clear local Mac private chat messages and attachments (all) or attachment files only (files) to free disk space. Employee workspace files and native Team sessions are untouched.",
+    "gui": "Clear private chat history",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "all",
+            "files"
+          ]
+        }
+      },
+      "required": [
+        "employee"
       ]
     },
     "readOnly": false,
@@ -9273,7 +9937,7 @@
   },
   {
     "name": "messenger.upload-begin",
-    "args": "CONVERSATION --name NAME --bytes N",
+    "args": "CONVERSATION --name NAME --bytes N [--scope messages|work]",
     "summary": "User-only: allocate a unique conversation attachment and begin a chunked upload",
     "gui": "Message attachments",
     "inputSchema": {
@@ -9291,6 +9955,13 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 2147483648
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "messages",
+            "work"
+          ]
         }
       },
       "required": [
@@ -9765,7 +10436,7 @@
   {
     "name": "messenger.draft",
     "args": "CONVERSATION --data JSON [--scope messages|work|topic|thread|form --topic-id ID --thread-id ID --form-id ID]",
-    "summary": "User or Secretary: persist a draft and its send identity, or conditionally clear the matching draft; scope work separates Board/work drafts; group topic/thread/form drafts retain their own contents. Never sends or opens an engine",
+    "summary": "User or Secretary: persist a draft and its send identity, or conditionally clear the matching draft; scope work separates Agent workbench drafts; group topic/thread/form drafts retain their own contents. Never sends or opens an engine",
     "gui": "Message and work composers",
     "inputSchema": {
       "type": "object",
@@ -9863,20 +10534,14 @@
           "maxLength": 160,
           "description": "Identity of this send snapshot. Reuse for unchanged group/channel retries and the private-send acceptance receipt contract; uncertain private work is never replayed."
         },
-        "viewId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 160,
-          "description": "Frozen Team category scope for a private/group attempt; not a Plan or plugin view."
-        },
         "sourceView": {
           "type": "string",
           "enum": [
-            "company",
+            "library",
             "messages",
             "plan"
           ],
-          "description": "Sender-declared origin for this input. company or omitted: native Team reply, without private/group tags. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Not an execution target or permission. Preserve on unchanged retries."
+          "description": "Sender-declared origin for this input. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Omitted: native Agent conversation reply, without private/group tags. Not an execution target or permission. Preserve on unchanged retries."
         },
         "expectedClientMessageId": {
           "type": "string",
@@ -9961,7 +10626,7 @@
   },
   {
     "name": "assets.browse",
-    "args": "[--root ID --query TEXT --view Company|Messages|Plan --team NAME --employee ID --conversation REF --host ID --kind TYPE --storage local|remote|cloud --sort name|modified|size --offset N --limit N --hidden]",
+    "args": "[--root ID --query TEXT --view Agents|Messages|Plan|Reader|Hosts --employee ID --conversation REF --host ID --kind TYPE --storage local|remote|cloud --sort name|modified|size --offset N --limit N --hidden]",
     "summary": "User-only: page real workspace shelves, one folder or recursive file/folder search with stable IDs and ownership; no implicit cloud download",
     "gui": "File library",
     "inputSchema": {
@@ -9974,14 +10639,12 @@
         },
         "view": {
           "enum": [
-            "Company",
+            "Agents",
             "Messages",
-            "Plan"
+            "Plan",
+            "Reader",
+            "Hosts"
           ]
-        },
-        "team": {
-          "type": "string",
-          "minLength": 1
         },
         "employee": {
           "type": "string",
@@ -10068,7 +10731,7 @@
   {
     "name": "assets.preview",
     "args": "ID",
-    "summary": "User-only: derive bounded PDF/image/text covers with the installed Reader renderer. Configured group storage may use disposable remote preview scratch space; other remote originals are not fetched.",
+    "summary": "User-only: derive bounded PDF/image/text covers with the built-in Study Reader renderer. Configured group storage may use disposable remote preview scratch space; other remote originals are not fetched.",
     "gui": "Document cover",
     "inputSchema": {
       "type": "object",
@@ -10111,8 +10774,8 @@
   },
   {
     "name": "assets.tree",
-    "args": "[--view Company|Messages|Plan] [--team NAME] [--employee ID] [--conversation REF]",
-    "summary": "User-only: read the fixed Aexus, Messages and Plan workspace tree",
+    "args": "[--view Agents|Messages|Plan|Reader|Hosts] [--employee ID] [--conversation REF]",
+    "summary": "User-only: read the fixed Agents, Messages, Plan, Reader and Hosts workspace tree",
     "gui": "Files and assets",
     "inputSchema": {
       "type": "object",
@@ -10124,14 +10787,12 @@
         },
         "view": {
           "enum": [
-            "Company",
+            "Agents",
             "Messages",
-            "Plan"
+            "Plan",
+            "Reader",
+            "Hosts"
           ]
-        },
-        "team": {
-          "type": "string",
-          "minLength": 1
         },
         "employee": {
           "type": "string",
@@ -10162,14 +10823,12 @@
         },
         "view": {
           "enum": [
-            "Company",
+            "Agents",
             "Messages",
-            "Plan"
+            "Plan",
+            "Reader",
+            "Hosts"
           ]
-        },
-        "team": {
-          "type": "string",
-          "minLength": 1
         },
         "employee": {
           "type": "string",
@@ -10213,8 +10872,8 @@
   },
   {
     "name": "assets.search",
-    "args": "[--query TEXT] [--root ID] [--offset N] [--limit N] [--hidden] [--refresh] [--view Company|Messages|Plan] [--team NAME] [--employee ID] [--conversation REF] [--kind TYPE] [--storage local|remote|cloud] [--sort name|modified|size]",
-    "summary": "User-only: page background-indexed files with their Team, employee, group or channel ownership",
+    "args": "[--query TEXT] [--root ID] [--offset N] [--limit N] [--hidden] [--refresh] [--view Agents|Messages|Plan|Reader|Hosts] [--employee ID] [--conversation REF] [--kind TYPE] [--storage local|remote|cloud] [--sort name|modified|size]",
+    "summary": "User-only: page background-indexed files with their employee, group, channel, reader or host ownership",
     "gui": "Asset list",
     "inputSchema": {
       "type": "object",
@@ -10226,14 +10885,12 @@
         },
         "view": {
           "enum": [
-            "Company",
+            "Agents",
             "Messages",
-            "Plan"
+            "Plan",
+            "Reader",
+            "Hosts"
           ]
-        },
-        "team": {
-          "type": "string",
-          "minLength": 1
         },
         "employee": {
           "type": "string",
@@ -10389,7 +11046,7 @@
   {
     "name": "conversation.workspace",
     "args": "CONVERSATION [--employee ID]",
-    "summary": "Read shared content paths and file rights. Groups have no per-employee folders; joining never changes the Team execution workspace. User/Secretary administer without joining.",
+    "summary": "Read shared content paths and file rights. Groups have no per-employee folders; joining never changes the employee execution workspace. User/Secretary administer without joining.",
     "gui": "Group / channel workspace",
     "inputSchema": {
       "type": "object",
@@ -12371,7 +13028,7 @@
   },
   {
     "name": "chat.poll-create",
-    "args": "ID --spec JSON --client-request-id KEY [--topic-id ID --view-id ID]",
+    "args": "ID --spec JSON --client-request-id KEY [--topic-id ID]",
     "summary": "Publish a durable poll/quiz as the real caller. Multiple choice, anonymous votes, revoting, added answers, closing time and hidden results.",
     "gui": "Create poll",
     "inputSchema": {
@@ -12455,10 +13112,6 @@
           "minLength": 1
         },
         "topicId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "viewId": {
           "type": "string",
           "minLength": 1
         }
@@ -12604,7 +13257,7 @@
   },
   {
     "name": "chat.checklist-create",
-    "args": "ID --title TEXT --items JSON --client-request-id KEY [--topic-id ID --view-id ID --allow-add true|false --allow-complete true|false]",
+    "args": "ID --title TEXT --items JSON --client-request-id KEY [--topic-id ID --allow-add true|false --allow-complete true|false]",
     "summary": "Publish a checklist without completing any Mission. Assignees must be current members.",
     "gui": "Create checklist",
     "inputSchema": {
@@ -12651,10 +13304,6 @@
           "minLength": 1
         },
         "topicId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "viewId": {
           "type": "string",
           "minLength": 1
         },
@@ -12894,7 +13543,7 @@
   {
     "name": "workspace.catalog",
     "args": "[--employee ID|self]",
-    "summary": "Return the employee’s assigned Team execution workspace, exact host and file API. Joining conversations does not create additional workspaces or change cwd.",
+    "summary": "Return the employee’s assigned centralized or cloud execution workspace, exact host and file API. Joining conversations does not create additional workspaces or change cwd.",
     "gui": "Employee workspace selector",
     "inputSchema": {
       "type": "object",
@@ -12940,7 +13589,7 @@
   {
     "name": "conversation.download",
     "args": "CONVERSATION --entry-id ID --attachment-id ID --client-request-id KEY [--workspace WORKSPACE_ID --employee ID --path DIR --name FILENAME]",
-    "summary": "Copy one published private/group/channel attachment into your own Aexus execution workspace by default. Optional workspace ID must refer to that same assigned Team workspace. Streams with size/version/integrity checks; sources retained and existing destinations never overwritten.",
+    "summary": "Copy one published private/group/channel attachment into your own Aexus execution workspace by default. Optional workspace ID must refer to that same assigned execution workspace. Streams with size/version/integrity checks; sources retained and existing destinations never overwritten.",
     "gui": "Download to employee workspace",
     "inputSchema": {
       "type": "object",
@@ -13279,8 +13928,8 @@
   },
   {
     "name": "view.navigation",
-    "args": "team|mission|plan [--expanded true|false]",
-    "summary": "Legacy navigation compatibility. Team and Mission open directly; disclosure requests leave the current view unchanged.",
+    "args": "mission|plan [--expanded true|false]",
+    "summary": "Legacy navigation compatibility. Mission opens directly; disclosure requests leave the current view unchanged.",
     "gui": "Primary navigation compatibility",
     "inputSchema": {
       "type": "object",
@@ -13288,14 +13937,13 @@
       "properties": {
         "section": {
           "enum": [
-            "team",
             "mission",
             "plan"
           ]
         },
         "expanded": {
           "type": "boolean",
-          "description": "Deprecated compatibility input; Team and Mission have no expandable navigation."
+          "description": "Deprecated compatibility input; Mission has no expandable navigation."
         }
       },
       "required": [
@@ -13308,9 +13956,9 @@
   },
   {
     "name": "view.select",
-    "args": "company|messages|plan [--team-view ID]",
-    "summary": "Open the unified Team board or Mission directly, select a saved Team grouping, or resume the last Messages conversation. Legacy Team selectors resolve to the single Team board.",
-    "gui": "Shared views / group conversations",
+    "args": "library|messages|plan",
+    "summary": "Switch between Library, Message and Mission directly.",
+    "gui": "Main views",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -13318,29 +13966,10 @@
         "id": {
           "type": "string",
           "enum": [
-            "company",
+            "library",
             "messages",
             "plan"
           ]
-        },
-        "teamViewId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "engineeringId": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Legacy project navigation metadata; does not open a Team child page."
-        },
-        "teamTab": {
-          "enum": [
-            "engineering",
-            "research",
-            "characters",
-            "board",
-            "workers"
-          ],
-          "description": "Deprecated compatibility aliases; every value resolves to Team and is returned as board."
         },
         "missionTab": {
           "enum": [
@@ -13350,7 +13979,7 @@
         },
         "toggleNavigation": {
           "type": "boolean",
-          "description": "Deprecated compatibility intent. Team and Mission selections are idempotent and never expand navigation. Cannot be combined with explicit legacy child selection."
+          "description": "Deprecated compatibility intent. Main view selections are idempotent and never expand navigation."
         }
       },
       "required": [
@@ -13378,8 +14007,8 @@
   },
   {
     "name": "chat.create",
-    "args": "--name NAME [--team TEAM] [--members JSON] [--owner-id ID] [--storage JSON] [--client-request-id ID]",
-    "summary": "Create a group with an Agent Owner. User/Secretary can choose local or registered-host storage, create a custom named folder or bind an existing folder; employees keep their Team cwd. Stable clientRequestId retries the same caller-owned creation",
+    "args": "--name NAME [--members JSON] [--owner-id ID] [--storage JSON] [--client-request-id ID]",
+    "summary": "Create a group with an Agent Owner. User/Secretary can choose local or registered-host storage, create a custom named folder or bind an existing folder; employees keep their centralized cwd. Stable clientRequestId retries the same caller-owned creation",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -13398,10 +14027,6 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 160
-        },
-        "team": {
-          "type": "string",
-          "minLength": 1
         },
         "storage": {
           "type": "object",
@@ -13472,13 +14097,6 @@
             "minLength": 1
           },
           "maxItems": 200
-        },
-        "addTeams": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
         },
         "expectedRevision": {
           "type": "integer",
@@ -13692,7 +14310,7 @@
   },
   {
     "name": "chat.send",
-    "args": "ID [--text TEXT] [--images JSON] [--files JSON] [--mentions JSON|all] [--client-message-id ID] [--view ID] [--reply-to ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only]",
+    "args": "ID [--text TEXT] [--images JSON] [--files JSON] [--mentions JSON|all] [--client-message-id ID] [--reply-to ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only]",
     "summary": "Deliver to current members; mentions and user replies select work, other recipients receive context",
     "gui": "Shared views / group conversations",
     "inputSchema": {
@@ -13744,10 +14362,6 @@
           "type": "string",
           "maxLength": 160,
           "description": "Stable retry key; duplicate payloads are not dispatched again"
-        },
-        "viewId": {
-          "type": "string",
-          "minLength": 1
         },
         "replyTo": {
           "type": "string",
@@ -13829,7 +14443,7 @@
   {
     "name": "chat.post",
     "args": "ID [--text TEXT] [--images JSON] [--files JSON] [--kind summary|decision|blocker|question|result|message] [--reply-to ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only] [--client-message-id ID]",
-    "summary": "Explicitly publish a group message; ordinary native output stays only in Team; private replies require direct.post",
+    "summary": "Explicitly publish a group message; ordinary native output stays in the Agent conversation; private replies require direct.post",
     "gui": "Shared views / group conversations",
     "inputSchema": {
       "type": "object",
@@ -14048,7 +14662,7 @@
   },
   {
     "name": "engine.check",
-    "args": "--engine ID [--team NAME] [--force]",
+    "args": "--engine ID [--host-id ID] [--force]",
     "summary": "Check executable, protocol and authentication without inference",
     "gui": "引擎检测",
     "readOnly": true,
@@ -14401,7 +15015,7 @@
   {
     "name": "avatar.update",
     "args": "ID --enabled true|false [--expected-revision N]",
-    "summary": "User or Secretary: enable/archive a registered character immediately across Team, Message, Mission and pickers; retain all source assets and saved identities",
+    "summary": "User or Secretary: enable/archive a registered character immediately across Message, Mission and pickers; retain all source assets and saved identities",
     "gui": "启用或归档角色",
     "inputSchema": {
       "type": "object",
@@ -14429,51 +15043,6 @@
     "target": "request"
   },
   {
-    "name": "connector.get",
-    "args": "--manager ID --employee ID",
-    "summary": "Read endpoint anchors and 24 availablePoints, including all four corners of the uniform employee frame",
-    "gui": "连线端点",
-    "readOnly": true,
-    "permission": "layout.read",
-    "target": "request"
-  },
-  {
-    "name": "connector.set",
-    "args": "--manager ID --employee ID [--source auto|top|right|bottom|left --source-offset 0.5] [--target auto|top|right|bottom|left --target-offset 0.5] [--points JSON|@file | --auto-route]",
-    "summary": "Persist endpoint sides and offsets; does not create management authority or a relation",
-    "gui": "点击人物周围点位 / 拖动端点吸附",
-    "readOnly": false,
-    "permission": "layout.write",
-    "target": "request"
-  },
-  {
-    "name": "connector.segment",
-    "args": "--manager ID --employee ID --index N --x X --y Y",
-    "summary": "Move an orthogonal segment in source-Team coordinates; preserve attached employees",
-    "gui": "拖动任意折线段",
-    "readOnly": false,
-    "permission": "layout.write",
-    "target": "request"
-  },
-  {
-    "name": "connector.reset",
-    "args": "--manager ID --employee ID",
-    "summary": "Restore automatic source and head-top target routing",
-    "gui": "恢复自动连接点",
-    "readOnly": false,
-    "permission": "layout.write",
-    "target": "request"
-  },
-  {
-    "name": "office.layout",
-    "args": "[--team NAME] [--view VIEW_ID]",
-    "summary": "Read authorized Team bounds, employee coordinates and permitted layout actions; no filesystem access",
-    "gui": "Agent 布局工具",
-    "readOnly": true,
-    "permission": "layout.read",
-    "target": "request"
-  },
-  {
     "name": "session.acknowledge",
     "args": "--employee ID --reply-id ID",
     "summary": "User-only acknowledgement of the exact displayed reply; stale acknowledgements do not clear newer replies",
@@ -14483,18 +15052,9 @@
     "target": "session-or-employee"
   },
   {
-    "name": "management.relayout",
-    "args": "--team NAME",
-    "summary": "Group related employees and fit this Team without changing the viewport",
-    "gui": "整理团队拓扑",
-    "readOnly": false,
-    "permission": "layout.write",
-    "target": "request"
-  },
-  {
     "name": "management.topology",
-    "args": "[--team NAME] [--teams-only] [--creator self|others|operator|unknown|EMPLOYEE_ID]",
-    "summary": "Read teams with isOwnTeam, employeeCount, governorIds, allowedActions and deleteBlockedReason; employee nodes include creation provenance and allowedActions",
+    "args": "[--creator self|others|operator|unknown|EMPLOYEE_ID]",
+    "summary": "Read role topology and employee nodes with creation provenance, reporting edges and allowedActions",
     "gui": "管理与协同",
     "readOnly": true,
     "permission": "topology",
@@ -14502,7 +15062,7 @@
   },
   {
     "name": "management.activity",
-    "args": "[--team NAME]",
+    "args": "",
     "summary": "Read live communication and delegated tasks; highlighted is a maximum 600ms visual cue, not task completion",
     "gui": "管理交互连线",
     "readOnly": true,
@@ -14626,16 +15186,6 @@
     "target": "request"
   },
   {
-    "name": "management.team",
-    "args": "",
-    "summary": "Deprecated discovery only; Team and folder membership no longer grant authority",
-    "gui": "旧接口兼容",
-    "readOnly": false,
-    "replacement": "management.roles",
-    "permission": "operator",
-    "target": "request"
-  },
-  {
     "name": "management.global",
     "args": "ID on|off",
     "summary": "User or Secretary compatibility alias: assign Governor or demote to Manager; Secretary lifecycle remains user-only",
@@ -14693,7 +15243,7 @@
   {
     "name": "transfer.start",
     "args": "--from JSON|@file --to JSON|@file",
-    "summary": "Copy a file or directory between local, shared and Team/employee workspaces",
+    "summary": "Copy a file or directory between local, shared and employee workspaces",
     "gui": "跨工作区拖放复制",
     "readOnly": false,
     "permission": "operator",
@@ -14791,8 +15341,8 @@
   },
   {
     "name": "schedule.create",
-    "args": "--spec @file.json | --name NAME --employee ID|self --prompt TEXT (--after-seconds N | --at ISO | --time HH:mm | --every-seconds N | --on-event EVENT) [--enabled true|false|on|off | --paused] [--view VIEW_ID --days 7 --timezone IANA --month-day last --max-occurrences N --client-request-id KEY --duration-minutes N --channel ID --event-channel ID --event-conversation REF --event-employee ID --monitor-id ID --cooldown-seconds N]",
-    "summary": "Schedule an existing employee or yourself; enabled by default; --paused or --enabled false disables automatic runs; Governor requires --view; retry-safe clientRequestId",
+    "args": "--spec @file.json | --name NAME --employee ID|self --prompt TEXT (--after-seconds N | --at ISO | --time HH:mm | --every-seconds N | --on-event EVENT) [--enabled true|false|on|off | --paused] [--days 7 --timezone IANA --month-day last --max-occurrences N --client-request-id KEY --duration-minutes N --channel ID --event-channel ID --event-conversation REF --event-employee ID --monitor-id ID --cooldown-seconds N]",
+    "summary": "Schedule an existing employee or yourself; enabled by default; --paused or --enabled false disables automatic runs; retry-safe clientRequestId",
     "gui": "Mission task editor",
     "inputSchema": {
       "type": "object",
@@ -14839,11 +15389,6 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 64000
-                },
-                "viewId": {
-                  "type": "string",
-                  "minLength": 1,
-                  "description": "Explicit company subview ID required for Governor targets"
                 },
                 "channelId": {
                   "type": "string",
@@ -15243,11 +15788,6 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 64000
-                },
-                "viewId": {
-                  "type": "string",
-                  "minLength": 1,
-                  "description": "Explicit company subview ID required for Governor targets"
                 },
                 "channelId": {
                   "type": "string",
@@ -15737,11 +16277,6 @@
                   "minLength": 1,
                   "maxLength": 64000
                 },
-                "viewId": {
-                  "type": "string",
-                  "minLength": 1,
-                  "description": "Explicit company subview ID required for Governor targets"
-                },
                 "channelId": {
                   "type": "string",
                   "minLength": 1,
@@ -16110,11 +16645,6 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 64000
-                },
-                "viewId": {
-                  "type": "string",
-                  "minLength": 1,
-                  "description": "Explicit company subview ID required for Governor targets"
                 },
                 "channelId": {
                   "type": "string",
@@ -16578,7 +17108,7 @@
   {
     "name": "settings.get",
     "args": "",
-    "summary": "Read independent Aexus, Messages and Plan appearances, shared controls and default employee models",
+    "summary": "Read independent Library, Messages and Plan appearances, shared controls, workspaces root and default employee models",
     "gui": "应用设置",
     "readOnly": true,
     "permission": "operator",
@@ -16586,7 +17116,7 @@
   },
   {
     "name": "engine.models",
-    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek|antigravity [--kind worker|cloud-native-worker] [--team NAME] [--model MODEL]",
+    "args": "--engine codex|claude|cline|pi|opencode|kilo|deepseek|antigravity [--kind worker|cloud-native-worker] [--host-id ID] [--model MODEL]",
     "summary": "List available models before employee creation, without inference; Cloud Native reads the selected host",
     "gui": "创建员工和默认模型设置",
     "inputSchema": {
@@ -16611,7 +17141,7 @@
             "cloud-native-worker"
           ]
         },
-        "team": {
+        "hostId": {
           "type": "string",
           "minLength": 1
         },
@@ -16631,9 +17161,9 @@
   },
   {
     "name": "settings.set",
-    "args": "[--view company|messages|plan | --view-appearance JSON|@file] [--message-wallpaper JSON|@file] [--language en|zh-CN] [--theme violet|blue|mint|teal|cyan|rose|coral|amber|indigo|graphite|custom|white|light|space|black|midnight|sage] [--theme-color #RRGGBB] [--default-permission default|acceptEdits|bypassPermissions] [--explorer-width N] [--explorer-collapsed on|off] [--explorer-tree-collapsed on|off] [--asset-drawer-width N] [--terminal-height N] [--page-zoom N] [--zoom-sensitivity N] [--pan-sensitivity N] [--sidebar-width N] [--board-max-columns N] [--snap-employees on|off] [--team-overview on|off] [--default-codex-model ID] [--default-claude-model ID] [--default-cline-model ID] [--default-pi-model ID]",
-    "summary": "Patch independent view appearances and shared settings; legacy theme flags target Messages only",
-    "gui": "背景、灵敏度和团队索引",
+    "args": "[--view library|messages|plan | --view-appearance JSON|@file] [--message-wallpaper JSON|@file] [--employee-workspaces-root PATH] [--language en|zh-CN] [--theme violet|blue|mint|teal|cyan|rose|coral|amber|indigo|graphite|custom|white|light|space|black|midnight|sage] [--theme-color #RRGGBB] [--default-permission default|acceptEdits|bypassPermissions] [--explorer-width N] [--explorer-collapsed on|off] [--explorer-tree-collapsed on|off] [--asset-drawer-width N] [--terminal-height N] [--page-zoom N] [--sidebar-width N] [--default-codex-model ID] [--default-claude-model ID] [--default-cline-model ID] [--default-pi-model ID]",
+    "summary": "Patch independent view appearances, shared settings and centralized workspace root; legacy theme flags target Messages only",
+    "gui": "外观、侧栏与工作区目录设置",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16727,6 +17257,10 @@
             "bypassPermissions"
           ]
         },
+        "employeeWorkspacesRoot": {
+          "type": "string",
+          "maxLength": 1000
+        },
         "theme": {
           "enum": [
             "violet",
@@ -16757,7 +17291,7 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "company": {
+            "library": {
               "type": "object",
               "additionalProperties": false,
               "properties": {
@@ -16853,31 +17387,10 @@
           },
           "description": "Partial per-view changes; omitted views and fields are retained"
         },
-        "zoomSensitivity": {
-          "type": "number",
-          "minimum": 0.25,
-          "maximum": 8
-        },
-        "panSensitivity": {
-          "type": "number",
-          "minimum": 0.25,
-          "maximum": 4
-        },
         "sidebarWidth": {
           "type": "number",
           "minimum": 56,
           "maximum": 96
-        },
-        "boardMaxColumns": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 6
-        },
-        "snapEmployees": {
-          "type": "boolean"
-        },
-        "showTeamOverview": {
-          "type": "boolean"
         },
         "pageZoom": {
           "type": "number",
@@ -16934,8 +17447,8 @@
   },
   {
     "name": "view.open",
-    "args": "home|messages|plan|team|employee|workspace|conversation|initialization|plugin|settings [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--team-tab engineering|research|characters|board|workers] [--mission-tab plan]",
-    "summary": "Open a form, workspace, news channel or employee conversation",
+    "args": "library|messages|plan|employee|conversation|initialization|plugin|settings [--section overview|files|search|reader|hosts] [--host-id ID] [--query TEXT] [--name NAME] [--employee ID | --chat GROUP_ID | --channel CHANNEL_ID] [--source SOURCE_ID] [--plugin ID] [--plan-view ID] [--mission-tab plan]",
+    "summary": "Open Library sections, a form, news channel, group chat or employee conversation",
     "gui": "打开资料或会话",
     "readOnly": false,
     "permission": "operator",
@@ -16980,17 +17493,17 @@
   {
     "name": "session.list",
     "args": "[--live] [--summary]",
-    "summary": "List stored cards (or live sessions with --live)",
-    "gui": "The company floor",
+    "summary": "List stored employee cards (or live sessions with --live)",
+    "gui": "Employee directory",
     "readOnly": true,
     "permission": "employee.read",
     "target": "session-or-employee"
   },
   {
     "name": "session.new",
-    "args": "[--engine claude|codex|cline|pi|opencode|kilo|deepseek|antigravity] [--group NAME] [--model M]",
+    "args": "[--engine claude|codex|cline|pi|opencode|kilo|deepseek|antigravity] [--folder-name NAME] [--model M]",
     "summary": "Create a session",
-    "gui": "“+ Hire employee”",
+    "gui": "创建员工",
     "readOnly": false,
     "permission": "operator",
     "target": "session-or-employee"
@@ -17008,14 +17521,14 @@
     "name": "session.open",
     "args": "<cardId>",
     "summary": "Open a stored card (resumes its engine context)",
-    "gui": "Clicking a card",
+    "gui": "Clicking an employee",
     "readOnly": false,
     "permission": "employee.message",
     "target": "session-or-employee"
   },
   {
     "name": "session.send",
-    "args": "<id> <text> | --employee ID --text TEXT [--source-view company|messages|plan] [--view VIEW_ID] [--client-message-id ID] [--images JSON] [--files JSON] [--reply-to MESSAGE_ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only]",
+    "args": "<id> <text> | --employee ID --text TEXT [--source-view messages|plan] [--client-message-id ID] [--images JSON] [--files JSON] [--reply-to MESSAGE_ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only]",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -17041,17 +17554,14 @@
             "type": "string"
           }
         },
-        "viewId": {
-          "type": "string"
-        },
         "sourceView": {
           "type": "string",
           "enum": [
-            "company",
+            "library",
             "messages",
             "plan"
           ],
-          "description": "Sender-declared origin for this input. company or omitted: native Team reply, without private/group tags. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Not an execution target or permission. Preserve on unchanged retries."
+          "description": "Sender-declared origin for this input. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Omitted: native Agent conversation reply, without private/group tags. Not an execution target or permission. Preserve on unchanged retries."
         },
         "clientMessageId": {
           "type": "string",
@@ -17131,7 +17641,7 @@
     "name": "host.terminal-open",
     "args": "<id> [--directory PATH --cols N --rows N]",
     "summary": "Open a persistent SSH PTY without an employee",
-    "gui": "Cloud Hosts 工作台",
+    "gui": "Library 云主机工作台",
     "readOnly": false,
     "permission": "operator",
     "target": "request"
@@ -17140,7 +17650,7 @@
     "name": "host.terminal-list",
     "args": "<id>",
     "summary": "List host PTYs",
-    "gui": "Cloud Hosts 工作台",
+    "gui": "Library 云主机工作台",
     "readOnly": true,
     "permission": "operator",
     "target": "request"
@@ -17149,7 +17659,7 @@
     "name": "host.terminal-read",
     "args": "<id> --terminal ID [--cursor N --wait-ms N]",
     "summary": "Read incremental host PTY output, optionally waiting up to 15000ms for new data",
-    "gui": "Cloud Hosts 工作台",
+    "gui": "Library 云主机工作台",
     "readOnly": true,
     "permission": "operator",
     "target": "request"
@@ -17158,7 +17668,7 @@
     "name": "host.terminal-input",
     "args": "<id> --terminal ID --data TEXT|--file FILE [--enter]",
     "summary": "Send host PTY input and control keys",
-    "gui": "Cloud Hosts 工作台",
+    "gui": "Library 云主机工作台",
     "readOnly": false,
     "permission": "operator",
     "target": "request"
@@ -17167,7 +17677,7 @@
     "name": "host.terminal-resize",
     "args": "<id> --terminal ID --cols N --rows N",
     "summary": "Resize a host PTY",
-    "gui": "Cloud Hosts 工作台",
+    "gui": "Library 云主机工作台",
     "readOnly": false,
     "permission": "operator",
     "target": "request"
@@ -17176,7 +17686,7 @@
     "name": "host.terminal-close",
     "args": "<id> --terminal ID",
     "summary": "Close a host PTY",
-    "gui": "Cloud Hosts 工作台",
+    "gui": "Library 云主机工作台",
     "readOnly": false,
     "permission": "operator",
     "target": "request"
@@ -17194,7 +17704,7 @@
     "name": "host.list",
     "args": "[--os linux|macos|windows] [--distribution ubuntu|kali|ID] [--summary] [--credentials]",
     "summary": "Discover the shared host registry; credentials optionally includes passwords and SSH files for authorized Manager/Governor hosts; no SSH probes",
-    "gui": "Cloud Hosts 插件",
+    "gui": "Library 云主机工作台",
     "readOnly": true,
     "permission": "topology",
     "target": "request"
@@ -17202,8 +17712,8 @@
   {
     "name": "host.get",
     "args": "<id>",
-    "summary": "Read a cloud host connection record; Governor all hosts, Manager its Team host",
-    "gui": "Cloud Hosts 插件",
+    "summary": "Read a cloud host connection record",
+    "gui": "Library 云主机工作台",
     "readOnly": true,
     "permission": "host.read",
     "target": "request"
@@ -17212,7 +17722,7 @@
     "name": "host.create",
     "args": "--data @host.json",
     "summary": "Create a cloud host in the shared registry",
-    "gui": "Cloud Hosts 插件",
+    "gui": "Library 云主机工作台",
     "readOnly": false,
     "permission": "operator",
     "target": "request"
@@ -17221,7 +17731,7 @@
     "name": "host.update",
     "args": "<id> --data @patch.json",
     "summary": "Edit host connection and credentials",
-    "gui": "Cloud Hosts 插件",
+    "gui": "Library 云主机工作台",
     "readOnly": false,
     "permission": "operator",
     "target": "request"
@@ -17230,7 +17740,7 @@
     "name": "host.remove",
     "args": "<id>",
     "summary": "Remove an unbound cloud host",
-    "gui": "Cloud Hosts 插件",
+    "gui": "Library 云主机工作台",
     "readOnly": false,
     "permission": "operator",
     "target": "request"
@@ -17238,8 +17748,8 @@
   {
     "name": "host.check",
     "args": "<id>",
-    "summary": "Check SSH connectivity without requiring a Team working directory",
-    "gui": "Cloud Hosts 插件与 Team 连接灯",
+    "summary": "Check SSH connectivity for a registered cloud host",
+    "gui": "Library 云主机工作台与连接灯",
     "readOnly": false,
     "permission": "operator",
     "target": "request"
@@ -17248,7 +17758,7 @@
     "name": "host.directories",
     "args": "<id> [--path PATH]",
     "summary": "Browse existing directories on a registered cloud host",
-    "gui": "Cloud Hosts 插件",
+    "gui": "Library 云主机工作台",
     "readOnly": true,
     "permission": "operator",
     "target": "request"
@@ -17257,15 +17767,15 @@
     "name": "host.credentials",
     "args": "<id>",
     "summary": "Read authorized host password and registered private key, known_hosts and SSH config contents",
-    "gui": "Cloud Hosts 插件",
+    "gui": "Library 云主机工作台",
     "readOnly": false,
     "permission": "host.read",
     "target": "request"
   },
   {
     "name": "engine.remote-check",
-    "args": "--team NAME --engine codex|claude [--directory PATH]",
-    "summary": "Check a Cloud Team native CLI, protocol, authentication and workspace before hiring",
+    "args": "--host-id ID --engine codex|claude [--directory PATH]",
+    "summary": "Check a Cloud Host native CLI, protocol, authentication and workspace before hiring",
     "gui": "Cloud Native Worker 创建前检查",
     "readOnly": false,
     "permission": "operator",
@@ -17273,8 +17783,8 @@
   },
   {
     "name": "engine.remote-sessions",
-    "args": "--team NAME --engine codex|claude",
-    "summary": "List native sessions on the selected Cloud Team host",
+    "args": "--host-id ID --engine codex|claude",
+    "summary": "List native sessions on the selected Cloud Host",
     "gui": "绑定已有云端会话",
     "readOnly": false,
     "permission": "operator",
@@ -17608,7 +18118,7 @@
   },
   {
     "name": "session.steer",
-    "args": "<id> <text> [--source-view company|messages|plan]",
+    "args": "<id> <text> [--source-view messages|plan]",
     "summary": "Append instructions to the active native turn with optional per-message presentation context",
     "gui": "运行中追加",
     "inputSchema": {
@@ -17626,11 +18136,11 @@
         "sourceView": {
           "type": "string",
           "enum": [
-            "company",
+            "library",
             "messages",
             "plan"
           ],
-          "description": "Sender-declared origin for this input. company or omitted: native Team reply, without private/group tags. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Not an execution target or permission. Preserve on unchanged retries."
+          "description": "Sender-declared origin for this input. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Omitted: native Agent conversation reply, without private/group tags. Not an execution target or permission. Preserve on unchanged retries."
         }
       },
       "anyOf": [
@@ -17679,7 +18189,7 @@
   },
   {
     "name": "session.enqueue",
-    "args": "<id> <text> | --employee ID --text TEXT [--source-view company|messages|plan] [--view VIEW_ID] [--client-message-id ID] [--images JSON] [--files JSON] [--reply-to MESSAGE_ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only]",
+    "args": "<id> <text> | --employee ID --text TEXT [--source-view messages|plan] [--client-message-id ID] [--images JSON] [--files JSON] [--reply-to MESSAGE_ID] [--reply-quote JSON] [--reply-conversation REF] [--reply-text-only]",
     "inputSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -17705,17 +18215,14 @@
             "type": "string"
           }
         },
-        "viewId": {
-          "type": "string"
-        },
         "sourceView": {
           "type": "string",
           "enum": [
-            "company",
+            "library",
             "messages",
             "plan"
           ],
-          "description": "Sender-declared origin for this input. company or omitted: native Team reply, without private/group tags. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Not an execution target or permission. Preserve on unchanged retries."
+          "description": "Sender-declared origin for this input. messages: tagged private input, reply via direct.post. plan: native task result unless publication is requested. Omitted: native Agent conversation reply, without private/group tags. Not an execution target or permission. Preserve on unchanged retries."
         },
         "clientMessageId": {
           "type": "string",
@@ -17846,171 +18353,10 @@
     "target": "request"
   },
   {
-    "name": "group.list",
-    "args": "",
-    "summary": "List departments",
-    "gui": "Department headings",
-    "readOnly": true,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "team-view.list",
-    "args": "",
-    "summary": "List All Team and saved Team views with the active selection",
-    "gui": "顶部视图标签",
-    "readOnly": true,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "team-view.create",
-    "args": "--name NAME [--teams @teams.json --select true|false]",
-    "summary": "Create a named view of existing Teams; select defaults to true. Background orchestration uses select=false without changing the current client destination.",
-    "gui": "＋ 添加视图",
-    "inputSchema": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "teams": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "select": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "name"
-      ]
-    },
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "team-view.update",
-    "args": "ID --patch @patch.json",
-    "summary": "Rename, reorder, or change Team membership of a custom view",
-    "gui": "编辑或拖动视图",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "team-view.remove",
-    "args": "ID",
-    "summary": "Delete a custom view without deleting Teams",
-    "gui": "删除视图",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "team-view.select",
-    "args": "all|ID",
-    "summary": "Select a saved Team view and its canvas viewport",
-    "gui": "切换视图",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "group.add",
-    "args": "<name> [--mode build|cloud] [--host-id ID] [--directory-mode default|bind] [--folder-name NAME --parent-directory PATH] [--remote-dir PATH] [--os linux|macos|windows] [--distribution ID] [--design JSON --client-request-id ID]",
-    "summary": "Create a local/cloud project with a folder name independent of the display name. Create under parent-directory (remote-dir is also a cloud parent) or bind an existing folder. Fixed seats, caller-bound retries and host OS assertions remain.",
-    "gui": "“+ Department”",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "group.configure",
-    "args": "<name> --mode build|cloud [--host-id ID --remote-dir PATH]",
-    "summary": "Configure an unbound local/cloud Team; no new plugin binding. Existing legacy plugin folders remain compatible.",
-    "gui": "创建 Team 时配置工作方式",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "group.remove",
-    "args": "<name> [name ...] [--delete-workspace]",
-    "summary": "Delete selected Teams and all their employees; optionally delete their employee folders after one batch preflight",
-    "gui": "侧栏编辑 · 多选团队 · 一次确认删除",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "room.place",
-    "args": "<name> --column N --row N [--expected-placement JSON] | --slot N (legacy)",
-    "summary": "Move a Team on the employee-seat grid. Whole signed columns/rows; colliding Teams yield atomically. Legacy slots remain compatible.",
-    "gui": "按工位网格移动 Team",
-    "inputSchema": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "column": {
-          "type": "integer"
-        },
-        "row": {
-          "type": "integer"
-        },
-        "expectedPlacement": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "column": {
-              "type": "integer"
-            },
-            "row": {
-              "type": "integer"
-            }
-          },
-          "required": [
-            "column",
-            "row"
-          ]
-        },
-        "slot": {
-          "type": "integer",
-          "minimum": 1
-        }
-      },
-      "required": [
-        "name"
-      ]
-    },
-    "readOnly": false,
-    "permission": "layout.write",
-    "target": "request"
-  },
-  {
     "name": "card.rename",
     "args": "<cardId> <title>",
     "summary": "Rename an employee without moving its working folder",
     "gui": "员工资料中的名字",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "session-or-employee"
-  },
-  {
-    "name": "card.move",
-    "args": "<cardId> <same-group> [--before id]",
-    "summary": "Reorder within the existing Team; group and directory are fixed",
-    "gui": "同 Team 内排序",
     "readOnly": false,
     "permission": "operator",
     "target": "session-or-employee"
@@ -18026,7 +18372,7 @@
   },
   {
     "name": "card.clone",
-    "args": "<id> --title NAME [--directory-mode default|bind] [--cwd PATH]",
+    "args": "<id> --title NAME [--folder-name NAME] [--directory-mode default|bind] [--cwd PATH]",
     "summary": "Clone an employee with an independent native conversation",
     "gui": "克隆员工",
     "readOnly": false,
@@ -18044,8 +18390,8 @@
   },
   {
     "name": "card.create",
-    "args": "--title NAME [--group TEAM] [--character NAME --avatar-style anime|chibi | --avatar ID] [--profession TEXT] [--management-role employee|manager|governor|secretary] [--kind worker|cloud-native-worker] [--work-environment team|local] [--engine E] [--model ID] [--thinking on|off] [--effort LEVEL] [--client-request-id ID]",
-    "summary": "Create an employee: title=name, character/avatar=appearance, managementRole=rank, profession=duties; discover appearances with avatar.list and verify via session.status",
+    "args": "--title NAME [--folder-name NAME] [--directory-mode default|bind] [--cwd PATH] [--host-id ID --remote-dir PATH] [--character NAME --avatar-style anime|chibi | --avatar ID] [--profession TEXT] [--management-role employee|manager|governor|secretary] [--kind worker|cloud-native-worker] [--engine E] [--model ID] [--thinking on|off] [--effort LEVEL] [--client-request-id ID]",
+    "summary": "Create an employee in Message view under the centralized local workspaces root or a selected Cloud Host; discover appearances with avatar.list and verify via session.status",
     "gui": "添加员工",
     "inputSchema": {
       "type": "object",
@@ -18055,11 +18401,29 @@
       "properties": {
         "title": {
           "type": "string",
-          "description": "Employee display name only; does not select appearance"
+          "description": "Employee display name; defaults the workspace folder name unless --folder-name/--cwd is set"
         },
-        "group": {
+        "folderName": {
           "type": "string",
-          "description": "Existing Team; Manager defaults to own Team and cannot hire elsewhere"
+          "description": "Optional subfolder name under the centralized employee workspaces root"
+        },
+        "directoryMode": {
+          "type": "string",
+          "enum": [
+            "default",
+            "bind"
+          ]
+        },
+        "cwd": {
+          "type": "string"
+        },
+        "hostId": {
+          "type": "string",
+          "description": "Registered cloud host ID when creating a cloud-native-worker"
+        },
+        "remoteDir": {
+          "type": "string",
+          "description": "Remote working directory or parent directory on the selected cloud host"
         },
         "character": {
           "type": "string",
@@ -18085,20 +18449,13 @@
             "governor",
             "secretary"
           ],
-          "description": "Manager creates own-Team employees; Governor creates employees/managers; Secretary also creates Governors and administers the app; only user creates Secretaries"
+          "description": "Manager creates employees; Governor creates employees/managers; Secretary also creates Governors and administers the app; only user creates Secretaries"
         },
         "kind": {
           "type": "string",
           "enum": [
             "worker",
             "cloud-native-worker"
-          ]
-        },
-        "workEnvironment": {
-          "type": "string",
-          "enum": [
-            "team",
-            "local"
           ]
         },
         "engine": {
@@ -18127,16 +18484,6 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 160
-        },
-        "cwd": {
-          "type": "string"
-        },
-        "directoryMode": {
-          "type": "string",
-          "enum": [
-            "default",
-            "bind"
-          ]
         }
       }
     },
@@ -18147,7 +18494,7 @@
   {
     "name": "card.avatar",
     "args": "<employee-id> [--avatar ID | --character NAME --avatar-style anime|chibi]",
-    "summary": "Set a controlled employee appearance and palette; omit appearance for a random enabled character. Manager own Team, Governor across Teams; discover live choices with avatar.list",
+    "summary": "Set a controlled employee appearance and palette; omit appearance for a random enabled character; discover live choices with avatar.list",
     "gui": "员工人物形象",
     "inputSchema": {
       "type": "object",
@@ -18177,7 +18524,7 @@
   {
     "name": "card.update",
     "args": "<cardId> [--title NAME] [--avatar ID | --character NAME --avatar-style STYLE] [--profession TEXT]",
-    "summary": "Edit employee profile with {id,patch:{...}}; profession is the displayed specialty, not managementRole. Supervisors use card.avatar for appearance; Team and folder stay fixed.",
+    "summary": "Edit employee profile with {id,patch:{...}}; profession is the displayed specialty, not managementRole. Supervisors use card.avatar for appearance; workspace directory and engine stay fixed.",
     "gui": "员工资料",
     "inputSchema": {
       "type": "object",
@@ -18222,7 +18569,7 @@
             }
           },
           "additionalProperties": true,
-          "description": "Nest profile fields here. Existing legacy forms may include unchanged binding fields, but Team/folder/engine cannot change. A patch with no editable fields is rejected."
+          "description": "Nest profile fields here. Existing legacy forms may include unchanged binding fields, but workspace/folder/engine cannot change. A patch with no editable fields is rejected."
         }
       },
       "required": [
@@ -18235,161 +18582,10 @@
     "target": "session-or-employee"
   },
   {
-    "name": "group.rename",
-    "args": "<name> <newName>",
-    "summary": "Rename a Team without renaming or moving its workspace folder",
-    "gui": "Team 名称",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "room.design",
-    "args": "<name> [--theme sage] [--wall windows] [--desk oak]",
-    "summary": "Replace room surfaces and furnishings",
-    "gui": "空间设计",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "group.migrate",
-    "args": "<name>",
-    "summary": "Move a legacy Team into its managed directory, preserving files",
-    "gui": "修复旧工作目录",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "group.root",
-    "args": "<name> <absolute-folder>",
-    "summary": "Bind a legacy unbound Team; an existing Team root cannot be changed",
-    "gui": "创建 Team 时选择文件夹",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "room.bounds",
-    "args": "<name> [--columns N] [--rows N]",
-    "summary": "Resize a rectangular Team by whole seat columns and rows. Occupied edge seats cannot be cut off.",
-    "gui": "拖动右边、下边或右下角调整座位网格",
-    "inputSchema": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "columns": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 12
-        },
-        "rows": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 50
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "anyOf": [
-        {
-          "required": [
-            "columns"
-          ]
-        },
-        {
-          "required": [
-            "rows"
-          ]
-        }
-      ]
-    },
-    "readOnly": false,
-    "permission": "layout.write",
-    "target": "request"
-  },
-  {
-    "name": "room.layout",
-    "args": "<name>",
-    "summary": "Computed bounds and full-size employee positions",
-    "gui": "Team 画布布局",
-    "readOnly": true,
-    "permission": "layout.read",
-    "target": "request"
-  },
-  {
-    "name": "card.place",
-    "args": "<id> --seat N [--expected-seating JSON]",
-    "summary": "Move to a numbered Team seat; occupied seats swap atomically. Read room.layout for available seats.",
-    "gui": "选择座位或拖到规范座位",
-    "inputSchema": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "seat": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "One-based seat from room.layout; occupied seats swap."
-        },
-        "expectedSeating": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "columns": {
-              "type": "integer"
-            },
-            "rows": {
-              "type": "integer"
-            }
-          },
-          "required": [
-            "columns",
-            "rows"
-          ]
-        }
-      },
-      "required": [
-        "id",
-        "seat"
-      ]
-    },
-    "readOnly": false,
-    "permission": "layout.write",
-    "target": "session-or-employee"
-  },
-  {
-    "name": "canvas.view",
-    "args": "[--view VIEW_ID]",
-    "summary": "Read viewport position and zoom",
-    "gui": "画布视野",
-    "readOnly": true,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
-    "name": "canvas.set",
-    "args": "--x N --y N --zoom N [--view VIEW_ID]",
-    "summary": "Retired: Characters has fixed scale and finite scrolling.",
-    "gui": "固定比例角色视图",
-    "readOnly": false,
-    "permission": "operator",
-    "target": "request"
-  },
-  {
     "name": "plugin.list",
     "args": "",
     "summary": "List installed software plugins",
-    "gui": "Team 工作空间插件",
+    "gui": "软件插件",
     "readOnly": true,
     "permission": "plugin",
     "target": "request"
@@ -18541,7 +18737,7 @@
   },
   {
     "name": "plugin.call",
-    "args": "<id> <method> --team NAME [--params JSON] [--raw]",
+    "args": "<id> <method> [--params JSON] [--raw]",
     "summary": "Invoke the shared plugin runtime; raw preserves the JSON-RPC error/result envelope",
     "gui": "插件中的操作",
     "readOnly": false,
@@ -18550,7 +18746,7 @@
   },
   {
     "name": "plugin.open",
-    "args": "<id> [--workspace PATH|--team NAME|--employee ID]",
+    "args": "<id> [--workspace PATH|--employee ID]",
     "summary": "Open or focus an independent plugin window",
     "gui": "独立插件窗口",
     "readOnly": false,
@@ -18595,7 +18791,7 @@
   },
   {
     "name": "plugin.view",
-    "args": "<id> [--workspace PATH|--team NAME|--employee ID]",
+    "args": "<id> [--workspace PATH|--employee ID]",
     "summary": "Open a plugin view in its managed root or selected scope",
     "gui": "插件工作空间",
     "readOnly": false,
@@ -18613,7 +18809,7 @@
   },
   {
     "name": "workspace.docs",
-    "args": "--team NAME | --employee ID",
+    "args": "--employee ID",
     "summary": "Prepare shared documentation and authorized CLI entry points without copying handbooks into the workspace",
     "gui": "自动准备 Agent 文档",
     "readOnly": false,
@@ -18622,8 +18818,8 @@
   },
   {
     "name": "workspace.suggest",
-    "args": "--team NAME [--work-environment team|local]",
-    "summary": "Suggest an external workspace directory without changing files",
+    "args": "[--title NAME] [--folder-name NAME] [--host-id ID --remote-dir PATH]",
+    "summary": "Suggest an external centralized local or cloud workspace directory without changing files",
     "gui": "默认工作目录",
     "readOnly": true,
     "permission": "operator",
@@ -18640,7 +18836,7 @@
   },
   {
     "name": "remote.check",
-    "args": "--team NAME | --employee ID | --remote-host HOST --remote-dir PATH",
+    "args": "--employee ID | --host-id ID [--remote-dir PATH] | --remote-host HOST --remote-dir PATH",
     "summary": "Check SSH and the target working directory; return remote OS details",
     "gui": "云端工作目录诊断",
     "readOnly": false,
@@ -18733,15 +18929,7 @@
             "shared": {
               "type": "boolean"
             },
-            "team": {
-              "type": "string",
-              "minLength": 1
-            },
             "employee": {
-              "type": "string",
-              "minLength": 1
-            },
-            "group": {
               "type": "string",
               "minLength": 1
             },
@@ -18768,7 +18956,7 @@
   },
   {
     "name": "workspace.list",
-    "args": "[path] [--shared|--team NAME|--employee ID]",
+    "args": "[path] [--shared|--employee ID]",
     "summary": "List real workspace files",
     "gui": "文件目录",
     "readOnly": true,
@@ -18777,7 +18965,7 @@
   },
   {
     "name": "workspace.image",
-    "args": "<path> [--shared|--team NAME|--employee ID]",
+    "args": "<path> [--shared|--employee ID]",
     "summary": "Read a scoped image for preview or model input",
     "gui": "图片预览和附件",
     "readOnly": true,
@@ -18786,7 +18974,7 @@
   },
   {
     "name": "workspace.read",
-    "args": "<path> [--shared|--team NAME|--employee ID]",
+    "args": "<path> [--shared|--employee ID]",
     "summary": "Read a workspace file",
     "gui": "文件预览",
     "readOnly": true,
@@ -18795,7 +18983,7 @@
   },
   {
     "name": "workspace.write",
-    "args": "<path> [--shared|--team NAME|--employee ID] --content TEXT|--base64-file IMAGE_B64 [--hash HASH]",
+    "args": "<path> [--shared|--employee ID] --content TEXT|--base64-file IMAGE_B64 [--hash HASH]",
     "summary": "Save text or a PNG/JPEG/GIF/WebP image in a workspace",
     "gui": "保存文件或粘贴截图",
     "readOnly": false,
@@ -18804,7 +18992,7 @@
   },
   {
     "name": "workspace.mkdir",
-    "args": "<path> [--shared|--team NAME|--employee ID]",
+    "args": "<path> [--shared|--employee ID]",
     "summary": "Create a folder",
     "gui": "新建文件夹",
     "readOnly": false,
@@ -18813,7 +19001,7 @@
   },
   {
     "name": "workspace.move",
-    "args": "<path> --to PATH [--shared|--team NAME|--employee ID]",
+    "args": "<path> --to PATH [--shared|--employee ID]",
     "summary": "Rename or move a file",
     "gui": "重命名文件",
     "readOnly": false,
@@ -18822,7 +19010,7 @@
   },
   {
     "name": "workspace.trash",
-    "args": "<path> [--shared|--team NAME|--employee ID]",
+    "args": "<path> [--shared|--employee ID]",
     "summary": "Move a file to recoverable workspace trash",
     "gui": "移到回收站",
     "readOnly": false,
@@ -18831,7 +19019,7 @@
   },
   {
     "name": "workspace.restore",
-    "args": "--id ID [--shared|--team NAME|--employee ID]",
+    "args": "--id ID [--shared|--employee ID]",
     "summary": "Restore a trashed file",
     "gui": "撤销删除",
     "readOnly": false,
@@ -18841,7 +19029,7 @@
   {
     "name": "ui.view",
     "args": "",
-    "summary": "Which view is showing (home or a session)",
+    "summary": "Which view is showing (messages, plan, or a session)",
     "gui": "The screen itself",
     "readOnly": false,
     "permission": "operator",
@@ -18904,7 +19092,7 @@
   {
     "name": "ui.screenshot",
     "args": "<path> [--privacy]",
-    "summary": "Capture a fresh desktop frame; privacy hides Team paths, activity bubbles and dimensions only during export",
+    "summary": "Capture a fresh desktop frame; privacy hides workspace paths and activity bubbles only during export",
     "gui": "Rendered interface",
     "readOnly": false,
     "permission": "operator",

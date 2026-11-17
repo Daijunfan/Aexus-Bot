@@ -29,6 +29,7 @@ function copy(relative){
 run(process.execPath,['scripts/release-check.mjs',...(development?['--technical']:[])])
 if(skipBuild&&/require\(["']\.\/chunks\//.test(fs.readFileSync(path.join(root,'out/main/daemon.js'),'utf8')))throw Error('--skip-build requires the standalone Node build; run build:server first, not only the Electron build')
 if(!skipBuild){
+  run(process.execPath,['scripts/build-library-reader.mjs'])
   run(process.execPath,['scripts/build-plugins.mjs','--release'])
   run(process.execPath,['scripts/build-server.mjs'])
   run('npx',['--no-install','vite','build','--config','vite.web.config.ts'])
@@ -42,7 +43,7 @@ for(const plugin of plugins){
 }
 fs.mkdirSync(output,{recursive:true})
 fs.rmSync(stage,{recursive:true,force:true});fs.mkdirSync(stage,{recursive:true})
-for(const relative of ['out/main/daemon.js','out/main/message-index-worker.js','out/renderer','bin','build/plugins','Modules/Tunnel','docs','licenses',
+for(const relative of ['out/main/daemon.js','out/main/message-index-worker.js','out/renderer','resources/library-reader','bin','build/plugins','Modules/Tunnel','docs','licenses',
   'README.md','API.md','PERMISSIONS.md','ARCHITECTURE.md','ENGINE_CAPABILITIES.md','PLAN.md','SCHEDULER.md','PLUGIN_SPEC.md','CHANGELOG.md',
   'SECURITY.md','LICENSING.md','LICENSE','NOTICE','THIRD_PARTY_NOTICES.md','engine-downloads.json','plugins.lock.json','package-lock.json'])copy(relative)
 // Keep the exact dependency manifest/lock; only scripts and the runtime entry differ.
@@ -60,7 +61,7 @@ fs.writeFileSync(path.join(stage,'RUN_SERVER.txt'),[
   'Start: node bin/agents serve --web --port 5151',
   'In another terminal: node bin/agents web token',
   'Open http://127.0.0.1:5151; use HTTPS or SSH forwarding for another computer.',
-  'All three plugins are included. Workspaces default to the configured Core data directory.',
+  'Built-in Study Reader and Cloud Hosts live inside Library; Mission Notebook lives inside Mission. Workspaces default to the configured Core data directory.',
   'No credentials, browser profiles, running tasks or user workspaces are included.',
   development?'PRIVATE CANDIDATE: redistribution reviews remain pending; do not publish.':'See LICENSING.md for the distribution licenses.',
   'Complete matching sources: use the source archive produced from the same checkout.'

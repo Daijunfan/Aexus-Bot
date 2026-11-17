@@ -132,7 +132,7 @@ for (const command of rendererCommands) {
   ok(cliCommands.has(command) && serverCommands.has(command), `frontend API call → ${command}`)
 }
 
-const requiredBusiness=['group.add','group.configure','card.create','card.update','session.open','session.send','session.transcript','session.interrupt','config.engine','config.model','config.permission','config.thinking','config.effort','plugin.call','workspace.write','terminal.input','schedule.create','schedule.run','schedule.cancel','schedule.history','schedule.preview','schedule.schema']
+const requiredBusiness=['notebook.call','notebook.access','notebook.resources','card.create','card.update','session.open','session.send','session.transcript','session.interrupt','config.engine','config.model','config.permission','config.thinking','config.effort','plugin.call','workspace.write','terminal.input','schedule.create','schedule.run','schedule.cancel','schedule.history','schedule.preview','schedule.schema']
 for(const command of requiredBusiness)ok(cliCommands.has(command)&&declared.has(command)&&serverCommands.has(command),`CLI-first business contract → ${command}`)
 
 // ---- the GUI controls that must have an equivalent ----

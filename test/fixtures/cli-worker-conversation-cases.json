@@ -468,8 +468,6 @@
       "create",
       "--engine",
       "codex",
-      "--team",
-      "Studio",
       "--cwd",
       "/tmp/project",
       "--title",
@@ -481,7 +479,6 @@
       "cmd": "worker.create",
       "args": {
         "engine": "codex",
-        "team": "Studio",
         "cwd": "/tmp/project",
         "title": "Clean member",
         "clientRequestId": "member-attempt"

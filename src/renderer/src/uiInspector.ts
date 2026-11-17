@@ -21,20 +21,16 @@ function isVisible(el: Element): boolean {
 
 /** A structured description of the current screen. */
 function snapshot(): UiSnapshot {
-  const onHome = !document.querySelector('.conversation-dialog')
-  // A desk lives inside a room; the room's sign gives the department.
-  const cards = [...document.querySelectorAll('.employee[data-card-id]')].map((el) => {
-    const room = el.closest('.room')
-    const mark = el.querySelector('svg[aria-label]')?.getAttribute('aria-label') ?? ''
-    return {
-      title: textOf(el.querySelector('.employee-name')),
-      engine: el.getAttribute('data-engine') || mark.toLowerCase(),
-      group: el.getAttribute('data-group') || textOf(room ? room.querySelector('.room-sign h2') : null)
-    }
-  })
+  const inSession = !!document.querySelector('.conversation-dialog')
+  const inLibrary = !!document.querySelector('.library-view')
+  const inPlan = !!document.querySelector('.plan-view, .mission-view, .mission-workspace')
+  const cards = [...document.querySelectorAll('.message-contact[data-employee]')].map((el) => ({
+    title: textOf(el.querySelector('strong')),
+    engine: el.getAttribute('data-engine') || '',
+    id: el.getAttribute('data-employee') || ''
+  }))
 
   const counts: Record<string, number> = {
-    departments: document.querySelectorAll('.world-room').length,
     cards: cards.length,
     turns: document.querySelectorAll('.turn').length,
     toolCalls: document.querySelectorAll('.tool').length,
@@ -42,13 +38,12 @@ function snapshot(): UiSnapshot {
   }
 
   const base: UiSnapshot = {
-    view: onHome ? 'home' : 'session',
-    departments: [...document.querySelectorAll('.team-title strong')].map((n) => textOf(n)),
+    view: inSession ? 'session' : inLibrary ? 'library' : inPlan ? 'plan' : 'messages',
     cards,
     counts
   }
 
-  if (!onHome) {
+  if (inSession) {
     const toggle = document.querySelector('.toggle') as HTMLButtonElement | null
     base.session = {
       title: textOf(document.querySelector('.session-heading')),

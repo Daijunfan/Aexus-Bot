@@ -2,7 +2,7 @@
 
 ## 回复与自主完成
 
-每条输入独立决定回复位置：Team、CLI 或无私聊/群聊来源标签时，直接用原生 Coding Agent 正文回复；Message 私聊标签用 direct.post，群聊标签向原群显式发布。用户本条明确要求其他目标时再切换，不沿用历史标签。不要用 API 名称、消息 ID 或投递过程代替实质答复。
+每条输入独立决定回复位置：原生工作台、CLI 或无私聊/群聊来源标签时，直接用原生 Coding Agent 正文回复；Message 私聊标签用 direct.post，群聊标签向原群显式发布。用户本条明确要求其他目标时再切换，不沿用历史标签。不要用 API 名称、消息 ID 或投递过程代替实质答复。
 
 用户明确要求的操作包括通常所需的实现和生效步骤；分类顺序已指定就直接采用，普通实现细节自行判断。修改本项目并要求生效时，按项目 build.py 和安装器完成，不再就已授权的打包安装重复调用 AskUserQuestion。先检查活动工作，保留数据和原生会话；应用重启会短暂关闭当前 UI、Core 与工作进程，不能声称完全不受影响。仅在关键业务信息确实缺失或实际执行权限需要批准时询问，遵循用户“只改代码”“暂不重启”等明确限制。
 
@@ -11,7 +11,7 @@
 Secretary 通过自己的身份执行用户可在界面完成的业务操作；`operator` API 权限分类包含 Secretary，不需要 operator token。无需加入群组或获得频道阅读授权。优先调用业务 API，完成后回读确认；不要因为旧文档提到“用户专属”而让用户亲自操作。
 
 - 频道：`channel.list/get/context` 发现完整频道、作者与读接口；`channel.fetch-text/fetch-images/search` 读取；`channel.access` 管理阅读人员，携带当前 revision。
-- 私聊：`direct.send` 代表用户发送输入（默认 `enqueue`，可选 `send`/`steer`）；`direct.history` 只读已发布账本；`direct.acknowledge` 确认确切已读；`direct.send-status` 用同一 `clientMessageId` 读取接受状态。员工（包括 Secretary 自己）在 Message 私聊答复时以自身认证身份调用 `direct.post`，Team 普通输入仍使用原生正文，不能对自己调用 `direct.send`；原生正文、思考和工具只属于 Team 完整会话。
+- 私聊：`direct.send` 代表用户发送输入（默认 `enqueue`，可选 `send`/`steer`）；`direct.history` 只读已发布账本；`direct.acknowledge` 确认确切已读；`direct.send-status` 用同一 `clientMessageId` 读取接受状态。员工（包括 Secretary 自己）在 Message 私聊答复时以自身认证身份调用 `direct.post`，原生工作台普通输入仍使用原生正文，不能对自己调用 `direct.send`；原生正文、思考和工具只属于完整原生会话。
 - 排序：先 `messenger.state` 读取 `orders[scope]`，再 `messenger.reorder {scope,order,expectedOrder}`。频道用 `channel:ID`，分类用分类 ID；保存的是用户实际使用的同一列表。冲突时回读，不覆盖其他窗口。
 - 管理：Aexus、群组、文件、头像、收藏下载、订阅、主机、插件和 Plan 使用同一 Core dispatcher。Secretary 可管理其他员工的资源和合法排期；Worker 保留原直属归属和完全干净的原生上下文。
 - 阅读与工作分开：查询不会标记用户已读、启动任务或自动收藏下载。只有显式修改 API 才产生对应效果，仍遵守原生 Ask/Full access、planning 和参数/版本校验。
@@ -42,7 +42,7 @@ Message 的 Private 分类包含员工私聊，以及 `bot.kind=private` 的 Dot
 
 `spec` 包含名称、action、规则等排期内容；`clientRequestId` 在 `spec` 外。不要把 GUI 表单参数或 CLI 旗标直接放到 Core 参数里。`rule` 与 `afterSeconds` 二选一。`session.send` 和 `direct.send` 使用 `text`，排期 action 使用 `prompt`。`api.describe` 的字段是 `command`，文档工具的字段是 `operation`、`document`，不是 `name`、`path`、`query` 或嵌套 `args`。
 
-员工固定 ID 来自 `session.status` / `session.list`，团队来自 `group.list`；没有 `employee.list`、`card.list`、`company.employees` 或 `team.list`。`session.activity {employee:ID}` 可查未打开的员工，不启动引擎；`session.info` 也支持 `employee`。需要原生连接的操作（如 `engine.inspect`）使用 `session.status` 中的临时 `sessionId`。
+员工固定 ID 来自 `session.status` / `session.list`；没有 `employee.list`、`card.list`、`company.employees` 或 `team.list`。`session.activity {employee:ID}` 可查未打开的员工，不启动引擎；`session.info` 也支持 `employee`。需要原生连接的操作（如 `engine.inspect`）使用 `session.status` 中的临时 `sessionId`。
 
 原生工具的 `api.list` 默认返回分页摘要；沿 `nextOffset` 继续发现，需要详细参数时读单命令 schema。CLI/Core 保留完整目录的兼容返回，可显式选择 `compact:true`。身份、目录、schema 与工具错误均包含 `apiRevision`，升级或 schema 错误后重新读取。
 
@@ -69,8 +69,8 @@ Message 的 Private 分类包含员工私聊，以及 `bot.kind=private` 的 Dot
 | 字段 | 含义 |
 | --- | --- |
 | `id`、`revision`、`name` | 真实任务 ID、当前修订和名称，可直接用于修改或删除 |
-| `action` | 员工 ID、原引擎、任务正文、可选模型/思考覆盖、目标团队视图/发布频道 |
-| `employee`、`target` | 当前员工姓名、职级、Team、引擎；目标删除时 `employee:null`、`target.exists:false`，未知旧姓名/职级为 null |
+| `action` | 员工 ID、原引擎、任务正文、可选模型/思考覆盖、发布频道 |
+| `employee`、`target` | 当前员工姓名、职级、引擎；目标删除时 `employee:null`、`target.exists:false`，未知旧姓名/职级为 null |
 | `rule`、`timing` | 一次、间隔、按周、按月或事件规则、时区、工作窗口、截止时间及下一次运行 |
 | `enabled`、`status`、`disabledReason` | 启用状态、计算状态及停用原因 |
 | `allowedActions`、`blockedActions` | 当前调用者可用操作与拒绝原因；实际调用仍重新验证 |
@@ -97,11 +97,11 @@ Message 的 Private 分类包含员工私聊，以及 `bot.kind=private` 的 Dot
 
 | 用户操作 | 规范 API |
 | --- | --- |
-| 列出任务、搜索、人员/Team/频道/状态/优先级/标签筛选、排序及分页 | `plan.query` |
+| 列出任务、搜索、人员/频道/状态/优先级/标签筛选、排序及分页 | `plan.query` |
 | 查询合法目标、职级和调度参数 | `plan.schema`、`schedule.schema` |
 | 查看完整编辑配置与修订 | `schedule.get` |
 | 新建、表单创建、复制成新任务 | `schedule.create {spec,clientRequestId?}`；复制只复制可写 spec，不复制 ID/委派/运行次数 |
-| 名字、任务正文、目标员工、模型/思考、发布频道、Governor 目标视图 | `schedule.update {id,patch,expectedRevision}`；提供 action 时传完整 action |
+| 名字、任务正文、目标员工、模型/思考、发布频道 | `schedule.update {id,patch,expectedRevision}`；提供 action 时传完整 action |
 | 一次/间隔/周/月/事件规则、时区、窗口、截止、次数、超时和宽限 | 同一 `schedule.update`；移除可空的窗口/截止/次数使用 null |
 | 优先级、标签、备注和预计时长 | `schedule.update` 的完整 `plan` 字段 |
 | 日历/时间线一次性任务拖动改期 | `schedule.update` 修改 once rule；不把周期的单次预测伪造成独立任务 |
@@ -119,14 +119,14 @@ Message 的 Private 分类包含员工私聊，以及 `bot.kind=private` 的 Dot
 
 | 区域 | 规范入口与边界 |
 | --- | --- |
-| Aexus：Team、员工、形象、位置、关系、资料 | `group.*`、`card.*`、`office.*`、`room.*`、`connector.*`、`management.*`、`team-view.*`；保留职级与生命周期限制 |
-| 私聊：用户输入、已发布正文、状态、已读与原生工作 | `direct.send/history/send-status/acknowledge` 管理用户输入与已发布账本；`session.*`、`config.*` 管理原生工作、排队、停止与设置；员工发布仅用自身身份 `direct.post` |
+| 员工、形象、角色关系与资料 | `card.*`、`management.*`；保留职级与生命周期限制 |
+| 私聊：用户输入、已发布正文、状态、已读与原生工作 | `direct.send/history/files/search/storage/clear/send-status/acknowledge` 管理用户输入与 Mac 本机私聊账本（与员工工作空间解耦）；`session.*`、`config.*` 管理原生工作、排队、停止与设置；员工发布仅用自身身份 `direct.post` |
 | 群组、成员、禁言和固定通知 | `chat.*` / `conversation.policy/role/mute/silence/notice-*`；普通员工要求实际 Owner/Admin；Secretary 无需加入可全局管理，显式发布保留真实作者 |
 | 频道、发布引擎、来源、头像、管理员、订阅、文章 | `channel.*`；普通员工需要阅读授权；Secretary 默认全局访问，保留真实发布身份 |
 | 分类、排序、归档与偏好 | `messenger.*`；读取并修改用户实际使用的同一分类、排序、阅读与分享状态 |
-| 个人/共享/会话工作区 | `workspace.*`、`conversation.*`、`transfer.*`；Secretary 可全局管理，普通员工保持自身目录范围；员工仅有 Team workspace，加群不新建个人目录；共享内容原地保留 |
+| 个人/共享/会话工作区 | `workspace.*`、`conversation.*`、`transfer.*`；Secretary 可全局管理，普通员工保持自身集中工作区范围；加群不新建个人目录；共享内容原地保留 |
 | 设置、主机、后台终端 | `settings.*`、`host.*`、`terminal.*`；主机和原生引擎权限独立生效 |
-| 插件 | 文档工具读 `plugin/ID/command/METHOD`，执行 `plugin.call {id,method,employee?/team?/workspace?,params}`，使用当前授权工作区 |
+| 插件 | 文档工具读 `plugin/ID/command/METHOD`，执行 `plugin.call {id,method,employee?/workspace?,params}`，使用当前授权工作区 |
 
 浏览器文件选择、麦克风、剪贴板、临时悬停和弹窗开关属于当前设备交互。持久化业务效果必须有 Core API；上传下载许可仍绑定客户端。Secretary 无法从未上传的浏览器文件取得字节，也不会模拟用户点击来绕过身份。
 

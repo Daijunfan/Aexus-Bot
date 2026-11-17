@@ -1,13 +1,13 @@
 import type {ApiPermission} from './api-registry'
 
-/** Role authority is attached to an employee. Team membership only bounds a team-scoped role. */
-type RolePolicy={label:string;description:string;scope:'self'|'team'|'global';requiresLocal:boolean;userManaged:boolean;appAdministrator?:boolean;permissions:'all'|readonly ApiPermission[];controls:readonly string[];schedules:readonly string[];creates:readonly string[];removes:readonly string[];assigns:readonly string[]}
+/** Role authority is attached to an employee; directory paths and views do not grant permissions. */
+type RolePolicy={label:string;description:string;scope:'self'|'role'|'global';requiresLocal:boolean;userManaged:boolean;appAdministrator?:boolean;permissions:'all'|readonly ApiPermission[];controls:readonly string[];schedules:readonly string[];creates:readonly string[];removes:readonly string[];assigns:readonly string[]}
 const personal:ApiPermission[]=['worker','chat','identity','topology','employee.read','workspace','plugin','schedule']
 export const MANAGEMENT_ROLES={
   employee:{label:'Employee',description:'使用自己的工作空间与已授权工具，接收任务；不管理其他员工。',scope:'self',requiresLocal:false,userManaged:false,permissions:personal,controls:[],schedules:[],creates:[],removes:[],assigns:[]},
-  manager:{label:'Manager',description:'管理本 Team 的全部 Employee，可创建、派发任务和调整位置。',scope:'team',requiresLocal:false,userManaged:false,permissions:[...personal,'relation','host.read','employee.message','employee.configure','employee.create','employee.delete','layout.read','layout.write'],controls:['employee'],schedules:['employee'],creates:['employee'],removes:['employee'],assigns:[]},
-  governor:{label:'Governor',description:'跨 Team 管理团队和员工；Governor 的任免由用户或 Secretary 操作。',scope:'global',requiresLocal:false,userManaged:false,permissions:'all',controls:['employee','manager','governor'],schedules:['employee','manager'],creates:['employee','manager'],removes:['employee','manager'],assigns:['employee','manager']},
-  secretary:{label:'Secretary',description:'用户的软件执行助手，统一管理频道、排序、团队、主机、文件、插件与 Mission。',scope:'global',requiresLocal:true,userManaged:true,appAdministrator:true,permissions:'all',controls:['employee','manager','governor','secretary'],schedules:['employee','manager','governor','secretary'],creates:['employee','manager','governor'],removes:['employee','manager','governor'],assigns:['employee','manager','governor']}
+  manager:{label:'Manager',description:'管理全部普通 Employee，可创建和派发任务。',scope:'role',requiresLocal:false,userManaged:false,permissions:[...personal,'relation','host.read','employee.message','employee.configure','employee.create','employee.delete'],controls:['employee'],schedules:['employee'],creates:['employee'],removes:['employee'],assigns:[]},
+  governor:{label:'Governor',description:'管理全部 Employee 与 Manager；Governor 的任免由用户或 Secretary 操作。',scope:'global',requiresLocal:false,userManaged:false,permissions:'all',controls:['employee','manager','governor'],schedules:['employee','manager'],creates:['employee','manager'],removes:['employee','manager'],assigns:['employee','manager']},
+  secretary:{label:'Secretary',description:'用户的软件执行助手，统一管理频道、排序、主机、文件、插件与 Mission。',scope:'global',requiresLocal:true,userManaged:true,appAdministrator:true,permissions:'all',controls:['employee','manager','governor','secretary'],schedules:['employee','manager','governor','secretary'],creates:['employee','manager','governor'],removes:['employee','manager','governor'],assigns:['employee','manager','governor']}
 } as const satisfies Record<string,RolePolicy>
 export type ManagementRole=keyof typeof MANAGEMENT_ROLES
 export function isManagementRole(value:unknown):value is ManagementRole{return typeof value==='string'&&Object.hasOwn(MANAGEMENT_ROLES,value)}

@@ -17,11 +17,14 @@ The pinned source commit and SHA-256 are recorded in
 `src/renderer/src/assets/telegram-pattern-source.json`; the license is included
 in `licenses/telegram-web-a-GPL-3.0.txt`. The default light/dark palettes, twelve solid colors, pattern scale and the static gradient blending algorithm follow that client's wallpaper implementation. The renderer adapts `src/util/gradientBackground.ts` (GPL-3.0) to a fixed64px 2D canvas, without its animation loop. This does not imply Telegram endorsement.
 
-## MiniNotion
+## Mission Super-Notion Notebook
 
-MiniNotion source and notices are in `PlugIns/mini-notion/`. The plugin carries its
-own GPL-3.0-only LICENSE and THIRD_PARTY_NOTICES.md into its distributable package.
-It is built from source and loaded through the documented local plugin interface.
+The built-in Mission Super-Notion Notebook implementation resides in
+`src/shared/mission-notebook/`, `src/main/mission-notebook/`, and
+`src/renderer/src/mission-notebook/` under **GNU GPL v3** (`LICENSE`). Full notices for
+the BlockNote / multi-column editor and emoji unicode tables ship in `LICENSE`,
+`LICENSING.md`, `licenses/UNICODE-LICENSE.txt`, and
+`licenses/upstream/blocknote-0.54.2-source.tar.gz`.
 
 ## Scheduler time arithmetic
 
@@ -89,11 +92,11 @@ at `licenses/mxgraph-4.2.2-Apache-2.0.txt`. No mxGraph DOM runtime is required.
 
 ## Cloud Hosts interactive clients
 
-Cloud Hosts bundles unmodified noVNC 1.7.0 (MPL-2.0), xterm.js 6.0.0 and xterm FitAddon 0.11.0 (MIT). Their license texts are included in the plugin `licenses/` directory and legal notices accompany the generated bundle. noVNC source for this distribution is available at https://github.com/novnc/noVNC/tree/v1.7.0 and through the exact package version in `PlugIns/cloud-hosts/package-lock.json`. No native RDP client is redistributed; the plugin invokes a separately installed operating-system client.
+Library Cloud Hosts uses unmodified `@xterm/xterm` 6.0.0 and `@xterm/addon-fit` 0.11.0 (MIT) alongside Core's SSH Tunnel & SFTP integration. Full dependency license notices accompany the distributed node modules and build metadata. No native RDP client is redistributed.
 
 ## Original presentation artwork
 
-Application, Cloud Hosts, Margin Reader, local-computer and generic security-Linux icons are original Agents Company (now Avalon) vector artwork under Apache-2.0. Engine and operating-system names identify compatible third-party products and do not imply endorsement. No extracted Finder/MarginNote icons are included.
+Application, Cloud Hosts, Study Reader, local-computer and generic security-Linux icons are original Agents Company vector artwork under Apache-2.0. Engine and operating-system names identify compatible third-party products and do not imply endorsement. No extracted Finder/MarginNote icons are included.
 
 The local 0.49.9 candidate restores the eight previously imported OpenAI pet atlases from `learn.chatgpt.com` and the original OpenAI/Codex and Claude identification glyphs from project history. These vendor assets are not covered by the application Apache or community MIT notices. Original sprite URLs and checksums are recorded in the pet manifest; public redistribution review is pending in `licenses/release-review.json`. Named avatar IDs render their own original artwork again.
 

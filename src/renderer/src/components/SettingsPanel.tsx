@@ -15,12 +15,12 @@ import {useBeforeUnloadGuard} from './useBeforeUnloadGuard'
 import {DEFAULT_PREFERENCES,DEFAULT_VIEW_APPEARANCE,PRESENTATION_VIEWS,COLOR_THEMES,THEMES,THEME_LABELS,mergePreferences,readableThemeAccent,type Preferences,type PreferencesPatch,type PresentationView,type ViewAppearance} from '../../../shared/preferences'
 import '../styles/view-preferences.css'
 
-const viewLabels={company:'Team',messages:'Message',plan:'Mission'},viewIcons={company:'organization',messages:'comment-discussion',plan:'checklist'}
+const viewLabels:Record<PresentationView,string>={library:'Library',messages:'Message',plan:'Mission'},viewIcons:Record<PresentationView,string>={library:'library',messages:'comment-discussion',plan:'checklist'}
 const themeChoices:Preferences['theme'][]=[...COLOR_THEMES,...THEMES.filter(theme=>!COLOR_THEMES.some(color=>color===theme))]
-type EmployeeDefaults=Pick<Preferences,'defaultPermissionMode'>
-const employeeDefaults:EmployeeDefaults={defaultPermissionMode:DEFAULT_PREFERENCES.defaultPermissionMode}
+type EmployeeDefaults=Pick<Preferences,'defaultPermissionMode'|'employeeWorkspacesRoot'>
+const employeeDefaults:EmployeeDefaults={defaultPermissionMode:DEFAULT_PREFERENCES.defaultPermissionMode,employeeWorkspacesRoot:DEFAULT_PREFERENCES.employeeWorkspacesRoot}
 
-export function SettingsPanel({value,onSave,onClose,initialView='company',backLabel='Back to company'}:{value:Preferences;onSave:(patch:PreferencesPatch)=>Promise<unknown>;onClose:()=>void;initialView?:PresentationView;backLabel?:string}){
+export function SettingsPanel({value,onSave,onClose,initialView='messages',backLabel='Back to Message'}:{value:Preferences;onSave:(patch:PreferencesPatch)=>Promise<unknown>;onClose:()=>void;initialView?:PresentationView;backLabel?:string}){
  useI18n()
  const enabledCharacters=useEnabledAvatars(),[characterLibrary,setCharacterLibrary]=useState(false),[enginesVisited,setEnginesVisited]=useState(false)
  const auto=usePreferencesAutosave(onSave),[view,setView]=useState<PresentationView>(initialView),[employeeDraft,setEmployeeDraft]=useState<Partial<EmployeeDefaults>>({}),[employeeSaving,setEmployeeSaving]=useState(false),[employeeError,setEmployeeError]=useState(''),[employeeSaved,setEmployeeSaved]=useState(false),tabs=useRef<HTMLDivElement>(null),body=useRef<HTMLDivElement>(null)
@@ -38,9 +38,9 @@ export function SettingsPanel({value,onSave,onClose,initialView='company',backLa
  const customStyle={'--custom-theme-color':appearance.themeColor,'--custom-theme-accent':readableThemeAccent(appearance.themeColor)} as CSSProperties
  const changeAppearance=(patch:Partial<ViewAppearance>,delay=0)=>auto.update({viewAppearance:{[view]:patch},...(view==='messages'&&patch.theme?{messageWallpaper:{palette:'theme' as const}}:{})},delay)
  const changeEmployee=(patch:Partial<EmployeeDefaults>)=>{setEmployeeDraft(previous=>({...previous,...patch}));setEmployeeSaved(false);setEmployeeError('')}
- useEffect(()=>{setEmployeeDraft(previous=>{const entries=Object.entries(previous).filter(([key,next])=>next!==value[key as keyof EmployeeDefaults]);return entries.length===Object.keys(previous).length?previous:Object.fromEntries(entries)})},[value.defaultPermissionMode,value.defaultCodexModel,value.defaultClaudeModel,value.defaultClineModel,value.defaultPiModel])
+ useEffect(()=>{setEmployeeDraft(previous=>{const entries=Object.entries(previous).filter(([key,next])=>next!==value[key as keyof EmployeeDefaults]);return entries.length===Object.keys(previous).length?previous:Object.fromEntries(entries)})},[value.defaultPermissionMode,value.employeeWorkspacesRoot])
  const saveEmployee=async()=>{if(employeeSaving||!employeePending)return;setEmployeeSaving(true);setEmployeeError('');try{if(await onSave(employeePatch))setEmployeeSaved(true);else setEmployeeError('Settings could not be saved. Your changes are still here.')}catch(cause){setEmployeeError((cause as Error).message)}finally{setEmployeeSaving(false)}}
- const resetView=()=>auto.update({viewAppearance:{[view]:DEFAULT_VIEW_APPEARANCE[view]},...(view==='messages'?{messageWallpaper:{...DEFAULT_MESSAGE_WALLPAPER,palette:'theme',colors:['#bdcd8c'],rotation:0}}:{}),...(view==='company'?{boardMaxColumns:DEFAULT_PREFERENCES.boardMaxColumns}:{})})
+ const resetView=()=>auto.update({viewAppearance:{[view]:DEFAULT_VIEW_APPEARANCE[view]},...(view==='messages'?{messageWallpaper:{...DEFAULT_MESSAGE_WALLPAPER,palette:'theme',colors:['#bdcd8c'],rotation:0}}:{})})
  const resetShared=()=>auto.update({language:DEFAULT_PREFERENCES.language,pageZoom:DEFAULT_PREFERENCES.pageZoom,sidebarWidth:DEFAULT_PREFERENCES.sidebarWidth,explorerWidth:DEFAULT_PREFERENCES.explorerWidth,terminalHeight:DEFAULT_PREFERENCES.terminalHeight})
  const close=async()=>{if(employeeReady()&&await auto.flush())onClose()}
  const chooseView=(next:PresentationView)=>{setView(next);body.current?.scrollTo({top:0,behavior:'instant'})}
@@ -57,18 +57,15 @@ export function SettingsPanel({value,onSave,onClose,initialView='company',backLa
     <div className={`settings-appearance-preview theme-sample sample-${appearance.theme}`} data-preview-view={view} style={customStyle} role="img" aria-label={uiText('{0} appearance preview',[viewLabels[view]])}>
      <div className="settings-preview-header" aria-hidden="true"><Icon name={viewIcons[view]}/><strong>{viewLabels[view]}</strong><span/></div>
      <div className="settings-preview-layout" aria-hidden="true"><aside><i/><i/><i/></aside><section>
-      {view==='company'?<div className="settings-preview-team">{[0,1,2].map(key=><article key={key}><i/><b/><span/></article>)}</div>:view==='messages'?<div className="settings-preview-conversation"><article><b/><span/><span/></article><article><b/><span/></article><footer/></div>:<div className="settings-preview-mission"><header/><article><i/><b/><span/></article><article><i/><b/><span/></article><article><i/><b/><span/></article></div>}
+      {view==='library'?<div className="settings-preview-team"><article><i/><b/><span/></article><article><i/><b/><span/></article><article><i/><b/><span/></article></div>:view==='messages'?<div className="settings-preview-conversation"><article><b/><span/><span/></article><article><b/><span/></article><footer/></div>:<div className="settings-preview-mission"><header/><article><i/><b/><span/></article><article><i/><b/><span/></article><article><i/><b/><span/></article></div>}
      </section></div>
     </div>
-    {view==='messages'&&<button type="button" className="settings-unify-appearance" onClick={()=>auto.update({viewAppearance:Object.fromEntries(PRESENTATION_VIEWS.map(key=>[key,{...appearance}]))})}><Icon name="color-mode"/>{uiText('Use this color scheme in all three views')}</button>}
+    {view==='messages'&&<button type="button" className="settings-unify-appearance" onClick={()=>auto.update({viewAppearance:Object.fromEntries(PRESENTATION_VIEWS.map(key=>[key,{...appearance}]))})}><Icon name="color-mode"/>{uiText('Use this color scheme in all views')}</button>}
     {view!=='messages'&&<button type="button" className="settings-use-message-appearance" onClick={()=>auto.update({viewAppearance:{[view]:{...draft.viewAppearance.messages}}})}><Icon name="comment-discussion"/>{uiText('Use Message appearance')}</button>}
     <div className="theme-presets" aria-label={uiText('Color scheme')}>{themeChoices.map(themeButton)}</div>
     <p className="settings-help">{uiText('Every view supports all color schemes. Message wallpaper follows the color scheme you choose.')}</p>
     <label className="custom-theme-color" htmlFor="custom-theme-color"><span>{uiText('Custom color')}</span><input id="custom-theme-color" name="themeColor" type="color" aria-label={uiText('Custom color')} value={appearance.themeColor} onChange={event=>changeAppearance({theme:'custom',themeColor:event.target.value},180)}/><output>{appearance.themeColor.toUpperCase()}</output></label>
     {view==='messages'&&<WallpaperSettings value={draft.messageWallpaper} appearance={appearance} onChange={(messageWallpaper,delay)=>auto.update({messageWallpaper},delay)}/>}
-    {view==='company'&&<section className="settings-canvas-controls" aria-label={uiText('Team layout')}><h3>{uiText('Team')}</h3><p className="settings-help">{uiText('Maximum per row; narrow windows show fewer columns.')}</p>
-     <label className="settings-range"><span>{uiText('Maximum columns per row')}<output>{draft.boardMaxColumns}</output></span><input type="range" aria-label={uiText('Maximum columns per row')} min="1" max="6" step="1" value={draft.boardMaxColumns} onChange={event=>auto.update({boardMaxColumns:Number(event.target.value)},180)}/></label>
-    </section>}
    </section>
    <section className="settings-shared" aria-label={uiText('Shared settings')}><div className="settings-section-heading"><h3>{uiText('Shared settings')}</h3><button type="button" onClick={resetShared}>{uiText('Restore shared defaults')}</button></div>
     <div className="settings-language"><label htmlFor="interface-language">{uiText('Interface language')}</label><AppSelect id="interface-language" name="language" aria-label={uiText('Interface language')} value={draft.language} onChange={event=>auto.update({language:event.target.value as Preferences['language']})}><option value="en">English</option><option value="zh-CN">简体中文</option></AppSelect></div>
@@ -76,6 +73,7 @@ export function SettingsPanel({value,onSave,onClose,initialView='company',backLa
    </section>
    <section className="settings-character-library"><div><h3>{uiText('Characters')}</h3><p>{uiText('{0} enabled characters',[enabledCharacters.length])}</p></div><button type="button" onClick={()=>setCharacterLibrary(true)}><Icon name="person"/>{uiText('Manage characters')}</button></section>
    <details ref={employeeSection} className="settings-disclosure settings-employee-defaults"><summary><span>{uiText('Employee defaults')}</span>{employeePending&&<small>{uiText('Not applied')}</small>}<Icon name="chevron-down"/></summary><form onSubmit={event=>{event.preventDefault();void saveEmployee()}}><fieldset disabled={employeeSaving}>
+    <label>{uiText('Unified workspaces folder')}<input type="text" aria-label={uiText('Unified workspaces folder')} value={draft.employeeWorkspacesRoot} placeholder="~/Aexus-bot-workspaces" onChange={event=>changeEmployee({employeeWorkspacesRoot:event.target.value})}/><small>{uiText('Leave empty to store all new local employee workspaces under ~/Aexus-bot-workspaces/<employee-name>.')}</small></label>
     <label>{uiText('Default permissions')}<AppSelect aria-label={uiText('Default permissions')} value={draft.defaultPermissionMode} onChange={event=>changeEmployee({defaultPermissionMode:event.target.value as Preferences['defaultPermissionMode']})}><option value="default">{uiText('Ask · Approve when needed')}</option><option value="acceptEdits">{uiText('Workspace write · Allow workspace edits')}</option><option value="bypassPermissions">{uiText('Full access · Trust the engine’s system account')}</option></AppSelect><small>{uiText('Full access keeps all capabilities but does not provide operating-system isolation. Existing employee permissions are not raised automatically.')}</small></label>
     <p className="settings-help">{uiText('Employee defaults require Apply. They affect newly created employees.')} {uiText("Model defaults come from the native Coding Agent configuration.")}</p>
     {employeeError&&<p className="settings-employee-error" role="alert">{uiText(employeeError)}</p>}

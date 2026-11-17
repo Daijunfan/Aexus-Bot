@@ -1,15 +1,13 @@
 # Licensing and redistribution
 
-The complete Avalon distribution is published under **GNU GPL v3** (`LICENSE`), including its bundled GPL MiniNotion functionality. The earlier Apache-2.0 host material and notices remain in `licenses/host-original-Apache-2.0.txt`; the compatible permissive components retain their own notices. This does not relicense vendor runtimes, services or trademarks.
+The complete Avalon distribution is published under **GNU GPL v3** (`LICENSE`), including its built-in GPL Mission Super-Notion Notebook functionality. The earlier Apache-2.0 host material and notices remain in `licenses/host-original-Apache-2.0.txt`; the compatible permissive components retain their own notices. This does not relicense vendor runtimes, services or trademarks.
 
 ## Bundled open-source components
 
 | Component | License | Source |
 | --- | --- | --- |
-| Complete host distribution | GPL-3.0-only | `src/`, `bin/`, `scripts/`, `Modules/` |
-| Cloud Hosts | Apache-2.0 | `PlugIns/cloud-hosts/` |
-| MiniNotion and its multi-column editor | GPL-3.0-only | `PlugIns/mini-notion/` |
-| Margin Reader | MIT | `PlugIns/margin-reader/` |
+| Complete host distribution (including Mission Notebook, multi-column editor & Cloud Hosts) | GPL-3.0-only (with Apache-2.0 notices retained) | `src/`, `bin/`, `scripts/`, `Modules/` |
+| Built-in Study Reader runtime & UI (originally Margin Reader) | MIT | `resources/library-reader/`, `src/main/library-reader/` |
 | Community avatars | MIT | `src/renderer/src/assets/pets/`, full notices in `licenses/` there |
 | Original application and integration icons | Apache-2.0, GPL-compatible | SVG sources and source records beside the assets |
 

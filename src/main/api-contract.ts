@@ -7,8 +7,8 @@ export const API_REVISION=createHash('sha256').update(JSON.stringify(COMMANDS)).
 const ajv=new Ajv2020({strict:false,allErrors:true,validateFormats:false}),validators=new Map<string,ValidateFunction>()
 const alternatives:Record<string,string[]>={
  'employee.list':['session.status','card.profile'],'card.list':['session.status','card.profile'],
- 'company.employees':['session.status'],'team.list':['group.list'],
- 'employee.create':['card.create'],'group.create':['group.add'],
+ 'company.employees':['session.status'],
+ 'employee.create':['card.create'],
  conversation:['conversation.entry','conversation.workspaces'],describe:['api.describe'],document:['api.docs']
 }
 export function apiError(code:string,command:string,message:string,details:Record<string,unknown>={}){

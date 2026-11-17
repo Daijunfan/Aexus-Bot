@@ -23,7 +23,7 @@ import {closeAllMedia} from './media'
 import {startChannels,closeChannels,setChannelsEmitter} from './channels'
 import {syncChannelIngress,closeChannelIngress,channelIngressStatus} from './channel-ingress'
 import {startChannelExports} from './channel-export'
-import {setMessengerEmitter} from './messenger'
+import {setMessengerEmitter,clearDirectMessengerState} from './messenger'
 import {setPlanEmitter} from './plan'
 import {setChatEmitter,recoverChatDeliveries} from './chat-groups'
 import {recordDiscussionDelivery as updateChatDelivery} from './discussion-context'
@@ -34,7 +34,7 @@ import {closeEngineLogins} from './engines/login'
 import {exposeClaudeSdk} from './engines/claude-sdk'
 import {acquireRuntimeLock} from './runtime-lock'
 import {publishReply,beginReplyTurn,endReplyTurn,recordDirectReply,acknowledgeDirectReply} from './reply-receipts'
-import {setDirectEmitter,setDirectReplyHandlers,recordDirectReceipt} from './direct-messages'
+import {setDirectEmitter,setDirectReplyHandlers,setDirectClearHandler,recordDirectReceipt} from './direct-messages'
 import {recordNativeInput} from './transcripts'
 import {setManagementActivityEmitter,setManagementTask,clearManagementInteraction,pruneManagementActivity,resetManagementActivity} from './management-activity'
 import {startInitializations,stopInitializations} from './initialization'
@@ -46,10 +46,12 @@ import {closeTransfers} from './transfers'
 import {onPluginWindows,closePluginWindows} from './plugins/windows'
 import { startScheduler, stopScheduler, reconcileSchedules } from './scheduler/service'
 import { getLive,setEmitter, closeAll,revokeInvalidDelegations } from './sessions'
-import { onStoreChange,migrateCloudTeams,migrateCloudHostBindings } from './store'
+import { onStoreChange } from './store'
 import { onViewChange } from './presentation'
 import { publishEvent, setDesktopEvent, startServer, stopServer } from './server'
+import {closeLibraryReader} from './library-reader'
 import { closePlugins } from './plugins/runtime'
+import { closeMissionNotebook, setNotebookEmitter } from './mission-notebook'
 import {setTerminalEmitter,closeTerminals} from './terminals'
 import {closeRemoteFiles} from './tunnel'
 import { conversation,transcriptItems,markTurnEnd, markTurnStart, recordClaude, recordCodex, recordAgent, recordUser, recordOutboundReceipt, recordError, saveTranscript } from './transcripts'
@@ -69,12 +71,11 @@ export function startRuntime(notify: (channel: string, payload: any) => void = (
   setConversationFilesEmitter(conversation=>publishEvent('conversation:files-changed',{conversation}))
   setConversationPolicyEmitter(conversation=>{reconcileSchedules();reconcilePostTriggers();revokeInvalidDelegations();reconcileConversationNotices();publishEvent('conversation:controls',{conversation});if(conversation.startsWith('group:'))publishEvent('chat:changed',{id:conversation.slice(6)})})
   setPlanEmitter(()=>publishEvent('plan:changed',{}))
+  setNotebookEmitter((channel,payload)=>publishEvent(channel,payload))
   setMessengerEmitter(payload=>publishEvent('messenger:changed',payload))
   recoverChatDeliveries()
   recoverChannelDeliveries()
   setManagementActivityEmitter(state=>publishEvent('management:activity',state))
-  migrateCloudTeams()
-  migrateCloudHostBindings()
   migrateEmployeePermissionDefaults()
   initializeManagement()
   const initial=readStore()
@@ -121,6 +122,7 @@ export function startRuntime(notify: (channel: string, payload: any) => void = (
   setEmitter(broadcast)
   setDirectEmitter(employee=>broadcast('direct:changed',{employee,cardId:employee}))
   setDirectReplyHandlers((employee,reference)=>{recordDirectReply(employee,reference);notifyScheduleEvent({type:'message.received',id:reference.messageId,conversation:'employee:'+employee,messageId:reference.messageId,sequence:reference.sequence},employee)},acknowledgeDirectReply)
+  setDirectClearHandler(clearDirectMessengerState)
   setTerminalEmitter(broadcast)
   const unsubscribe = onStoreChange((store,changes) => { if(changes.authority){reconcileMissions();reconcilePostTriggers();reconcileConversationNotices();reconcileSchedules();revokeInvalidDelegations();pruneManagementActivity()} broadcast('store:changed', {...store,changes}) })
   const unwindows=onPluginWindows(windows=>broadcast('plugin:windows',windows))
@@ -141,8 +143,8 @@ export function startRuntime(notify: (channel: string, payload: any) => void = (
     await Promise.all([closeWorkers(),closeAll(),closeTerminals()])
     setWorkerEmitter();closeAllMedia();closeEngineLogins();closeConversationDownloads();resetManagementActivity()
     await Promise.all([closeChannelIngress(),closeInstallations(),closeWorkspacePdfs(),closeUploads(),closeTransfers()])
-    closeRemoteFiles();closeChannelStorageTransport();await closePlugins();await closeChannels()
+    closeRemoteFiles();closeChannelStorageTransport();closeMissionNotebook();await closeLibraryReader();await closePlugins();await closeChannels()
     await Promise.all([closeMessageIndex(),closeAssetPreviews()]);await assetIndex.close()
-    setDesktopEvent(()=>{});setChatEmitter(()=>{});setPlanEmitter(()=>{});setMessengerEmitter(()=>{});setChannelsEmitter(()=>{});releaseLock()
+    setDesktopEvent(()=>{});setChatEmitter(()=>{});setPlanEmitter(()=>{});setNotebookEmitter(()=>{});setMessengerEmitter(()=>{});setChannelsEmitter(()=>{});releaseLock()
   }
 }

@@ -15,7 +15,7 @@ import {resolveAvatar} from '../shared/avatars'
 import {activeAvatarIds} from './avatar-catalog'
 import {validatedImage} from './image-input'
 import type {PublicMessage,MessageSource} from './message-index'
-import {queryMessageIndex,type IndexKind,type IndexOptions,type IndexResult} from './message-index-client'
+import {queryMessageIndex,removeIndexedConversation,type IndexKind,type IndexOptions,type IndexResult} from './message-index-client'
 import {attachmentPaths} from '../shared/message-attachments'
 import type {MessageReply} from '../shared/types'
 import {quoteShape,validateQuote,type MessageQuote} from '../shared/message-quotes'
@@ -52,7 +52,7 @@ let channelDrafts:MessengerState['drafts']={},draftsInitialized=false
 function read(){
  const state=normalizeChannelReferences(readDisk())
  if(state.draftScopes!==1){
-  for(const [key,draft] of Object.entries(state.drafts))if(key.startsWith('employee:')&&draft.sourceView==='company'&&!state.drafts['work:'+key]){state.drafts['work:'+key]=draft;delete state.drafts[key]}
+  for(const [key,draft] of Object.entries(state.drafts))if(key.startsWith('employee:')&&(draft.sourceView as string)==='company'&&!state.drafts['work:'+key]){state.drafts['work:'+key]=draft;delete state.drafts[key]}
   state.draftScopes=1;state.revision++;atomicJson(file,state,true)
  }
  if(!draftsInitialized){
@@ -88,6 +88,7 @@ function messageSource(ref:ReturnType<typeof resolve>):MessageSource{
  const annotations=ref.kind==='group'?groupContentAnnotations(requireConversation('group:'+ref.id).group!):undefined
  return {id:ref.key,version:JSON.stringify([typeof version==='number'?[liveEpoch,version]:version,ref.card?.lastReply?.id,ref.card?.lastReply?.createdAt,ref.card?.lastReply?.itemId]),read:()=>ref.kind==='group'?readChatMessages(ref.id).filter(message=>!message.deletedAt).map(message=>({conversation:ref.key,id:message.id,author:message.authorName,authorIdentity:message.author,role:message.author.kind==='operator'?'user':'assistant',text:message.text,images:message.attachments?.filter(file=>file.kind==='image').map(file=>file.path)??[],files:message.attachments?.filter(file=>file.kind==='file'),createdAt:message.createdAt,editedAt:message.editedAt,editRevision:message.editRevision,topicId:message.topicId??'general',pinnedAt:annotations?.(message.id).pinnedAt})):directItems(ref.id).flatMap(item=>{
   if(item.role==='notice')return []
+  if(item.role==='user'&&item.delivery&&['preparing','queued','interrupted'].includes(item.delivery.state))return []
   const text=item.role==='user'?item.text:item.blocks.filter(block=>block.kind==='text').map(block=>block.text).join('\n\n'),images=item.images??[]
   if(!text.trim()&&!images.length&&!item.files?.length)return []
   const authorIdentity=item.role==='user'?item.author:{kind:'agent' as const,employeeId:ref.id}
@@ -249,9 +250,8 @@ export async function messengerRequest(command:string,args:Record<string,any>={}
    if(args.replyQuote!==undefined){if(!args.replyTo)throw Error('A selected quote requires a reply message');args.replyQuote=quoteShape(args.replyQuote)}
    if(args.replyConversation!==undefined){if(!args.replyTo||typeof args.replyConversation!=='string'||!/^(employee|group|channel):[a-zA-Z0-9_-]+$/.test(args.replyConversation))throw Error('A source conversation requires a valid reply')}
    if(args.replyTextOnly!==undefined&&typeof args.replyTextOnly!=='boolean')throw Error('replyTextOnly must be boolean')
-   for(const key of ['clientMessageId','viewId','expectedClientMessageId'])if(args[key]!==undefined&&(typeof args[key]!=='string'||!args[key]||args[key]!==args[key].trim()||args[key].length>160))throw Error('Invalid draft '+key)
-   if(ref.kind==='channel'&&args.viewId!==undefined)throw Error('Channel drafts do not use a task view')
-   const draft={text:args.text,images:args.images,files,mentions:args.mentions,replyTo:args.replyTo,replyQuote:args.replyQuote,replyConversation:args.replyConversation,replyTextOnly:args.replyTextOnly,clientMessageId:args.clientMessageId,viewId:args.viewId,...(sourceView?{sourceView}:{}),updatedAt:Date.now()}
+   for(const key of ['clientMessageId','expectedClientMessageId'])if(args[key]!==undefined&&(typeof args[key]!=='string'||!args[key]||args[key]!==args[key].trim()||args[key].length>160))throw Error('Invalid draft '+key)
+   const draft={text:args.text,images:args.images,files,mentions:args.mentions,replyTo:args.replyTo,replyQuote:args.replyQuote,replyConversation:args.replyConversation,replyTextOnly:args.replyTextOnly,clientMessageId:args.clientMessageId,...(sourceView?{sourceView}:{}),updatedAt:Date.now()}
    if(args.expectedClientMessageId!==undefined&&state.drafts[key]?.clientMessageId!==args.expectedClientMessageId)return state
    if(!hasDraftContent(draft))delete state.drafts[key]
    else state.drafts[key]=draft
@@ -268,9 +268,9 @@ function conversationDirectory(args:Record<string,any>,state:MessengerState){
  const category=folder===undefined?undefined:state.categories?.find(item=>item.id===folder)
  if(folder!==undefined&&!category)throw Error('Unknown conversation folder')
  const categoryQuery=!!category||type!=='all'
- type Entry=CategoryEntry&{id:string;title:string;description:string;channelId?:string;locator?:string;team?:string;role?:string;engine?:string;archived:boolean}
+ type Entry=CategoryEntry&{id:string;title:string;description:string;channelId?:string;locator?:string;role?:string;engine?:string;archived:boolean}
  const entries:Entry[]=[
-  ...visibleEmployees().filter(card=>!card.deleting).map(card=>({key:'employee:'+card.id,id:card.id,kind:'employee' as const,title:card.title,description:[card.group,card.managementRole??'employee',card.engine].join(' · '),team:card.group,role:card.managementRole??'employee',engine:card.engine,archived:false})),
+  ...visibleEmployees().filter(card=>!card.deleting).map(card=>({key:'employee:'+card.id,id:card.id,kind:'employee' as const,title:card.title,description:[card.managementRole??'employee',card.engine].join(' · '),role:card.managementRole??'employee',engine:card.engine,archived:false})),
   ...listChatGroups().map(group=>({key:'group:'+group.id,id:group.id,kind:'group' as const,botKind:group.bot?.kind,title:group.name,description:group.bot?(group.bot.provider==='grok'?'Grok':'Dot')+' Worker':group.members.map(member=>member.title).join(', '),archived:false})),
   ...(channelRequest('channel.list',{}) as {id:string;name:string;kind:string;sourceCount?:number}[]).map(channel=>({key:'channel:'+channel.id,id:channel.id,kind:'channel' as const,title:channel.name,description:channel.kind,platform:channel.kind,sourceCount:channel.sourceCount,archived:false})),
   ...socialElements({includeDisabled:true}).map(source=>({key:source.key,id:source.id,kind:'source' as const,title:source.name,description:source.platform+' · '+source.locator,platform:source.platform,locator:source.locator,channelId:source.channelId,enabled:source.enabled,archived:false}))
@@ -323,4 +323,13 @@ async function galleryPage(args:Record<string,any>,state:MessengerState):Promise
  const {result:page}=await indexedQuery('gallery',refs.map(value=>messageSource(resolve(value))),state,{conversation:args.conversation,anchor,through:boundary,order,direction,query:query.trim().toLocaleLowerCase(),author,limit,topicId:args.topicId,authorId:args.authorId,from:args.from,to:args.to})
  const titles=new Map(refs.map(key=>[key,resolve(key).title])),labels=new Map<string,string[]>(),names=new Map<string,Map<string,string>>()
  return {...page,images:page.images.map(({message,path})=>{const key=message.conversation+'\n'+message.id;if(!labels.has(key))labels.set(key,messageImageLabels(message.text,message.images.length));if(message.conversation.startsWith('employee:')&&!names.has(key)){try{names.set(key,new Map(directPublishedEntry(message.conversation.slice(9),message.id).attachments.map(file=>[file.path,file.name])))}catch{names.set(key,new Map())}}return ({...(message.conversation.startsWith('employee:')?{employee:message.conversation.slice(9)}:message.conversation.startsWith('channel:')?{channel:message.conversation.slice(8)}:{group:message.conversation.slice(6)}),messageId:message.id,path,name:names.get(key)?.get(path)??path.split(/[\\/]/).at(-1),caption:labels.get(key)![message.images.indexOf(path)]??'',editRevision:message.editRevision,conversationTitle:titles.get(message.conversation)!})})}
+}
+export function clearDirectMessengerState(employee:string){
+ const key='employee:'+employee,prefix=key+'/',current=read()
+ let changed=false
+ for(const k of Object.keys(current.messages))if(k.startsWith(prefix)){delete current.messages[k];changed=true}
+ if(current.drafts[key]){delete current.drafts[key];changed=true}
+ removeIndexedConversation(key)
+ if(changed)write(current,key)
+ else emit({revision:current.revision,conversation:key})
 }

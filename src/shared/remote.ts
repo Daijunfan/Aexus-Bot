@@ -29,4 +29,4 @@ export function remoteTarget(value:unknown):RemoteTarget|null {
 }
 
 export type VirtualMachine = {hypervisorId:string;name:string;projectDirectory:string;state:'running'|'stopped'|'paused'|'unknown';access:'ssh'|'serial'|'rdp'|'unconfigured';notes?:string}
-export type CloudHost = Omit<RemoteTarget,'directory'|'credentialId'> & {id:string;name:string;vm?:VirtualMachine;defaultDirectory:string;hasPassword:boolean;createdAt:number;updatedAt:number;status?:RemoteHealth&{checkedAt:number;error?:string}}
+export type CloudHost = Omit<RemoteTarget,'directory'|'credentialId'> & {id:string;name:string;vm?:VirtualMachine;defaultDirectory:string;tags?:string[];notes?:string;hasPassword:boolean;createdAt:number;updatedAt:number;status?:RemoteHealth&{checkedAt:number;error?:string}}

@@ -1,10 +1,10 @@
 # Engineering
 
-Engineering is a Team workspace for engineering orchestration, native Worker execution and explicit multi-level acceptance. Each project binds one independent Team and exactly one Mission. Topology and DAG display the same saved roles, tasks, native runs and reviews together. Research is an entry only. Characters retains its numbered seats and existing Team geometry; Engineering graph positions are separate.
+Engineering provides orchestrated role hierarchies (`governor` -> `manager` -> `employee`), native Worker execution and explicit two-stage acceptance. Each project binds one explicit role/task graph and one linked Mission. Topology and DAG display the same saved roles, tasks, native runs and reviews together.
 
 ## Create and manage
 
-The user or Secretary creates projects in **Team → Engineering → New engineering** or through the same authenticated CLI. Select a new local/cloud Team or bind an existing project Team. The storage picker supports registered hosts, custom folder names and existing folders, separately from the Team label. An existing Team cannot belong to two Engineering projects. Existing employee bindings must have the exact chosen Team and rank; engines, native references and workspaces never change silently.
+The user or Secretary creates engineering projects through the Core API / CLI (`engineering.*`). New local roles provision centralized employee workspaces under the configured workspaces root (default `~/Aexus-bot-workspaces/<folder>`), or bind explicit existing employee IDs or registered cloud hosts (`hostId`, `remoteDirectory`). Existing employee bindings must match the chosen role rank; engines, native references and workspaces never change silently.
 
 Example `engineering.json`:
 
@@ -12,7 +12,6 @@ Example `engineering.json`:
 {
   "name": "Release the application",
   "goal": "Deliver the requested change with actual implementation and verification evidence.",
-  "team": "Release team",
   "roles": [
     {"key":"governor","title":"Release Governor","rank":"governor","engine":"codex"},
     {"key":"manager","title":"Delivery Manager","rank":"manager","parent":"governor","engine":"codex"},
@@ -37,15 +36,15 @@ agents engineering context --id ENGINEERING_ID --json
 agents engineering start --id ENGINEERING_ID --expected-revision REVISION --json
 ```
 
-`key` identifies a graph role/task. `employeeId` optionally binds an existing Aexus employee. It is distinct from a Worker ID, native session ID, Engineering ID and Mission ID. Context returns the exact mappings, real caller identity, current node/chain, prompt paths and permitted next actions. Creation keys resume saved partial setup without duplicating Team, employees or Mission. Failed setup remains visible and can be retried. Project selection is remembered per client. `engineering.activity` supplies live role state/bubbles without retransmitting historical delivery data. Node execution/review writes tolerate unrelated node updates; changes to that node still require a fresh revision. Archive/restore changes visibility while preserving execution/history.
+`key` identifies a graph role/task. `employeeId` optionally binds an existing Aexus employee. It is distinct from a Worker ID, native session ID, Engineering ID and Mission ID. Context returns the exact mappings, real caller identity, current node/chain, prompt paths and permitted next actions. Creation keys resume saved partial setup without duplicating employees or Mission. Failed setup remains visible and can be retried. `engineering.activity` supplies live role state without retransmitting historical delivery data. Node execution/review writes tolerate unrelated node updates; changes to that node still require a fresh revision. Archive/restore changes visibility while preserving execution/history.
 
 ## Graphs and ownership
 
-Topology is a free pan/zoom canvas with top-down Governor → Manager → Employee management and collaboration edges. DAG flows left to right; each node is an Employee. Native Workers are leaf execution instances in the Employee inspector, never graph nodes. Nodes are circular employee portraits, with names, live status and Worker counts outside the portrait; there are no rectangular node cards. Drag nodes freely; scroll to pan; Command/Ctrl + scroll zooms. Fit, zoom and automatic layout controls are explicit. Focused nodes also move with arrow keys (Shift uses a smaller step). Inspect nodes or connections for ownership, requirements, progress, actual Worker history and both reviews.
+Topology models Governor → Manager → Employee management and collaboration edges. DAG flows from dependencies across Employee nodes. Native Workers are leaf execution instances, never graph nodes.
 
 Exactly one Governor oversees the project. Each Manager owns one continuous unbranched chain; every Employee has one Manager. A fork source, each separate branch and join continuation need distinct Managers. Ambiguous ownership, cycles, dangling dependencies, duplicate keys and mismatched roles fail before provisioning. These relationships describe work; they do not grant Aexus authority or another Employee’s Worker controls.
 
-The graphical editor manages roles, bindings, task prompts/acceptance, dependencies, collaboration and check intervals. Engineering creates its Governor task scope using `team-view.create --select false`, so background setup does not switch the user’s current Characters filter. Structural changes require draft/paused state (blocked or interrupted setup can also be repaired) and no active linked Worker runs. Removing a graph role does not delete its Aexus employee, files or native history. Changed work and dependent acceptance are invalidated; unrelated completed work remains. Check periods may change while running; a goal change requires pause and renewed acceptance.
+Structural changes require draft/paused state (blocked or interrupted setup can also be repaired) and no active linked Worker runs. Removing a graph role does not delete its Aexus employee, files or native history. Changed work and dependent acceptance are invalidated; unrelated completed work remains. Check periods may change while running; a goal change requires pause and renewed acceptance.
 
 ## Mermaid import/export
 
@@ -128,7 +127,7 @@ Every Manager/Governor has a saved next-check time, default interval and optiona
 
 Pause suspends new wakeups and advancement. Already accepted native Worker tasks may finish and retain delivery for later review; **Stop this run** actually interrupts them. Resume retains pending work and both review histories. Archive is only a visibility action. Engineering Missions retain their linked acceptance history; an automatic delete-retention policy archives these linked records instead of deleting their required project reference.
 
-Project participants and user/Secretary can read project context. Configuration belongs to user/Secretary. Current identity, actual rank/Team, creator credential, node ownership and project generation are rechecked before dispatch and queued execution. Deleted/demoted roles or revoked credentials block work rather than borrowing an operator token or changing hosts. Repair configuration under current authority, then resume. Bound employee IDs and engines remain fixed; a replacement uses a new explicit role key. Existing Aexus ranks are changed through the normal employee role interface/`card.management-role`; then synchronize the graph with the actual rank (or use the editor’s current-rank action). A blocked project can be repaired without changing its Team, employee IDs, native references or Mission. The editor can explicitly replace an unavailable Governor; the same Mission then follows the current Governor.
+Project participants and user/Secretary can read project context. Configuration belongs to user/Secretary. Current identity, actual rank, creator credential, node ownership and project generation are rechecked before dispatch and queued execution. Deleted/demoted roles or revoked credentials block work rather than borrowing an operator token or changing hosts. Repair configuration under current authority, then resume. Bound employee IDs and engines remain fixed; a replacement uses a new explicit role key. Existing Aexus ranks are changed through the normal employee role interface/`card.management-role`; then synchronize the graph with the actual rank. A blocked project can be repaired without changing its employee IDs, native references or Mission. Replacing an unavailable Governor keeps the same Mission following the current Governor.
 
 Restart retains attempts, reviews, runs, prompts, intervals and pause state. Interrupted native work is not replayed. An enqueue interrupted at an uncertain boundary remains visible with an explanation: inspect history, then `engineering.wake --id ID --key ROLE --expected-revision N` explicitly requests a new wakeup. Reconciliation into the existing Mission is idempotent. Storage failures report an error rather than inventing success or replacement identities.
 

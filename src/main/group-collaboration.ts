@@ -4,8 +4,6 @@ import {GROUP_ACCESS_APIS} from '../shared/group-access'
 import {groupAccessRequest} from './group-access'
 import {GROUP_HISTORY_APIS} from '../shared/group-history'
 import {groupHistoryRequest} from './group-history'
-import {resolveTeamView} from '../shared/team-views'
-import {clientStore} from './client-state'
 import {createHash,randomUUID} from 'node:crypto'
 import {join} from 'node:path'
 import {atomicJson,readJson} from './atomic-file'
@@ -19,8 +17,8 @@ import {effectiveChatMute,type ChatGroup,type ChatMessage} from '../shared/chat-
 import type {PrincipalRef} from '../shared/management'
 
 type Vote={options:string[];at:number;by:PrincipalRef}
-type Poll=Omit<GroupPoll,'options'|'voterCount'|'myOptions'|'resultsVisible'|'closed'>&{options:{id:string;label:string}[];votes:Record<string,Vote>;closedAt?:number;requestKey:string;fingerprint:string;viewId?:string}
-type Checklist=GroupChecklist&{requestKey:string;fingerprint:string;viewId?:string}
+type Poll=Omit<GroupPoll,'options'|'voterCount'|'myOptions'|'resultsVisible'|'closed'>&{options:{id:string;label:string}[];votes:Record<string,Vote>;closedAt?:number;requestKey:string;fingerprint:string}
+type Checklist=GroupChecklist&{requestKey:string;fingerprint:string}
 type State={reactions?:Record<string,Record<string,{by:PrincipalRef;emojis:string[]}>>;pins?:Record<string,{at:number;by:PrincipalRef}>;version:1;topics:(GroupTopic&{requestKey?:string;fingerprint?:string})[];polls:Poll[];checklists:Checklist[]}
 type Publisher=(args:Record<string,any>,card:{pollId?:string;checklistId?:string})=>Promise<ChatMessage>|ChatMessage
 const flights=new SingleFlight<any>(),actor=()=>requestContext().principal,key=(value:unknown)=>JSON.stringify(value),same=(a:PrincipalRef,b:PrincipalRef)=>key(a)===key(b)
@@ -54,18 +52,18 @@ function published(groupId:string,messageId?:string,cardId?:string){const messag
 function pollView(poll:Poll):GroupPoll{
  const own=poll.votes[key(actor())],closed=!!poll.closedAt||!!poll.closesAt&&poll.closesAt<=Date.now(),visible=closed||!poll.hideResults
  const options=poll.options.map(option=>({id:option.id,label:option.label,votes:visible?Object.values(poll.votes).filter(v=>v.options.includes(option.id)).length:0,...(!poll.anonymous&&visible?{voters:Object.values(poll.votes).filter(v=>v.options.includes(option.id)).map(v=>({id:v.by.kind==='operator'?'operator':v.by.employeeId,name:memberName(v.by),at:v.at}))}:{})}))
- const {votes,requestKey,fingerprint,closedAt,correctOptions,explanation,viewId,...value}=poll
+ const {votes,requestKey,fingerprint,closedAt,correctOptions,explanation,...value}=poll
  let manager=true;try{editable(poll.groupId,poll.createdBy)}catch{manager=false}
  return {...value,allowedActions:[...(!closed?['vote']:[]),...(manager&&!closed?['close']:[])],options,closed,voterCount:Object.keys(votes).length,myOptions:own?.options??[],resultsVisible:visible,...(poll.quiz&&(closed||own&&!poll.hideResults)?{correctOptions,explanation}:{})}
 }
-const checklistView=(item:Checklist):GroupChecklist=>{const {requestKey,fingerprint,viewId,...value}=item;let manager=true;try{editable(item.groupId,item.createdBy)}catch{manager=false}return structuredClone({...value,allowedActions:[...(item.allowComplete||manager?['check']:[]),...(item.allowAdd||manager?['add']:[]),...(manager?['edit']:[])]})}
+const checklistView=(item:Checklist):GroupChecklist=>{const {requestKey,fingerprint,...value}=item;let manager=true;try{editable(item.groupId,item.createdBy)}catch{manager=false}return structuredClone({...value,allowedActions:[...(item.allowComplete||manager?['check']:[]),...(item.allowAdd||manager?['add']:[]),...(manager?['edit']:[])]})}
 function items(group:ChatGroup,input:any[],previous:ChecklistItem[]=[]):ChecklistItem[]{
  const used=new Set<string>();return input.map((row:any)=>{const old=previous.find(item=>item.id===row.id);if(row.id&&!old&&!/^item_[a-f0-9-]{36}$/.test(row.id))throw Error('Choose a stable item_UUID identifier for new checklist items');const id=old?.id??row.id??'item_'+randomUUID();if(used.has(id))throw Error('Duplicate checklist item');used.add(id);if(row.assignee&&row.assignee!==old?.assignee&&!group.memberIds.includes(row.assignee))throw Error('Choose a current group member');return {id,text:text(row.text,500),...(row.assignee?{assignee:row.assignee}:{}),...(row.dueAt?{dueAt:instant(row.dueAt)}:{}),done:old?.done??false,...(old?.completedAt?{completedAt:old.completedAt,completedBy:old.completedBy}:{})}})
 }
 async function publish(id:string,object:Poll|Checklist,type:'poll'|'checklist',topicId:string|undefined,publisher:Publisher){
  if(object.messageId)return
  const title=type==='poll'?(object as Poll).question:(object as Checklist).title
- const message=await publisher({id,text:title,clientMessageId:type+':'+object.id,...(topicId?{topicId}:{}),...(object.viewId?{viewId:object.viewId}:{})},type==='poll'?{pollId:object.id}:{checklistId:object.id})
+ const message=await publisher({id,text:title,clientMessageId:type+':'+object.id,...(topicId?{topicId}:{})},type==='poll'?{pollId:object.id}:{checklistId:object.id})
  object.messageId=message.id;emitChatChange(id,message.id,undefined,'metadata')
 }
 export const groupCollaborationVersion=(id:string)=>fileVersion(file(id))
@@ -106,15 +104,13 @@ export async function groupCollaborationRequest(command:string,args:Record<strin
  if(op==='topic-update'){
   const topic=state.topics.find(t=>t.id===args.topicId);if(!topic)throw Error('Unknown topic');if(topic.createdBy)editable(id,topic.createdBy);else current(id,true);if(args.patch.pinned!==undefined)current(id,true);revision(args.expectedRevision,topic.revision);if(topic.id==='general'&&args.patch.archived)throw Error('General cannot be archived');Object.assign(topic,args.patch,{revision:topic.revision+1});save(id,state);auditConversation('group:'+id,'topic-update',{topicId:topic.id,...args.patch});const {requestKey:_,fingerprint:__,...view}=topic;return view
  }
- if(args.viewId!==undefined&&actor().kind!=='operator')throw Error('Agent publications use their current task view; viewId is user-only')
- const acceptedView=actor().kind==='operator'&&['poll-create','checklist-create'].includes(op)?resolveTeamView(clientStore(readStore()),args.viewId).id:undefined
  if(op==='poll-create'||op==='checklist-create')return flights.run(op+':'+id+':'+key([actor(),args.clientRequestId]),async()=>{
-  const fresh=data(group),type=op==='poll-create'?'poll':'checklist',list=type==='poll'?fresh.polls:fresh.checklists,requestKey=key([actor(),args.clientRequestId]),spec=type==='poll'?args.spec:{title:args.title,items:args.items,allowAdd:args.allowAdd??true,allowComplete:args.allowComplete??true},previous=list.find(o=>o.requestKey===requestKey),viewId=args.viewId??(previous?previous.viewId:acceptedView),fingerprint=hash([spec,args.topicId??null,viewId]);let object=previous
+  const fresh=data(group),type=op==='poll-create'?'poll':'checklist',list=type==='poll'?fresh.polls:fresh.checklists,requestKey=key([actor(),args.clientRequestId]),spec=type==='poll'?args.spec:{title:args.title,items:args.items,allowAdd:args.allowAdd??true,allowComplete:args.allowComplete??true},previous=list.find(o=>o.requestKey===requestKey),fingerprint=hash([spec,args.topicId??null]);let object=previous
   if(object&&object.fingerprint!==fingerprint)throw Error('Request ID already used with different content')
   if(object?.messageId){published(id,object.messageId);return type==='poll'?pollView(object as Poll):checklistView(object as Checklist)}
   mayCreate(id,'polls')
   if(!object){
-   const base={id:type+'_'+randomUUID(),groupId:id,createdAt:Date.now(),createdBy:actor(),revision:1,requestKey,fingerprint,...(viewId?{viewId}:{})}
+   const base={id:type+'_'+randomUUID(),groupId:id,createdAt:Date.now(),createdBy:actor(),revision:1,requestKey,fingerprint}
    if(type==='poll'){
     const labels=spec.options.map((o:any)=>text(o.label,200));if(new Set(labels).size!==labels.length)throw Error('Poll answers must be distinct');const correct=spec.correctOptions??[];if(spec.quiz&&(!correct.length||correct.some((n:number)=>n>=labels.length)||!spec.multiple&&correct.length!==1))throw Error('Choose the correct quiz answer');if(spec.quiz&&spec.openAnswers)throw Error('Quiz answers cannot be added after publication')
     object={...base,question:text(spec.question,1000),options:labels.map((label:string,n:number)=>({id:'option_'+n,label})),multiple:spec.multiple??false,anonymous:spec.anonymous??true,quiz:spec.quiz??false,revote:spec.revote??!spec.quiz,hideResults:spec.hideResults??false,openAnswers:spec.openAnswers??false,...(spec.closesAt?{closesAt:instant(spec.closesAt,true)}:{}),...(spec.quiz?{correctOptions:correct.map((n:number)=>'option_'+n),explanation:spec.explanation??''}:{}),votes:{}} as Poll;fresh.polls.push(object as Poll)

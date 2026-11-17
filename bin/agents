@@ -60,13 +60,13 @@ function jsonArgument(value) {
 function messageSourceOption(parts) {
   const index=parts.indexOf('--source-view');if(index<0)return {}
   const sourceView=parts[index+1]
-  if(!['company','messages','plan'].includes(sourceView))throw Error('--source-view requires company, messages or plan')
+  if(!['messages','plan'].includes(sourceView))throw Error('--source-view requires messages or plan')
   parts.splice(index,2);return {sourceView}
 }
 /** Preserve literal message words while consuming only the established send options. */
 function positionalMessage(argv) {
   const parts=argv.slice(1),input={id:argv[0],...messageSourceOption(parts)}
-  for(const [flag,key,type] of [['images','images','json'],['files','files','file-json'],['view','viewId','view ID'],['reply-to','replyTo','message ID'],['reply-quote','replyQuote','file-json'],['reply-conversation','replyConversation','conversation reference'],['client-message-id','clientMessageId','request ID']]) {
+  for(const [flag,key,type] of [['images','images','json'],['files','files','file-json'],['reply-to','replyTo','message ID'],['reply-quote','replyQuote','file-json'],['reply-conversation','replyConversation','conversation reference'],['client-message-id','clientMessageId','request ID']]) {
     const index=parts.indexOf('--'+flag);if(index<0)continue
     const value=parts[index+1]
     if(type==='json')input[key]=JSON.parse(value)
@@ -220,7 +220,7 @@ async function main() {
   if(group==='session'&&rest.includes('--client-message-id')&&!['send','enqueue'].includes(sub))throw Error('--client-message-id is supported by session send and enqueue')
   if(group==='session'&&(rest.includes('--reply-to')||rest.includes('--reply-quote')||rest.includes('--reply-conversation')||rest.includes('--reply-text-only'))&&!['send','enqueue'].includes(sub))throw Error('--reply-to / --reply-quote are supported by session send and enqueue')
   if(group==='session'&&['info','snapshot','transcript','send','steer','follow','interrupt','enqueue','queue','dequeue','open'].includes(sub)&&rest.includes('--employee')){
-    const p=parse(rest);if((p.images!==undefined||p.files!==undefined)&&!['send','enqueue'].includes(sub))throw Error('--images is supported by session send and enqueue');const result=await send({cmd:'session.'+sub,args:{employee:p.employee,clientMessageId:p['client-message-id'],viewId:p.view,sourceView:p['source-view'],replyTo:p['reply-to'],replyConversation:p['reply-conversation'],replyTextOnly:p['reply-text-only']?true:undefined,replyQuote:p['reply-quote']===undefined?undefined:jsonArgument(p['reply-quote']),images:p.images===undefined?undefined:jsonArgument(p.images),files:p.files===undefined?undefined:jsonArgument(p.files),text:p.text??p._.join(' '),limit:p.limit?Number(p.limit):undefined,thinking:!!p.thinking,raw:!!p.raw,messageId:p['message-id'],expectedMessageId:p['expected-message-id']}},{stream:sub==='follow'});if(sub==='follow'){if(useJson)console.log(JSON.stringify({type:'snapshot',...result.initial}));else if(result.initial.text)console.log(result.initial.text);process.on('SIGINT',()=>{result.stream.end();process.exit(0)});return}return out(result)
+    const p=parse(rest);if((p.images!==undefined||p.files!==undefined)&&!['send','enqueue'].includes(sub))throw Error('--images is supported by session send and enqueue');const result=await send({cmd:'session.'+sub,args:{employee:p.employee,clientMessageId:p['client-message-id'],sourceView:p['source-view'],replyTo:p['reply-to'],replyConversation:p['reply-conversation'],replyTextOnly:p['reply-text-only']?true:undefined,replyQuote:p['reply-quote']===undefined?undefined:jsonArgument(p['reply-quote']),images:p.images===undefined?undefined:jsonArgument(p.images),files:p.files===undefined?undefined:jsonArgument(p.files),text:p.text??p._.join(' '),limit:p.limit?Number(p.limit):undefined,thinking:!!p.thinking,raw:!!p.raw,messageId:p['message-id'],expectedMessageId:p['expected-message-id']}},{stream:sub==='follow'});if(sub==='follow'){if(useJson)console.log(JSON.stringify({type:'snapshot',...result.initial}));else if(result.initial.text)console.log(result.initial.text);process.on('SIGINT',()=>{result.stream.end();process.exit(0)});return}return out(result)
   }
   const command=`${group}${sub && !sub.startsWith('-') ? '.' + sub : ''}`
   const input=require('./command-inputs.cjs').commandInput(command,rest,parse,jsonArgument)
@@ -228,7 +228,7 @@ async function main() {
   switch (command) {
     case 'system.directories': {const p=parse(rest);return out(await call('system.directories',{path:p.path}))}
     case 'engine.capabilities': {const p=parse(rest);return out(await call('engine.capabilities',{engine:p.engine}))}
-    case 'engine.check': {const p=parse(rest);return out(await call('engine.check',{engine:p.engine,team:p.team,force:!!p.force}))}
+    case 'engine.check': {const p=parse(rest);return out(await call('engine.check',{engine:p.engine,hostId:p['host-id'],force:!!p.force}))}
     case 'engine.probe': {const p=parse(rest);return out(await call('engine.probe',{engine:p.engine,model:p.model,confirm:p.confirm===true}))}
     case 'engine.configure': {const p=parse(rest);return out(await call('engine.configure',{engine:p.engine,patch:jsonArgument(p.data)}))}
     case 'engine.install-plan': case 'engine.install': case 'engine.login': {const p=parse(rest);return out(await call('engine.'+sub,{engine:p.engine,confirm:!!p.confirm}))}
@@ -243,11 +243,11 @@ async function main() {
     case 'view.shared': {if(!['on','off'].includes(rest[0]))throw Error('view shared accepts on|off');return out(await call('view.shared',{enabled:rest[0]==='on'}))}
     case 'transfer.start': {const p=parse(rest);return out(await call('transfer.start',{from:jsonArgument(p.from),to:jsonArgument(p.to)}))}
     case 'settings.set': {
-      const p=parse(rest),a={};if(p.language!==undefined)a.language=p.language;if(p.theme!==undefined)a.theme=p.theme;if(p['theme-color']!==undefined)a.themeColor=p['theme-color'];if(p['default-permission']!==undefined)a.defaultPermissionMode=p['default-permission'];for(const [key,flag] of [['defaultCodexModel','default-codex-model'],['defaultClaudeModel','default-claude-model'],['defaultClineModel','default-cline-model'],['defaultPiModel','default-pi-model']])if(p[flag]!==undefined)a[key]=p[flag];for(const [key,flag] of [['boardMaxColumns','board-max-columns'],['assetDrawerWidth','asset-drawer-width'],['explorerWidth','explorer-width'],['terminalHeight','terminal-height'],['pageZoom','page-zoom'],['zoomSensitivity','zoom-sensitivity'],['panSensitivity','pan-sensitivity'],['sidebarWidth','sidebar-width']])if(p[flag]!==undefined)a[key]=Number(p[flag]);for(const [key,flag] of [['snapEmployees','snap-employees'],['showTeamOverview','team-overview'],['explorerCollapsed','explorer-collapsed'],['explorerTreeCollapsed','explorer-tree-collapsed']])if(p[flag]!==undefined){if(!['on','off'].includes(p[flag]))throw new Error(`--${flag} accepts on|off`);a[key]=p[flag]==='on'}
+      const p=parse(rest),a={};if(p.language!==undefined)a.language=p.language;if(p.theme!==undefined)a.theme=p.theme;if(p['theme-color']!==undefined)a.themeColor=p['theme-color'];if(p['default-permission']!==undefined)a.defaultPermissionMode=p['default-permission'];if(p['employee-workspaces-root']!==undefined)a.employeeWorkspacesRoot=p['employee-workspaces-root'];for(const [key,flag] of [['defaultCodexModel','default-codex-model'],['defaultClaudeModel','default-claude-model'],['defaultClineModel','default-cline-model'],['defaultPiModel','default-pi-model']])if(p[flag]!==undefined)a[key]=p[flag];for(const [key,flag] of [['assetDrawerWidth','asset-drawer-width'],['explorerWidth','explorer-width'],['terminalHeight','terminal-height'],['pageZoom','page-zoom'],['sidebarWidth','sidebar-width']])if(p[flag]!==undefined)a[key]=Number(p[flag]);for(const [key,flag] of [['explorerCollapsed','explorer-collapsed'],['explorerTreeCollapsed','explorer-tree-collapsed']])if(p[flag]!==undefined){if(!['on','off'].includes(p[flag]))throw new Error(`--${flag} accepts on|off`);a[key]=p[flag]==='on'}
       if(p['message-wallpaper']!==undefined)a.messageWallpaper=jsonArgument(p['message-wallpaper'])
       if(p['view-appearance']!==undefined)a.viewAppearance=jsonArgument(p['view-appearance'])
       if(p.view!==undefined){
-        if(!['company','messages','plan'].includes(p.view))throw Error('--view accepts company, messages or plan')
+        if(!['library','messages','plan'].includes(p.view))throw Error('--view accepts library, messages or plan')
         if(p['view-appearance']!==undefined)throw Error('Choose --view or --view-appearance')
         if(a.theme===undefined&&a.themeColor===undefined)throw Error('--view requires --theme or --theme-color')
         a.viewAppearance={[p.view]:{...(a.theme!==undefined?{theme:a.theme}:{}),...(a.themeColor!==undefined?{themeColor:a.themeColor}:{})}};delete a.theme;delete a.themeColor
@@ -258,23 +258,18 @@ async function main() {
     case 'api.call':{const p=parse(rest),args=p.args===undefined?{}:jsonArgument(p.args);if(p._.length!==1||!/^[a-z][a-z0-9.-]*$/.test(p._[0])||!args||typeof args!=='object'||Array.isArray(args)||Object.keys(p).some(key=>!['_','args'].includes(key)))throw Error('Usage: agents api call COMMAND --args JSON|@file');return out(await call(p._[0],args))}
     case 'api.docs':{const p=parse(rest);return out(await call('api.docs',{document:p.document??p._[0]}),data=>data.markdown)}
     case 'api.describe':{const p=parse(rest);return out(await call('api.describe',{command:p._[0],...(p.all===true?{all:true}:{})}))}
-    case 'connector.get':case 'connector.set':case 'connector.reset':case 'connector.segment': {const p=parse(rest),a={manager:p.manager,employee:p.employee};for(const end of ['source','target']){if(p[end+'-offset']!==undefined&&p[end]===undefined)throw Error('--'+end+'-offset requires --'+end);if(p[end]!==undefined)a[end]={side:p[end],...(p[end+'-offset']===undefined?{}:{offset:Number(p[end+'-offset'])})}}if(p.points!==undefined&&p['auto-route'])throw Error('Choose --points or --auto-route');if(p.points!==undefined)a.route=jsonArgument(p.points);if(p['auto-route'])a.route=null;if(sub==='segment'){a.index=Number(p.index);a.x=Number(p.x);a.y=Number(p.y)}return out(await call('connector.'+sub,a))}
-    case 'office.layout': {const p=parse(rest);return out(await call('office.layout',{team:p.team,viewId:p.view}))}
     case 'session.acknowledge': {const p=parse(rest);return out(await call('session.acknowledge',{employee:p.employee??p._[0],replyId:p['reply-id']}))}
-    case 'management.relayout': {const p=parse(rest);return out(await call('management.relayout',{team:p.team}))}
-    case 'management.topology':{const p=parse(rest);return out(await call('management.topology',{team:p.team,creator:p.creator,teamsOnly:p['teams-only']===true}))}
-    case 'management.activity':{const p=parse(rest);return out(await call('management.activity',{team:p.team}))}
+    case 'management.topology':{const p=parse(rest);return out(await call('management.topology',{creator:p.creator}))}
+    case 'management.activity':{return out(await call('management.activity',{}))}
     case 'management.request':{const p=parse(rest);return out(await call('management.request',{employee:p.employee,manager:p.manager}))}
     case 'management.bind':case 'management.unbind': {
       const p=parse(rest)
       if(p._.length>(sub==='unbind'?1:0)||Object.keys(p).some(key=>!['_','employee','manager','json'].includes(key)))throw Error('Use --employee ID [--manager ID], or a relation ID for unbind')
       return out(await call('management.'+sub,{employee:p.employee,manager:p.manager,...(p._[0]===undefined?{}:{id:p._[0]})}))
     }
-    case 'management.team': {const p=parse(rest);if(p.clear&&p.team)throw Error('Use --team or --clear');return out(await call('management.team',{team:p.team,clear:!!p.clear}))}
     case 'management.global':if(!['on','off'].includes(rest[1]))throw Error('Use on or off');return out(await call('management.global',{id:rest[0],enabled:rest[1]==='on'}))
     case 'session.status':{const p=parse(rest);return out(await call('session.status',{employee:p.employee}))}
-    // Keep legacy selector flags parseable; Core canonicalizes them to the direct Team board.
-    case 'view.select': {const p=parse(rest);if(p['toggle-navigation']!==undefined&&typeof p['toggle-navigation']!=='boolean')throw Error('Use --toggle-navigation without a value');return out(await call('view.select',{id:p._[0],teamViewId:p['team-view'],teamTab:p['team-tab'],engineeringId:p.engineering,missionTab:p['mission-tab'],toggleNavigation:p['toggle-navigation']}))}
+    case 'view.select': {const p=parse(rest);if(p['toggle-navigation']!==undefined&&typeof p['toggle-navigation']!=='boolean')throw Error('Use --toggle-navigation without a value');return out(await call('view.select',{id:p._[0],...(p.section?{librarySection:p.section}:{}),missionTab:p['mission-tab'],toggleNavigation:p['toggle-navigation']}))}
     case 'transfer.download-save':{const p=parse(rest);if(!p.path)throw Error('Provide --path on the Core host');return out(await call('transfer.download-save',{from:jsonArgument(p.from),path:p.path,overwrite:!!p.overwrite}))}
     case 'chat.file':{const p=parse(rest);return out(await call('chat.file',{id:p._[0],path:p.path,operation:p.operation,offset:Number(p.offset??0)}))}
     case 'messenger.draft':{const p=parse(rest),data=jsonArgument(p.data);if(!data||typeof data!=='object'||Array.isArray(data)||'conversation' in data)throw Error('Use a draft object without conversation');if(p.scope!==undefined&&data.scope!==undefined&&p.scope!==data.scope)throw Error('Draft scope options must agree');return out(await call('messenger.draft',{...data,...(p.scope!==undefined?{scope:p.scope}:{}),conversation:p._[0]}))}
@@ -286,17 +281,14 @@ async function main() {
     case 'chat.update': {const p=parse(rest),patch=jsonArgument(p.patch);if(!patch||typeof patch!=='object'||Array.isArray(patch)||'id' in patch)throw Error('Use a group patch without id');return out(await call('chat.update',{...patch,id:p._[0]}))}
     case 'chat.edit': {const p=parse(rest);return out(await call('chat.edit',{id:p._[0],messageId:p.message,text:p.file?readInputFile(p.file):p.text,expectedRevision:p['expected-revision']===undefined?undefined:Number(p['expected-revision'])}))}
     case 'chat.mute': {const p=parse(rest);return out(await call('chat.mute',{id:p._[0],member:p.member,muted:!p.off,durationSeconds:p.for===undefined?undefined:Number(p.for)}))}
-    case 'chat.send':case 'chat.post': {const p=parse(rest);if(p.silent!==undefined)throw Error('Silent publication is removed. To remain silent, do not call chat post');const a={id:p._[0],text:p.file?readInputFile(p.file):p.text,images:p.images===undefined?undefined:jsonArgument(p.images),files:p.files===undefined?undefined:jsonArgument(p.files),clientMessageId:p['client-message-id'],replyTo:p['reply-to'],replyConversation:p['reply-conversation'],replyTextOnly:p['reply-text-only']?true:undefined,replyQuote:p['reply-quote']===undefined?undefined:jsonArgument(p['reply-quote'])};if(sub==='send'){a.mentions=p.mentions===undefined?[]:p.mentions==='all'?'all':jsonArgument(p.mentions);a.viewId=p.view}else a.kind=p.kind;return out(await call('chat.'+sub,a))}
-    case 'team-view.create': {const p=parse(rest);return out(await call('team-view.create',{name:p.name,teams:p.teams?jsonArgument(p.teams):[]}))}
-    case 'team-view.update': {const p=parse(rest);return out(await call('team-view.update',{id:p._[0],patch:jsonArgument(p.patch)}))}
+    case 'chat.send':case 'chat.post': {const p=parse(rest);if(p.silent!==undefined)throw Error('Silent publication is removed. To remain silent, do not call chat post');const a={id:p._[0],text:p.file?readInputFile(p.file):p.text,images:p.images===undefined?undefined:jsonArgument(p.images),files:p.files===undefined?undefined:jsonArgument(p.files),clientMessageId:p['client-message-id'],replyTo:p['reply-to'],replyConversation:p['reply-conversation'],replyTextOnly:p['reply-text-only']?true:undefined,replyQuote:p['reply-quote']===undefined?undefined:jsonArgument(p['reply-quote'])};if(sub==='send'){a.mentions=p.mentions===undefined?[]:p.mentions==='all'?'all':jsonArgument(p.mentions)}else a.kind=p.kind;return out(await call('chat.'+sub,a))}
     case 'view.open': {
-      const p=parse(rest);return out(await call('view.open',{kind:p._[0],teamTab:p['team-tab'],missionTab:p['mission-tab'],name:p.name,employee:p.employee,chatId:p.chat,channelId:p.channel,sourceId:p.source,planViewId:p['plan-view'],pluginId:p.plugin,settings:p.mode?{mode:p.mode,pluginId:p.plugin,remote:remoteFlags(p)}:undefined,details:!!p.details}))
+      const p=parse(rest);return out(await call('view.open',{kind:p._[0],...(p.section?{librarySection:p.section}:{}),...(p['host-id']?{libraryHostId:p['host-id']}:{}),...(p.query?{libraryQuery:p.query}:{}),...(p['reader-workspace']?{readerWorkspace:p['reader-workspace']}:{}),...(p['reader-document']?{readerDocumentId:p['reader-document']}:{}),missionTab:p['mission-tab'],name:p.name,employee:p.employee,chatId:p.chat,channelId:p.channel,sourceId:p.source,planViewId:p['plan-view'],pluginId:p.plugin,settings:p.mode?{mode:p.mode,pluginId:p.plugin,remote:remoteFlags(p)}:undefined,details:!!p.details}))
     }
     case 'view.details': return out(await call('view.details',{enabled:rest[0]==='on'}))
-    case 'remote.check': {const p=parse(rest);return out(await call('remote.check',{employee:p.employee,team:p.team,remote:remoteFlags(p)}))}
+    case 'remote.check': {const p=parse(rest);return out(await call('remote.check',{employee:p.employee,hostId:p['host-id'],directory:p['remote-dir']??p.directory,remote:remoteFlags(p)}))}
     case 'worker.snapshot': case 'worker.send': case 'worker.dequeue': case 'worker.respond': case 'worker.configure': case 'worker.create': case 'worker.list': case 'worker.engines': case 'worker.start': case 'worker.read': case 'worker.input': case 'worker.draft': case 'worker.resize': case 'worker.interrupt': case 'worker.stop': case 'worker.remove': {
       const p=parse(rest),a={id:p._[0],employee:p.employee,engine:p.engine,title:p.title,cwd:p.cwd}
-      if(sub==='create'&&p.team!==undefined)a.team=p.team
       for(const key of ['cols','rows','cursor'])if(p[key]!==undefined)a[key]=Number(p[key])
       if(p['wait-ms']!==undefined)a.waitMs=Number(p['wait-ms'])
       if(p['client-request-id']!==undefined)a.clientRequestId=p['client-request-id']
@@ -315,11 +307,11 @@ async function main() {
     case 'terminal.input': {const p=parse(rest),data=p.file?readInputFile(p.file):p.data??p._[1]??'';return out(await call('terminal.input',{id:p._[0],data:data+(p.enter?'\r':'')}))}
     case 'terminal.resize': {const p=parse(rest);return out(await call('terminal.resize',{id:p._[0],cols:Number(p.cols),rows:Number(p.rows)}))}
     case 'workspace.suggest':case 'workspace.choose': {
-      const p=parse(rest);return out(await call(`workspace.${sub}`,{team:p.team,path:p.path,workEnvironment:p['work-environment'],mode:p.mode,pluginId:p.plugin,remote:remoteFlags(p)}))
+      const p=parse(rest);return out(await call(`workspace.${sub}`,{title:p.title,folderName:p['folder-name'],path:p.path,hostId:p['host-id'],directory:p['remote-dir']??p.directory,mode:p.mode,pluginId:p.plugin,remote:remoteFlags(p)}))
     }
     case 'workspace.image':case 'workspace.list':case 'workspace.read':case 'workspace.write':case 'workspace.mkdir':case 'workspace.move':case 'workspace.trash':case 'workspace.restore': {
       const p=parse(rest),content=p.file?readInputFile(p.file):p.content
-      return out(await call(`workspace.${sub}`,{shared:!!p.shared,team:p.team,employee:p.employee,path:p._[0]??p.path,to:p.to,content,contentBase64:p['base64-file']?readInputFile(p['base64-file']).trim():p['content-base64'],hash:p.hash,create:!!p.create,hidden:!!p.hidden,id:p.id}))
+      return out(await call(`workspace.${sub}`,{shared:!!p.shared,employee:p.employee,path:p._[0]??p.path,to:p.to,content,contentBase64:p['base64-file']?readInputFile(p['base64-file']).trim():p['content-base64'],hash:p.hash,create:!!p.create,hidden:!!p.hidden,id:p.id}))
     }
     case 'serve': {
       const p=parse(argv.slice(1));if(p.web)process.env.AGENTS_COMPANY_WEB='1';for(const [flag,key] of [['host','HOST'],['port','PORT'],['public-url','PUBLIC_URL']])if(p[flag]!==undefined)process.env['AGENTS_COMPANY_WEB_'+key]=p[flag];if(p['allow-insecure'])process.env.AGENTS_COMPANY_WEB_ALLOW_INSECURE='1';
@@ -329,21 +321,21 @@ async function main() {
     case 'plugin.call': {
       const p=parse(rest)
       const params=p.params ? JSON.parse(String(p.params).startsWith('@')?readInputFile(String(p.params).slice(1)):String(p.params)) : {}
-      return out(await call('plugin.call',{id:p._[0],method:p._[1],team:p.team,workspace:p.workspace,employee:p.employee,params,raw:p.raw===true}))
+      return out(await call('plugin.call',{id:p._[0],method:p._[1],workspace:p.workspace,employee:p.employee,params,raw:p.raw===true}))
     }
     case 'plugin.place': {const p=parse(rest),bounds={};for(const key of ['x','y','width','height'])if(p[key]!==undefined)bounds[key]=Number(p[key]);return out(await call('plugin.place',{id:p._[0],bounds}))}
-    case 'plugin.open': {const p=parse(rest);return out(await call('plugin.open',{id:p._[0],team:p.team,employee:p.employee,workspace:p.workspace}))}
+    case 'plugin.open': {const p=parse(rest);return out(await call('plugin.open',{id:p._[0],employee:p.employee,workspace:p.workspace}))}
     case 'plugin.view': {
       const p=parse(rest)
-      return out(await call('plugin.view',{id:p._[0],team:p.team,workspace:p.workspace,employee:p.employee}))
+      return out(await call('plugin.view',{id:p._[0],workspace:p.workspace,employee:p.employee}))
     }
     case 'workspace.docs': {
       const p=parse(rest)
-      return out(await call('workspace.docs',{team:p.team,workspace:p.workspace,employee:p.employee}))
+      return out(await call('workspace.docs',{workspace:p.workspace,employee:p.employee}))
     }
     case 'status':
       return out(await call('status'), (d) =>
-        `running   ${d.running}\nhome      ${d.home}\nteamRoots ${Object.keys(d.teamRoots ?? {}).length}\nlive      ${d.live}\nstored    ${d.stored}`
+        `running    ${d.running}\nhome       ${d.home}\nworkspaces ${d.workspacesRoot ?? ''}\nlive       ${d.live}\nstored     ${d.stored}`
       )
     case 'session.list': {
       const p = parse(argv.slice(1))
@@ -360,9 +352,9 @@ async function main() {
         table(s.sessions, [
           { key: 'id', label: 'ID' },
           { key: 'engine', label: 'ENGINE' },
-          { key: 'group', label: 'DEPARTMENT' },
-          { key: 'title', label: 'TITLE' }
-        ]) + `\n\ndepartments: ${s.groups.join(', ') || '(none)'}`
+          { key: 'title', label: 'TITLE' },
+          { key: 'cwd', label: 'WORKSPACE' }
+        ])
       )
     }
 
@@ -370,12 +362,11 @@ async function main() {
       const p = parse(argv.slice(1))
       const d = await call('session.new', {
         engine: p.engine,
-        group: p.group,
-        model: p.model,workEnvironment:p['work-environment'],
+        folderName: p['folder-name'],
+        model: p.model,
         cwd: p.cwd,
         directoryMode:p['directory-mode'],hostId:p['host-id'],directory:p['remote-dir'],remote:remoteFlags(p),
         title: p.title,
-        seat: p.seat,
         permissionMode: p.permission,
         effort: p.effort,
         thinking: p.thinking === undefined ? undefined : p.thinking === 'on'
@@ -430,7 +421,7 @@ async function main() {
       return out(await call('config.effort', { id: rest[0], effort: rest[1] ?? 'default' }))
 
     case 'config.plan': {if(!['on','off'].includes(rest[1]))throw new Error('Use on|off');return out(await call('config.plan',{id:rest[0],enabled:rest[1]==='on'}))}
-    case 'engine.models': {const p=parse(rest);return out(await call('engine.models',{engine:p.engine,kind:p.kind,team:p.team,model:p.model}))}
+    case 'engine.models': {const p=parse(rest);return out(await call('engine.models',{engine:p.engine,kind:p.kind,hostId:p['host-id'],model:p.model}))}
     case 'engine.skill': return out(await call('engine.skill',{id:rest[0],name:rest[1],prompt:rest.slice(2).join(' ')}))
     case 'session.steer': {const parts=rest.slice(1),source=messageSourceOption(parts);return out(await call('session.steer',{id:rest[0],text:parts.join(' '),...source}))}
     case 'session.background-stop': {const p=parse(rest);return out(await call('session.background-stop',{id:p._[0],processId:p.process}))}
@@ -478,10 +469,9 @@ async function main() {
     case 'ui.view':
       return out(await call('ui.view'), (d) => {
         const lines = [`view        ${d.view}`]
-        if (d.view === 'home') {
-          lines.push(`departments ${d.departments.join(', ') || '(none)'}`)
+        if (d.view === 'messages' || d.view === 'plan') {
           lines.push(`cards       ${d.cards.length}`)
-          for (const c of d.cards) lines.push(`  · ${c.title}  [${c.engine}]  ${c.group || 'Unassigned'}`)
+          for (const c of d.cards) lines.push(`  · ${c.title}  [${c.engine}]`)
         } else if (d.session) {
           const s = d.session
           lines.push(`session     ${s.title}`)
@@ -522,12 +512,6 @@ async function main() {
       )
     }
 
-    case 'room.place': {
-      const p=parse(rest);return out(await call('room.place',{name:p._[0],slot:Number(p.slot)}))
-    }
-
-    case 'group.list':
-      {const p=parse(rest);return out(await call('group.list',{details:!!p.details}),g=>g.map(value=>typeof value==='string'?value:`${value.name} · ${value.mode}${value.remote?' · '+value.remote.host:value.pluginId?' · '+value.pluginId:''} · ${value.root??''}`).join('\n')||'(none)')}
     case 'host.terminal-open': case 'host.terminal-list': case 'host.terminal-read': case 'host.terminal-input': case 'host.terminal-resize': case 'host.terminal-close': {
       const p=parse(rest),a={id:p._[0],terminal:p.terminal,session:p.session,directory:p.directory}
       for(const key of ['cols','rows','cursor'])if(p[key]!==undefined)a[key]=Number(p[key])
@@ -541,34 +525,12 @@ async function main() {
     case 'host.create': {const p=parse(rest);return out(await call('host.create',jsonArgument(p.data||'{}')))}
     case 'host.update': {const p=parse(rest);return out(await call('host.update',{id:p._[0],patch:jsonArgument(p.data||'{}')}))}
     case 'host.directories': {const p=parse(rest);return out(await call('host.directories',{id:p._[0],path:p.path}))}
-    case 'engine.remote-check': {const p=parse(rest);return out(await call('engine.remote-check',{team:p.team,engine:p.engine,directory:p.directory}))}
-    case 'engine.remote-sessions': {const p=parse(rest);return out(await call('engine.remote-sessions',{team:p.team,engine:p.engine}))}
-    case 'group.add':
-      {const p=parse(rest);return out(await call('group.add', { name: rest[0], root:p.root,mode:p.mode,pluginId:p.plugin,directoryMode:p['directory-mode'],folderName:p['folder-name'],parentDirectory:p['parent-directory'],hostId:p['host-id'],directory:p['remote-dir'],remote:remoteFlags(p),os:p.os,distribution:p.distribution,...(p.design!==undefined?{design:jsonArgument(p.design)}:{}),...(p.bounds!==undefined?{bounds:jsonArgument(p.bounds)}:{}),...(p['client-request-id']!==undefined?{clientRequestId:p['client-request-id']}: {}) }), (s) => s.groups.join('\n'))}
-    case 'group.configure':
-      {const p=parse(rest);return out(await call('group.configure',{name:p._[0],mode:p.mode,pluginId:p.plugin,directoryMode:p['directory-mode'],root:p.root,hostId:p['host-id'],directory:p['remote-dir'],remote:remoteFlags(p)}))}
-    case 'group.root':
-      return out(await call('group.root',{name:rest[0],root:rest[1],create:!!parse(rest).create,directoryMode:parse(rest)['directory-mode']}))
-    case 'room.bounds': {
-      const p=parse(rest);return out(await call('room.bounds',{name:p._[0],...(p.columns!==undefined?{columns:Number(p.columns)}:{}),...(p.rows!==undefined?{rows:Number(p.rows)}:{})}))
-    }
-    case 'card.place': {
-      const p=parse(rest)
-      if(['x','y','snap','zoom'].some(key=>p[key]!==undefined))throw Error('Free coordinates are no longer supported. Use --seat N.')
-      return out(await call('card.place',{id:p._[0],seat:Number(p.seat)}))
-    }
-    case 'canvas.view':
-      return out(await call('canvas.view',{viewId:parse(rest).view}))
-    case 'canvas.set': {
-      const p=parse(rest)
-      return out(await call('canvas.set',{x:p.x,y:p.y,zoom:p.zoom,viewId:p.view}))
-    }
-    case 'group.remove':
-      {const p=parse(rest);if(p['delete-workspace']!==undefined&&p['delete-workspace']!==true)throw Error('--delete-workspace is a flag');return out(await call('group.remove', { ...(p._.length===1?{name:p._[0]}:{names:p._}),deleteWorkspace:p['delete-workspace']===true }), (s) => s.groups.join('\n'))}
+    case 'engine.remote-check': {const p=parse(rest);return out(await call('engine.remote-check',{hostId:p['host-id'],engine:p.engine,directory:p['remote-dir']??p.directory}))}
+    case 'engine.remote-sessions': {const p=parse(rest);return out(await call('engine.remote-sessions',{hostId:p['host-id'],engine:p.engine}))}
 
     case 'card.rename':
       return out(await call('card.rename', { cardId: rest[0], title: rest.slice(1).join(' ') }))
-    case 'card.clone': {const p=parse(rest);return out(await call('card.clone',{id:p._[0],title:p.title,cwd:p.cwd,directoryMode:p['directory-mode']}))}
+    case 'card.clone': {const p=parse(rest);return out(await call('card.clone',{id:p._[0],title:p.title,folderName:p['folder-name'],cwd:p.cwd,directoryMode:p['directory-mode']}))}
     case 'card.initialize': {const p=parse(rest);return out(await call('card.initialize',{id:p._[0],model:p.model,effort:p.effort}))}
     case 'avatar.list': {const p=parse(rest);return out(await call('avatar.list',{query:p.query,style:p.style,status:p.status,all:!!p.all}))}
     case 'avatar.get': {const p=parse(rest);return out(await call('avatar.get',{id:p._[0]}))}
@@ -578,24 +540,12 @@ async function main() {
       const p = parse(rest)
       if(p.thinking!==undefined&&!['on','off'].includes(p.thinking))throw new Error('--thinking must be on or off')
       if(p.kind!==undefined&&!['worker','cloud-native-worker'].includes(p.kind)||p['chat-provider']!==undefined||p['chat-mode']!==undefined||p['chrome-profile']!==undefined)throw new Error('Only Local or Cloud Native Worker employees are supported')
-      return out(await call('card.create', { ...p,clientRequestId:p['client-request-id'], thinking:p.thinking===undefined?undefined:p.thinking==='on', permissionMode:p.permission, avatarStyle:p['avatar-style'], workEnvironment:p['work-environment'],managementRole:p['management-role'],accessMode:p['access-mode'],directoryMode:p['directory-mode'],hostId:p['host-id'],directory:p['remote-dir'],remote:remoteFlags(p), _: undefined }))
+      return out(await call('card.create', { ...p,clientRequestId:p['client-request-id'], thinking:p.thinking===undefined?undefined:p.thinking==='on', permissionMode:p.permission, avatarStyle:p['avatar-style'], folderName:p['folder-name'], managementRole:p['management-role'],accessMode:p['access-mode'],directoryMode:p['directory-mode'],hostId:p['host-id'],remoteDir:p['remote-dir'],remote:p['host-id']?undefined:remoteFlags(p),'client-request-id':undefined,'avatar-style':undefined,'folder-name':undefined,'management-role':undefined,'access-mode':undefined,'directory-mode':undefined,'host-id':undefined,'remote-dir':undefined,permission:undefined, _: undefined }))
     }
     case 'card.update': {
       const p = parse(rest)
       if(p.kind!==undefined&&!['worker','cloud-native-worker'].includes(p.kind)||p['chat-provider']!==undefined||p['chat-mode']!==undefined||p['chrome-profile']!==undefined)throw new Error('Only Local or Cloud Native Worker employees are supported')
-      return out(await call('card.update', { id: p._[0], patch: { ...p, avatarStyle:p['avatar-style'], workEnvironment:p['work-environment'],directoryMode:p['directory-mode'],hostId:p['host-id'],directory:p['remote-dir'],remote:remoteFlags(p), _: undefined } }))
-    }
-    case 'room.design': {
-      const p = parse(rest)
-      const design = { theme: p.theme, wall: p.wall, desk: p.desk, subtitle: p.subtitle, background:p.background,pattern:p.pattern }
-      for (const key of ['plants', 'shelf', 'lamp', 'art', 'scenery']) if (p[key] !== undefined) design[key] = p[key] === 'on'
-      return out(await call('room.design', { name: p._[0] ?? '', design }))
-    }
-    case 'card.move': {
-      const p = parse(argv.slice(1))
-      return out(
-        await call('card.move', { id: p._[1], group: p._[2] ?? '', before: p.before, cwd: p.cwd })
-      )
+      return out(await call('card.update', { id: p._[0], patch: { ...p, avatarStyle:p['avatar-style'], directoryMode:p['directory-mode'],hostId:p['host-id'],remoteDir:p['remote-dir'],remote:p['host-id']?undefined:remoteFlags(p),'avatar-style':undefined,'directory-mode':undefined,'host-id':undefined,'remote-dir':undefined, _: undefined } }))
     }
     case 'card.remove':
       {const p=parse(rest);if(p['delete-workspace']!==undefined&&p['delete-workspace']!==true)throw Error('--delete-workspace is a flag');return out(await call('card.remove', { ...(p._.length===1?{id:p._[0]}:{ids:p._}),deleteWorkspace:p['delete-workspace']===true }))}

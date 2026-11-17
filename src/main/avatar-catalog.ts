@@ -29,6 +29,6 @@ export function updateAvatar(args:{id:string;enabled:boolean;expectedRevision?:n
  const enabled=args.enabled?[...before,item.id]:before.filter(id=>id!==item.id)
  if(!enabled.length)throw Error('Keep at least one enabled character; enable its replacement before archiving this one')
  store.avatarCatalog={revision:revision+1,enabled} satisfies AvatarCatalogState
- writeStore(store,{reconcileOffice:false})
+ writeStore(store)
  return getAvatar(item.id)
 }

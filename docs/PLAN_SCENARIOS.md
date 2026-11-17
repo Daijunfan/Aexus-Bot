@@ -1,8 +1,8 @@
-# Plan and MiniNotion: scenario-based acceptance
+# Plan and Mission Notebook: scenario-based acceptance
 
 This guide separates three things: the schedule definition, its actual execution record, and the content saved by the employee. A green/succeeded engine turn alone does not prove that a report or database record was written.
 
-All automated cases use a new `AGENTS_COMPANY_HOME`, temporary employee workspaces and deterministic engine/provider fixtures. They never create demonstration schedules in the user's company. Screenshots contain only fixture names and content. New Plan controls are English; this work does not translate or replace MiniNotion's existing interface.
+All automated cases use a new `AGENTS_COMPANY_HOME`, temporary employee workspaces and deterministic engine/provider fixtures. They never create demonstration schedules in the user's company. Screenshots contain only fixture names and content. Plan controls use configurable UI labels while Mission Notebook exposes the integrated Notion-grade workflow canvas.
 
 ## A. Sunday project review across time zones
 
@@ -32,7 +32,7 @@ No actual deployment is performed in the fixture. The employee runs a determinis
 
 **Checks.** The first calendar range contains the three expected times. A later range contains none after the quota has already been allocated in the forecast. Moving the calendar or using `--after` does not replenish the limit. Exactly 100 allowed occurrences are not incorrectly described as truncated; an unlimited high-frequency rule does show a truncation warning.
 
-The end-to-end MiniNotion case actually runs two scheduled turns, writes two different records, checks `occurrences=2` and `nextAt=null`, and verifies that no new native conversation was created. Manual runs are tested separately and do not consume the scheduled count.
+The end-to-end Mission Notebook case runs scheduled turns or `/workflow` triggers, writes records through `notebook.call`, checks `occurrences=2` and `nextAt=null`, and verifies execution without fabricating runs. Manual runs are tested separately and do not consume the scheduled count.
 
 ## D. Daily digest, monthly research and an overnight work window
 
@@ -66,23 +66,21 @@ The calendar remains bounded by the existing API limits. A day agenda contains t
 
 **Checks.** Employee grouping/filtering uses stable IDs and shows Team names. A tag only present on page two is still available from page one. Query facets come only from the caller's authorized schedules, never from all employees' private plans. Deleting the last page's records returns the UI to the last valid page rather than leaving an empty or reversed pagination range. Clear filters restores the complete visible list. Sorting and pagination do not repeat IDs across pages.
 
-## H. A scheduled employee writes a rich MiniNotion report
+## H. A scheduled employee writes a rich Mission Notebook report
 
-**Situation.** A Work employee is bound to an existing MiniNotion main-page folder. A scheduled review must update a child report containing a decision summary, an evidence table, next-action checkboxes and a code block.
+**Situation.** An employee is granted access to an existing Mission Notebook main page. A scheduled review must update a child report containing a decision summary, an evidence table, next-action checkboxes and a code block.
 
-**Execution under test.** The installed Codex process is connected only to a local deterministic HTTP provider. It performs the actual tool call through the employee's authenticated `agents plugin call mininotion ... --employee ID` channel. The test rejects completion unless the latest tool returns a successful Core response. It then independently reads the saved content.
+**Execution under test.** The employee calls Core `agents notebook call ... --employee ID` with authenticated page access. The test independently reads back the saved content through `notebook.call page.read-markdown`.
 
-**Checks.** Verify the weekly rule using preview, execute one explicit manual test run, and confirm the next weekly date was not consumed. Check the real child page via `page.read-markdown`, open the actual MiniNotion window, and inspect its native table/checklist/code rendering. The test does not merely insert a success message into the transcript.
+**Checks.** Verify the weekly rule using preview, execute one explicit manual test run, and confirm the next weekly date was not consumed. Check the real child page via `page.read-markdown`, open the Mission Notebook surface, and inspect its table/checklist/code rendering and `/workflow` workflow buttons.
 
-The fixture controls the model's chosen action. It validates the complete execution route and saved result; it does not certify that an arbitrary model will always follow every natural-language instruction.
+## I. Repeat tasks and `/workflow` buttons populate the same Mission Notebook database
 
-## I. Repeat tasks populate the same MiniNotion database
+**Situation.** Automated tasks create and update records in the same Mission Notebook database, with status and date properties plus content blocks.
 
-**Situation.** Two short recurring quality checks create "First verification" and "Second verification" in the same database, with status and date properties plus a content block explaining the evidence.
+**Checks.** Verify succeeded run records, actual stored database records, and view rendering across Table, Board, Gallery, List and Calendar. Run `notebook.call fs.audit` and reread records and report content. All views must reference one data source.
 
-**Checks.** Let the real timer trigger both turns. Require two succeeded run records, two actual stored records, a consumed limit, and the same original employee/native session. Open Table, Board, Gallery, List and Calendar in MiniNotion and verify both record titles in every view. Run filesystem audit, close/reopen the plugin, and reread records and report content. All views must reference one data source.
-
-The timing system remains Core-owned `schedule.*`. MiniNotion retains its existing pages, database properties, document reminders and files; Plan does not duplicate or replace them.
+The timing system remains Core-owned `schedule.*` (directly callable from Mission Notebook `/workflow` buttons and `button.*` / `automation.*`). Mission Notebook retains its pages, database properties, internal reminders and files; Plan does not duplicate them.
 
 ## Reproduce safely
 
@@ -93,9 +91,10 @@ npm run typecheck
 npm run build
 node test/plan-polish-core-test.mjs
 node test/plan-polish-ui-test.mjs
-node test/plan-notion-delivery-test.mjs
+node test/mission-notebook-core-test.mjs
+node test/mission-notebook-ui-test.mjs
 ```
 
-The final command requires a real local Codex executable; `AGENTS_TEST_CODEX_BIN` selects it. All model responses in that test come from localhost, with a new native profile and no production provider key. `AGENTS_COMPANY_TEST_APP` selects a built/installed app for the UI and delivery tests.
+`AGENTS_COMPANY_TEST_APP` selects a built/installed app for UI tests.
 
-Evidence is written beneath `artifacts/plan-polish/`: scenario JSON, logs, light/dark/compact screenshots, the crowded-day agenda, and MiniNotion native-renderer screenshots. The regular Core, UI, scheduler, engine, plugin and Tunnel suites remain independent regression gates. Real SSH/live-host tests require separate authorization and must be reported as skipped when not run.
+Evidence is written beneath `artifacts/plan-polish/` and `artifacts/mission-notebook/`. The regular Core, UI, scheduler, engine, plugin and Tunnel suites remain independent regression gates. Real SSH/live-host tests require separate authorization and must be reported as skipped when not run.

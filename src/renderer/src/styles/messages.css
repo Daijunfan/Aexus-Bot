@@ -17,6 +17,7 @@
 .message-view button:focus-visible{outline:2px solid var(--message-accent);outline-offset:-2px}
 .message-contact-avatar{position:relative;display:block;flex:none}
 .message-contact-avatar>i{position:absolute;right:-1px;bottom:0;width:11px;height:11px;border:2px solid var(--bg-elev);border-radius:50%;background:#65a68c}
+.message-contact.selected .message-contact-avatar>i{border-color:var(--accent)}
 .message-contact-avatar>i[data-state=working]{background:var(--message-accent)}
 .message-contact-avatar>i[data-state=attention]{background:#d6a858}
 .message-avatar{display:block;position:relative;width:50px;height:50px;border-radius:18px;background:color-mix(in srgb,var(--message-accent) 8%,var(--bg-alt));overflow:hidden;flex:none;isolation:isolate}
@@ -279,11 +280,11 @@
 .message-list-heading h1{font-size:26px;letter-spacing:-.8px;font-weight:680;margin:0}
 .message-search{height:44px;margin:0 16px 13px;border-radius:14px;background:color-mix(in srgb,var(--message-accent) 5%,var(--bg-elev));color:var(--fg-dim)}
 .message-list-caption{padding:10px 22px 12px;border-top:0}
-.message-contact{min-height:88px;padding:12px;gap:13px;border-radius:16px;transition:background .18s,box-shadow .18s}
+.message-contact{min-height:88px;padding:12px;gap:13px;border-radius:16px;transition:none}
 .message-contact-line strong{line-height:1.35;font-size:15px;font-weight:650;letter-spacing:-.15px}
 .message-contact-subtitle{line-height:1.4;margin:4px 0 0;font-size:10px;color:var(--fg-faint)}
 .message-contact .message-avatar,.message-contact>.group-avatar{width:54px;height:54px;border-radius:18px}
-.message-contacts>[role=listitem]{contain-intrinsic-size:auto 88px}
+.message-contacts>[role=listitem]{contain-intrinsic-size:auto 76px}
 .message-sidebar-footer{padding:15px 22px}
 .message-footer-mark{width:33px;height:33px;border-radius:10px;background:color-mix(in srgb,var(--message-accent) 7%,var(--bg-elev));color:var(--message-accent);border:0}
 .message-sidebar-footer small{font-size:10px}

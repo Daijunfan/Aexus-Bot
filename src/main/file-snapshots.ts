@@ -8,6 +8,7 @@ import {fileVersion} from './read-cache'
 import {workspacePath} from './files'
 import {atomicJson,readJson} from './atomic-file'
 import {onPluginWindows,pluginWindows} from './plugins/windows'
+import {onReaderSessions,readerSessions} from './library-reader'
 let active=0;const waiting:Array<()=>void>=[]
 /** Bound preview scratch space; only derived covers survive a preview. */
 export async function temporaryFile<T>(end:FileEndpoint,limit:number,work:(local:FileEndpoint)=>Promise<T>):Promise<T>{
@@ -20,12 +21,14 @@ export async function temporaryFile<T>(end:FileEndpoint,limit:number,work:(local
 type Cached={localVersion:string;sourceVersion:string}
 const tracked=new Map<string,string>(),manifest=(root:string)=>path.join(root,'.source-files.json')
 function cleanup(root:string){const data=readJson<Record<string,Cached>>(manifest(root),()=>({}));for(const [relative,entry]of Object.entries(data)){try{const file=workspacePath(root,relative);if(fileVersion(file)===entry.localVersion)fs.unlinkSync(file)}catch{}}}
-onPluginWindows(states=>{for(const [id,root]of tracked)if(!states.some(state=>state.id===id)){if(!states.some(state=>state.workspace===root))cleanup(root);tracked.delete(id)}})
+const isActiveReaderWorkspace=(root:string)=>pluginWindows().some(window=>window.workspace===root)||readerSessions().some(session=>session.workspace===root)
+onPluginWindows(states=>{for(const [id,root]of tracked)if(!states.some(state=>state.id===id)){if(!isActiveReaderWorkspace(root))cleanup(root);tracked.delete(id)}})
+onReaderSessions(sessions=>{for(const [id,root]of tracked)if(!sessions.some(session=>session.id===id)&&!pluginWindows().some(w=>w.id===id)){if(!isActiveReaderWorkspace(root))cleanup(root);tracked.delete(id)}})
 /** Remote originals are a temporary reading cache, never a mirror of the group folder. */
 export async function readingFile(end:FileEndpoint,conversation:string,version:string){
  if(!end.remote)return {root:end.root,path:end.path}
  const root=path.join(APP_HOME,'reader-cache',conversation.replace(':','-'));fs.mkdirSync(root,{recursive:true,mode:0o700})
- if(!pluginWindows().some(window=>window.workspace===root))cleanup(root)
+ if(!isActiveReaderWorkspace(root))cleanup(root)
  const data=readJson<Record<string,Cached>>(manifest(root),()=>({})),relative=end.path,file=workspacePath(root,relative)
  if(fs.existsSync(file)){
   const previous=data[relative];if(!previous||fileVersion(file)!==previous.localVersion)throw Error('The Reader copy was edited locally. Save it before reopening the shared original.')

@@ -29,7 +29,7 @@ export function ensureEngineeringPrompts(item:Engineering){
  for(const task of item.tasks)defaults['nodes/'+task.key+'.md']='# '+task.title+'\n\n## Task\n'+task.prompt+'\n\n## Acceptance\n'+task.acceptance+'\n'
  for(const [relative,content] of Object.entries(defaults)){const file=workspacePath(item.promptDirectory,relative,true),version=hash(content);if(!fs.existsSync(file)||previous[relative]&&hash(fs.readFileSync(file,'utf8'))===previous[relative]&&previous[relative]!==version)write(file,content);next[relative]=version}
  if(JSON.stringify(previous)!==JSON.stringify(next))atomicJson(templateFile,next)
- const structure=JSON.stringify({id:item.id,name:item.name,goal:item.goal,team:item.team,missionId:item.missionId,roles:item.roles.map(({key,title,rank,parent,employeeId})=>({key,title,rank,parent,employeeId})),tasks:item.tasks,dependencies:item.dependencies},null,2)+'\n',file=workspacePath(item.promptDirectory,'structure.json',true)
+ const structure=JSON.stringify({id:item.id,name:item.name,goal:item.goal,...(item.hostId?{hostId:item.hostId}:{}),missionId:item.missionId,roles:item.roles.map(({key,title,rank,parent,employeeId})=>({key,title,rank,parent,employeeId})),tasks:item.tasks,dependencies:item.dependencies},null,2)+'\n',file=workspacePath(item.promptDirectory,'structure.json',true)
  if(!fs.existsSync(file)||fs.readFileSync(file,'utf8')!==structure)write(file,structure)
 }
 export function engineeringPrompts(item:Engineering,relative?:string,content?:string,expectedVersion?:string){

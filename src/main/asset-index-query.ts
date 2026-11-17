@@ -7,8 +7,7 @@ export function assetIndexQuery(args:Record<string,any>,sources:{id:string;remot
  if(args.view){clauses.push("json_extract(owner,'$.view')=?");values.push(args.view)}
  if(args.conversation){clauses.push("json_extract(owner,'$.conversation')=?");values.push(args.conversation)}
  const shared=()=>{const ids:string[]=args.sharedConversations??[];return {sql:ids.length?"(json_extract(owner,'$.employee') IS NULL AND json_extract(owner,'$.conversation') IN ("+ids.map(()=>'?').join(',')+'))':'0',values:ids}}
- if(args.team){const also=shared();clauses.push("(json_extract(owner,'$.team')=? OR "+also.sql+')');values.push(args.team,...also.values)}
- if(args.employee){const also=shared();clauses.push("(json_extract(owner,'$.employee')=? OR "+also.sql+" OR (json_extract(owner,'$.employee') IS NULL AND json_extract(owner,'$.conversation') IS NULL AND json_extract(owner,'$.team')=?))");values.push(args.employee,...also.values,args.employeeTeam??'')}
+ if(args.employee){const also=shared();clauses.push("(json_extract(owner,'$.employee')=? OR "+also.sql+')');values.push(args.employee,...also.values)}
  if(args.kind&&args.kind!=='all'){clauses.push('kind=?');values.push(args.kind)}
  if(args.host){const ids=sources.filter(root=>root.host?.id===args.host).map(root=>root.id);clauses.push(ids.length?'root IN ('+ids.map(()=>'?').join(',')+')':'0');values.push(...ids)}
  if(args.storage){const ids=sources.filter(root=>args.storage==='remote'?root.remote:args.storage==='local'?!root.remote:false).map(root=>root.id);clauses.push(ids.length?'root IN ('+ids.map(()=>'?').join(',')+')':'0');values.push(...ids)}

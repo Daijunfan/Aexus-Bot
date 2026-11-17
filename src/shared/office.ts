@@ -77,31 +77,6 @@ export type AvatarKind = typeof AVATARS[number]
 export const currentAvatar=(kind:AvatarKind):SpriteAvatar=>LEGACY_AVATARS[kind as keyof typeof LEGACY_AVATARS]??kind as SpriteAvatar
 export const ACCESSORIES = ['headphones', 'glasses', 'none'] as const
 export type Accessory = typeof ACCESSORIES[number]
-export const ROOM_THEMES = ['sage', 'ocean', 'rose', 'amber', 'lavender', 'slate'] as const
-export const ROOM_PATTERNS = ['boards','grid','dots','plain'] as const
-export const WALLS = ['windows', 'panels', 'brick'] as const
-export const DESKS = ['walnut', 'oak', 'cloud'] as const
-export type RoomDesign = {
-  background: string
-  pattern: typeof ROOM_PATTERNS[number]
-  scenery: boolean
-  theme: typeof ROOM_THEMES[number]
-  wall: typeof WALLS[number]
-  desk: typeof DESKS[number]
-  subtitle: string
-  plants: boolean
-  shelf: boolean
-  lamp: boolean
-  art: boolean
-}
-export const DEFAULT_DESIGN: RoomDesign = {
-  background:'',pattern:'boards',scenery:true,
-  theme: 'sage', wall: 'windows', desk: 'walnut', subtitle: 'Good things are made together.',
-  plants: true, shelf: true, lamp: true, art: true
-}
-export function roomDesign(index: number, saved?: Partial<RoomDesign>): RoomDesign {
-  return { ...DEFAULT_DESIGN, theme: ROOM_THEMES[index % ROOM_THEMES.length], ...saved }
-}
 export const AVATAR_LABELS: Record<AvatarKind, string> = {
   ...FATE_LABELS,...TITAN_LABELS,
   hoots:'Hoots',clawd:'Clawd','claude-axolotl':'Axolotl','claude-blob':'Blob','claude-cactus':'Cactus','claude-capybara':'Capybara','claude-cat':'Cat','claude-chonk':'Chonk','claude-dragon':'Dragon','claude-duck':'Duck','claude-ghost':'Ghost','claude-goose':'Goose','claude-mushroom':'Mushroom','claude-octopus':'Octopus','claude-owl':'Owl','claude-penguin':'Penguin','claude-rabbit':'Rabbit','claude-robot':'Robot','claude-snail':'Snail','claude-turtle':'Turtle',

@@ -1,9 +1,10 @@
+import {storageFolderName} from '../shared/storage-folder'
 import {directoryName} from '../shared/directory-names'
 import {applicationRoot} from './resources'
 import {terminateTree} from './platform'
-import {cloudHostAskpass} from './cloud-hosts'
+import {cloudHostAskpass,cloudHostTarget} from './cloud-hosts'
 import {createHash,randomUUID} from 'node:crypto'
-import {teamSettings,employeeSettings,type Store} from '../shared/types'
+import {employeeSettings,type Store} from '../shared/types'
 import {chooseEmployeeWorkspace,cloudDirectory,cloudRelative} from './workspaces'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -75,24 +76,24 @@ export async function remoteFiles(id:string,target:RemoteTarget,operation:string
 export function closeRemote(id:string){const item=connections.get(id);connections.delete(id);if(item)void item.client.then(client=>client.close()).catch(()=>{})}
 export function closeRemoteFiles(){for(const id of connections.keys())closeRemote(id)}
 
-export const teamConnectionId=(name:string)=>'team-'+createHash('sha256').update(name).digest('hex').slice(0,20)
-/** Employee creation uses the same directory contract locally and through SSH. */
-export async function resolveEmployeeWorkspace(store:Store,group:string,title:string,input?:string,mode?:string,id?:string,preview=false,workEnvironment?:import('../shared/types').WorkEnvironment):Promise<string>{
-  workEnvironment??=store.sessions.find(card=>card.id===id)?.workEnvironment
-  if(workEnvironment!==undefined&&!['team','local'].includes(workEnvironment))throw Error('工作环境必须为 team 或 local')
-  if(workEnvironment==='local'&&teamSettings(store,group).mode==='work')throw Error('插件员工必须使用所属插件工作区')
-  const config=employeeSettings(store,{group,workEnvironment})
-  if(config.mode!=='cloud')return chooseEmployeeWorkspace(store,group,title,input,mode,id,preview,workEnvironment)
-  if(!store.groups.includes(group)||!config.remote)throw new Error('请先配置云主机 Team')
-  if(mode!==undefined&&!['default','bind','create','existing'].includes(mode))throw new Error('请选择默认生成或绑定已有文件夹')
-  const generated=mode==='default'||(!mode&&!input)
-  const name=directoryName(title,'employee')
-  if(!generated&&!input?.trim())throw new Error('请选择云端工作文件夹，绑定团队根目录请使用 .')
-  if(generated&&(!name||name==='.'||name==='..'||/[\\/\0]/.test(name)))throw new Error('默认文件夹必须与员工同名，名字不能包含路径分隔符')
-  const target=cloudDirectory(config,generated?name:input||''),own=store.sessions.some(c=>c.id===id&&c.group===group&&c.cwd===target)
-  if(generated&&input&&cloudDirectory(config,input)!==target)throw new Error('默认工作目录由员工名字生成')
-  const result=await remoteFiles(teamConnectionId(group),config.remote,'directory',{path:cloudRelative(config,target),create:generated||mode==='create',exclusive:!own,preview})
-  return result.path
+export const hostConnectionId=(hostId:string)=>'host-'+createHash('sha256').update(hostId).digest('hex').slice(0,20)
+/** Employee creation uses the same directory contract locally and under centralized workspaces or a selected Cloud Host. */
+export async function resolveEmployeeWorkspace(store:Store,opts:{title:string;folderName?:string;cwd?:string;directoryMode?:string;id?:string;preview?:boolean;hostId?:string;remoteDir?:string}):Promise<{cwd:string;remoteRoot?:string;remote?:RemoteTarget}>{
+  const existing=opts.id?store.sessions.find(card=>card.id===opts.id):undefined
+  const hostId=opts.hostId??(existing&&employeeSettings(store,existing).mode==='cloud'?employeeSettings(store,existing).hostId:undefined)
+  if(!hostId)return {cwd:chooseEmployeeWorkspace(store,opts.title,opts.folderName,opts.cwd,opts.directoryMode,opts.id,opts.preview)}
+  if(opts.directoryMode!==undefined&&!['default','bind','create','existing'].includes(opts.directoryMode))throw new Error('请选择默认生成或绑定已有文件夹')
+  const remoteBase=opts.remoteDir??existing?.remoteRoot??(opts.directoryMode==='bind'&&opts.cwd?opts.cwd:undefined)
+  const targetHost=cloudHostTarget(hostId,remoteBase)
+  const config={mode:'cloud' as const,hostId,directory:targetHost.directory,remote:targetHost}
+  const generated=opts.directoryMode==='default'||(!opts.directoryMode&&!opts.cwd)
+  const name=opts.folderName?.trim()?storageFolderName(opts.folderName.trim()):directoryName(opts.title,'employee')
+  if(!generated&&!opts.cwd?.trim()&&!opts.remoteDir?.trim())throw new Error('请选择云端工作文件夹')
+  if(generated&&(!name||name==='.'||name==='..'||/[\\/\0]/.test(name)))throw new Error('默认文件夹名称不能含路径分隔符')
+  const requested=generated?name:(opts.cwd||opts.remoteDir||''),target=cloudDirectory(config,requested),own=store.sessions.some(c=>c.id===opts.id&&c.hostId===hostId&&c.cwd===target)
+  if(generated&&opts.cwd&&cloudDirectory(config,opts.cwd)!==target)throw new Error('默认工作目录由远端父目录和文件夹名生成')
+  const result=await remoteFiles(hostConnectionId(hostId),targetHost,'directory',{path:cloudRelative(config,target),create:generated||opts.directoryMode==='create',exclusive:!own,preview:opts.preview})
+  return {cwd:result.path,remoteRoot:targetHost.directory,remote:{...targetHost,directory:result.path}}
 }
 
 /** A fresh remote MCP connection per management command; no local shell or fallback. */

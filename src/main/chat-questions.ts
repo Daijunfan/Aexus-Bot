@@ -13,10 +13,9 @@ import {postDirectMessage,linkDirectQuestion} from './direct-messages'
 import {postChatMessage} from './chat-groups'
 import {messages,historyFile,emitChatChange} from './chat-group-store'
 import {getLive,listLive,startSession,enqueueMessage} from './sessions'
-import {taskViewId} from './task-view'
 import {apiReadOnly} from '../shared/api-effects'
 
-type Saved=ChatQuestion&{credentialHash?:string;originTaskId?:string;fingerprint:string;resume?:'claimed'|'queued'|'waiter'|'not-needed';viewId?:string}
+type Saved=ChatQuestion&{credentialHash?:string;originTaskId?:string;fingerprint:string;resume?:'claimed'|'queued'|'waiter'|'not-needed'}
 const file=join(APP_HOME,'chat-questions.json'),creating=new Set<string>(),waiters=new Map<string,Set<()=>void>>()
 let state:{version:1;questions:Saved[]}|undefined,timer:ReturnType<typeof setInterval>|undefined,emit:(channel:string,payload:unknown)=>void=()=>{},running=false,serviceError=''
 const questionFingerprint=(value:Record<string,any>,scope=true)=>createHash('sha256').update(JSON.stringify([value.conversation,value.question,value.options.map((option:any)=>[option.id,option.label]),value.timeoutSeconds,value.fallback?[value.fallback.optionId,value.fallback.text??null]:null,...(scope?[value.missionId??null]:[])])).digest('hex')
@@ -28,7 +27,7 @@ function readable(item:ChatQuestion,principal=requestContext().principal){
  requireConversation(item.conversation,'read',principal)
 }
 function get(id:string){const item=data().questions.find(item=>item.id===id);if(!item)throw Error('Unknown question');readable(item);return item}
-function publicQuestion(item:Saved):ChatQuestion{if(serviceError)throw Error(serviceError);const {credentialHash,originTaskId,fingerprint,resume,viewId,...value}=item;return structuredClone(value)}
+function publicQuestion(item:Saved):ChatQuestion{if(serviceError)throw Error(serviceError);const {credentialHash,originTaskId,fingerprint,resume,...value}=item;return structuredClone(value)}
 function validateAuthor(item:Saved){
  if(!person(item.authorId))throw Error('Question author no longer exists')
  if(item.credentialHash&&!credentialActive(item.authorId,item.credentialHash))throw Error('Question author credential was revoked')
@@ -56,7 +55,7 @@ async function resume(item:Saved){
   const opened=await startSession({cardId:item.authorId,delegation});validateDelegation(delegation,item.authorId)
   if(!running)throw Error('Service stopped before question continuation was queued')
   const text='[Aexus saved question decision]\n'+JSON.stringify({id:item.id,conversation:item.conversation,question:item.question,missionId:item.missionId,answer:item.answer,chosenLabel:item.options.find(option=>option.id===item.answer?.optionId)?.label??'Other'})+'\nContinue the original task using this recorded decision. When missionId is present, read mission.get to recover the goal and acceptance criteria before continuing. Newer messages and mission notifications are separate tasks. Do not ask the same question again or invent another user answer.'
-  enqueueMessage(opened.sessionId,text,[],delegation,taskViewId(item.authorId,item.viewId,true),undefined,undefined,undefined,undefined,[],undefined,item.conversation.startsWith('employee:')?'messages':'company')
+  enqueueMessage(opened.sessionId,text,[],delegation,undefined,undefined,undefined,undefined,[],undefined,item.conversation.startsWith('employee:')?'messages':'plan')
  });item.resume='queued';item.deliveryError=undefined}catch(error){if(item.missionId&&['succeeded','missing'].includes(missionTaskState(item.missionId))){item.resume='not-needed';item.closedReason='mission-completed';item.deliveryError=undefined}else item.deliveryError=(error as Error).message}save(item)
 }
 function settle(item:Saved,answer:NonNullable<ChatQuestion['answer']>){
@@ -93,14 +92,14 @@ export async function questionRequest(method:string,args:Record<string,any>){
  if(method==='ask'){
   if(context.principal.kind!=='agent')throw Error('Questions are published by the authenticated employee, not the operator')
   const authorId=context.principal.employeeId
-  if(args.conversation!=='employee:'+authorId){const group=requireConversation(args.conversation);if(!args.conversation.startsWith('group:')||group.group?.bot)throw Error('Questions require your private chat or a Company group')}
+  if(args.conversation!=='employee:'+authorId){const group=requireConversation(args.conversation);if(!args.conversation.startsWith('group:')||group.group?.bot)throw Error('Questions require your private chat or a group conversation')}
   if(!Array.isArray(args.options)||!args.options.length||args.options.some((option:any)=>!option?.id?.trim()||!option.label?.trim()||option.id==='other')||new Set(args.options.map((option:any)=>option.id)).size!==args.options.length)throw Error('Provide unique option IDs; Other is added automatically')
   if(args.timeoutSeconds!==null&&(!Number.isSafeInteger(args.timeoutSeconds)||args.timeoutSeconds<1))throw Error('Use a positive timeout or null to require the user indefinitely')
   if(args.timeoutSeconds!==null&&!args.fallback)throw Error('A finite timeout requires the employee’s declared fallback decision')
   if(args.timeoutSeconds===null&&args.fallback)throw Error('An indefinite user decision cannot have an automatic fallback')
   const fingerprint=questionFingerprint(args),previous=data().questions.find(item=>item.authorId===authorId&&item.clientRequestId===args.clientRequestId)
   if(previous){readable(previous);if(previous.fingerprint!==fingerprint)throw Error('Question request key already used with different content');return publicQuestion(previous)}
-  const live=listLive().map(({id})=>getLive(id)).find(live=>live?.cardId===authorId&&live.running),now=Date.now(),item:Saved={conversation:args.conversation,question:args.question,options:args.options,timeoutSeconds:args.timeoutSeconds,fallback:args.fallback,clientRequestId:args.clientRequestId,id:'question_'+randomUUID(),authorId,createdAt:now,deadline:args.timeoutSeconds===null?null:now+args.timeoutSeconds*1000,revision:1,status:'pending',missionId:(args.missionId??missionTaskId(authorId,live?.currentTask))?questionMissionId(args.missionId??missionTaskId(authorId,live?.currentTask)!,context.principal):undefined,credentialHash:context.credentialHash,fingerprint,originTaskId:live?.currentTask?.messageId,viewId:taskViewId(authorId,args.viewId??live?.currentTask?.viewId,true)}
+  const live=listLive().map(({id})=>getLive(id)).find(live=>live?.cardId===authorId&&live.running),now=Date.now(),item:Saved={conversation:args.conversation,question:args.question,options:args.options,timeoutSeconds:args.timeoutSeconds,fallback:args.fallback,clientRequestId:args.clientRequestId,id:'question_'+randomUUID(),authorId,createdAt:now,deadline:args.timeoutSeconds===null?null:now+args.timeoutSeconds*1000,revision:1,status:'pending',missionId:(args.missionId??missionTaskId(authorId,live?.currentTask))?questionMissionId(args.missionId??missionTaskId(authorId,live?.currentTask)!,context.principal):undefined,credentialHash:context.credentialHash,fingerprint,originTaskId:live?.currentTask?.messageId}
   if(item.fallback)choice(item,item.fallback.optionId,item.fallback.text)
   const unanswered=item.missionId&&data().questions.find(previous=>previous.authorId===authorId&&previous.missionId===item.missionId&&previous.status==='pending'&&questionFingerprint(previous,false)===questionFingerprint(item,false))
   if(unanswered)return publicQuestion(unanswered)

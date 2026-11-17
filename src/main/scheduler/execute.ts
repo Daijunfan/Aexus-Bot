@@ -1,4 +1,3 @@
-import {taskViewId} from '../task-view'
 import {validateDelegation,withCaller,operatorContext} from '../authorization'
 import type {Delegation} from '../../shared/management'
 import type { ScheduledAction } from '../../shared/scheduler'
@@ -10,7 +9,6 @@ import { startSession, getLive, reserveEmployee, onSessionEvent, sendMessage, se
 export async function executeTask(action: ScheduledAction, owner: string, signal: AbortSignal, opened: (id: string) => void,delegation?:Delegation) {
   delegation??={requestedBy:{kind:'operator'},requestId:owner}
   validateDelegation(delegation,action.employeeId)
-  taskViewId(action.employeeId,action.viewId,true)
   const release = reserveEmployee(action.employeeId, owner)
   let id: string | undefined, unsubscribe = () => {}, restore: (() => Promise<void>) | undefined
   let abort = () => {}
@@ -46,7 +44,7 @@ export async function executeTask(action: ScheduledAction, owner: string, signal
       })
       abort = () => { void closeSession(id!).then(() => reject(signal.reason), reject) }
       signal.addEventListener('abort', abort, { once: true })
-      try { signal.throwIfAborted(); void sendMessage(id!, action.prompt, owner,[],delegation,action.viewId,undefined,undefined,undefined,undefined,[],undefined,'plan').catch(reject) } catch (error) { reject(error) }
+      try { signal.throwIfAborted(); void sendMessage(id!, action.prompt, owner,[],delegation,undefined,undefined,undefined,undefined,[],undefined,'plan').catch(reject) } catch (error) { reject(error) }
     })
   } catch (error) {
     if (id && getLive(id)?.running) await closeSession(id)

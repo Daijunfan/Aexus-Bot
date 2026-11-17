@@ -7,13 +7,13 @@ import {fixtureCore} from './fixtures/headless-core.mjs'
 const f=await fixtureCore(),rpc=async(cmd,args={})=>{const r=await f.request(null,cmd,args);assert.ok(r.ok,r.error);return r.data}
 const iso=ms=>new Date(ms).toISOString(),day=86400000,base=Date.now()+40*day
 try{
-  const source=fs.readFileSync(path.join(f.root,'PlugIns/mini-notion/src/database/viewTypes.ts'),'utf8')
+  const source=fs.readFileSync(path.join(f.root,'src/shared/mission-notebook/database/viewTypes.ts'),'utf8')
   const notion=[...source.matchAll(/\{ type: '([^']+)'/g)].map(match=>match[1])
   const schema=await f.cli('plan','schema'),views=await f.cli('plan','views')
   assert.deepEqual(new Set(schema.layouts),new Set(notion),'source-versioned Notion layout catalog must stay in parity')
   assert.equal(notion.length,10);assert.deepEqual(views.filter(view=>view.builtin).map(view=>view.layout),schema.layouts)
-  await f.cli('group','add','Release Studio');await f.cli('group','add','Night Operations')
-  const a=await f.create('Alex','Release Studio'),b=await f.create('Alex','Night Operations')
+  const a=await rpc('card.create',{title:'Alex',folderName:'alex-release',engine:'codex',model:'gpt-6-luna',effort:'low'}),b=await rpc('card.create',{title:'Alex',folderName:'alex-ops',engine:'codex',model:'gpt-6-luna',effort:'low'})
+  await f.ready(a.id);await f.ready(b.id)
   const once=(name,at,extra={})=>({name,action:{type:'agent',employeeId:a.id,prompt:'Review rehearsal evidence; do not publish or deploy.'},rule:{kind:'once',at:iso(at)},...extra})
   const estimated=await rpc('schedule.create',{spec:once('Three-hour cross-date review',base,{timeoutSeconds:60,plan:{durationMinutes:180,priority:'high',tags:['overlap'],notes:'Estimate does not reserve the employee.'}})})
   const ending=await rpc('schedule.create',{spec:once('Ends exactly at the boundary',base-2*3600000,{plan:{durationMinutes:120,priority:'normal',tags:['boundary'],notes:''}})})
@@ -30,7 +30,7 @@ try{
   const saved=await f.cli('plan','view-create','--spec',JSON.stringify({name:'London timeline',layout:'timeline',filter:{tags:['overlap']},options:{timezone:'Europe/London',timelineScale:'week'}}))
   assert.equal(saved.options.timezone,'Europe/London')
   for(const layout of ['plan','gallery','chart','feed','form']){
-    const view=await f.cli('plan','view-create','--spec',JSON.stringify({name:'Saved '+layout,layout,options:layout==='chart'?{chartType:'donut',chartMetric:'runs',chartGroupBy:'team'}:{}}))
+    const view=await f.cli('plan','view-create','--spec',JSON.stringify({name:'Saved '+layout,layout,options:layout==='chart'?{chartType:'donut',chartMetric:'runs',chartGroupBy:'priority'}:{}}))
     assert.equal(view.layout,layout)
   }
   const invalid=await f.request(null,'plan.view-create',{spec:{name:'bad',layout:'timeline',options:{timezone:'Invalid/Zone'}}});assert.equal(invalid.ok,false)
@@ -41,7 +41,7 @@ try{
   const paged=await rpc('plan.query',{filter:{tags:['portfolio']},limit:100});assert.equal(paged.rows.length,100)
   const analytics=await f.cli('plan','analytics','--metric','schedules','--group-by','status','--filter','{"tags":["portfolio"]}')
   assert.equal(analytics.total,108);assert.equal(analytics.buckets.find(bucket=>bucket.key==='scheduled').value,96);assert.equal(analytics.buckets.find(bucket=>bucket.key==='paused').value,12)
-  const people=await rpc('plan.analytics',{groupBy:'employee',filter:{tags:['portfolio']}});assert.equal(people.buckets.length,2);assert.ok(people.buckets.every(bucket=>bucket.value===54));assert.notEqual(people.buckets[0].label,people.buckets[1].label)
+  const people=await rpc('plan.analytics',{groupBy:'employee',filter:{tags:['portfolio']}});assert.equal(people.buckets.length,2);assert.ok(people.buckets.every(bucket=>bucket.value===54));assert.notEqual(people.buckets[0].key,people.buckets[1].key)
   assert.equal((await rpc('plan.analytics',{metric:'runs',filter:{tags:['portfolio']}})).total,0,'future work is not execution')
   const actual=await rpc('schedule.create',{spec:once('Actual fixture review',base,{enabled:false})})
   await f.cli('schedule','run',actual.id);await f.until(async()=>(await f.cli('schedule','history',actual.id))[0]?.status==='succeeded','first actual attempt')

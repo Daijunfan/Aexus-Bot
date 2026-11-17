@@ -15,7 +15,7 @@ export async function engineRequest(command:string,a:Record<string,any>){
     case 'engine.list': return engineList()
     case 'engine.providers': return engineProviderCatalog(a.engine)
     case 'engine.capabilities': return engineCapabilities(a.engine)
-    case 'engine.check': return checkEngine(a.engine,{team:a.team,force:a.force===true})
+    case 'engine.check': return checkEngine(a.engine,{hostId:a.hostId,force:a.force===true})
     case 'engine.probe': return probeEngine(a.engine,a.confirm===true,a.model)
     case 'engine.configure': {const result=configureEngine(a.engine,a.patch??{});invalidateEngine(a.engine);exposeClaudeSdk();return result}
     case 'engine.install-plan': return engineInstallPlan(a.engine)
@@ -25,9 +25,9 @@ export async function engineRequest(command:string,a:Record<string,any>){
     case 'engine.login': return beginEngineLogin(s(a.engine))
     case 'engine.login-status': return engineLoginStatus(s(a.id))
     case 'engine.cancel-login': return cancelEngineLogin(s(a.id))
-    case 'engine.remote-check': return checkCloudNative(s(a.team),s(a.engine) as 'codex'|'claude',a.directory)
-    case 'engine.remote-sessions': return listCloudNativeSessions(s(a.team),s(a.engine) as 'codex'|'claude')
-    case 'engine.models': return engineModels(a.engine,a.kind,a.team,a.model)
+    case 'engine.remote-check': return checkCloudNative(s(a.hostId),s(a.engine) as 'codex'|'claude',a.directory)
+    case 'engine.remote-sessions': return listCloudNativeSessions(s(a.hostId),s(a.engine) as 'codex'|'claude')
+    case 'engine.models': return engineModels(a.engine,a.kind,a.hostId,a.model)
     case 'engine.inspect': return inspectEngine(s(a.id),s(a.section??'capabilities'))
     case 'engine.skill': return {sent:await invokeSkill(s(a.id),s(a.name),s(a.prompt??''))}
  default:throw Error('Unknown engine command')

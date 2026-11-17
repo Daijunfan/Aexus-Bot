@@ -9,7 +9,7 @@
 .message-category-tabs>.message-selection-glider{border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);border-radius:12px;background:color-mix(in srgb,var(--accent) 12%,var(--bg-elev))}
 .message-category-tabs[data-sorting]>.message-selection-glider{visibility:hidden}
 .message-category-tabs[data-selection-motion]>.message-category-chip[data-selected=true]{border-color:transparent;background:transparent}
-.channel-source-chip,.message-category-chip,.channel-all-sources,.message-category-all{transition:color .18s,background .18s,border-color .18s,transform .22s cubic-bezier(.22,1,.36,1)}
+.message-category-chip,.message-category-all{transition:color .18s,background .18s,border-color .18s,transform .22s cubic-bezier(.22,1,.36,1)}
 .channel-source-chip:active,.message-category-chip:active,.channel-all-sources:active,.message-category-all:active{transform:scale(.97)}
 .message-stage button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .group-conversation>.message-thread-header .message-thread-actions>button{width:36px;height:36px;flex:none;padding:0;border:0;border-radius:11px;background:transparent}
@@ -26,13 +26,17 @@
 .message-view [data-floating-messages] .message-chat-body>*{pointer-events:auto}
 .message-view [data-floating-messages] :is(.composer,.group-composer){margin-top:auto;z-index:3;pointer-events:none}
 .message-view [data-floating-messages] :is(.composer,.group-composer)>*{pointer-events:auto}
+.message-view [data-floating-messages] .group-composer>footer{pointer-events:none}
+.message-view [data-floating-messages] .group-composer>footer>*{pointer-events:auto}
 .message-view [data-floating-messages] :is(.message-thread-header,.message-pin-strip,.message-selection-bar,.conversation-search,.group-topics,.pending-questions){position:relative;z-index:3}
 .message-view .channel-conversation[data-feed-view]{--message-read-inset:var(--channel-header-height,124px)}
 .message-view :is([data-floating-messages],.channel-conversation[data-feed-view])::before,
 .message-view :is([data-floating-messages],.channel-conversation[data-feed-view])::after{content:'';position:absolute;left:0;right:0;z-index:1;pointer-events:none;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .message-view :is([data-floating-messages],.channel-conversation[data-feed-view])::before{top:0;height:var(--message-read-inset);mask-image:linear-gradient(#000,transparent);-webkit-mask-image:linear-gradient(#000,transparent)}
+.message-view .channel-conversation[data-feed-view]::before{backdrop-filter:blur(14px) saturate(1.15);-webkit-backdrop-filter:blur(14px) saturate(1.15);mask-image:linear-gradient(to bottom,#000 0%,#000 68%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 68%,transparent 100%)}
 .message-view :is([data-floating-messages],.channel-conversation[data-feed-view])::after{bottom:0;height:var(--message-read-bottom-inset);mask-image:linear-gradient(transparent,#000);-webkit-mask-image:linear-gradient(transparent,#000)}
-.message-view [data-floating-messages] :is(.transcript,.group-transcript),.message-view .channel-conversation[data-feed-view] .channel-feed{mask-image:linear-gradient(to bottom,#0008,#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),#0008);-webkit-mask-image:linear-gradient(to bottom,#0008,#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),#0008)}
+.message-view [data-floating-messages] :is(.transcript,.group-transcript){mask-image:linear-gradient(to bottom,#0008,#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),#0008);-webkit-mask-image:linear-gradient(to bottom,#0008,#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),#0008)}
+.message-view .channel-conversation[data-feed-view] .channel-feed{mask-image:linear-gradient(to bottom,rgba(0,0,0,.08) 0%,rgba(0,0,0,.18) calc(var(--message-read-inset) - 16px),#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),rgba(0,0,0,.18) 100%);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.08) 0%,rgba(0,0,0,.18) calc(var(--message-read-inset) - 16px),#000 var(--message-read-inset),#000 calc(100% - var(--message-read-bottom-inset)),rgba(0,0,0,.18) 100%)}
 .message-view .channel-conversation[data-feed-view] .channel-reader-header{background:transparent}
 .message-view .channel-conversation[data-feed-view] .channel-feed{--message-read-inset:inherit;--message-read-bottom-inset:inherit}
 .message-view .channel-conversation .channel-reader-controls{z-index:3}

@@ -95,13 +95,14 @@
 @media (prefers-reduced-motion:reduce) {
   [data-message-jump=true]{animation:none}
 }
-.message-pin-strip{display:flex;align-items:center;gap:13px;padding:11px 16px;flex:none;background:var(--bg-elev);color:var(--message-accent);margin:10px 16px 0;border:1px solid color-mix(in srgb,var(--bg-elev) 85%,transparent);border-radius:14px}
-.message-pin-strip>.codicon{font-size:19px}
-.message-pin-preview{display:block;min-width:0;flex:1;text-align:left;padding:0;border:0;background:none;color:inherit;border-left:2px solid color-mix(in srgb,var(--message-accent) 45%,transparent);padding-left:11px}
-.message-pin-preview strong{display:block;font-size:12px;font-weight:600;line-height:1.4}
-.message-pin-preview span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--fg-dim);line-height:1.6;margin-top:2px}
-.message-pin-all{display:grid;place-items:center;width:31px;height:31px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--message-accent)}
-.message-pin-all:hover{background:var(--bg-elev)}
+.message-pin-strip{display:flex;align-items:center;gap:8px;height:32px;min-height:32px;max-height:32px;width:fit-content;max-width:min(680px,calc(100% - 32px));margin:6px auto 2px;padding:0 6px 0 12px;flex:none;box-sizing:border-box;border-radius:999px;background:color-mix(in srgb,var(--bg-elev) 78%,transparent);backdrop-filter:blur(16px) saturate(1.15);-webkit-backdrop-filter:blur(16px) saturate(1.15);border:1px solid color-mix(in srgb,var(--message-accent) 16%,var(--border,rgba(15,23,42,.08)));box-shadow:0 4px 14px rgba(15,23,42,.06);color:var(--message-accent);z-index:4}
+:root:is([data-theme=black],[data-theme=space],[data-theme=midnight],[data-theme=sage]) .message-pin-strip{background:color-mix(in srgb,var(--bg-elev) 82%,transparent);border-color:color-mix(in srgb,var(--fg) 12%,var(--border-soft));box-shadow:0 6px 18px rgba(0,0,0,.32)}
+.message-pin-strip>.codicon{font-size:13px;flex:none;opacity:.88}
+.message-pin-preview{display:flex;align-items:center;gap:8px;min-width:0;flex:1;text-align:left;padding:0 0 0 8px;height:20px;border:0;border-left:1.5px solid color-mix(in srgb,var(--message-accent) 40%,transparent);background:none;color:inherit;cursor:pointer}
+.message-pin-preview strong{flex:none;font-size:11.5px;font-weight:600;line-height:1;white-space:nowrap}
+.message-pin-preview span{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--fg-dim);line-height:1.2;margin-top:0}
+.message-pin-all{display:grid;place-items:center;width:24px;height:24px;flex:none;padding:0;border:0;border-radius:999px;background:transparent;color:var(--message-accent);cursor:pointer}
+.message-pin-all:hover{background:color-mix(in srgb,var(--message-accent) 12%,transparent)}
 .message-shared-link{display:flex;align-items:center;gap:10px;width:calc(100% - 24px);margin:14px 12px 0;padding:12px;border:1px solid var(--border-soft);border-radius:11px;background:var(--bg-alt);text-align:left;color:var(--fg)}
 .message-shared-link>span:first-child{display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:9px;background:var(--bg-elev);color:var(--message-accent)}
 .message-shared-link>span:nth-child(2){min-width:0;flex:1}
@@ -119,7 +120,7 @@
   .message-stage:has(.message-library) .message-person small{max-width:200px}
 }
 @media (max-width:760px) {
-  .message-pin-strip{padding:10px 17px;gap:9px}
+  .message-pin-strip{height:32px;max-width:calc(100% - 20px);padding:0 5px 0 10px;gap:6px}
 }
 .composer-tools{display:flex;align-items:center;gap:2px}
 .composer-tools>button{display:grid;place-items:center;width:29px;height:29px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--fg-dim)}

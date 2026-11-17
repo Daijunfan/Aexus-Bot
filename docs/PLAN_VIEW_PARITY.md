@@ -12,7 +12,7 @@ Table selection supports batch pause/resume of compatible schedules and archive/
 
 ## Scope and reference
 
-The reference is this repository's source-versioned MiniNotion plugin, `PlugIns/mini-notion/src/database/viewTypes.ts`, not an assumed external product version. Its ten layout IDs are `table`, `board`, `timeline`, `calendar`, `plan`, `list`, `gallery`, `chart`, `feed`, and `form`. Plan now implements all ten. A regression compares the actual source catalogs so adding another MiniNotion layout cannot silently leave Plan behind.
+The reference is the built-in Mission Workflow Notebook's database catalog, `src/shared/mission-notebook/database/viewTypes.ts`, not an assumed external product version. Its ten layout IDs are `table`, `board`, `timeline`, `calendar`, `plan`, `list`, `gallery`, `chart`, `feed`, and `form`. Plan implements all ten. A regression compares the actual source catalogs so adding another notebook layout cannot silently leave Plan behind.
 
 This is layout-type parity for an employee scheduling database. It does not claim that every general-purpose Notion database feature, formula, relation, dependency editor or anonymous form is implemented. Schedule identities, engine conversations, authorization and execution remain the existing Core's responsibility.
 
@@ -117,7 +117,7 @@ The screenshots and chronological observations are in `artifacts/plan-parity/int
 
 | Charter | Steps and actual observation |
 | --- | --- |
-| Baseline | Open the previous Plan, compare its four tabs with all ten MiniNotion source types; inspect a detailed review form lacking duration. |
+| Baseline | Open the previous Plan, compare its four tabs with all ten Mission notebook source types; inspect a detailed review form lacking duration. |
 | London review | Save a three-Sunday 18:30 London review, estimate 90 minutes and timeout 600 seconds; verify 18:30–20:00 estimate and unchanged timeout. |
 | First-event visibility | Day initially appeared empty because the only event was offscreen after 18:00. Added first-occurrence positioning and a navigation button; retest showed the event immediately. |
 | Form interruption | Fill a detailed DST rehearsal, inspect Gallery, return to Form. Draft was lost; after lifecycle repair, name, multiline prompt, date, target and estimate survived. |

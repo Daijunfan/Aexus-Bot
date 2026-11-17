@@ -9,8 +9,8 @@ export function workspaceCatalog(args:Record<string,any>){
  if(!employee||!isAppAdministrator(principal)&&principal.kind==='agent'&&employee!==principal.employeeId)throw Error('Choose your own employee identity; the user supplies employee explicitly')
  const store=readStore(),card=store.sessions.find(card=>card.id===employee&&!card.deleting)
  if(!card)throw Error('Unknown employee')
- const settings=employeeSettings(store,card),base={employeeId:card.id,employeeName:card.title,team:card.group}
- const workspaces:WorkspaceChoice[]=[{...base,id:'company:'+card.id,view:'company',name:card.group+' / '+card.title,path:card.cwd,location:settings.mode==='cloud'?'remote':'core',nativeAccess:settings.mode!=='cloud'||card.kind==='cloud-native-worker',fileApi:{command:'workspace.list',args:{employee:card.id,path:'.'}}}]
+ const settings=employeeSettings(store,card),base={employeeId:card.id,employeeName:card.title}
+ const workspaces:WorkspaceChoice[]=[{...base,id:'workspace:'+card.id,view:'messages',name:card.title,path:card.cwd,location:settings.mode==='cloud'?'remote':'core',nativeAccess:settings.mode!=='cloud'||card.kind==='cloud-native-worker',fileApi:{command:'workspace.list',args:{employee:card.id,path:'.'}}}]
 
  return {employeeId:employee,workspaces,total:workspaces.length}
 }

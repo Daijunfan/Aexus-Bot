@@ -1,8 +1,8 @@
 /* One reading measure for text and illustrated reports, independent of image size. */
-.message-view .message-stage{--thread-width:1100px;--message-reading-width:880px}
+.message-view .message-stage,.message-view .group-conversation{--thread-width:940px;--message-reading-width:880px}
 .message-view .group-message-row>.group-message[data-message-layout=reading]{width:calc(100% - var(--group-portrait-size) - var(--group-portrait-gap));max-width:var(--message-reading-width,880px);min-width:0}
 .message-view .message-conversation .turn.assistant[data-message-layout=reading],.message-view .message-conversation .turn.user[data-message-layout=reading]>.bubble{width:100%;max-width:var(--message-reading-width,880px);min-width:0}
-.message-view .message-conversation .private-message-row>.turn[data-message-layout=reading]{width:calc(100% - var(--private-avatar-size) - 12px);max-width:var(--message-reading-width,880px)}
+.message-view .message-conversation .private-message-row>.turn[data-message-layout=reading]{width:calc(100% - var(--private-avatar-size) - var(--private-avatar-gap,9px));max-width:var(--message-reading-width,880px)}
 .message-view [data-message-layout=reading] .markdown{min-width:0;max-width:100%}
 .message-view [data-message-layout=reading] :is(.message-inline-photo,.message-single-photo){width:100%;max-width:100%}
 .message-view [data-message-layout=reading] :is(.message-photo,.message-album){max-width:100%}
@@ -10,33 +10,60 @@
 .message-view [data-message-layout=reading] .markdown>:last-child{margin-bottom:0}
 
 /* Shared paper, spacing and interaction states across private, group and channel inputs. */
-.message-view :is(.message-conversation .composer,.group-composer){padding-top:10px;padding-bottom:14px}
-.message-view :is(.message-conversation .composer-box.task-composer,.group-compose-box){box-sizing:border-box;min-height:64px;border:1px solid color-mix(in srgb,var(--message-accent) 16%,var(--bg-elev));border-radius:25px;background:var(--bg-elev);box-shadow:0 4px 18px color-mix(in srgb,var(--message-accent) 8%,transparent);transition:border-color 160ms ease,box-shadow 160ms ease}
-.message-view .message-conversation .composer-box.task-composer{padding:10px 12px 8px;gap:4px}
-.message-view .group-compose-box{padding:9px 10px 9px 12px;gap:8px}
+.message-view .message-conversation .composer{padding:6px max(40px,calc((100% - 780px)/2)) 9px}
+.message-view .group-composer{padding:5px max(40px,calc((100% - 780px)/2)) 6px}
+.message-view :is(.message-conversation .composer-box.task-composer,.group-compose-box){box-sizing:border-box;min-height:46px;border:1px solid color-mix(in srgb,var(--message-accent) 16%,var(--bg-elev));border-radius:23px;background:var(--bg-elev);box-shadow:0 4px 18px color-mix(in srgb,var(--message-accent) 8%,transparent);transition:border-color 160ms ease,box-shadow 160ms ease}
+.message-view .message-conversation .composer-box.task-composer.message-inline-composer{display:flex;flex-direction:row;align-items:flex-end;gap:4px;min-height:46px;padding:5px 6px 5px 8px;border-radius:23px}
+.message-view .group-compose-box{min-height:46px;padding:5px 6px 5px 8px;gap:5px;border-radius:23px}
 .message-view :is(.composer-box.task-composer,.group-compose-box):focus-within{border-color:color-mix(in srgb,var(--message-accent) 55%,var(--border));box-shadow:0 0 0 3px color-mix(in srgb,var(--message-accent) 8%,transparent),0 6px 22px color-mix(in srgb,var(--message-accent) 9%,transparent)}
-.message-view :is(.composer-box.task-composer,.group-compose-box)>textarea{box-sizing:border-box;min-width:0;min-height:42px;max-height:180px;margin:0;padding:9px 5px;font-size:15px;line-height:24px;resize:none;outline:none;background:transparent;overflow-x:hidden}
-.message-view .message-conversation .composer-box.task-composer>textarea{padding:4px 7px;min-height:34px}
-.message-view .composer-box.task-composer .composer-bar{align-items:center;gap:8px;min-height:40px}
-.message-view :is(.message-attach,.voice-record){align-self:flex-end;flex:none;width:40px;min-width:40px;height:42px;min-height:42px;padding:0;border:0;border-radius:13px;background:transparent;color:var(--message-accent);display:grid;place-items:center;cursor:pointer;transition:background-color 140ms ease,transform 140ms ease}
-.message-view :is(.message-attach,.voice-record):hover:enabled{background:color-mix(in srgb,var(--message-accent) 8%,transparent)}
-.message-view :is(.message-attach,.voice-record):active:enabled{transform:scale(.95)}
-.message-view :is(.message-attach,.voice-record)>.codicon{font-size:22px}
-.message-view .composer-actions{--composer-accent:var(--message-accent);--composer-control-size:36px}
-.message-view .group-send{flex:none;display:grid;place-items:center;width:44px;min-width:44px;height:44px;min-height:44px;padding:0;border:1px solid transparent;border-radius:15px;background:var(--message-accent);color:var(--button-ink,#fff);box-shadow:0 3px 9px color-mix(in srgb,var(--message-accent) 18%,transparent);cursor:pointer;transition:background-color 140ms ease,box-shadow 140ms ease,transform 140ms cubic-bezier(.22,1,.36,1)}
+.message-view :is(.composer-box.task-composer,.group-compose-box)>textarea{box-sizing:border-box;min-width:0;min-height:34px;max-height:160px;margin:0;padding:5px 4px;font-size:14px;line-height:24px;resize:none;outline:none;background:transparent;overflow-x:hidden;align-self:center}
+.message-view .composer-box.task-composer.message-inline-composer>textarea{flex:1 1 0;width:auto;min-height:34px;max-height:160px;padding:5px 6px;scrollbar-gutter:auto}
+.message-view .composer-leading-tools{display:flex;align-items:center;gap:1px;flex:none;min-height:34px}
+.message-view .composer-box.task-composer.message-inline-composer .composer-bar{flex:none;justify-content:flex-end;gap:4px;min-height:34px}
+.message-view .composer-box.task-composer.message-inline-composer .composer-utilities{gap:2px;flex:none;flex-wrap:nowrap}
+.message-view .composer-box.task-composer.message-inline-composer .composer-utilities>.composer-tools{margin-left:0;padding-left:0;border-left:0;gap:1px}
+.message-view .composer-box.task-composer.message-inline-composer .composer-utilities .composer-tools>button{width:28px;height:28px;border-radius:50%;color:var(--fg-dim)}
+.message-view .composer-box.task-composer.message-inline-composer .composer-utilities .composer-tools .codicon{font-size:16px}
+.message-view .composer-box.task-composer.message-inline-composer .composer-utilities .composer-tools>button:is(:hover:enabled,[aria-expanded=true]){background:color-mix(in srgb,var(--message-accent) 8%,transparent);color:var(--message-accent)}
+.message-view .composer-box.task-composer .composer-bar-status{display:inline-flex;align-items:center;gap:6px;min-width:0;margin-left:auto;color:var(--fg-dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.message-view .composer-box.task-composer .composer-bar-status+.composer-actions{margin-left:4px}
+.message-view .message-conversation .composer-box.task-composer.message-inline-composer.is-busy{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;row-gap:4px;column-gap:4px;min-height:0;padding:7px 10px 6px;border-radius:20px}
+.message-view .message-conversation .composer-box.task-composer.message-inline-composer.is-busy>textarea{grid-column:1 / -1;grid-row:1;width:100%;min-height:30px;padding:3px 6px}
+.message-view .message-conversation .composer-box.task-composer.message-inline-composer.is-busy>.composer-leading-tools{grid-column:1;grid-row:2}
+.message-view .message-conversation .composer-box.task-composer.message-inline-composer.is-busy>.composer-bar{grid-column:2;grid-row:2;width:100%;min-width:0;justify-content:flex-end}
+.message-view :is(.message-attach,.voice-record,.message-record-voice){align-self:center;flex:none;width:32px;min-width:32px;height:32px;min-height:32px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--message-accent);display:grid;place-items:center;cursor:pointer;transition:background-color 140ms ease,transform 140ms ease}
+.message-view :is(.message-attach,.voice-record,.message-record-voice):hover:enabled{background:color-mix(in srgb,var(--message-accent) 8%,transparent)}
+.message-view :is(.message-attach,.voice-record,.message-record-voice):active:enabled{transform:scale(.95)}
+.message-view :is(.message-attach,.voice-record,.message-record-voice)>.codicon{font-size:18px}
+.message-view .composer-actions{--composer-accent:var(--message-accent);--composer-control-size:34px}
+.message-view .message-conversation .composer-actions .send-btn:not(.enqueue):not(.steer):not(.stop){width:34px;min-width:34px;height:34px;min-height:34px;border-radius:50%}
+.message-view .message-conversation .composer-actions .send-btn.stop{width:32px;min-width:32px;height:32px;min-height:32px;border-radius:50%}
+.message-view .message-conversation .composer-actions .send-btn:is(.enqueue,.steer){height:32px;min-height:32px;border-radius:16px}
+.message-view .group-send{flex:none;display:grid;place-items:center;width:34px;min-width:34px;height:34px;min-height:34px;padding:0;border:1px solid transparent;border-radius:50%;background:var(--message-accent);color:var(--button-ink,#fff);box-shadow:0 3px 9px color-mix(in srgb,var(--message-accent) 18%,transparent);cursor:pointer;transition:background-color 140ms ease,box-shadow 140ms ease,transform 140ms cubic-bezier(.22,1,.36,1);align-self:center}
 .message-view .group-send:hover:enabled{background:color-mix(in srgb,var(--message-accent) 90%,var(--fg));box-shadow:0 4px 12px color-mix(in srgb,var(--message-accent) 24%,transparent);transform:translateY(-1px)}
 .message-view .group-send:active:enabled{transform:scale(.95)}
 .message-view .group-send:disabled:not([aria-busy=true]){background:color-mix(in srgb,var(--message-accent) 10%,var(--bg-elev));color:color-mix(in srgb,var(--message-accent) 68%,var(--fg-dim));box-shadow:none;cursor:default;opacity:1}
 .message-view .group-send[aria-busy=true]{cursor:progress}
-.message-view .group-send>.codicon{font-size:22px;animation:message-send-icon-in 140ms cubic-bezier(.22,1,.36,1)}
-.message-view :is(.group-send,.send-btn,.message-attach,.voice-record):focus-visible{outline:2px solid var(--message-accent);outline-offset:3px}
-.message-view .group-composer>footer{gap:7px;min-height:32px;padding:6px 4px 0;color:var(--fg-dim);flex-wrap:wrap}
+.message-view .group-send>.codicon{font-size:18px;animation:message-send-icon-in 140ms cubic-bezier(.22,1,.36,1)}
+.message-view :is(.group-send,.send-btn,.message-attach,.voice-record,.message-record-voice):focus-visible{outline:2px solid var(--message-accent);outline-offset:3px}
+.message-view .group-composer>footer{margin-top:3px;gap:6px;min-height:24px;padding:0 4px;color:var(--fg-dim);flex-wrap:wrap}
+.message-view .group-composer>footer>button{min-height:24px;padding:2px 5px}
+.message-view .group-composer .composer-tools>button{width:26px;height:26px}
 .message-view .group-composer>footer>span:last-child{min-width:0;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .message-view .group-composer>footer button{border-radius:7px;transition:background-color 140ms ease,color 140ms ease}
 .message-view .group-composer>footer button:hover:enabled{background:color-mix(in srgb,var(--message-accent) 8%,transparent)}
 @keyframes message-send-icon-in{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:none}}
-@media(max-width:760px){.message-view :is(.message-conversation .composer,.group-composer){padding-inline:12px}.message-view .group-compose-box{border-radius:22px;padding-inline:8px;gap:4px}.message-view :is(.message-attach,.voice-record){width:34px;min-width:34px}}
-@media(prefers-reduced-motion:reduce){.message-view :is(.composer-box,.group-compose-box,.group-send,.send-btn,.message-attach,.voice-record){transition:none!important}.message-view :is(.group-send,.send-btn)>.codicon{animation:none!important}}
+@media(max-width:1050px){.message-view :is(.message-conversation .composer,.group-composer){padding-inline:max(24px,calc((100% - 760px)/2))}}
+@media(max-width:760px){.message-view :is(.message-conversation .composer,.group-composer){padding-inline:12px}.message-view .message-conversation .composer{padding-top:5px;padding-bottom:8px}.message-view .group-composer{padding-top:4px;padding-bottom:6px}.message-view .group-compose-box{border-radius:22px;padding-inline:8px;gap:4px}}
+@media(max-width:680px){
+ .message-view .message-conversation .composer-box.task-composer.message-inline-composer{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;row-gap:4px;column-gap:4px;min-height:0;padding:7px 9px 6px;border-radius:20px}
+ .message-view .message-conversation .composer-box.task-composer.message-inline-composer>textarea{grid-column:1 / -1;grid-row:1;width:100%;min-height:30px;padding:3px 6px}
+ .message-view .message-conversation .composer-box.task-composer.message-inline-composer>.composer-leading-tools{grid-column:1;grid-row:2}
+ .message-view .message-conversation .composer-box.task-composer.message-inline-composer>.composer-bar{grid-column:2;grid-row:2;width:100%;min-width:0;justify-content:flex-end}
+ .message-view :is(.message-attach,.voice-record,.message-record-voice){width:30px;min-width:30px;height:30px;min-height:30px}
+ .message-view .composer-box.task-composer.message-inline-composer .composer-utilities .composer-tools>button{width:26px;height:26px}
+}
+@media(prefers-reduced-motion:reduce){.message-view :is(.composer-box,.group-compose-box,.group-send,.send-btn,.message-attach,.voice-record,.message-record-voice){transition:none!important}.message-view :is(.group-send,.send-btn)>.codicon{animation:none!important}}
 
 /* Thread replies use the same input proportions inside their own work surface. */
 .group-thread-panel .group-thread-compose>div:not(.draft-files):not(.attachment-transfers){border-radius:22px;padding:9px;gap:7px;background:var(--bg-elev);transition:border-color 160ms ease,box-shadow 160ms ease}

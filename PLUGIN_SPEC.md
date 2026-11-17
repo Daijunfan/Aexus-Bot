@@ -47,19 +47,19 @@ agents plugin call workspace-notes notes.list --workspace /existing/plugin/works
 
 ## Workspace contract
 
-新 Team 只有 **Build** 本机项目与 **cloud** 云端项目；cloud 绑定已登记的主机和远端目录。插件独立打开，不配置插件团队。用户或 Secretary 在插件“授权人员”中选择具体内容和员工的阅读、修改、新增权限；员工通过 `plugin.resources` 发现内容，再使用 `plugin.call`。`autoAttach` 与旧 Work 绑定只保留兼容。
+新 Team 只有 **Build** 本机项目与 **cloud** 云端项目；cloud 绑定已登记的主机和远端目录。插件独立打开，不配置插件团队。用户或 Secretary 在插件“授权人员”中选择具体内容和员工的阅读、修改、新增权限；员工通过 `plugin.resources` 发现内容，再使用 `plugin.call`。Mission 内置超级笔记本改由 Core `notebook.*` 命令直接提供。`autoAttach` 与旧 Work 绑定只保留兼容。
 
 ```sh
 agents group add Planning --mode build
 agents group list --details --json
-agents plugin resources --id mininotion
-agents plugin call mininotion page.get --params '{"pageId":"AUTHORIZED_PAGE_ID"}'
+agents notebook resources
+agents notebook call page.get --params '{"pageId":"AUTHORIZED_PAGE_ID"}'
 ```
 
 旧 Work Team 根目录继续使用 `<插件工作区基目录>/<创建时的 Team 名称>`。
 便携发布包使用 `$AGENTS_COMPANY_HOME/workspaces/<workspaceDirectory>` 作为基目录；
 开发包有有效 `source-location.json` 时继续使用源码目录的 `workspaces/`，例如
-`PlugIns/mini-notion/workspaces/Planning`。`AGENTS_COMPANY_WORKSPACES` 显式覆盖时，
+`workspaces/`（旧插件工作区示例）。`AGENTS_COMPANY_WORKSPACES` 显式覆盖时，
 基目录为 `<该环境变量>/<workspaceDirectory>`。安装到用户插件目录的包同样使用外部
 工作区数据目录，不把工作文件放进可替换的软件包。
 一个插件的旧 Team 各有独立目录；不再新增此类 Team。已登记的旧 Team 继续使用原目录，
@@ -68,18 +68,13 @@ agents plugin call mininotion page.get --params '{"pageId":"AUTHORIZED_PAGE_ID"}
 
 可选 manifest 字段 `defaultWorkspace` 为 `default`（省略时的默认值）或 `collection`。
 前者让用户直接打开插件时使用基目录下的 `default/`；后者使用基目录本身，允许插件
-在统一视图中索引各 Team 和用户页面。MiniNotion 使用 `collection`；其他插件保持原行为。
+在统一视图中索引各 Team 和用户内容。需要跨目录聚合视图的插件可使用 `collection`；其他插件保持原行为。
 这是用户默认视图的选择，不扩大员工权限，不改变 Team/员工的 cwd，也不让插件向父级查找数据库。
 旧 `default/` 的文件保留原位，集合视图从子目录读取它们；旧版外部默认目录的首次导入仍
-复制到 `default/`，不覆盖集合或已有目录。集合外的旧 Team 使用显式 `--team` 访问，不自动搬迁。
-旧 Work 员工使用所属 Team 根目录的**子目录**，支持任意层级嵌套，不能占用 Team 根目录。同一个确切目录对应一个员工；父目录员工可以操作所有子目录，子目录员工
-不能操作父目录或兄弟目录。Build 可以让多名员工共用普通项目根目录。
-Build 自动使用 `~/develop/Agents-company-projects/<创建时的 Team 名称>`。创建 Team 会创建
-对应目录；也可绑定其他已有的物理文件夹。Team 可在 UI 与 CLI 中改名，但原工作目录与员工目录不变；员工改显示名称也不重命名目录。员工支持新建文件夹
-（`--directory-mode default`，与员工同名）或绑定已有物理文件夹（`bind`）。
-旧版本未指定模式的 Team 按 Build 兼容。`group migrate NAME` 保留文件迁入新目录，
-保存元数据备份。已有员工的 Team 不可切换模式/插件，空 Team 可以更改。
-更改员工目录会重建引擎上下文并保留历史；忙碌任务需要先停止。
+复制到 `default/`，不覆盖集合或已有目录。已退役的旧 Team/Work 目录仍保留在原磁盘路径，不再作为新的工作区类型。
+新员工默认在统一本地工作空间根目录（`~/Aexus-bot-workspaces/<员工名>`，可在偏好设置修改）或指定的云主机目录创建，各自工作区与插件目录解耦。
+支持按员工、具体内容通过 `plugin.access` 授予阅读/修改/新增权限；Secretary 默认拥有完整权限。
+历史兼容目录仍保留原位，不自动迁移或删除用户已有数据。
 
 每个 Work 员工的**自身目录**内生成：
 
@@ -90,7 +85,7 @@ employee-scope/
   .agents-company/
     AGENTS.md                # 宿主管理的工具入口
     CLAUDE.md
-    workspace.json           # schemaVersion 2、mode、scope、teamRoot、所选插件
+    workspace.json           # schemaVersion 2、mode、scope、所选插件
     README.md                # 当前作用范围和 API 入口
     plugins/<id>/API.md
     plugins/<id>/schema.json
@@ -146,7 +141,7 @@ Work 员工启动前，宿主会准备所选插件的运行时和 Workspace 内�
 `.agents-company/ipc/<plugin-id>/<employeeId>`。此通道让受文件系统沙箱约束的 CLI 继续使用
 同一个后端，不需要放开网络或任意 Unix socket 权限。
 
-插件 CLI 可以采用以下可选协议（MiniNotion 已实现）：
+插件 CLI 可以采用以下可选协议：
 
 - 检查目录中的 `host.json`（包含 pid 和已规范化的 workspace）；宿主未运行时可用软件自身的本地服务模式。
 - 生成随机 UUID，将 JSON-RPC 请求先写入 `<uuid>.request.json.tmp`，再原子重命名
@@ -231,55 +226,15 @@ workspace: required
 每个命令至少定义 `method`、`description`，写操作标记 `mutates:true`，参数在
 `options` 中声明类型、必填项、描述，复杂对象提供 `examples`。
 
-## MiniNotion integration
+## Mission 超级笔记本（已内置为 Core 能力）
 
-MiniNotion 源码位于 `PlugIns/mini-notion`，与 Cloud Hosts、Margin Reader 一起由宿主
-仓库管理。版本与 `plugins.lock.json` 保持一致；其中 `sourceCommit` 保留整合前的历史来源，
-当前源码由宿主仓库版本记录，不伪造新的插件独立提交。
-
-MiniNotion 构建：
-
-```sh
-npm run build:plugins
-npm run build
-npm run test:plugins
-npm run test:plugin-ui
-npm run test:mininotion
-npm run test:mininotion-ui
-```
-
-MiniNotion 的 `--workspace` 模式将 Markdown、代码/文本、CSV、图片、PDF 映射成
-可浏览的文件页面。新原生主页面保存为 `<主页面目录>/index.mininotion.json`；后代页面、
-数据库、记录、模板和同页同步内容保存为同目录中的 `<page-id>.mininotion.json`。
-文件格式为 `{"format":"mininotion.page/v1","page":{...}}`；`page.parentId` 表达递归层级，
-物理目录无需跟随页面深度增长。用户与员工共用这些文件，不按创建者分库。
-原始 Markdown 使用源码编辑；富文本保持原生块结构。`fs.*` 是实际文件接口，
-与独立模式原有的空间 `folder.*` 接口区分。
-
-`fs.path {pageId}` 返回页面文件与 `absoluteDirectory`，员工创建时可绑定该目录；
-`fs.bind {path,title?,color?}` 把已有目录作为可编辑主页面，重复调用不覆盖内容。
-标题修改不重命名已绑定目录；跨主页面移动子树迁移原生文件，但不删除员工文件夹。
-旧 `Documents/*.mininotion.json` 继续原位读取；`fs.organize {dryRun:true}` 先返回整理计划，
-备份并检查绑定后才显式执行 `dryRun:false`。不得在升级时自动迁移用户资料。
-文件路径以 `fs.path` 为准，测试和其他消费者不得从页面标题或历史 `Documents` 布局猜测。
-
-默认插件窗口通过 `collection` 工作区展示同一基目录内的内容；旧 `--team` 和 `--employee` 选择器仍兼容。新员工无需绑定页面目录，使用自身身份调用页面 API，由宿主按页面授权过滤读取和验证实际修改。集成测试覆盖普通团队员工、批量授权、撤销和旧目录兼容。
-
-`.mininotion/` 保存共享服务的索引、设置、历史、附件和草稿。该模式不读取独立 App
-的个人数据库，也不启动自身 Agent。完整备份应复制整个 Workspace；PDF 导出和
-全库替换在此模式下明确拒绝，常规文档导出使用 Markdown/HTML/JSON/CSV。
-
-后台 UI 验证使用隐藏窗口或离屏渲染，临时数据目录和禁止激活策略，不显示界面。
+原 MiniNotion 笔记本与多视图数据库实现已集成至 Aexus Bot Core 的 `Mission` 视图（`src/shared/mission-notebook/`、`src/main/mission-notebook/`、`src/renderer/src/mission-notebook/`），通过 Core 命令 `notebook.*` 直接暴露；原 `margin-reader` 精读与脑图工作台已集成至 `Library` 视图（`resources/library-reader/`、`src/main/library-reader/`、`reader.*`），原 `cloud-hosts` 云主机管理与终端/SFTP 已集成至 `Library` 视图与 Core `host.*`（`host.resources`、`host.access`、`host.files`），均不再作为外部插件打包或通过 `plugin.*` 调用；完整说明见 [docs/MISSION_NOTEBOOK.md](docs/MISSION_NOTEBOOK.md) 与 `docs/LIBRARY.md`。
 
 ## Source layout and builds
 
-所有集成软件的源代码按插件放在 `PlugIns/<name>/`；MiniNotion 为 `PlugIns/mini-notion`。
-每个源码包用 `package.json` 的 `build:plugin` 脚本实现 `--out <directory>` 构建协议。
-`npm run build:plugins` 自动遍历这些源码目录，输出到 `build/plugins/<name>/`。
-宿主通过标准 manifest 发现生成包；不从插件源码导入业务实现。
+`plugins.lock.json` 为空列表（`"plugins": []`）：内置功能直接随 Core/UI 构建交付。外部或第三方开发插件源代码仍可放在 `PlugIns/<name>/`（参考 [`examples/plugin-starter`](examples/plugin-starter)），并通过 `package.json` 的 `build:plugin` 脚本实现 `--out <directory>` 构建协议；`npm run build:plugins` 会遍历 `plugins.lock.json` 中登记的包输出到 `build/plugins/<name>/`，`agents plugin install` 也可安装任意外部插件到 `$AGENTS_COMPANY_HOME/plugins/`。
 
-交付 App 包含构建后的插件，不需要原来的 `<plugin-source>/mini-notion` checkout
-或独立 MiniNotion macOS App。源码和用户数据分离，现有 Markdown/API 文档规范保持不变。
+交付 App 直接包含内置的 `Library`（资料库、超级搜索、`Study Reader` 与 `Cloud Hosts`）和 `Mission` 超级笔记本，不需要额外插件仓库 checkout。源码和用户数据分离，现有 Markdown/API 文档规范保持不变。
 
 创建员工默认在 Team 根目录内生成与员工同名的文件夹，保留中文、空格和大小写。Work 员工绑定已有文件夹时必须在插件权限根目录的子级；Build 可以绑定项目根目录之外的物理文件夹。移除员工会清理其 Codex / Claude 原生会话，工作文件与插件文档仍保留。
 
@@ -293,25 +248,23 @@ MiniNotion 的 `--workspace` 模式将 Markdown、代码/文本、CSV、图片�
 插件安装要求独立 CLI、共享 `runtime.request`、非空命令 schema 和上述规范 Markdown。
 每个方法必须有唯一名称和说明。CLI、HTTP 界面和员工 mailbox 共用同一请求校验：
 未声明的方法返回 `-32601`，不能从 GUI 偷渡。界面初始化/就绪等生命周期方法也应声明，
-例如 MiniNotion 的 `ui.register`；这类命令本身不得以弹出窗口作为业务执行前提。
+这类命令本身不得以弹出窗口作为业务执行前提。
 
 提交插件必须验证：无 Electron 环境下的创建/读取/修改/错误路径；schema 与 Markdown
 同步；GUI 请求均能通过 CLI 重放；不可达接口或冲突不能导致静默数据丢失。
-使用 `npm run test:coverage`、`npm run test:cli-foundation`、`npm run test:plugins`
+使用 `npm run test:coverage`、`npm run test:cli-foundation`、`npm run test:plugins`、`npm run test:mission-notebook`
 以及插件自身的 headless 测试。`examples/plugin-starter` 提供共享运行时与 schema 校验样例。
 
 ## Host scheduling foundation (v1)
 
-未来插件需要安排宿主员工工作时，复用 `agents schedule` / socket `schedule.*`。
-完整规范见 [SCHEDULER.md](SCHEDULER.md)。`source` 可保存插件 ID 以便过滤；它不授予权限。
+插件或内置 `Mission` 笔记本需要安排宿主员工工作时，复用 `agents schedule` / socket `schedule.*`。
+完整规范见 [SCHEDULER.md](SCHEDULER.md)。`source` 可保存来源 ID 以便过滤；它不授予权限。
 模型、思考覆盖是临时的，目录和引擎身份来自已有员工；不要另启隐藏会话或私自提升权限。
-宿主运行才会触发，插件必须呈现真实的失败、跳过、取消结果。本版本没有把它接入 MiniNotion。
+宿主运行才会触发，工作流必须呈现真实的失败、跳过、取消结果；内置 `Mission` 超级笔记本已通过 `/workflow` 与 `button.*` 直接接入 `direct.send` / `session.send`、`mission.create` 与 `schedule.create`。
 
-## Application service plugins
+Builtin Cloud Hosts 在 `Library -> Cloud Hosts` 中直接使用 Core `host.*`（含 `host.resources`、`host.access`、`host.files`、`host.terminal-*`、`host.exec`）提供完整配置、SFTP 远程文件与 SSH 交互终端，无需外部插件通道；Secretary 默认全权，普通员工仅可访问明确授权或自身绑定的主机（阅读不返回凭据，修改不含导出私钥或删除主机）。
 
-`scope: "application"` 表示插件通过宿主公开 API 管理跨 Team 的平台资源；默认为 `workspace`。这是显式的管理能力，员工文档入口会说明这一点。工作文件仍限定在员工目录内，插件不得通过读取父目录偷偷扩大文件权限。应用级业务能力通过文档和 schema 明确列出，不通过私有 IPC。
-
-Cloud Hosts (`PlugIns/cloud-hosts`) 是此类插件：独立 CLI、runtime 和 UI 共用宿主 `host.*` Core 服务。可无窗口运行 `agents serve`；它不依赖 Electron、不导入宿主实现、不保存第二份主机库。无需插件团队；员工按获授权的具体主机操作，Secretary 默认全权。主机阅读不返回凭据，修改包含远端操作；普通员工不能导出 SSH 私钥文件或删除主机。
+支持 `scope: "application"` 的外部插件同样通过宿主公开 API 管理跨范围平台资源；工作文件仍限定在员工目录内，插件不得通过读取父目录偷偷扩大文件权限。应用级业务能力通过文档和 schema 明确列出，不通过私有 IPC。
 
 新 cloud Team 只能使用已登记 `hostId` 和现有远端 `directory`。旧 SSH 配置自动迁入主机库，数据备份后去重；新 Team 不再新建账号。连接详情与凭据通过 `host` CLI 或 Cloud Hosts UI 修改，密码默认隐藏。
 

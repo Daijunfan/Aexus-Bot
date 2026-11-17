@@ -3,15 +3,12 @@
     "args": [
       "view",
       "select",
-      "company",
-      "--team-tab",
-      "workers"
+      "messages"
     ],
     "expected": {
       "cmd": "view.select",
       "args": {
-        "id": "company",
-        "teamTab": "workers"
+        "id": "messages"
       }
     }
   },
@@ -61,28 +58,6 @@
       "args": {
         "section": "plan",
         "expanded": false
-      }
-    }
-  },
-  {
-    "args": [
-      "group",
-      "add",
-      "Display",
-      "--directory-mode",
-      "default",
-      "--folder-name",
-      "Code",
-      "--parent-directory",
-      "/tmp/projects"
-    ],
-    "expected": {
-      "cmd": "group.add",
-      "args": {
-        "name": "Display",
-        "directoryMode": "default",
-        "folderName": "Code",
-        "parentDirectory": "/tmp/projects"
       }
     }
   }

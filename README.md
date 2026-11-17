@@ -6,7 +6,7 @@
 
 订阅世界的信息，让 AI 团队替你阅读、讨论、核对，持续交付你关心的结果。
 
-Aexus Bot 把资讯频道、文档、多个 Agent 与持续任务放进同一个工作台。用 **Message** 汇集信息、交办工作，用 **Team** 组织成员、跟进过程，用 **Mission** 安排长期关注与交付。
+Aexus Bot 把资讯频道、文档、资料库、多个 Agent 与持续任务放进同一个工作台。用 **Library** 统一可视管理本机与云端文件、超级搜索、精读文献脑图与 SSH 云主机，用 **Message** 汇集信息、创建角色并交办工作，用 **Mission**（含超级 Notion 笔记本）安排长期关注与交付。
 
 [开始使用](#开始使用) · [部署指南](docs/DEPLOYMENT.md) · [CLI / API](API.md)
 
@@ -36,29 +36,28 @@ Aexus Bot 把资讯频道、文档、多个 Agent 与持续任务放进同一个
 
 你的来源、资料、工作区与成员职责由你安排。过去需要多人分工的信息工作，也可以成为个人日常使用的能力。
 
-## 三个视图，连接阅读、协作与交付
+## 三个主视图，连接资料、协作与交付
 
-### Message · 信息与讨论的中心
+### Library · 资料库、精读与云主机中心
 
-把资讯频道、私聊和群组放在一起，读到值得关注的内容，就能接着提问、讨论与交办。
+把软件内的全部本地与远端文件、超级搜索、PDF/EPUB 精读脑图与云主机配置合为统一工作台：
+
+- **存储全景（Overview）**：堆叠占比条与七大存储域卡片，一目了然掌握集中员工工作区、完全解耦的 Mac 本机私聊存储、群聊/频道、精读文献库、超级笔记本、公共共享目录与云主机占用。
+- **全部文件与超级搜索（All Files & Super Search）**：按空间或文件类型浏览与预览/编辑文件；支持按 `⌘K` 一键跨文件名、文本行片段、私聊附件、Mission 笔记本、精读文献卡片与云主机即时检索。
+- **内置精读与脑图（Study Reader）**：原生支持 PDF / EPUB / DOCX / MOBI / Markdown / HTML 阅读、手写批注、摘录、XMind 脑图与 FSRS 复习（`reader.*`），点击兼容文件可一键打开精读，并管理逐文献员工授权。
+- **内置云主机管理（Cloud Hosts）**：集中管理 SSH 主机、凭据密钥、指纹信任、远端 SFTP 文件浏览器（`host.files`）、多标签交互终端（`host.terminal-*`）与员工逐主机授权。
+
+### Message · 信息、角色与讨论中心
+
+把资讯频道、私聊、群组以及角色创建和原生 Agent 对话放在一起，读到值得关注的内容，就能接着提问、讨论与交办。
 消息在浮动标题栏与输入栏的圆角两侧自然延伸，保留柔和的毛玻璃渐变，让长文阅读与对话衔接起来。
 平台保留原生图标，订阅来源显示自己的头像，在列表、正文与管理页面中保持一致。
 
 - **资讯频道**：汇集 Telegram、X、YouTube、知乎、LinkedIn 与 Reddit 的内容，按来源、关键词和时间筛选；成员也能通过接口阅读与搜索。
 - **丰富消息**：使用图文、引用、讨论串、表情标记、投票与协作清单，在同一段上下文中交流、补充和汇总。
-- **共享资料**：预览图片与文档，在 Margin Reader 中阅读 PDF，编辑与管理文件，并从相关消息继续追问。
+- **共享资料与内置阅读**：预览图片与文档，在 Library Study Reader 中直接阅读群聊 PDF，编辑与管理文件，并从相关消息继续追问。
 
-Dot、Grok 等外部 Worker 保留各自的原生身份与历史。你可以在 Message 中管理 Bot、原生群组、成员与运行配置，界面和 CLI 使用同一套管理接口。在 macOS 上完成官方应用的安装与登录后，Aexus Bot 可接入本机执行通道，让桌面和 Web 会话都能调用你的 Mac。[原生 Bot 接入](docs/BOT_WORKERS.md) · [Message 工作台](docs/MESSAGE_EXPERIENCE.md)。
-
-### Team · 组织你的情报成员
-
-为成员安排关注方向和职责：资讯追踪、资料阅读、专题分析、独立复核、简报整理。秘书协调工作，你可以随时打开成员工作台，查看实际进展。
-
-角色员工与原生 **Worker** 共用一张并行工作看板，统一搜索、分类与跟进。会话、文件、终端、工具调用、授权和队列都在成员工作台中；Worker 使用独立原生会话，保留干净的原生上下文。
-
-可接入 **Codex、Claude Agent、Cline、Pi、OpenCode、Kilo Code、DeepSeek Harness、Google Antigravity**。选择你的模型与原生配置，在本机或已登记的远程工作环境中安排执行。[查看引擎能力](ENGINE_CAPABILITIES.md)。
-
-![Aexus Bot Team：并行查看成员的独立工作台与会话](docs/images/team-board.png)
+Dot、Grok 等外部 Worker 以及 **Codex、Claude Agent、Cline、Pi、OpenCode、Kilo Code、DeepSeek Harness、Google Antigravity** 均可在 Message 中创建（本地默认集中在 `~/Aexus-bot-workspaces/<员工名>`，或指定云主机目录）并管理。界面和 CLI 使用同一套管理接口。[原生 Bot 接入](docs/BOT_WORKERS.md) · [Message 工作台](docs/MESSAGE_EXPERIENCE.md) · [查看引擎能力](ENGINE_CAPABILITIES.md)。
 
 ### Mission · 让重要的事持续推进
 
@@ -74,11 +73,11 @@ Dot、Grok 等外部 Worker 保留各自的原生身份与历史。你可以在 
 
 工作区可以使用本机或已登记云主机中的目录。成员使用自己的工作区，群组集中管理共享资料，文件与原生会话在升级时保留稳定身份。
 
-| 插件 | 用途 |
+| 内置工作台 / 能力 | 用途 |
 | --- | --- |
-| **Margin Reader** | 阅读 PDF 与文档，摘录内容，整理参考资料。 |
-| **MiniNotion** | 组织笔记、数据库与知识。 |
-| **Cloud Hosts** | 管理远程主机、连接与终端。 |
+| **Library 资料库**（内置） | 七大存储域全景、全文件管理、跨库超级搜索、Study Reader 精读脑图、Cloud Hosts 云主机与 SFTP/SSH 终端。 |
+| **Mission 超级笔记本**（内置） | Notion 级页面、10 视图数据库、`/workflow` 工作流按钮与 Agent/排期联动。 |
+| **外部插件接口** | 通过 `plugin.*` 与 `examples/plugin-starter` 加载可选第三方本地插件。 |
 
 按具体内容为成员分配阅读、修改或新增权限。桌面、浏览器、CLI / API 与成员工具共用一个 Core，让同一项工作可以从不同入口继续完成。
 
@@ -88,9 +87,9 @@ Dot、Grok 等外部 Worker 保留各自的原生身份与历史。你可以在 
 
 1. 启动桌面应用，或连接自己的 Core Web 后端。
 2. 在设置中选择引擎，完成模型配置与认证。
-3. 创建团队，绑定工作区，为成员安排职责。
-4. 接入资讯来源、提供文档，或直接提出一个问题。
-5. 在 Message 中讨论，在 Team 中跟进，通过 Mission 安排持续交付。
+3. 在 **Message** 中创建角色员工或连接原生 Bot，在 **Library -> Cloud Hosts** 中登记远程主机。
+4. 接入资讯来源、向 Study Reader 或共享空间提供资料，或直接提出一个问题。
+5. 在 **Library** 管理与检索文件，在 **Message** 中讨论协作，通过 **Mission** 安排持续交付。
 
 [查看部署指南](docs/DEPLOYMENT.md)，选择 macOS / Windows 桌面，或 Linux Core / Web 与浏览器的组合。
 

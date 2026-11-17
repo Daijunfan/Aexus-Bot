@@ -30,6 +30,7 @@ export function messageReply(item:Item,quote?:MessageQuote):MessageReply|null{
   const characters=Array.from(text)
   return {id:item.id,role:item.role,...(item.author?{author:item.author}:{}),text:selected?.text??characters.slice(0,1200).join(''),...(selected?{quote:selected}:{}),...(images?.length?{images}:{}),...(files?.length?{files}:{}),...(!selected&&characters.length>1200?{truncated:true}:{})}
 }
+export function messageLinks(text:string):string[]{return [...new Set((text.match(/https?:\/\/[^\s<>"\u0000-\u001f]+/g)??[]).map(url=>url.replace(/[),.;]+$/,'')))]}
 export function messagePreview(items:Item[],reply?:EmployeeReply):MessagePreview{
   for(let i=items.length-1;i>=0;i--){
     const item=items[i]

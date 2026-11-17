@@ -10,14 +10,14 @@ const service=spawn(process.execPath,[path.join(root,'bin/agents'),'serve'],{env
 const cli=async(...args)=>{const reply=JSON.parse((await run(process.execPath,[path.join(root,'bin/agents'),...args,'--json'],{env,timeout:25000})).stdout);assert.ok(reply.ok,reply.error);return reply.data}
 try{
  for(let i=0;i<100;i++){try{if((await cli('status')).running)break}catch{}await new Promise(r=>setTimeout(r,30))}
- const [a,b]=await Promise.all([cli('plugin','open','mininotion'),cli('plugin','open','mininotion')])
+ const [a,b]=await Promise.all([cli('plugin','open','margin-reader'),cli('plugin','open','margin-reader')])
  assert.equal(a.id,b.id);assert.equal((await cli('plugin','windows')).length,1);assert.equal(a.attached,false)
- assert.ok((await fetch(a.url).then(r=>r.text())).includes('Mini Notion'))
+ assert.ok((await fetch(new URL('index.html',a.url)).then(r=>r.text())).includes('Margin Reader'))
  console.log('PASS pure CLI opens a deduplicated live plugin view without Electron')
  const state=await cli('plugin','place',a.id,'--x','-300','--y','100','--width','900','--height','680')
  assert.deepEqual(state.bounds,{x:-300,y:100,width:900,height:680})
  assert.equal((await cli('plugin','mode',a.id,'minimized')).mode,'minimized')
- assert.equal((await cli('plugin','open','mininotion')).mode,'normal')
+ assert.equal((await cli('plugin','open','margin-reader')).mode,'normal')
  await assert.rejects(()=>cli('plugin','place',a.id,'--width','0'))
  console.log('PASS window geometry and mode are CLI-owned and validated')
  await cli('plugin','dismiss',a.id);assert.equal((await cli('plugin','windows')).length,0);await assert.rejects(()=>fetch(a.url))

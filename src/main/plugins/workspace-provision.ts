@@ -17,8 +17,8 @@ export function retireRootInstructions(root:string){
  }
 }
 
-export function provisionWorkspace(root:string,settings:TeamSettings,teamRoot=root){
- root=fs.realpathSync(root);teamRoot=fs.realpathSync(teamRoot);retireRootInstructions(root)
+export function provisionWorkspace(root:string,settings:TeamSettings,permissionRoot=root){
+ root=fs.realpathSync(root);permissionRoot=fs.realpathSync(permissionRoot);retireRootInstructions(root)
  const plugins=settings.mode==='work'?[requirePlugin(settings.pluginId!)]:[]
- return {schemaVersion:3,mode:settings.mode,workspace:root,teamRoot,documentation:ensureApiDocuments(),plugins:plugins.map(plugin=>({id:plugin.id,name:plugin.name,version:plugin.version,documentation:'plugin/'+plugin.id+'/api'}))}
+ return {schemaVersion:3,mode:settings.mode,workspace:root,permissionRoot,documentation:ensureApiDocuments(),plugins:plugins.map(plugin=>({id:plugin.id,name:plugin.name,version:plugin.version,documentation:'plugin/'+plugin.id+'/api'}))}
 }

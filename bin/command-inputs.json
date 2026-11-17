@@ -887,13 +887,6 @@
         false
       ],
       [
-        "viewId",
-        "view-id",
-        "text",
-        false,
-        false
-      ],
-      [
         "clientRequestId",
         "client-request-id",
         "text",
@@ -1063,36 +1056,53 @@
       ]
     ]
   },
-  "board.categories": {
-    "fields": [],
-    "rawPositionals": true
+  "notebook.status": {
+    "fields": []
   },
-  "board.category-save": {
+  "notebook.guide": {
     "fields": [
       [
-        "id",
+        "topic",
         0,
         "text",
         false,
         false
-      ],
+      ]
+    ]
+  },
+  "notebook.methods": {
+    "fields": [
       [
-        "name",
-        "name",
+        "query",
+        0,
         "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "notebook.resources": {
+    "fields": []
+  },
+  "notebook.access": {
+    "fields": [
+      [
+        "resourceIds",
+        "resources",
+        "json",
         false,
         false
       ],
       [
-        "employeeIds",
+        "employees",
         "employees",
         "json",
         false,
         false
       ],
       [
-        "workerIds",
-        "workers",
+        "updates",
+        "updates",
         "json",
         false,
         false
@@ -1106,16 +1116,209 @@
       ]
     ]
   },
-  "board.category-delete": {
+  "notebook.call": {
     "fields": [
       [
-        "id",
+        "method",
         0,
         "text",
         false,
         false
       ],
       [
+        "params",
+        "params",
+        "json",
+        false,
+        false
+      ],
+      [
+        "stateMode",
+        "state-mode",
+        "text",
+        false,
+        false
+      ],
+      [
+        "includeEnvelope",
+        "include-envelope",
+        "boolean",
+        false,
+        false
+      ]
+    ]
+  },
+  "notebook.asset": {
+    "fields": [
+      [
+        "path",
+        0,
+        "text",
+        true,
+        false
+      ]
+    ]
+  },
+  "library.overview": {
+    "fields": [
+      [
+        "refresh",
+        "refresh",
+        "boolean",
+        false,
+        false
+      ]
+    ]
+  },
+  "library.search": {
+    "fields": [
+      [
+        "query",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "domains",
+        "domains",
+        "json",
+        false,
+        false
+      ],
+      [
+        "kind",
+        "kind",
+        "text",
+        false,
+        false
+      ],
+      [
+        "employeeId",
+        "employee-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "hostId",
+        "host-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "minBytes",
+        "min-bytes",
+        "number",
+        false,
+        false
+      ],
+      [
+        "maxBytes",
+        "max-bytes",
+        "number",
+        false,
+        false
+      ],
+      [
+        "updatedAfter",
+        "updated-after",
+        "number",
+        false,
+        false
+      ],
+      [
+        "sort",
+        "sort",
+        "text",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "reader.status": {
+    "fields": [
+      [
+        "workspace",
+        "workspace",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "reader.guide": {
+    "fields": [
+      [
+        "topic",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "reader.methods": {
+    "fields": [
+      [
+        "query",
+        0,
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "reader.resources": {
+    "fields": [
+      [
+        "workspace",
+        "workspace",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "reader.access": {
+    "fields": [
+      [
+        "workspace",
+        "workspace",
+        "text",
+        false,
+        false
+      ],
+      [
+        "resourceIds",
+        "resources",
+        "json",
+        false,
+        false
+      ],
+      [
+        "employees",
+        "employees",
+        "json",
+        false,
+        false
+      ],
+      [
+        "updates",
+        "updates",
+        "json",
+        false,
+        false
+      ],
+      [
         "expectedRevision",
         "expected-revision",
         "number",
@@ -1124,19 +1327,220 @@
       ]
     ]
   },
-  "board.category-order": {
+  "reader.call": {
     "fields": [
       [
-        "order",
-        "order",
+        "method",
+        0,
+        "text",
+        false,
+        false
+      ],
+      [
+        "workspace",
+        "workspace",
+        "text",
+        false,
+        false
+      ],
+      [
+        "params",
+        "params",
         "json",
         false,
         false
       ],
       [
-        "expectedOrder",
-        "expected-order",
+        "origin",
+        "origin",
+        "text",
+        false,
+        false
+      ],
+      [
+        "stateMode",
+        "state-mode",
+        "text",
+        false,
+        false
+      ],
+      [
+        "includeEnvelope",
+        "include-envelope",
+        "boolean",
+        false,
+        false
+      ],
+      [
+        "viewId",
+        "view-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "reader.open": {
+    "fields": [
+      [
+        "workspace",
+        "workspace",
+        "text",
+        false,
+        false
+      ],
+      [
+        "path",
+        "path",
+        "text",
+        false,
+        false
+      ],
+      [
+        "documentId",
+        "document-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "studySetId",
+        "study-set-id",
+        "text",
+        false,
+        false
+      ],
+      [
+        "importToLibrary",
+        "import-to-library",
+        "boolean",
+        false,
+        false
+      ]
+    ]
+  },
+  "reader.close": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        true,
+        false
+      ]
+    ]
+  },
+  "host.resources": {
+    "fields": []
+  },
+  "host.access": {
+    "fields": [
+      [
+        "resourceIds",
+        "resources",
         "json",
+        false,
+        false
+      ],
+      [
+        "employees",
+        "employees",
+        "json",
+        false,
+        false
+      ],
+      [
+        "updates",
+        "updates",
+        "json",
+        false,
+        false
+      ],
+      [
+        "expectedRevision",
+        "expected-revision",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "host.files": {
+    "fields": [
+      [
+        "id",
+        0,
+        "text",
+        true,
+        false
+      ],
+      [
+        "directory",
+        "directory",
+        "text",
+        false,
+        false
+      ],
+      [
+        "operation",
+        "operation",
+        "text",
+        true,
+        false
+      ],
+      [
+        "path",
+        "path",
+        "text",
+        false,
+        false
+      ],
+      [
+        "to",
+        "to",
+        "text",
+        false,
+        false
+      ],
+      [
+        "content",
+        "content",
+        "text",
+        false,
+        false
+      ],
+      [
+        "hash",
+        "hash",
+        "text",
+        false,
+        false
+      ],
+      [
+        "create",
+        "create",
+        "boolean",
+        false,
+        false
+      ],
+      [
+        "hidden",
+        "hidden",
+        "boolean",
+        false,
+        false
+      ],
+      [
+        "offset",
+        "offset",
+        "number",
+        false,
+        false
+      ],
+      [
+        "trashId",
+        "trash-id",
+        "text",
         false,
         false
       ]
@@ -2326,6 +2730,148 @@
       [
         "messageId",
         "message-id",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "direct.files": {
+    "fields": [
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ],
+      [
+        "query",
+        "query",
+        "text",
+        false,
+        false
+      ],
+      [
+        "kind",
+        "kind",
+        "text",
+        false,
+        false
+      ],
+      [
+        "author",
+        "author",
+        "text",
+        false,
+        false
+      ],
+      [
+        "sort",
+        "sort",
+        "text",
+        false,
+        false
+      ],
+      [
+        "offset",
+        "offset",
+        "number",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "direct.search": {
+    "fields": [
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ],
+      [
+        "query",
+        "query",
+        "text",
+        false,
+        false
+      ],
+      [
+        "filter",
+        "filter",
+        "text",
+        false,
+        false
+      ],
+      [
+        "author",
+        "author",
+        "text",
+        false,
+        false
+      ],
+      [
+        "from",
+        "from",
+        "number",
+        false,
+        false
+      ],
+      [
+        "to",
+        "to",
+        "number",
+        false,
+        false
+      ],
+      [
+        "offset",
+        "offset",
+        "number",
+        false,
+        false
+      ],
+      [
+        "limit",
+        "limit",
+        "number",
+        false,
+        false
+      ]
+    ]
+  },
+  "direct.storage": {
+    "fields": [
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ]
+    ]
+  },
+  "direct.clear": {
+    "fields": [
+      [
+        "employee",
+        "employee",
+        "text",
+        false,
+        false
+      ],
+      [
+        "scope",
+        "scope",
         "text",
         false,
         false
@@ -4179,6 +4725,13 @@
         "number",
         true,
         false
+      ],
+      [
+        "scope",
+        "scope",
+        "text",
+        false,
+        false
       ]
     ]
   },
@@ -4501,13 +5054,6 @@
         false
       ],
       [
-        "team",
-        "team",
-        "text",
-        false,
-        false
-      ],
-      [
         "employee",
         "employee",
         "text",
@@ -4636,13 +5182,6 @@
         false
       ],
       [
-        "team",
-        "team",
-        "text",
-        false,
-        false
-      ],
-      [
         "employee",
         "employee",
         "text",
@@ -4670,13 +5209,6 @@
       [
         "view",
         "view",
-        "text",
-        false,
-        false
-      ],
-      [
-        "team",
-        "team",
         "text",
         false,
         false
@@ -4744,13 +5276,6 @@
       [
         "view",
         "view",
-        "text",
-        false,
-        false
-      ],
-      [
-        "team",
-        "team",
         "text",
         false,
         false
@@ -6216,13 +6741,6 @@
         "text",
         false,
         false
-      ],
-      [
-        "viewId",
-        "view-id",
-        "text",
-        false,
-        false
       ]
     ]
   },
@@ -6352,13 +6870,6 @@
       [
         "topicId",
         "topic-id",
-        "text",
-        false,
-        false
-      ],
-      [
-        "viewId",
-        "view-id",
         "text",
         false,
         false
@@ -6893,13 +7404,6 @@
       [
         "clientRequestId",
         "client-request-id",
-        "text",
-        false,
-        false
-      ],
-      [
-        "team",
-        "team",
         "text",
         false,
         false
@@ -7798,194 +8302,6 @@
       ]
     ],
     "rawPositionals": true
-  },
-  "team-view.list": {
-    "fields": [],
-    "rawPositionals": true
-  },
-  "team-view.create": {
-    "fields": [
-      [
-        "name",
-        "name",
-        "text",
-        false,
-        false
-      ],
-      [
-        "teams",
-        "teams",
-        "json",
-        false,
-        false
-      ],
-      [
-        "select",
-        "select",
-        "boolean-value",
-        false,
-        false
-      ]
-    ],
-    "defaults": {
-      "teams": "[]"
-    }
-  },
-  "team-view.remove": {
-    "fields": [
-      [
-        "id",
-        0,
-        "text",
-        false,
-        false
-      ]
-    ],
-    "rawPositionals": true
-  },
-  "team-view.select": {
-    "fields": [
-      [
-        "id",
-        0,
-        "text",
-        false,
-        false
-      ]
-    ],
-    "rawPositionals": true
-  },
-  "room.place": {
-    "fields": [
-      [
-        "name",
-        0,
-        "text",
-        false,
-        false
-      ],
-      [
-        "column",
-        "column",
-        "number",
-        false,
-        false
-      ],
-      [
-        "row",
-        "row",
-        "number",
-        false,
-        false
-      ],
-      [
-        "expectedPlacement",
-        "expected-placement",
-        "json",
-        false,
-        false
-      ],
-      [
-        "slot",
-        "slot",
-        "number",
-        false,
-        false
-      ]
-    ]
-  },
-  "group.rename": {
-    "fields": [
-      [
-        "name",
-        0,
-        "text",
-        false,
-        false
-      ],
-      [
-        "nextName",
-        1,
-        "text",
-        false,
-        false
-      ]
-    ],
-    "rawPositionals": true
-  },
-  "group.migrate": {
-    "fields": [
-      [
-        "name",
-        0,
-        "text",
-        false,
-        false
-      ]
-    ],
-    "rawPositionals": true
-  },
-  "room.bounds": {
-    "fields": [
-      [
-        "name",
-        0,
-        "text",
-        false,
-        false
-      ],
-      [
-        "columns",
-        "columns",
-        "number",
-        false,
-        false
-      ],
-      [
-        "rows",
-        "rows",
-        "number",
-        false,
-        false
-      ]
-    ]
-  },
-  "room.layout": {
-    "fields": [
-      [
-        "name",
-        0,
-        "text",
-        false,
-        false
-      ]
-    ],
-    "rawPositionals": true
-  },
-  "card.place": {
-    "fields": [
-      [
-        "id",
-        0,
-        "text",
-        false,
-        false
-      ],
-      [
-        "seat",
-        "seat",
-        "number",
-        false,
-        false
-      ],
-      [
-        "expectedSeating",
-        "expected-seating",
-        "json",
-        false,
-        false
-      ]
-    ]
   },
   "plugin.list": {
     "fields": [],

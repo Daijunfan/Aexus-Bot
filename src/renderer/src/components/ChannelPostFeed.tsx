@@ -2,7 +2,7 @@ import {formatMessageDateTime} from '../message-time'
 import {useLayoutEffect,useMemo,useRef} from 'react'
 import type {ChannelPost,ChannelView} from '../../../shared/channels'
 import {translate as uiText,useI18n,interfaceLocale} from '../i18n'
-import {ChannelAvatar,ChannelImage,channelPlatform} from './ChannelNewsCard'
+import {ChannelAvatar,ChannelImage,channelPlatform,formatChannelAuthor} from './ChannelNewsCard'
 import {newestPosts,postExcerpt,postPhotos,type ChannelFeedView} from './channel-post-model'
 import {Icon} from './Icon'
 import {ChannelPostActions} from './ChannelPostActions'
@@ -35,7 +35,7 @@ export function ChannelPostFeed({posts,sourceAvatar,onOpen,onAuthor,onChanged}:{
 }
 
 function ChannelPostCard({post,sourceAvatar,onOpen,onAuthor,onChanged}:{post:ChannelPost;sourceAvatar?:ChannelView['avatar'];onOpen:()=>void;onAuthor:()=>void;onChanged:(post:ChannelPost|null)=>void}){
- const photos=postPhotos(post),cover=photos[0],text=postExcerpt(post.body),author=post.authorName||post.sourceName,identity=post.sourceAvatar??sourceAvatar,heading=post.title||(cover?text:''),date=new Date(post.publishedAt)
+ const photos=postPhotos(post),cover=photos[0],text=postExcerpt(post.body),author=formatChannelAuthor(post.plugin,post.authorName||post.sourceName),identity=post.sourceAvatar??sourceAvatar,heading=post.title||(cover?text:''),date=new Date(post.publishedAt)
  return <article className="channel-post-card" role="listitem" data-news-id={post.id} data-platform={post.plugin} data-source-key={post.plugin+':'+post.sourceId}>
   <div className="channel-post-content"><button type="button" className="channel-post-open" onClick={onOpen} aria-label={uiText('Open post from {0}: {1}',[author,post.title||text.slice(0,90)||uiText('Photos')])}>
    <div className={'channel-post-cover'+(cover?'':' is-text')}>

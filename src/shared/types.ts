@@ -10,14 +10,17 @@ export type WorkEnvironment = 'team' | 'local'
 export type NativeOrigin = {kind:'cloud';hostId:string;host:string;os:'linux'|'macos'|'windows';directory:string}
 export type NativeSession = {engine:Engine;id:string;profile?:string;origin?:NativeOrigin;ownership?:'external'}
 export type TeamSettings = { folderName?:string;parentDirectory?:string; mode: 'work' | 'build' | 'cloud'; pluginId?: string; hostId?:string; directory?:string; remote?: import('./remote').RemoteTarget; directoryMode?: 'default'|'bind' }
-export const teamSettings = (store: Pick<Store,'teamSettings'>, name: string): TeamSettings => store.teamSettings?.[name] ?? {mode:'build'}
-/** Team is organizational membership; a local workspace may coexist with cloud teammates. */
-export function employeeSettings(store:Pick<Store,'teamSettings'>,card:{group:string;workEnvironment?:WorkEnvironment}):TeamSettings {
-  const config=teamSettings(store,card.group)
-  return config.mode==='cloud'&&card.workEnvironment==='local'?{mode:'build'}:config
+export const teamSettings = (store: {teamSettings?:Record<string,TeamSettings>}|undefined, name?: string): TeamSettings => (name ? store?.teamSettings?.[name] : undefined) ?? {mode:'build'}
+/** Workspaces belong to each employee individually under the centralized root or an explicit host/folder. */
+export function employeeSettings(_store:unknown,card:{group?:string;workspaceMode?:'local'|'cloud'|'work';hostId?:string;remoteRoot?:string;remote?:import('./remote').RemoteTarget|null;pluginId?:string;directoryMode?:'default'|'bind';workEnvironment?:WorkEnvironment}):TeamSettings {
+  const store=_store as {teamSettings?:Record<string,TeamSettings>}|undefined
+  if(card.workspaceMode==='cloud'||(!card.workspaceMode&&card.hostId&&(card.workEnvironment as string)!=='local'))return {mode:'cloud',hostId:card.hostId,directory:card.remoteRoot??card.remote?.directory,remote:card.remote??undefined,directoryMode:card.directoryMode}
+  if(card.workspaceMode==='work'||card.pluginId)return {mode:'work',pluginId:card.pluginId,directoryMode:card.directoryMode}
+  if(card.workspaceMode==='local'||(card.workEnvironment as string)==='local')return {mode:'build',directoryMode:card.directoryMode}
+  const legacy=teamSettings(store,card.group)
+  return legacy.mode==='cloud'&&(card.workEnvironment as string)==='local'?{mode:'build',directoryMode:card.directoryMode}:legacy
 }
-import type { Accessory, AvatarKind, RoomDesign } from './office'
-import type { Point, RoomBounds, Viewport } from './canvas'
+import type { Accessory, AvatarKind } from './office'
 
 export type SlashCommand = {
   name: string
@@ -107,16 +110,20 @@ export type StoredSession = {
   id: string
   engine: Engine
   kind?: EmployeeKind
-  /** Default inherits Team; local keeps a Mac workspace inside a cloud Team. */
+  /** Optional legacy metadata; no longer used for grouping or workspaces. */
+  group?: string
+  workspaceMode?: 'local' | 'cloud' | 'work'
+  hostId?: string
+  remoteRoot?: string
+  pluginId?: string
+  folderName?: string
+  /** Legacy compatibility field for records migrated from Team cloud configs. */
   workEnvironment?: WorkEnvironment
-  /** Host-generated local root, preserved when a cloud Team is renamed. */
-  localWorkspaceRoot?: string
   title: string
-  group: string
   cwd: string
   /** Directory choice at creation; changing it later does not rebind the workspace. */
   directoryMode?: 'default'|'bind'
-  /** Read-only API projection from Team; persisted only in legacy 0.12 records. */
+  /** Read-only remote host projection derived from hostId and cwd. */
   remote?: import('./remote').RemoteTarget | null
   clonedFrom?: string
   clineSessionId?: string
@@ -133,12 +140,10 @@ export type StoredSession = {
   /** Native cloud execution uses a clean engine context; host history is preserved. */
   codexExecution?: 'native-v1'
   createdAt: number
-  /** Manual position within a department; set by dragging. */
-  orderIndex?: number
   model?: string
   planMode?: boolean
   usage?: Record<string,unknown>
-  pendingMessages?: {id:string;text:string;images?:string[];files?:string[];delegation?:Delegation;viewId?:string;sourceView?:import('./message-source').MessageSourceView}[]
+  pendingMessages?: {id:string;text:string;images?:string[];files?:string[];delegation?:Delegation;sourceView?:import('./message-source').MessageSourceView}[]
   remoteAdmin?: boolean
   fastMode?: boolean
   fastModeState?: string
@@ -146,62 +151,26 @@ export type StoredSession = {
   effort?: EffortLevel
   permissionMode?: PermissionMode
   thinking?: boolean
-  /** A workstation in the illustrated office; independent of its display name. */
-  seat?: string
-  /** One-based numbered seat in the Team's fixed grid. */
-  seatNumber?: number
   avatar?: AvatarKind
   accessory?: Accessory
   /** Legacy storage name for the profession/duties description, never an avatar or authority. */
   role?: string
   color?: string
-  /** Legacy free coordinates, converted to numbered seats when loading. */
-  position?: Point
-  /** Computed by the API; invalid legacy workspaces cannot launch an engine. */
+  /** Computed by the API; invalid workspaces cannot launch an engine. */
   workspaceError?: string
 }
-
-/** Where a department's room sits on the floor, and how big it is. */
-export type RoomLayout = {
-  slot?:number
-  placement?:import('./canvas').TeamPlacement
-  seating?:import('./canvas').TeamSeating
-  /** Grid column and row, in units of one room slot. */
-  col: number
-  row: number
-  /** Spans, so rooms can be made wider or taller than one slot. */
-  w: number
-  h: number
-  design?: Partial<RoomDesign>
-  bounds?: RoomBounds
-}
-
-export const ALL_TEAM_VIEW='all'
-export type TeamView={id:string;name:string;teams:string[];viewport?:Viewport}
 
 export type Store = {
   revision?:number
   avatarCatalog?:import('./avatars').AvatarCatalogState
   fullAccessDefaultApplied?:boolean
-  connectorAnchors?:import('./connector').ConnectorSettings
   access?:ManagementAccess
   lastEmployeeTemplate?:Partial<StoredSession>
-  lastTeamTemplate?:{settings:TeamSettings;design?:Partial<RoomDesign>;bounds?:RoomBounds}
 
   sessions: StoredSession[]
-  groups: string[]
-  boardCategories?:import('./board-categories').BoardCategory[]
-  teamViews?:TeamView[]
-  activeTeamViewId?:string
-  /** Layout per department name; a missing entry means "not placed yet". */
-  rooms?: Record<string, RoomLayout>
-  teamRoots?: Record<string, string>
-  teamSettings?: Record<string, TeamSettings>
   /** Internal creation retries; never projected into client state or used as authority. */
-  teamCreations?:Record<string,{caller:PrincipalRef;key:string;fingerprint:string}>
   employeeCreations?:Record<string,{caller:PrincipalRef;key:string;fingerprint:string}>
   preferences?: import('./preferences').Preferences
-  viewport?: Viewport
 }
 
 /** One rendered piece of an assistant turn. */
@@ -252,8 +221,7 @@ export type Session = {
   claudeSessionId?: string
   threadId?: string
   title: string
-  /** Department this session belongs to; '' is the default bucket. */
-  group: string
+  group?: string
   createdAt: number
   items: Item[]
   commands: SlashCommand[]
@@ -304,38 +272,6 @@ export type SessionMeta = {
   fastModeState?: string
   fastModeDisabledReason?: string
   effort?: EffortLevel
-}
-
-export function groupLabel(name: string): string {
-  return name || 'Unassigned'
-}
-
-/** Order cards for display: manual order wins, otherwise newest first. */
-export function orderSessions(sessions: StoredSession[]): StoredSession[] {
-  return [...sessions].sort((a, b) => {
-    const ao = a.orderIndex
-    const bo = b.orderIndex
-    if (ao !== undefined && bo !== undefined) return ao - bo
-    if (ao !== undefined) return -1
-    if (bo !== undefined) return 1
-    return b.createdAt - a.createdAt
-  })
-}
-
-/** Bucket sessions into departments, always including the default bucket. */
-export function groupSessions(
-  sessions: StoredSession[],
-  groups: string[]
-): { name: string; items: StoredSession[] }[] {
-  const departments = [
-    { name: '', items: [] as StoredSession[] },
-    ...groups.map((g) => ({ name: g, items: [] as StoredSession[] }))
-  ]
-  for (const card of orderSessions(sessions)) {
-    const dept = departments.find((d) => d.name === (card.group ?? ''))
-    ;(dept ?? departments[0]).items.push(card)
-  }
-  return departments
 }
 
 /** Empty native employees may bind an existing history; completed fresh onboarding is also empty. */

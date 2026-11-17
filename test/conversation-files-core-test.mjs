@@ -15,7 +15,7 @@ try{
  f=await fixtureCore({},entry)
  const rpc=async(cmd,args={},token=null)=>{const value=await f.request(token,cmd,args);assert.ok(value.ok,value.error);return value.data}
  const deny=async(cmd,args,token=null)=>{const value=await f.request(token,cmd,args);assert.equal(value.ok,false,cmd+' must reject');return value.error}
- await rpc('group.add',{name:'File team'});const a=await f.create('Author','File team'),b=await f.create('Member','File team'),other=await f.create('Outside','File team'),secretary=await f.create('Secretary','File team','secretary')
+ const a=await f.create('Author'),b=await f.create('Member'),other=await f.create('Outside'),secretary=await f.create('Secretary','secretary')
  const at=await f.token(a.id),bt=await f.token(b.id),ot=await f.token(other.id),st=await f.token(secretary.id)
  const group=await rpc('chat.create',{name:'Shared research',members:[a.id,b.id]}),conversation='group:'+group.id
  const workspace=await rpc('conversation.workspace',{conversation}),name='A complete long research filename with 中文 and full provenance.pdf',p='@workspace/reports/'+name,q='@workspace/reports/Notes.md'

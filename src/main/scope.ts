@@ -1,8 +1,8 @@
 import {claudeUserSettings} from './claude-provider'
 
-export function workCodexConfig(cwd:string,teamRoot:string,controlSocket?:string):string[] {
+export function workCodexConfig(cwd:string,permissionRoot:string,controlSocket?:string):string[] {
   const access:Record<string,string>={}
-  if(cwd!==teamRoot)access[teamRoot]='deny'
+  if(cwd!==permissionRoot)access[permissionRoot]='deny'
   access[cwd]='write'
   const table='{'+Object.entries(access).map(([key,value])=>`${JSON.stringify(key)}=${JSON.stringify(value)}`).join(',')+'}'
   // Stop AGENTS.md discovery at this employee's generated guide, before denied ancestors.

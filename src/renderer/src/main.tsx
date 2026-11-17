@@ -14,7 +14,6 @@ import './styles/session.css'
 import './styles/chat.css'
 import "./styles/office.css"
 import "./styles/panels.css"
-import './styles/canvas.css'
 import './styles/pets.css'
 import './styles/themes.css'
 import './styles/workbench.css'
@@ -56,14 +55,11 @@ import './styles/plan-controls.css'
 
 import './styles/product-density.css'
 
-import './styles/agent-board.css'
-
 import './styles/workspace-chrome.css'
 import './styles/team-layout.css'
 
 import './styles/team-surface.css'
 
-import './styles/board-directory.css'
 import './styles/task-composer.css'
 import './styles/worker-conversations.css'
 import './styles/scrollbars.css'
@@ -81,3 +77,5 @@ import './styles/message-navigation.css'
 import './styles/mission-workspace.css'
 
 import './styles/plan-view-options.css'
+import './styles/message-polish.css'
+import './styles/library-view.css'

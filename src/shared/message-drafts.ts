@@ -8,5 +8,5 @@ export function draftContent(value:Partial<Draft>,kind:DraftKind='employee'){
 }
 export function reuseDraft<T extends Draft>(value:T,previous:Draft|undefined,kind:DraftKind='employee'):T&{clientMessageId:string}{
  const same=previous&&draftContent(previous,kind)===draftContent(value,kind)
- return {...value,clientMessageId:same&&previous.clientMessageId||crypto.randomUUID(),...(same&&previous.viewId?{viewId:previous.viewId}:{}),...(same&&kind==='employee'&&previous.sourceView?{sourceView:previous.sourceView}:{})}
+ return {...value,clientMessageId:same&&previous.clientMessageId||crypto.randomUUID(),...(same&&kind==='employee'&&previous.sourceView?{sourceView:previous.sourceView}:{})}
 }

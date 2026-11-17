@@ -22,7 +22,7 @@ export function EmployeeInitialization({employee,onClose}:{employee:StoredSessio
         {failed&&<p className="employee-form-error">{employee.initialization?.error}</p>}
         {error&&<p role="alert">{error}</p>}
       </div>
-      <div className="form-footer"><button type="button" onClick={onClose}>{uiText("Back to team")}</button>{failed&&<button type="button" onClick={()=>void api.call('view.open',{kind:'employee',employee:employee.id})}>{uiText("Configure employee")}</button>}{failed&&<button className="btn primary" disabled={retrying} onClick={async()=>{setRetrying(true);setError('');try{await api.call('card.initialize',{id:employee.id})}catch(error){setError((error as Error).message)}finally{setRetrying(false)}}}>{retrying?uiText("Preparing to retry…"):uiText("Retry initialization")}</button>}</div>
+      <div className="form-footer"><button type="button" onClick={onClose}>{uiText("Back to Message")}</button>{failed&&<button type="button" onClick={()=>void api.call('view.open',{kind:'employee',employee:employee.id})}>{uiText("Configure employee")}</button>}{failed&&<button className="btn primary" disabled={retrying} onClick={async()=>{setRetrying(true);setError('');try{await api.call('card.initialize',{id:employee.id})}catch(error){setError((error as Error).message)}finally{setRetrying(false)}}}>{retrying?uiText("Preparing to retry…"):uiText("Retry initialization")}</button>}</div>
     </section>
   </div>
 }

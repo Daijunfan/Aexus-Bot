@@ -43,7 +43,7 @@ function changeBinding(enabled:boolean,args:BindingRequest){
   store.access??=emptyAccess()
   store.access.bindings=[...(store.access.bindings??[]).filter(edge=>!samePair(edge)),binding]
   // Keep a disabled override for creator lines, so a later save/restart cannot resurrect them.
-  writeStore(store,{reconcileOffice:false})
+  writeStore(store)
   return result(true)
 }
 

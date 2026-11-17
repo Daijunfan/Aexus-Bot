@@ -1,6 +1,6 @@
 # Shared conversation files and employee workspaces
 
-An employee has one execution workspace: the directory assigned in Team. Joining a group never creates another employee directory, changes cwd, switches host, or changes a native session. `workspace.catalog` returns this assigned `company:EMPLOYEE_ID` workspace only. Use `conversation.file` to read shared group content and `conversation.upload` to share results from the employee’s own workspace.
+An employee has one execution workspace: local employees are created under the unified workspaces root (default `~/Aexus-bot-workspaces/<folder>`, configurable via `preferences.employeeWorkspacesRoot`), and cloud employees specify `hostId` and `remoteRoot`/`cwd` directly. Joining a group never creates another employee directory, changes cwd, switches host, or changes a native session. `workspace.catalog` returns this assigned `employee:EMPLOYEE_ID` workspace only. Use `conversation.file` to read shared group content and `conversation.upload` to share results from the employee’s own workspace.
 
 ## One shared-file manager
 
@@ -20,11 +20,11 @@ agents chat create --name 'Existing data' --members '["EMPLOYEE_ID"]' --storage 
 
 The committed storage directory is stable across group rename/restart. Existing groups keep their original locations. A host storing group files cannot be removed while referenced. Storage gives current members scoped file access, not general SSH administration or host credentials. Local employees, workers on the storage host, and workers on another cloud host use the same conversation APIs and opaque versions; cross-host copies keep the employee’s assigned execution directory.
 
-Team creation uses the same folder choice. `group.add --folder-name NAME --parent-directory PATH` creates an independent local folder label; add `--mode cloud --host-id HOST_ID` for a cloud parent. `--directory-mode bind --root LOCAL_PATH` or `--remote-dir REMOTE_PATH` binds an existing location. No existing employee/native workspace is moved automatically.
+Employee creation uses centralized local folders by default (`card.create --title NAME [--folder-name DIR]`) or explicit cloud binding (`--host-id HOST_ID --remote-dir REMOTE_PATH`). No existing employee/native workspace is moved automatically during normal startup or creation.
 
 ## Shared content locations
 
-`conversation.workspace {conversation,employee?}` returns the stable Core or registered-host shared content root, current members and rights. Groups do not return `members[].directory`, `memberDirectory` or `memberPath`. `personalWorkspace`, when returned, is the existing Team cwd. `conversation.workspaces` lists shared content locations, not extra execution workspaces. Remote employees access Core files through these APIs; a Core path is not a remote-local path.
+`conversation.workspace {conversation,employee?}` returns the stable Core or registered-host shared content root, current members and rights. Groups do not return `members[].directory`, `memberDirectory` or `memberPath`. `personalWorkspace`, when returned, is the employee’s existing `cwd`. `conversation.workspaces` lists shared content locations, not extra execution workspaces. Remote employees access Core files through these APIs; a Core path is not a remote-local path.
 
 The ID parent isolates same-name conversations. Renaming a group or employee does not move files. Existing legacy member folders and their files remain at their original paths as ordinary shared content; they are not advertised or recreated as employee workspaces. Leaving or archiving a group preserves the files and revokes former members’ API access.
 
@@ -35,7 +35,7 @@ agents conversation file group:GROUP_ID --operation list --json
 agents conversation file group:GROUP_ID --operation read --path brief.txt --json
 ```
 
-All current group members have equal read/create/upload/edit/delete rights over shared content. User and Secretary administer without joining. Aexus position and group Owner/Admin office do not confer access to another employee’s private Team workspace. Core checks do not sandbox arbitrary same-account Trusted native tools.
+All current group members have equal read/create/upload/edit/delete rights over shared content. User and Secretary administer without joining. Aexus position and group Owner/Admin office do not confer access to another employee’s private personal workspace. Core checks do not sandbox arbitrary same-account Trusted native tools.
 
 Channel news feeds use reading grants, without new employee membership or personal folders. Channel roots retain the user’s explicit downloads and legacy content. Existing channel member-subfolder restrictions remain compatible for old layouts; they do not allocate another execution workspace in `workspace.catalog`.
 

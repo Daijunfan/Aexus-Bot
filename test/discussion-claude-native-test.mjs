@@ -77,8 +77,7 @@ try{
  f=await fixtureCore(env,entry)
  const rpc=async(cmd,args={})=>{const value=await f.request(null,cmd,args);assert.ok(value.ok,value.error);return value.data}
  const wait=async(check,label)=>{const deadline=Date.now()+45000;while(Date.now()<deadline){if(fixtureError)throw fixtureError;const value=await check();if(value)return value;await new Promise(resolve=>setTimeout(resolve,80))}throw Error('Timeout '+label)}
- await rpc('group.add',{name:'Native Claude ACK'})
- const card=await rpc('card.create',{title:'Isolated Claude reader',group:'Native Claude ACK',engine:'claude',model:'claude-sonnet-4-6',thinking:false,permissionMode:'bypassPermissions'})
+ const card=await rpc('card.create',{title:'Isolated Claude reader',engine:'claude',model:'claude-sonnet-4-6',thinking:false,permissionMode:'bypassPermissions'})
  await wait(async()=>{const value=await f.status(card.id);if(value.initialization?.status==='failed')throw Error(value.initialization.error);return value.initialization?.status==='ready'},'actual documentation initialization')
  for(const operation of ['bash','read']){
   const result=results.get('tool_initialization_'+operation);assert.ok(result?.is_error,JSON.stringify(result));assert.match(JSON.stringify(result.content),/denied|blocked|only.*tool|initialization/i)
@@ -88,7 +87,7 @@ try{
   const result=results.get('tool_initialization_'+operation);assert.ok(result&&!result.is_error,JSON.stringify(result))
   const data=JSON.parse(result.content.find(item=>item.type==='text').text)
   if(operation==='identity')assert.ok(JSON.stringify(data).includes(card.id))
-  else{assert.equal(data.document,'index');assert.ok(data.markdown.length<6000);assert.match(data.markdown,/Plan 是 Core 视图，不是 MiniNotion/);assert.doesNotMatch(data.markdown,/### card\.create/)}
+  else{assert.equal(data.document,'index');assert.ok(data.markdown.length<6000);assert.match(data.markdown,/Mission 超级笔记本/);assert.doesNotMatch(data.markdown,/### card\.create/)}
  }
  assert.equal(cases.get('initialization').step,5);assert.equal((await rpc('session.transcript',{employee:card.id})).items.length,0)
  checks.push('Ordinary Employee initialization denies actual native Bash/Read even with bypass permission, then accepts documentation identity/index tools and OK; no file leakage, full manuals or public transcript')

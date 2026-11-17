@@ -1,0 +1,968 @@
+import { codeLanguages, codeLanguageAliases, normalizeCodeLanguage } from '../../../../shared/mission-notebook/core/codeLanguages';
+import { saveAsset } from '../../../../shared/mission-notebook/content/assets';
+import { ButtonBlock } from '../actions/ButtonBlock';
+import { MousePointer2, ListTodo } from 'lucide-react';
+import { useEffect, useRef, useState, useContext, createContext } from 'react';
+import { EmojiPicker } from './Pickers';
+import { searchEmojis, searchCustomEmojis } from '../../../../shared/mission-notebook/core/iconSearch';
+import { CustomEmojiSpec } from '../content/CustomEmoji';
+import { AllSelection } from '@tiptap/pm/state';
+import {
+  BlockNoteEditor,
+  BlockNoteSchema,
+  defaultBlockSpecs,
+  defaultInlineContentSpecs,
+  defaultStyleSpecs,
+  createStyleSpecFromTipTapMark,
+  defaultProps,
+  isTableCellSelection,
+  formatKeyboardShortcut,
+  wrapInBlockStructure,
+} from '@blocknote/core';
+import { createCodeBlockSpec, createToggleWrapper } from '@blocknote/core/blocks';
+import { toggleState } from '../content/toggleState';
+import { zh } from '@blocknote/core/locales';
+import {
+  insertOrUpdateBlockForSlashMenu,
+  SyntaxHighlightingExtension,
+  ShowSelectionExtension,
+  FormattingToolbarExtension,
+} from '@blocknote/core/extensions';
+import {
+  withMultiColumn,
+  multiColumnDropCursor,
+  getMultiColumnSlashMenuItems,
+  locales as columnLocales,
+} from '@blocknote/xl-multi-column';
+import {
+  createReactBlockSpec,
+  createReactInlineContentSpec,
+  getDefaultReactSlashMenuItems,
+  SuggestionMenuController,
+  useCreateBlockNote,
+  FormattingToolbar,
+  FormattingToolbarController,
+  type FormattingToolbarProps,
+  getFormattingToolbarItems,
+  useBlockNoteEditor,
+  useComponentsContext,
+  useEditorState,
+  useEditorDOMElement,
+  useExtension,
+  useExtensionState,
+  useDictionary,
+  SideMenu,
+  SideMenuController,
+} from '@blocknote/react';
+import { BlockNoteView } from '@blocknote/mantine';
+import {
+  FilePlus2,
+  Lightbulb,
+  ArrowUpRight,
+  ListTree,
+  Database as DatabaseIcon,
+  Link2,
+  Unlink2,
+  MessageSquare,
+  Bot,
+  RefreshCw,
+  Upload,
+  MoreHorizontal,
+  Code2,
+  Strikethrough,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  IndentIncrease,
+  IndentDecrease,
+  RemoveFormatting,
+} from 'lucide-react';
+import { useWorkspace } from '../store';
+import { PageIcon } from '../ui';
+import { plainText, defaultDatabase, isInternalPage } from '../../../../shared/mission-notebook/model';
+import { InlineDatabaseSpec } from '../database/InlineDatabase';
+import type { Page, JsonBlock } from '../../../../shared/mission-notebook/types';
+import { EditorPageContext, syncedBlockSpec } from '../content/SyncedBlock';
+import { BlockMenu } from './BlockMenu';
+import { revealContent } from '../../../../shared/mission-notebook/content/navigation';
+import { NotionShortcuts, rememberColor } from '../content/shortcuts';
+import { isEmptyRootParagraph, isFullDocumentClipboard, unwrapEmptyPasteParents } from '../../../../shared/mission-notebook/content/clipboardBlocks';
+import { normalizeBlocks } from '../../../../shared/mission-notebook/core/blocks';
+import { Bookmark, Breadcrumb } from '../content/ReferenceBlocks';
+import { Equation, InlineMath } from '../content/Math';
+import { Sigma, Copy, Trash2 } from 'lucide-react';
+import { iconColors } from '../../../../shared/mission-notebook/core/icons';
+import { ColorSwatch } from '../content/SelectionColors';
+import { CategorizedSlashMenu } from '../content/SlashCategories';
+import { SelectionAssistant, type SelectionAIRequest } from '../content/SelectionAssistant';
+
+// Stable component identities keep the open block menu mounted during editor/store updates.
+function EditorBlockMenu() {
+  const { pageId } = useContext(EditorPageContext)!;
+  return <BlockMenu pageId={pageId} />;
+}
+function EditorSideMenu() {
+  return <SideMenu dragHandleMenu={EditorBlockMenu} />;
+}
+
+const EditorToolbarContext = createContext<{
+  commentSelection: () => void;
+  sendSelectionToAgent: (anchor: HTMLElement, quote: string) => void;
+} | null>(null);
+const SelectionLinkContext = createContext<{
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  url: string;
+  setUrl: (url: string) => void;
+  selection: { from: number; to: number; url: string } | undefined;
+} | null>(null);
+function EditorFormattingToolbarController() {
+  const editor = useBlockNoteEditor();
+  const element = useEditorDOMElement();
+  const toolbar = useExtension(FormattingToolbarExtension);
+  const show = useExtensionState(FormattingToolbarExtension);
+  const { showSelection } = useExtension(ShowSelectionExtension);
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState('');
+  const selection = useEditorState({ editor, selector: ({ editor }) => {
+    if (!editor.isEditable || isTableCellSelection(editor.prosemirrorState.selection) || !editor.getSelectedText()) return undefined;
+    const selected = editor.prosemirrorState.selection;
+    let plainContent = false;
+    selected.content().content.descendants(node => {
+      if (node.type.spec.content === 'text*') plainContent = true;
+      return !plainContent;
+    });
+    if (plainContent) return undefined;
+    const { from, to } = selected;
+    let url = '';
+    editor.prosemirrorState.doc.nodesBetween(from, to, node => {
+      if (url) return false;
+      const link = node.marks.find(mark => mark.type.name === 'link');
+      if (link) url = link.attrs.href;
+    });
+    return { from, to, url };
+  } });
+  useEffect(() => { setOpen(false); }, [selection]);
+  useEffect(() => { if (!show) setOpen(false); }, [show]);
+  useEffect(() => {
+    showSelection(open, 'selectionLink');
+    return () => showSelection(false, 'selectionLink');
+  }, [open, showSelection]);
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      // Native selection collapse can precede ProseMirror's selectionchange transaction.
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k' && selection && element?.ownerDocument.getSelection()?.isCollapsed === false) {
+        event.preventDefault();
+        toolbar.store.setState(true);
+        setUrl(selection.url);
+        setOpen(true);
+      }
+    };
+    element?.addEventListener('keydown', keydown);
+    return () => element?.removeEventListener('keydown', keydown);
+  }, [element, selection, toolbar]);
+  return <SelectionLinkContext.Provider value={{ open, setOpen, url, setUrl, selection }}>
+    <FormattingToolbarController formattingToolbar={EditorFormattingToolbar} />
+  </SelectionLinkContext.Provider>;
+}
+function SelectionLinkButton() {
+  const editor = useBlockNoteEditor();
+  const Components = useComponentsContext()!;
+  const dict = useDictionary();
+  const { open, setOpen, url, setUrl, selection } = useContext(SelectionLinkContext)!;
+  if (!selection) return null;
+  const unlink = () => {
+    editor.transact(tr => {
+      tr.removeMark(selection.from, selection.to, editor.pmSchema.marks.link).setMeta('preventAutolink', true);
+    });
+    setOpen(false);
+    editor.focus();
+  };
+  const apply = () => {
+    const value = url.trim();
+    if (!value) {
+      if (selection.url) unlink();
+      return;
+    }
+    const href = /^(https?:|mailto:|asset:|mission:|mininotion:|#)/i.test(value) ? value : `https://${value}`;
+    editor.createLink(href);
+    setOpen(false);
+    editor.focus();
+  };
+  return <Components.Generic.Popover.Root open={open} onOpenChange={setOpen}>
+    <Components.Generic.Popover.Trigger>
+      <Components.FormattingToolbar.Button className="bn-button" data-test="createLink"
+        label={dict.formatting_toolbar.link.tooltip} mainTooltip={dict.formatting_toolbar.link.tooltip}
+        secondaryTooltip={formatKeyboardShortcut(dict.formatting_toolbar.link.secondary_tooltip, dict.generic.ctrl_shortcut)}
+        icon={<Link2 size={17} />} onClick={() => { setUrl(selection.url); setOpen(!open); }} />
+    </Components.Generic.Popover.Trigger>
+    <Components.Generic.Popover.Content className="bn-popover-content bn-form-popover" variant="form-popover">
+      <Components.Generic.Form.Root>
+        <Components.Generic.Form.TextInput className="bn-text-input" name="url" label="链接地址" icon={<Link2 size={16} />}
+          autoFocus placeholder={dict.link_toolbar.form.url_placeholder} value={url}
+          onChange={event => setUrl(event.currentTarget.value)} onSubmit={apply}
+          onKeyDown={event => {
+            if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); apply(); }
+            if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
+              event.preventDefault(); event.stopPropagation(); setOpen(false); editor.focus();
+            }
+          }} />
+        {selection.url && <button className="selection-link-remove" type="button" onClick={unlink}>
+          <Unlink2 size={15} />移除链接
+        </button>}
+      </Components.Generic.Form.Root>
+    </Components.Generic.Popover.Content>
+  </Components.Generic.Popover.Root>;
+}
+function EditorFormattingToolbar(props: FormattingToolbarProps) {
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const quoteRef = useRef('');
+  const handlers = useContext(EditorToolbarContext)!;
+  const editor = useBlockNoteEditor();
+  const Components = useComponentsContext()!;
+  const state = useEditorState({ editor, selector: ({ editor }) => {
+    const blocks = editor.getSelection()?.blocks || [editor.getTextCursorPosition().block];
+    return {
+      inline: blocks.some(block => block.content !== undefined),
+      alignment: 'textAlignment' in blocks[0].props ? blocks[0].props.textAlignment : undefined,
+      canNest: editor.canNestBlock(),
+      canUnnest: editor.canUnnestBlock(),
+    };
+  } });
+  const align = (textAlignment: 'left' | 'center' | 'right') => {
+    editor.focus();
+    editor.transact(() => {
+      for (const block of editor.getSelection()?.blocks || [editor.getTextCursorPosition().block]) {
+        if ('textAlignment' in block.props) editor.updateBlock(block, { props: { textAlignment } });
+      }
+    });
+  };
+  const secondary = new Set(['textAlignLeftButton', 'textAlignCenterButton', 'textAlignRightButton', 'nestBlockButton', 'unnestBlockButton', 'strikeStyleButton']);
+  return (
+    <div ref={toolbarRef} className="selection-toolbar" onMouseDownCapture={event => {
+      if ((event.target as Element).closest('[aria-haspopup]'))
+        quoteRef.current = window.getSelection()?.toString() || editor.getSelectedText();
+      if ((event.target as Element).closest('.bn-button:not([aria-haspopup])')) event.preventDefault();
+    }}>
+      <FormattingToolbar {...props}>
+        {getFormattingToolbarItems(props.blockTypeSelectItems)
+          .filter(item => !secondary.has(String(item.key)) || (state.alignment === undefined && String(item.key).startsWith('textAlign')))
+          .map(item => item.key === 'createLinkButton' ? <SelectionLinkButton key="createLinkButton" /> : item)}
+        {state.inline && <>
+          <span className="selection-toolbar-divider" role="separator" />
+          <button className="block-comment-button" title="评论所选内容 · ⌘⇧M" aria-label="评论所选内容"
+            onMouseDown={event => event.preventDefault()} onClick={handlers.commentSelection}>
+            <MessageSquare size={16} />
+          </button>
+          <Components.Generic.Menu.Root>
+            <Components.Generic.Menu.Trigger>
+              <Components.FormattingToolbar.Button className="bn-button" label="更多文本操作" mainTooltip="更多文本操作" icon={<MoreHorizontal size={17} />} />
+            </Components.Generic.Menu.Trigger>
+            <Components.Generic.Menu.Dropdown className="bn-menu-dropdown selection-more-menu">
+              <Components.Generic.Menu.Label>更多文字样式</Components.Generic.Menu.Label>
+              <Components.Generic.Menu.Item checked={!!editor.getActiveStyles().strike} icon={<Strikethrough size={16} />}
+                onClick={() => { editor.focus(); editor.toggleStyles({ strike: true }); }}>删除线</Components.Generic.Menu.Item>
+              <Components.Generic.Menu.Item checked={!!editor.getActiveStyles().code} icon={<Code2 size={16} />}
+                onClick={() => { editor.focus(); editor.toggleStyles({ code: true }); }}>行内代码</Components.Generic.Menu.Item>
+              <Components.Generic.Menu.Divider />
+              <Components.Generic.Menu.Item icon={<Bot size={16} />}
+                onClick={() => handlers.sendSelectionToAgent(toolbarRef.current!, quoteRef.current)}>发送选区给 Agent</Components.Generic.Menu.Item>
+              <Components.Generic.Menu.Divider />
+              {state.alignment !== undefined && <>
+                <Components.Generic.Menu.Label>对齐方式</Components.Generic.Menu.Label>
+                {([['left', '左对齐', AlignLeft], ['center', '居中对齐', AlignCenter], ['right', '右对齐', AlignRight]] as const).map(([value, label, Icon]) =>
+                  <Components.Generic.Menu.Item key={value} checked={state.alignment === value} icon={<Icon size={16} />} onClick={() => align(value)}>{label}</Components.Generic.Menu.Item>)}
+                <Components.Generic.Menu.Divider />
+              </>}
+              {state.canNest && <Components.Generic.Menu.Item icon={<IndentIncrease size={16} />} onClick={() => { editor.focus(); editor.nestBlock(); }}>增加缩进</Components.Generic.Menu.Item>}
+              {state.canUnnest && <Components.Generic.Menu.Item icon={<IndentDecrease size={16} />} onClick={() => { editor.focus(); editor.unnestBlock(); }}>减少缩进</Components.Generic.Menu.Item>}
+              <Components.Generic.Menu.Item icon={<RemoveFormatting size={16} />} onClick={() => { editor.focus(); editor.removeStyles({ bold: true, italic: true, underline: true, strike: true, code: true, textColor: 'default', backgroundColor: 'default' }); }}>清除文字格式</Components.Generic.Menu.Item>
+            </Components.Generic.Menu.Dropdown>
+          </Components.Generic.Menu.Root>
+        </>}
+      </FormattingToolbar>
+    </div>
+  );
+}
+
+const Callout = createReactBlockSpec(
+  { type: 'callout', propSchema: { ...defaultProps, emoji: { default: '💡' } }, content: 'inline' },
+  {
+    render: ({ block, contentRef, editor }) => {
+      const [picker, setPicker] = useState<{ x: number; y: number } | null>(null);
+      return <div className={`callout-block ${block.props.emoji ? '' : 'without-icon'}`}
+        style={block.props.backgroundColor !== 'default' ? { background: 'transparent' } : undefined}>
+        <button className={`callout-emoji ${block.props.emoji ? '' : 'empty'}`} contentEditable={false}
+          disabled={!editor.isEditable} aria-label="切换提示图标" onClick={event => {
+            const rect = event.currentTarget.getBoundingClientRect(); setPicker({ x: rect.left, y: rect.bottom + 4 });
+          }}>
+          {block.props.emoji ? <PageIcon icon={block.props.emoji} size={21} /> : <Lightbulb size={16} />}
+        </button>
+        <div ref={contentRef} className="callout-content" />
+        {picker && <EmojiPicker {...picker} value={block.props.emoji} onClose={() => setPicker(null)}
+          onChange={emoji => editor.updateBlock(block, { props: { emoji } })} />}
+      </div>;
+    },
+    toExternalHTML: ({ block, contentRef }) => (
+      <aside>
+        {block.props.emoji && <PageIcon icon={block.props.emoji} size={21} />}
+        <div ref={contentRef} />
+      </aside>
+    ),
+  },
+);
+
+const PageLink = createReactBlockSpec(
+  { type: 'pageLink', propSchema: { ...defaultProps, pageId: { default: '' }, title: { default: '页面' } }, content: 'none' },
+  {
+    render: ({ block }) => {
+      const { workspace, navigate } = useWorkspace();
+      const page = workspace?.pages.find((p) => p.id === block.props.pageId && !p.trashedAt);
+      return (
+        <button
+          contentEditable={false}
+          className={`page-link-block ${!page ? 'missing-link' : ''}`}
+          onClick={event => page && navigate(page.id, undefined, event.metaKey || event.ctrlKey ? 'new' : undefined)}
+        >
+          <PageIcon icon={page?.icon} />
+          <span>{page ? page.title || '无标题' : '页面已删除'}</span>
+          <ArrowUpRight size={14} />
+        </button>
+      );
+    },
+    toExternalHTML: ({ block }) => (
+      <p>
+        <a href={`mission://page/${block.props.pageId}`}>{block.props.title}</a>
+      </p>
+    ),
+  },
+);
+
+const Mention = createReactInlineContentSpec(
+  {
+    type: 'pageMention',
+    propSchema: { pageId: { default: '' }, title: { default: '页面' } },
+    content: 'none',
+  },
+  {
+    render: ({ inlineContent }) => {
+      const { workspace, navigate } = useWorkspace();
+      const page = workspace?.pages.find((p) => p.id === inlineContent.props.pageId && !p.trashedAt);
+      return (
+        <span
+          className="page-mention"
+          contentEditable={false}
+          role="link"
+          onClick={event => page && navigate(page.id, undefined, event.metaKey || event.ctrlKey ? 'new' : undefined)}
+        >
+          <PageIcon icon={page?.icon} size={14} />
+          {page ? page.title || '无标题' : '已删除页面'}
+        </span>
+      );
+    },
+    toExternalHTML: ({ inlineContent }) => (
+      <a href={`mission://page/${inlineContent.props.pageId}`}>{inlineContent.props.title}</a>
+    ),
+  },
+);
+
+const TableOfContents = createReactBlockSpec(
+  { type: 'tableOfContents', propSchema: { ...defaultProps }, content: 'none' },
+  {
+    render: ({ editor }) => {
+      const headings: JsonBlock[] = [];
+      const collect = (blocks: JsonBlock[]) =>
+        blocks.forEach((block) => {
+          if (block.type === 'heading') headings.push(block);
+          if (block.children) collect(block.children);
+        });
+      collect(editor.document as JsonBlock[]);
+      return (
+        <div className="table-of-contents" contentEditable={false}>
+          {headings.length ? (
+            headings.map((b) => (
+              <button
+                key={b.id}
+                style={{ paddingLeft: (Number(b.props?.level) - 1) * 16 }}
+                onClick={() =>
+                  document
+                    .querySelector(`[data-id="${b.id}"]`)
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              >
+                {plainText(b.content) || '无标题'}
+              </button>
+            ))
+          ) : (
+            <span>添加标题后，目录将显示在这里。</span>
+          )}
+        </div>
+      );
+    },
+    toExternalHTML: () => <p>目录</p>,
+  },
+);
+
+const codeBlock = createCodeBlockSpec({
+  defaultLanguage: 'text',
+  indentLineWithTab: true,
+  supportedLanguages: Object.fromEntries(
+    [...codeLanguages, ...Object.keys(codeLanguageAliases)].map(language => [language, {
+      name: language === 'text' ? '纯文本' : language === 'shellscript' ? 'Shell' : language,
+    }]),
+  ),
+});
+// Old documents and pasted fences may have aliases or unsupported language IDs.
+// Render them without throwing; Core normalizes aliases and preserves the source label.
+codeBlock.config = { ...codeBlock.config, propSchema: { ...codeBlock.config.propSchema, originalLanguage: { default: '' } } } as typeof codeBlock.config;
+const renderCodeBlock = codeBlock.implementation.render;
+codeBlock.implementation.render = function (block, editor) { return renderCodeBlock.call(this, { ...block, props: { ...block.props, language: normalizeCodeLanguage(block.props.language) } }, editor); };
+codeBlock.implementation.meta = { ...codeBlock.implementation.meta, highlight: block => normalizeCodeLanguage(block.props.language) };
+// BlockNote 0.54.2 render shells: blocks/ListItem/toggleListItem/block.ts and
+// blocks/Heading/block.ts (MPL-2.0; see THIRD_PARTY_NOTICES.md). Keep its parsing,
+// export and shortcuts; inject only the public createToggleWrapper UI-state adapter.
+// Keep createSpec.ts's wrapInBlockStructure decoration for content DOM and fold CSS.
+const toggleListItem: typeof defaultBlockSpecs.toggleListItem = {
+  ...defaultBlockSpecs.toggleListItem,
+  implementation: { ...defaultBlockSpecs.toggleListItem.implementation, render(block, editor) {
+    const contentDOM = document.createElement('p');
+    return wrapInBlockStructure({ ...createToggleWrapper(block, editor, contentDOM, toggleState), contentDOM }, block.type, block.props, defaultBlockSpecs.toggleListItem.config.propSchema, false, this.blockContentDOMAttributes);
+  } },
+};
+const heading: typeof defaultBlockSpecs.heading = {
+  ...defaultBlockSpecs.heading,
+  implementation: { ...defaultBlockSpecs.heading.implementation, render(block, editor) {
+    const contentDOM = document.createElement(`h${block.props.level}`);
+    return wrapInBlockStructure({ ...createToggleWrapper(block, editor, contentDOM, toggleState), contentDOM }, block.type, block.props, defaultBlockSpecs.heading.config.propSchema, false, this.blockContentDOMAttributes);
+  } },
+};
+export const schema = withMultiColumn(
+  BlockNoteSchema.create({
+    blockSpecs: {
+      ...defaultBlockSpecs,
+      toggleListItem,
+      heading,
+      codeBlock,
+      equation: Equation(),
+      bookmark: Bookmark(),
+      breadcrumb: Breadcrumb(),
+      button: ButtonBlock(),
+      callout: Callout(),
+      pageLink: PageLink(),
+      tableOfContents: TableOfContents(),
+      databaseView: InlineDatabaseSpec(),
+      syncedBlock: syncedBlockSpec((page, theme, readOnly) => (
+        <Editor page={page} theme={theme} readOnly={readOnly} />
+      )),
+    },
+    inlineContentSpecs: { ...defaultInlineContentSpecs, pageMention: Mention, inlineMath: InlineMath, customEmoji: CustomEmojiSpec },
+    styleSpecs: {
+      ...defaultStyleSpecs,
+      code: createStyleSpecFromTipTapMark(defaultStyleSpecs.code.implementation.mark.extend({ excludes: '' }), 'boolean'),
+    },
+  }),
+);
+export const editorDictionary = {
+  ...zh,
+  multi_column: columnLocales.zh,
+  placeholders: {
+    ...zh.placeholders,
+    default: "输入文字，或按 '/' 选择块类型",
+    emptyDocument: "输入文字，或按 '/' 选择块类型",
+  },
+};
+export function createExportEditor() {
+  return BlockNoteEditor.create({
+    schema,
+    dictionary: editorDictionary,
+    links: { isValidLink: (href) => /^(https?:|mailto:|asset:|mininotion:|#)/i.test(href) },
+  });
+}
+
+export { saveAsset } from '../../../../shared/mission-notebook/content/assets';
+
+export function Editor({
+  page,
+  theme,
+  autoFocus = false,
+  readOnly = false,
+}: {
+  page: Page;
+  theme: 'light' | 'dark';
+  autoFocus?: boolean;
+  readOnly?: boolean;
+}) {
+  const { patch, workspace, create, navigate, notify, getCurrentPage, setCommentPanel, setModal, command, blockTarget } =
+    useWorkspace();
+  const editorContainer = useRef<HTMLDivElement>(null);
+  const [selectionAI, setSelectionAI] = useState<SelectionAIRequest | null>(null);
+  const [emojiUpload, setEmojiUpload] = useState<{ x: number; y: number } | null>(null);
+  const editor = useCreateBlockNote({
+    schema,
+    dropCursor: multiColumnDropCursor,
+    extensions: [
+      NotionShortcuts(),
+      SyntaxHighlightingExtension({
+        createHighlighter: () => import('../highlight').then((module) => module.highlighter),
+      }),
+    ],
+    dictionary: editorDictionary,
+    initialContent: page.blocks.length ? (page.blocks as any) : undefined,
+    pasteHandler: ({ event, editor: activeEditor, defaultPasteHandler }) => {
+      const html = event.clipboardData?.getData('text/html');
+      const sourceId = html
+        ? new DOMParser()
+            .parseFromString(html, 'text/html')
+            .querySelector('[data-mini-notion-sync]')
+            ?.getAttribute('data-mini-notion-sync')
+        : undefined;
+      const source = sourceId ? getCurrentPage(sourceId) : undefined;
+      if (!source?.syncedSource || source.trashedAt) {
+        // BlockNote inserts a closed, full-document blockGroup as children of
+        // a blank destination paragraph. That creates an extra indent guide on
+        // every cut/paste cycle. Replace that empty top-level placeholder with
+        // actual sibling blocks, preserving rich formatting and genuine nests.
+        const internal = event.clipboardData?.getData('blocknote/html') || '';
+        if (isFullDocumentClipboard(internal) && activeEditor.prosemirrorView.state.selection.empty) {
+          const target = activeEditor.getTextCursorPosition().block;
+          if (activeEditor.document.some(block => block.id === target.id) && isEmptyRootParagraph(target)) {
+            try {
+              const pasted = unwrapEmptyPasteParents(activeEditor.tryParseHTMLToBlocks(internal));
+              if (pasted.length) {
+                activeEditor.replaceBlocks([target], normalizeBlocks(pasted, true) as any);
+                return true;
+              }
+            } catch { /* Leave unknown clipboard formats to BlockNote's fallback. */ }
+          }
+        }
+        return defaultPasteHandler();
+      }
+      event.preventDefault();
+      try {
+        const block = activeEditor.getTextCursorPosition().block;
+        command('sync.link', { sourceId, pageId: page.id, afterId: block.id, replaceEmptyId: block.id });
+      } catch (error) {
+        notify(error instanceof Error ? error.message : String(error));
+      }
+      return true;
+    },
+    uploadFile: async (file) => {
+      try {
+        return await saveAsset(file);
+      } catch (error) {
+        notify('附件保存失败，请重试');
+        throw error;
+      }
+    },
+    links: {
+      isValidLink: (href) => /^(https?:|mailto:|asset:|mission:|mininotion:|#)/i.test(href),
+      onClick: (event) => {
+        const url = (event.target as HTMLElement).closest('a')?.getAttribute('href');
+        if (!url) return;
+        if (url.startsWith('mission://page/')) navigate(url.slice('mission://page/'.length));
+        else if (url.startsWith('mininotion://page/')) navigate(url.slice('mininotion://page/'.length));
+        else if (window.native) void window.native.openExternal(url);
+        else window.open(url, '_blank', 'noopener,noreferrer');
+      },
+    },
+  });
+
+  const syncedBlocks = useRef({
+    blocks: page.blocks,
+    source: '',
+    rendered: '',
+  });
+  // useRef's argument runs on every render; serialize the initial document once.
+  if (!syncedBlocks.current.source) {
+    syncedBlocks.current.source = JSON.stringify(page.blocks);
+    syncedBlocks.current.rendered = JSON.stringify(editor.document);
+  }
+  const applyingExternal = useRef(false);
+  const replaceContent = (blocks: JsonBlock[]) => {
+    syncedBlocks.current.blocks = blocks;
+    syncedBlocks.current.source = JSON.stringify(blocks);
+    applyingExternal.current = true;
+    try {
+      if (syncedBlocks.current.source !== JSON.stringify(editor.document))
+        editor.replaceBlocks(editor.document, blocks as any);
+      // BlockNote fills in default props. Rendering those defaults is not an edit.
+      syncedBlocks.current.rendered = JSON.stringify(editor.document);
+    } finally {
+      applyingExternal.current = false;
+    }
+  };
+  const commentSelection = () => {
+    const block = editor.getSelection()?.blocks[0] || editor.getTextCursorPosition().block;
+    setCommentPanel({
+      pageId: page.id,
+      blockId: block.id,
+      quote: window.getSelection()?.toString() || plainText(block.content),
+    });
+  };
+  const sendSelectionToAgent = (anchor: HTMLElement, quote: string) => {
+    const block = editor.getSelection()?.blocks[0] || editor.getTextCursorPosition().block;
+    const rect = anchor.getBoundingClientRect();
+    setSelectionAI({ context: { pageId: page.id, title: page.title, blockId: block.id,
+      quote: quote || editor.getSelectedText() || window.getSelection()?.toString() || plainText(block.content) },
+      x: Math.max(8, Math.min(rect.left, window.innerWidth - 388)),
+      y: Math.max(8, Math.min(rect.bottom + 8, window.innerHeight - 420)), id: Date.now() });
+  };
+  useEffect(() => {
+    const element = editorContainer.current;
+    if (!element) return;
+    const selectDocument = () => {
+      editor.transact((tr) => tr.setSelection(new AllSelection(tr.doc)));
+      editor.focus();
+    };
+    const selectAll = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'j') {
+        event.preventDefault();
+        event.stopPropagation();
+        nativeSelectionAgent();
+        return;
+      }
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === 'a' &&
+        (event.target as HTMLElement).closest('[data-editor-page]') === element &&
+        !(event.target as HTMLElement).closest('.inline-database')
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        selectDocument();
+      }
+    };
+    const nativeSelectAll = () => {
+      const active = document.activeElement;
+      if (active?.closest('[data-editor-page]') === element && !active.closest('.inline-database')) selectDocument();
+    };
+    const nativeComment = () => {
+      if (document.activeElement?.closest('[data-editor-page]') === element) commentSelection();
+    };
+    const nativeSelectionAgent = () => {
+      if (document.activeElement?.closest('[data-editor-page]') !== element) return;
+      const quote = editor.getSelectedText() || window.getSelection()?.toString();
+      if (quote) sendSelectionToAgent(element.querySelector<HTMLElement>('.selection-toolbar') || element, quote);
+    };
+    element.addEventListener('keydown', selectAll);
+    window.addEventListener('mini:select-all', nativeSelectAll);
+    window.addEventListener('mini:comment-selection', nativeComment);
+    window.addEventListener('mini:selection-agent', nativeSelectionAgent);
+    return () => {
+      element.removeEventListener('keydown', selectAll);
+      window.removeEventListener('mini:select-all', nativeSelectAll);
+      window.removeEventListener('mini:comment-selection', nativeComment);
+      window.removeEventListener('mini:selection-agent', nativeSelectionAgent);
+    };
+  }, [editor]);
+  useEffect(() => {
+    if (autoFocus) {
+      editor.focus();
+      editor.setTextCursorPosition(editor.document[0], 'start');
+    }
+  }, [editor, autoFocus]);
+  useEffect(() => {
+    // A delayed React effect must not replace text typed after that render.
+    if (page.blocks !== getCurrentPage(page.id)?.blocks) return;
+    if (page.blocks === syncedBlocks.current.blocks) return;
+    if (JSON.stringify(page.blocks) === syncedBlocks.current.source) {
+      syncedBlocks.current.blocks = page.blocks;
+      return;
+    }
+    replaceContent(page.blocks);
+  }, [editor, page.blocks]);
+
+  useEffect(() => {
+    if (!blockTarget || blockTarget.pageId !== page.id) return;
+    const frame = requestAnimationFrame(() => {
+      const element = document.querySelector<HTMLElement>(`[data-editor-page="${CSS.escape(page.id)}"] [data-id="${CSS.escape(blockTarget.blockId)}"]`);
+      if (element) revealContent(element);
+    });
+    return () => cancelAnimationFrame(frame);
+
+  }, [editor, blockTarget, page.id, page.blocks]);
+
+
+  useEffect(() => {
+    const focus = (e: Event) => {
+      if ((e as CustomEvent).detail === page.id) {
+        editor.focus();
+        editor.setTextCursorPosition(editor.document[0], 'start');
+      }
+    };
+    const restore = (e: Event) => {
+      const detail = (e as CustomEvent<{ id: string; blocks: JsonBlock[] }>).detail;
+      if (detail.id === page.id) replaceContent(detail.blocks);
+    };
+    window.addEventListener('mini:focus', focus);
+    window.addEventListener('mini:restore', restore);
+    return () => {
+      window.removeEventListener('mini:focus', focus);
+      window.removeEventListener('mini:restore', restore);
+    };
+  }, [editor, page.id]);
+
+  return (
+    <EditorPageContext.Provider value={{ pageId: page.id, theme, readOnly: readOnly || page.locked }}>
+      <EditorToolbarContext.Provider value={{ commentSelection, sendSelectionToAgent }}>
+      <div ref={editorContainer} className="note-editor" data-editor-page={page.id} data-block-target={blockTarget?.pageId === page.id ? blockTarget.blockId : undefined} spellCheck={workspace!.settings.spellcheck}>
+        {blockTarget?.pageId === page.id && <style>{`
+          @keyframes block-anchor-${blockTarget.request} { from { background-color: var(--selected); } to { background-color: transparent; } }
+          [data-editor-page="${CSS.escape(page.id)}"] [data-id="${CSS.escape(blockTarget.blockId)}"] > .bn-block > .bn-block-content {
+            animation: block-anchor-${blockTarget.request} 2.2s ease-out;
+          }
+        `}</style>}
+        <BlockNoteView
+          editor={editor}
+          theme={theme}
+          editable={!page.locked && !readOnly}
+          slashMenu={false}
+          emojiPicker={false}
+          sideMenu={false}
+          formattingToolbar={false}
+          onChange={() => {
+            if (applyingExternal.current) return;
+            const blocks = editor.document as JsonBlock[];
+            const serialized = JSON.stringify(blocks);
+            if (serialized === syncedBlocks.current.rendered) return;
+            syncedBlocks.current = { blocks, source: serialized, rendered: serialized };
+            if (!patch(page.id, { blocks })) {
+              const saved = getCurrentPage(page.id)!.blocks;
+              replaceContent(saved);
+            }
+          }}
+        >
+          <SideMenuController sideMenu={EditorSideMenu} />
+          <EditorFormattingToolbarController />
+          <CategorizedSlashMenu items={[
+                  ...getDefaultReactSlashMenuItems(editor),
+                  ...Object.entries(iconColors).flatMap(([color, tone]) => (['textColor', 'backgroundColor'] as const).map(field => ({
+                    title: tone.name + (field === 'backgroundColor' ? '背景' : '文字'),
+                    subtext: field === 'backgroundColor' ? '更改当前块的背景色' : '更改当前块的文字颜色',
+                    aliases: [color + (field === 'backgroundColor' ? ' background' : ''), tone.name + (field === 'backgroundColor' ? '背景' : '')],
+                    group: '颜色', icon: <ColorSwatch color={color} background={field === 'backgroundColor'} />,
+                    onItemClick: () => { rememberColor(field, color); editor.updateBlock(editor.getTextCursorPosition().block, { props: { [field]: color } }); },
+                  }))),
+                  { title: '复制块', aliases: ['duplicate', '复制'], group: '操作', icon: <Copy size={20} />,
+                    onItemClick: () => command('block.duplicate', { pageId: page.id, blockId: editor.getTextCursorPosition().block.id }) },
+                  { title: '删除块', aliases: ['delete', 'remove', '删除'], group: '操作', icon: <Trash2 size={20} />,
+                    onItemClick: () => command('block.delete', { pageId: page.id, ids: [editor.getTextCursorPosition().block.id] }) },
+                  {
+                    title: '布置 Agent 任务',
+                    subtext: '为当前页面添加定时、重复、事件驱动或督办任务',
+                    aliases: ['task', 'schedule', 'mission', '任务', '定时', '重复', '督办'],
+                    group: '操作',
+                    icon: <ListTodo size={20} />,
+                    onItemClick: () => setModal({ type: 'page-task-composer', pageId: page.id }),
+                  },
+                  {
+                    title: '按钮',
+                    subtext: '一键执行多步操作',
+                    aliases: ['button', '按钮'],
+                    group: '高级块',
+                    icon: <MousePointer2 size={20} />,
+                    onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: 'button' }),
+                  },
+                  {
+                    title: '工作流按钮',
+                    subtext: '一键派发 AI 员工、创建督办目标或定时工作流',
+                    aliases: ['workflow', '工作流', 'agent', 'ai'],
+                    group: '高级块',
+                    icon: <Bot size={20} />,
+                    onItemClick: () =>
+                      insertOrUpdateBlockForSlashMenu(editor, {
+                        type: 'button',
+                        props: {
+                          label: '⚡ 运行工作流',
+                          actions: JSON.stringify([
+                            {
+                              id: crypto.randomUUID(),
+                              type: 'agent',
+                              target: 'current',
+                              deliveryMode: 'direct',
+                              grantPageAccess: 'read',
+                              prompt: '请阅读当前页面「{{title}}」（pageId={{pageId}}），并按要求执行后续工作流。',
+                            },
+                          ]),
+                        },
+                      }),
+                  },
+                  ...getMultiColumnSlashMenuItems(editor).map(item => ({ ...item, group: '高级块' })),
+                  {
+                    title: '同步块',
+                    subtext: '同一份内容，在多处同步编辑',
+                    aliases: ['synced', 'sync', '同步'],
+                    group: '高级块',
+                    icon: <RefreshCw size={20} />,
+                    onItemClick: () => {
+                      const block = editor.getTextCursorPosition().block;
+                      command('sync.create', {
+                        pageId: page.id,
+                        blockIds: [block.id],
+                        blocks: [{ type: 'paragraph', content: '' }],
+                      });
+                    },
+                  },
+                  {
+                    title: '引用同步内容',
+                    subtext: '选择已有的共享内容',
+                    aliases: ['link synced', '引用同步'],
+                    group: '高级块',
+                    icon: <Link2 size={20} />,
+                    onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: 'syncedBlock' }),
+                  },
+                  {
+                    title: '数据库 · 内联',
+                    subtext: '在当前笔记中创建完整数据库',
+                    aliases: ['database', 'db', '内联数据库'],
+                    group: '数据库',
+                    icon: <DatabaseIcon size={20} />,
+                    onItemClick: () => {
+                      const source = create(
+                        {
+                          parentId: page.id,
+                          title: '无标题数据库',
+                          icon: '📋',
+                          database: defaultDatabase(),
+                          fullWidth: true,
+                        },
+                        false,
+                      );
+                      insertOrUpdateBlockForSlashMenu(editor, {
+                        type: 'databaseView',
+                        props: { databaseId: source.id, title: source.title },
+                      });
+                    },
+                  },
+                  {
+                    title: '数据库 · 完整页面',
+                    subtext: '创建可独立打开的数据库',
+                    aliases: ['full database', '完整数据库', '全页面数据库'],
+                    group: '数据库',
+                    icon: <DatabaseIcon size={20} />,
+                    onItemClick: () => {
+                      const source = create(
+                        { parentId: page.id, icon: '📋', database: defaultDatabase(), fullWidth: true },
+                        false,
+                      );
+                      insertOrUpdateBlockForSlashMenu(editor, {
+                        type: 'pageLink',
+                        props: { pageId: source.id },
+                      });
+                      navigate(source.id);
+                    },
+                  },
+                  {
+                    title: '关联数据库视图',
+                    subtext: '引用现有数据，单独设置视图与筛选',
+                    aliases: ['linked database', '关联数据库', '数据源'],
+                    group: '数据库',
+                    icon: <Link2 size={20} />,
+                    onItemClick: () =>
+                      insertOrUpdateBlockForSlashMenu(editor, {
+                        type: 'databaseView',
+                        props: { linked: true },
+                      }),
+                  },
+                  {
+                    title: '网页书签', subtext: '保存链接、标题和说明', aliases: ['bookmark', '书签'], group: '媒体', icon: <Link2 size={20} />,
+                    onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: 'bookmark' }),
+                  },
+                  {
+                    title: '面包屑导航', subtext: '显示当前页面所在位置', aliases: ['breadcrumb', '面包屑', '路径'], group: '高级块', icon: <ListTree size={20} />,
+                    onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: 'breadcrumb' }),
+                  },
+                  {
+                    title: '块公式', subtext: '使用 LaTeX 编写数学公式', aliases: ['equation', 'math', 'latex', '公式'], group: '高级块', icon: <Sigma size={20} />,
+                    onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: 'equation', props: { expression: '' } }),
+                  },
+                  {
+                    title: '行内公式', subtext: '在文字中插入数学公式', aliases: ['inline equation', 'inline math', '行内公式'], group: '行内', icon: <Sigma size={20} />,
+                    onItemClick: () => editor.insertInlineContent([{ type: 'inlineMath', props: { expression: '' } }, ' ']),
+                  },
+                  {
+                    title: '提示',
+                    subtext: '让一段文字更醒目',
+                    aliases: ['callout', 'tip', '提示'],
+                    group: '基本块',
+                    icon: <Lightbulb size={20} />,
+                    onItemClick: () =>
+                      insertOrUpdateBlockForSlashMenu(editor, { type: 'callout', props: { emoji: '💡' } }),
+                  },
+                  {
+                    title: '页面',
+                    subtext: '在当前页面中创建子页面',
+                    aliases: ['page', '页面', '子页面'],
+                    group: '基本块',
+                    icon: <FilePlus2 size={20} />,
+                    onItemClick: () => {
+                      const child = create({ parentId: page.id }, false);
+                      insertOrUpdateBlockForSlashMenu(editor, {
+                        type: 'pageLink',
+                        props: { pageId: child.id },
+                      });
+                      navigate(child.id);
+                    },
+                  },
+                  {
+                    title: '目录',
+                    subtext: '跳转到页面中的各个标题',
+                    aliases: ['toc', 'contents', '目录'],
+                    group: '高级块',
+                    icon: <ListTree size={20} />,
+                    onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: 'tableOfContents' }),
+                  },
+          ]} />
+          <SuggestionMenuController
+            triggerCharacter=":"
+            minQueryLength={1}
+            getItems={async query => {
+              const items = [...searchCustomEmojis(workspace!.settings.customEmojis || [], query).map(item => ({
+              title: item.name, icon: <PageIcon icon={item.url} />,
+              onItemClick: () => editor.insertInlineContent([{ type: 'customEmoji', props: { id: item.id, name: item.name, url: item.url } }, ' ']),
+            })), ...searchEmojis(query).slice(0, 40).map(item => ({
+              title: item.name, icon: <PageIcon icon={item.emoji} />,
+              onItemClick: () => editor.insertInlineContent(item.emoji + ' '),
+            }))].slice(0, 39);
+              return [...items, { title: '上传自定义表情', icon: <Upload size={18} />,
+              onItemClick: () => { const selection = window.getSelection();
+                const rect = selection?.rangeCount ? selection.getRangeAt(0).getBoundingClientRect() : editorContainer.current?.getBoundingClientRect();
+                setEmojiUpload({ x: rect?.left || 100, y: rect?.bottom || 100 });
+              } }];
+            }}
+          />
+          <SuggestionMenuController
+            triggerCharacter="@"
+            getItems={async (query) =>
+              workspace!.pages
+                .filter(
+                  (p) =>
+                    !p.trashedAt &&
+                    !isInternalPage(p, workspace!.pages) &&
+                    p.id !== page.id &&
+                    p.title.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
+                )
+                .map((p) => ({
+                  title: p.title || '无标题',
+                  icon: <PageIcon icon={p.icon} />,
+                  onItemClick: () =>
+                    editor.insertInlineContent([
+                      { type: 'pageMention', props: { pageId: p.id, title: p.title || '无标题' } },
+                      ' ',
+                    ]),
+                }))
+            }
+          />
+        </BlockNoteView>
+        <SelectionAssistant request={selectionAI} pageId={page.id} />
+        {emojiUpload && <EmojiPicker {...emojiUpload} value="" emojiOnly initialTab="upload" onClose={() => setEmojiUpload(null)}
+          onChange={(value, item) => {
+            editor.focus();
+            if (item) editor.insertInlineContent([{ type: 'customEmoji', props: { id: item.id, name: item.name, url: item.url } }, ' ']);
+            else if (value) editor.insertInlineContent(value + ' ');
+          }} />}
+      </div>
+      </EditorToolbarContext.Provider>
+    </EditorPageContext.Provider>
+  );
+}

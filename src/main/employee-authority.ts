@@ -9,7 +9,7 @@ export function canControl(principal:PrincipalRef,targetId:string){
   const index=employeeIndex(),caller=index.get(principal.employeeId),target=index.get(targetId)
   if(!caller||caller.deleting||!target||target.deleting)return false
   const policy=rolePolicy(caller.managementRole)
-  return policy.controls.includes(target.managementRole??'employee')&&(policy.scope==='global'||policy.scope==='team'&&caller.group===target.group)
+  return policy.controls.includes(target.managementRole??'employee')&&(policy.scope==='global'||policy.scope==='role')
 }
 
 /** Secretary administers the user's plans; other employees schedule self or subordinates. */

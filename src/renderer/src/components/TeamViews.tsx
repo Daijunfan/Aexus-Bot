@@ -17,10 +17,7 @@ export function TeamViews({store,view,act,groupUnread=0}:{store:Store;view:ViewS
   const unread=inbox.filter(entry=>entry.unread&&store.sessions.some(card=>card.id===entry.employeeId&&!card.deleting)).length+groupUnread
   const select=(id:string)=>void act('view.select',{id})
   return <nav className="company-navigation" aria-label={uiText("Main views")}>
-    <button className={`app-view-button company-view-trigger ${activeMode==='company'?'active':''}`} title={'Team'} aria-label={'Team'} aria-pressed={activeMode==='company'} onClick={()=>select('company')}>
-      <Icon name={APP_VIEWS[0].icon}/><span>{'Team'}</span>
-    </button>
-    {APP_VIEWS.filter(mode=>mode.id!=='company').map(mode=>{
+    {APP_VIEWS.map(mode=>{
       const text=mode.label
       return <button key={mode.id} className={`app-view-button ${mode.id}-view-trigger ${activeMode===mode.id?'active':''}`} aria-label={text} aria-pressed={activeMode===mode.id} onClick={()=>select(mode.id)}><Icon name={mode.icon}/><span>{text}</span>{mode.id==='messages'&&unread>0&&<b className="nav-unread" aria-label={uiText("{0} unread conversations",[unread])}>{unread}</b>}</button>
     })}

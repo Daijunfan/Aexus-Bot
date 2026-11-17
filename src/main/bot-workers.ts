@@ -32,7 +32,7 @@ const removedBots=()=>readJson<Record<string,{group:ChatGroup;removedAt:number}>
 let timer:NodeJS.Timeout|undefined,stopped=true
 export const botGroup=(id:unknown)=>typeof id==='string'?catalog().groups.find(g=>g.id===id&&g.bot):undefined
 export function requireBot(id:unknown){const g=botGroup(id);if(!g)throw Error('Unknown external Worker');if(!isAppAdministrator()&&!g.memberIds.includes(callerEmployee()!.id))throw Error('External Worker access required; ask the user or Secretary to grant it');return g}
-export function botDirectTarget(command:string,args:Record<string,any>){return command.startsWith('direct.')&&command!=='direct.post'?botGroup(args.employee):undefined}
+export function botDirectTarget(command:string,args:Record<string,any>){return ['direct.send','direct.history','direct.send-status','direct.acknowledge'].includes(command)?botGroup(args.employee):undefined}
 function mutate(id:string,fn:(g:ChatGroup)=>void){const store=catalog(),g=store.groups.find(g=>g.id===id);if(!g?.bot)throw Error('External Worker no longer exists');fn(g);g.revision++;g.updatedAt=Date.now();atomicJson(indexFile,store,true);emitChatChange(id);return g}
 function saveMessages(id:string,rows:ChatMessage[],changed:ChatMessage,incoming=false){
  atomicJson(historyFile(id),rows,true)

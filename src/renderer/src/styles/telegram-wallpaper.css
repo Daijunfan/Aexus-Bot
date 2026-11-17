@@ -1,6 +1,10 @@
+/* Aexus Luminous Aurora Silk canvas: airy multi-point light mesh and whisper-fine dot weave. */
 .telegram-wallpaper{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-.telegram-wallpaper>canvas{position:absolute;inset:0;width:100%;height:100%}
-.telegram-wallpaper[data-pattern]:not([data-masked])::after{content:"";position:absolute;inset:0;background:var(--tg-pattern-ink);opacity:var(--tg-pattern-opacity);mix-blend-mode:var(--tg-pattern-blend);mask:url('../assets/telegram-document-pattern.svg') center/var(--tg-pattern-scale) repeat}
-.telegram-wallpaper[data-masked][data-pattern]>canvas{mask:url('../assets/telegram-document-pattern.svg') center/var(--tg-pattern-scale) repeat;opacity:var(--tg-pattern-opacity)}
+.telegram-wallpaper::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(ellipse 74% 60% at 14% 10%,rgba(255,255,255,.78),transparent 68%),radial-gradient(ellipse 64% 54% at 88% 14%,color-mix(in srgb,var(--accent,#6e56cf) 16%,transparent),transparent 70%),radial-gradient(ellipse 72% 62% at 74% 92%,color-mix(in srgb,var(--theme-wash-alt,#e8ecf8) 60%,transparent),transparent 74%)}
+:root:is([data-theme=black],[data-theme=space],[data-theme=midnight],[data-theme=sage]) .telegram-wallpaper::before{background-image:radial-gradient(ellipse 74% 60% at 14% 10%,rgba(255,255,255,.045),transparent 68%),radial-gradient(ellipse 64% 54% at 88% 14%,color-mix(in srgb,var(--accent,#aab9ef) 16%,transparent),transparent 70%),radial-gradient(ellipse 72% 62% at 74% 92%,rgba(255,255,255,.025),transparent 74%)}
+.telegram-wallpaper>canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.44;filter:saturate(.92) brightness(1.05)}
+:root:is([data-theme=black],[data-theme=space],[data-theme=midnight],[data-theme=sage]) .telegram-wallpaper>canvas,.telegram-wallpaper[data-masked]>canvas{opacity:.76;filter:none}
+.telegram-wallpaper[data-pattern]::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle at 1px 1px,var(--tg-pattern-ink,currentColor) .85px,transparent 1px);background-size:22px 22px;opacity:min(.075,calc(var(--tg-pattern-opacity,.2) * .2));mix-blend-mode:var(--tg-pattern-blend,soft-light);mask-image:radial-gradient(ellipse 88% 84% at 54% 48%,#000 35%,rgba(0,0,0,.35) 100%);-webkit-mask-image:radial-gradient(ellipse 88% 84% at 54% 48%,#000 35%,rgba(0,0,0,.35) 100%)}
+.telegram-wallpaper[data-masked][data-pattern]::after{mix-blend-mode:screen}
 .message-wallpaper>.telegram-wallpaper{z-index:0}
 .message-wallpaper>.telegram-wallpaper~.message-wallpaper-pattern{z-index:1}

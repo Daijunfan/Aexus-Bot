@@ -6,7 +6,7 @@
 
 Follow the world's information. Let your AI team read, discuss, check the evidence, and keep delivering the results you care about.
 
-Aexus Bot brings information channels, documents, multiple Agents, and persistent tasks into one workspace. Use **Message** to gather information and delegate work, **Team** to organize members and follow progress, and **Mission** to schedule ongoing attention and deliveries.
+Aexus Bot brings information channels, a unified document Library, multiple Agents, and persistent Missions into one workspace. Use **Library** for visual storage management, super search, Study Reader mindmaps, and Cloud Hosts; **Message** to gather information and coordinate members; and **Mission** to manage Notion-style workflows and ongoing deliveries.
 
 [Get started](#getting-started) · [Deployment](docs/DEPLOYMENT.md) · [CLI / API](API.md)
 
@@ -36,27 +36,26 @@ The workflow connects private conversations, groups, and threads, with the same 
 
 You arrange the sources, documents, workspaces, and responsibilities. Information work that once required several people can become part of your daily routine.
 
-## Three views connect reading, collaboration, and delivery
+## Three primary views connect knowledge, collaboration, and delivery
 
-### Message · The center of information and discussion
+### Library · Storage, Study Reader, and Cloud Hosts
 
-Keep information channels, private conversations, and groups together. When something deserves attention, continue with a question, a discussion, or a task.
+Manage every local and remote file, search across your whole setup, read documents with mindmaps, and configure SSH servers in one dedicated view:
 
-- **Information channels:** gather content from Telegram, X, YouTube, Zhihu, and LinkedIn; filter by source, keywords, and time. Members can read and search through the same APIs.
+- **Storage Overview & All Files:** inspect disk usage across 7 domains (centralized employee workspaces, decoupled Mac-local Private Chat storage, groups & channels, Study Reader library, Mission Notebook, Shared workspace, and Cloud Hosts), browse thumbnails, and edit files inline.
+- **Super Search:** press `⌘K` to search filenames, line-numbered text snippets, private chat attachments, Mission Notebook pages, Study Reader documents/study sets, and Cloud Hosts simultaneously.
+- **Built-in Study Reader:** read PDF, EPUB, DOCX, MOBI, HTML, and Markdown, take ink/excerpt annotations, build XMind mindmaps, and review FSRS flashcards (`reader.*`), with per-resource employee access grants.
+- **Built-in Cloud Hosts:** configure SSH/VM hosts, encrypted credentials, host fingerprints, remote SFTP files (`host.files`), interactive `@xterm/xterm` SSH terminals (`host.terminal-*`), and per-host employee access.
+
+### Message · Information, members, and discussion
+
+Keep information channels, private conversations, groups, employee creation, and native Agent workbenches together. When something deserves attention, continue with a question, a discussion, or a delegated task.
+
+- **Information channels:** gather content from Telegram, X, YouTube, Zhihu, LinkedIn, and Reddit; filter by source, keywords, and time. Members can read and search through the same APIs.
 - **Rich conversations:** use illustrated messages, quotes, threads, polls, and collaborative checklists to discuss, add context, and bring findings together.
-- **Shared material:** preview images and documents, read PDFs in Margin Reader, edit and manage files, and return to the related conversation.
+- **Shared material:** preview images and documents, open group PDFs directly in Library Study Reader, edit and manage files, and return to the related conversation.
 
-External Workers such as Dot and Grok retain their native identities and histories. Manage Bots, native groups, members, and runtime configuration in Message through the same operations used by the CLI. After installing and signing in to the official apps on macOS, Aexus Bot connects their local execution channels so desktop and Web conversations can use your Mac. [Native Bot integration](docs/BOT_WORKERS.md) · [The Message workspace](docs/MESSAGE_EXPERIENCE.md).
-
-### Team · Organize your intelligence members
-
-Assign responsibilities such as source monitoring, document reading, topic analysis, independent review, and briefing preparation. A Secretary coordinates work, and you can open a member's workbench to follow actual progress.
-
-Role-based employees and native **Workers** share one concurrent work board, with unified search, categories, and progress tracking. Conversations, files, terminals, tool calls, approvals, and queues live in each member's workbench. Workers use independent native sessions and retain clean native context.
-
-Connect **Codex, Claude Agent, Cline, Pi, OpenCode, Kilo Code, DeepSeek Harness, and Google Antigravity**. Choose your models and native configuration, then arrange execution locally or in registered remote environments. [Explore engine capabilities](ENGINE_CAPABILITIES.md).
-
-![Aexus Bot Team: independent member workbenches and conversations side by side](docs/images/team-board.png)
+External Workers such as Dot and Grok plus **Codex, Claude Agent, Cline, Pi, OpenCode, Kilo Code, DeepSeek Harness, and Google Antigravity** can be created right inside Message (under `~/Aexus-bot-workspaces/<employee>` or a registered Cloud Host directory). Desktop, browser, and CLI share the same Core operations. [Native Bot integration](docs/BOT_WORKERS.md) · [The Message workspace](docs/MESSAGE_EXPERIENCE.md) · [Explore engine capabilities](ENGINE_CAPABILITIES.md).
 
 ### Mission · Keep important work moving
 
@@ -72,11 +71,11 @@ Decisions stay in the conversation: define the choices, use **Other** to write y
 
 Bind workspaces to local directories or registered cloud hosts. Members use their assigned workspace, groups organize shared material, and files and native sessions retain stable identities across upgrades.
 
-| Plugin | What it brings |
+| Built-in Surface / Interface | What it brings |
 | --- | --- |
-| **Margin Reader** | Read PDFs and documents, collect excerpts, and organize references. |
-| **MiniNotion** | Organize notes, databases, and knowledge. |
-| **Cloud Hosts** | Manage remote hosts, connections, and terminals. |
+| **Library** (built-in) | Unified 7-domain storage analytics, file explorer, cross-domain Super Search, Study Reader mindmaps/FSRS, and Cloud Hosts SFTP/SSH. |
+| **Mission Workflow Notebook** (built-in) | Notion-grade pages, 10-layout databases, `/workflow` automation blocks, and Agent/Schedule orchestration. |
+| **External Plugins (`plugin.*`)** | Optional third-party CLI-first packages via `examples/plugin-starter`. |
 
 Grant members read, modify, or create access to specific content. Desktop, browser, CLI / API, and native member tools share one Core, so the same work can continue through different interfaces.
 
@@ -86,9 +85,9 @@ Information collection and server storage are maintained in the separate [xhs_pu
 
 1. Start the desktop application or connect to your Core Web backend.
 2. Choose an engine in Settings, then configure and authenticate your models.
-3. Create a team, bind its workspace, and assign responsibilities.
-4. Connect information sources, provide documents, or ask a specific question.
-5. Discuss in Message, follow progress in Team, and arrange ongoing deliveries through Mission.
+3. Create members in **Message** and optionally register remote SSH hosts in **Library -> Cloud Hosts**.
+4. Connect information sources, import documents into Study Reader, or ask a specific question.
+5. Organize files in **Library**, collaborate in **Message**, and arrange ongoing deliveries through **Mission**.
 
 [Explore deployment options](docs/DEPLOYMENT.md): macOS / Windows desktop, or Linux Core / Web with a browser.
 

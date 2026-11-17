@@ -18,8 +18,10 @@ import {withCaller,requestContext} from '../request-context'
 import {getView} from '../presentation'
 import {managementActivity} from '../management-activity'
 import {pluginWindows,setPluginWindowDriver} from '../plugins/windows'
+import {readerSessions} from '../library-reader'
 import {runtimeInfo} from '../platform'
 import {createWebAuth,type WebSession} from './auth'
+import {readMissionNotebookAsset} from '../mission-notebook'
 import {pluginBridge} from './plugin-bridge'
 import {authenticate} from '../agent-access'
 import {APP_HOME,SOCKET_PATH,type Request} from '../../shared/protocol'
@@ -162,6 +164,20 @@ export async function startWebServer(options:Options={}){
           if(!response.body){res.end();return}
           const source=NodeReadable.fromWeb(response.body as any);trackStream(res,valid,()=>{source.destroy();res.end()});pipeAuthorized(source,res,valid);return
         }
+        if(url.pathname.startsWith('/api/notebook-asset/')){
+          if(!isAppAdministrator(current.context.principal))throw failure('Only the user or Secretary may read notebook assets',403)
+          if(!['GET','HEAD'].includes(req.method??''))throw failure('Method not allowed',405)
+          const rel=url.pathname.slice('/api/notebook-asset/'.length)
+          if(!rel)throw failure('Missing asset path',404)
+          try{
+            const asset=await readMissionNotebookAsset(rel)
+            res.writeHead(200,{'content-type':asset.mimeType,'content-length':String(asset.bytes.length),'cache-control':'private, max-age=3600','x-content-type-options':'nosniff','cross-origin-resource-policy':'same-origin'})
+            if(req.method==='HEAD')res.end();else res.end(asset.bytes)
+          }catch{
+            throw failure('Notebook asset not found',404)
+          }
+          return
+        }
         if(url.pathname==='/api/download'&&req.method==='GET'){
           if(!isAppAdministrator(current.context.principal))throw failure('Only the user may download a file',403)
           let from:any;try{from=JSON.parse(url.searchParams.get('from')??'null')}catch{throw failure('Invalid download source')}
@@ -186,8 +202,9 @@ export async function startWebServer(options:Options={}){
         if(url.pathname!=='/api/rpc'&&url.pathname!=='/api/follow'||req.method!=='POST')throw failure('Unknown endpoint',404)
         const value=await body(req,64*1024*1024),request:Request={cmd:value.cmd,args:value.args}
         if(typeof request.cmd!=='string'||!request.cmd||request.args!==undefined&&(!request.args||Array.isArray(request.args)||typeof request.args!=='object'))throw failure('Invalid Core request')
-        const pluginView=request.cmd==='plugin.call'&&request.args?.viewId?grants.get(String(request.args.viewId)):undefined
+        const pluginView=['plugin.call','reader.call'].includes(request.cmd)&&request.args?.viewId?grants.get(String(request.args.viewId)):undefined
         if(request.cmd==='plugin.call'&&request.args?.viewId&&(!pluginView||pluginView.session!==current.session||pluginView.clientId!==current.context.clientId||pluginView.plugin!==request.args.id||pluginView.workspace!==request.args.workspace||!pluginWindows().some(view=>view.id===request.args!.viewId)))throw failure('Plugin view does not belong to this authenticated client',403)
+        if(request.cmd==='reader.call'&&request.args?.viewId&&(!pluginView||pluginView.session!==current.session||pluginView.clientId!==current.context.clientId||pluginView.plugin!=='library-reader'||pluginView.workspace!==(request.args.workspace??pluginView.workspace)||!readerSessions().some(view=>view.id===request.args!.viewId)))throw failure('Study Reader view does not belong to this authenticated client',403)
         if(url.pathname==='/api/follow'){
           if(request.cmd!=='session.follow')throw failure('Only session.follow is allowed here')
           const token=req.headers.authorization?.replace(/^Bearer /,'')??fs.readFileSync(path.join(APP_HOME,'control.token'),'utf8').trim()
@@ -214,10 +231,10 @@ export async function startWebServer(options:Options={}){
         if(readOnly)pendingReads++
         const reply=(!coreReceipt?previous?.reply:undefined)??handleRequest(request,current.context)
         if(keepReply&&!previous){const item={signature,reply,at:0};replay.set(key,item);void reply.then(()=>{item.at=Date.now()},()=>{item.at=Date.now()})}
-        try{let result=await reply;if(value.snapshot?.version===1&&snapshotCommand(request.cmd))result=snapshots.encode(JSON.stringify([current.session?.id,current.context.principal,current.context.credentialHash,current.context.clientId]),request.cmd,request.args,result,typeof value.snapshot.base==='string'?value.snapshot.base:undefined);if(request.cmd==='messenger.media-open'&&current.session)mediaSessions.set(result.id,{session:current.session,context:current.context});if(request.cmd==='messenger.media-close')mediaSessions.delete(String(request.args?.id));json(res,{ok:true,data:request.cmd==='conversation.file-open'?{...result,reader:projectPluginView(result.reader,current.session??peers.get(current.context.clientId??'')?.session)}:['plugin.open','plugin.windows','plugin.place','plugin.mode','plugin.view'].includes(request.cmd)?projectPluginView(result,current.session??peers.get(current.context.clientId??'')?.session):result})}finally{
+        try{let result=await reply;if(value.snapshot?.version===1&&snapshotCommand(request.cmd))result=snapshots.encode(JSON.stringify([current.session?.id,current.context.principal,current.context.credentialHash,current.context.clientId]),request.cmd,request.args,result,typeof value.snapshot.base==='string'?value.snapshot.base:undefined);if(request.cmd==='messenger.media-open'&&current.session)mediaSessions.set(result.id,{session:current.session,context:current.context});if(request.cmd==='messenger.media-close')mediaSessions.delete(String(request.args?.id));const activeSession=current.session??peers.get(current.context.clientId??'')?.session;json(res,{ok:true,data:request.cmd==='conversation.file-open'?{...result,reader:projectPluginView(result.reader,activeSession)}:request.cmd==='reader.open'||['plugin.open','plugin.windows','plugin.place','plugin.mode','plugin.view'].includes(request.cmd)?projectPluginView(result,activeSession):result})}finally{
           // Read concurrency stays bounded without retaining completed query responses.
           if(readOnly)pendingReads--
-          if(['plugin.dismiss','plugin.close'].includes(request.cmd)){const id=String(request.args?.id);grants.delete(id);}
+          if(['plugin.dismiss','plugin.close','reader.close'].includes(request.cmd)){const id=String(request.args?.id??request.args?.viewId??'');if(id)grants.delete(id);}
         }
         return
       }
@@ -227,7 +244,11 @@ export async function startWebServer(options:Options={}){
       if(!fs.existsSync(file)||!fs.statSync(file).isFile())throw failure('Resource not found',404)
       const actual=fs.realpathSync(file),base=fs.realpathSync(renderer)
       if(!actual.startsWith(base+path.sep))throw failure('Resource outside renderer',403)
-      res.writeHead(200,{'content-type':mime[path.extname(file)]??'application/octet-stream','cache-control':file.endsWith('index.html')?'no-cache':'public, max-age=3600','x-content-type-options':'nosniff','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"})
+      const isNotebookFrame=actual===path.join(base,'mission-notebook.html')
+      const csp=isNotebookFrame
+        ?"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self'; frame-src 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+        :"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+      res.writeHead(200,{'content-type':mime[path.extname(file)]??'application/octet-stream','cache-control':file.endsWith('index.html')||isNotebookFrame?'no-cache':'public, max-age=3600','x-content-type-options':'nosniff','content-security-policy':csp})
       if(req.method==='HEAD')res.end();else fs.createReadStream(file).pipe(res)
     }catch(error){if(!res.headersSent)json(res,{ok:false,error:(error as Error).message,code:(error as any).code??'REQUEST_FAILED'},(error as any).status??400);else res.destroy()}
   })

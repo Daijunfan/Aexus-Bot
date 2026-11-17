@@ -16,7 +16,7 @@ export function useSelectionMotion(root:RefObject<HTMLElement|null>,selector:str
    const next={transform:`translate3d(${(rect.left-box.left)/zoom+element.scrollLeft}px,${(rect.top-box.top)/zoom+element.scrollTop}px,0)`,width:rect.width/zoom+'px',height:rect.height/zoom+'px'}
    const style=getComputedStyle(highlight),previous=(style.transform==='none'?'':style.transform)+` scale(${parseFloat(style.width)/parseFloat(next.width)||1},${parseFloat(style.height)/parseFloat(next.height)||1})`
    animation?.cancel();highlight.hidden=false;Object.assign(highlight.style,next)
-   if(animate&&positioned&&!element.hasAttribute('data-sorting'))animation=playMessageMotion(highlight,[{transform:previous},{transform:next.transform}],280)
+   if(animate&&positioned&&!element.hasAttribute('data-sorting'))animation=playMessageMotion(highlight,[{transform:previous},{transform:next.transform}],210)
    positioned=true
   }
   measure.current(false)

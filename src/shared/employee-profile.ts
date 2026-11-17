@@ -8,7 +8,7 @@ export type ProfileMembership={conversation:string;id:string;kind:'group'|'chann
 /** An authorized projection; it contains no credentials, private messages or execution handles. */
 export type EmployeeProfileData={
  employee:Pick<StoredSession,'id'|'title'|'avatar'|'color'|'accessory'|'role'|'engine'|'model'|'managementRole'|'kind'|'createdAt'>
- company:{team:string;mode:TeamSettings['mode'];teamRoot:string|null;workspace:string;location:'core'|'remote';host:string|null}
+ workspace:{mode:TeamSettings['mode'];workspacesRoot:string|null;cwd:string;location:'core'|'remote';host:string|null}
  memberships:ProfileMembership[]
  plans:{rows:ProfilePlan[];total:number;offset:number;hasMore:boolean;counts:Record<PlanState,number>;eventTriggersSupported:boolean;error?:string}
  canEditProfile:boolean

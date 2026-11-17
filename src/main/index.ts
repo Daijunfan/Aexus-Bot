@@ -5,17 +5,18 @@ import {operatorContext} from './authorization'
 import {openExternalUrl,setExternalOpener} from './external'
 import {attachPluginDesktop} from './plugins/desktop'
 import { session, app, BrowserWindow, ipcMain, shell,dialog,protocol } from 'electron'
-import { join } from 'node:path'
-import { writeFileSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import {getPreferences} from './store'
 import { startRuntime } from './runtime'
+import { missionNotebookMimeType, readMissionNotebookAsset, setNotebookPdfRenderer } from './mission-notebook'
 import { handleRequest, setUiHandler, setViewGuard } from './server'
 import {SnapshotEncoder,snapshotCommand} from '../shared/snapshot-wire'
 import {randomUUID} from 'node:crypto'
 import { askRenderer, resolveUiRequest, rendererReady, setRendererReady, setPrimaryWindow } from './ui'
 import type { Request, Response } from '../shared/protocol'
 
-protocol.registerSchemesAsPrivileged([{scheme:'agents-media',privileges:{standard:true,secure:true,supportFetchAPI:true,stream:true}}])
+protocol.registerSchemesAsPrivileged([{scheme:'agents-media',privileges:{standard:true,secure:true,supportFetchAPI:true,stream:true,corsEnabled:true}}])
 const REMOTE_WEB_URL=process.env.AGENTS_COMPANY_WEB_URL
 if(REMOTE_WEB_URL){
   const url=new URL(REMOTE_WEB_URL)
@@ -33,6 +34,56 @@ app.setPath('userData', process.env.AGENTS_COMPANY_HOME ? join(process.env.AGENT
 let mainWindow:BrowserWindow|undefined
 let pluginDesktop:ReturnType<typeof attachPluginDesktop>|undefined
 let quitting=false,preparingQuit=false
+const notebookPrintJobs=new Map<string,{workspace:unknown;dataDirectory:string}>()
+
+async function renderNotebookPdf(document:string|{workspace:unknown;dataDirectory:string},output:string):Promise<void>{
+  const win=new BrowserWindow({
+    show:false,
+    width:1380,
+    height:920,
+    webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false,backgroundThrottling:false}
+  })
+  const jobId=randomUUID()
+  let tempHtml:string|undefined
+  try{
+    if(typeof document==='string'){
+      tempHtml=join(app.getPath('temp'),`aexus-notebook-pdf-${jobId}.html`)
+      writeFileSync(tempHtml,document,'utf8')
+      await win.loadFile(tempHtml)
+    }else{
+      notebookPrintJobs.set(jobId,document)
+      if(process.env.ELECTRON_RENDERER_URL){
+        const target=new URL('mission-notebook.html',process.env.ELECTRON_RENDERER_URL)
+        target.searchParams.set('printJob',jobId)
+        await win.loadURL(target.href)
+      }else{
+        await win.loadFile(join(__dirname,'../renderer/mission-notebook.html'),{query:{printJob:jobId}})
+      }
+      await win.webContents.executeJavaScript(`new Promise((resolve,reject)=>{
+        const start=Date.now();
+        const check=()=>{
+          const startupBtn=document.querySelector('.startup-state button');
+          if(startupBtn)return reject(new Error(document.querySelector('.startup-state')?.textContent||'页面加载失败'));
+          const ready=document.querySelector('.page-title, .database-view, .folder-document, .home-scroll');
+          const pending=document.querySelector('.loading-surface, .page-symbol-pending');
+          if(ready&&!pending)return resolve(null);
+          if(Date.now()-start>30000)return reject(new Error('页面内容加载超时，未生成不完整的 PDF'));
+          setTimeout(check,20);
+        };
+        check();
+      }).then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(null))))))`)
+    }
+    await win.webContents.executeJavaScript('Promise.all([document.fonts.ready,...Array.from(document.images).map(image=>{image.loading="eager";return image.complete?Promise.resolve():new Promise(resolve=>{image.onload=image.onerror=()=>resolve(null)})})])')
+    const landscape=Boolean(await win.webContents.executeJavaScript('!!document.querySelector(".plan-hourWeek")'))
+    const pdfBytes=await win.webContents.printToPDF({printBackground:true,pageSize:'A4',landscape,margins:{top:0.4,bottom:0.4,left:0.3,right:0.3}})
+    mkdirSync(dirname(output),{recursive:true})
+    writeFileSync(output,pdfBytes)
+  }finally{
+    notebookPrintJobs.delete(jobId)
+    if(tempHtml)rmSync(tempHtml,{force:true})
+    if(!win.isDestroyed())win.destroy()
+  }
+}
 // Handle the native chord before editors, terminals, frames or ignored menu
 // shortcuts can consume it. Plugin windows use this same quit transaction.
 app.on('web-contents-created',(_event,contents)=>{
@@ -89,7 +140,7 @@ setUiHandler(async (op, args) => {
   }
   if (op === 'screenshot' && win) {
     const contents=win.webContents,throttled=contents.getBackgroundThrottling()
-    const css=args?.privacy?await contents.insertCSS('.team-root-label,.activity-bubble,.room-dimension,.board-workspace>span:not(.codicon){visibility:hidden!important}'):undefined
+    const css=args?.privacy?await contents.insertCSS('.activity-bubble{visibility:hidden!important}'):undefined
     try{
       if(throttled)contents.setBackgroundThrottling(false)
       await contents.executeJavaScript('Promise.all([...document.images].filter(i=>{const r=i.getBoundingClientRect();return i.complete&&i.naturalWidth>0&&r.bottom>0&&r.top<innerHeight&&r.right>0&&r.left<innerWidth}).map(i=>i.decode().catch(()=>undefined)))')
@@ -158,7 +209,7 @@ function createWindow() {
   win.webContents.on('did-start-navigation', details => { if(details.isMainFrame&&!details.isSameDocument)setRendererReady(win.webContents,false) })
   win.webContents.on('render-process-gone', () => setRendererReady(win.webContents,false))
   win.webContents.setWindowOpenHandler(({url}) => {if(REMOTE_WEB_URL&&/^https?:\/\//.test(url))void shell.openExternal(url);return {action:'deny'}})
-  win.webContents.on('will-navigate',(event,url)=>{const expected=REMOTE_WEB_URL||process.env.ELECTRON_RENDERER_URL||new URL(`file://${join(__dirname,'../renderer/index.html')}`).href;if(url!==expected)event.preventDefault()})
+  win.webContents.on('will-navigate',(event,url)=>{const expected=REMOTE_WEB_URL||process.env.ELECTRON_RENDERER_URL||new URL(`file://${join(__dirname,'../renderer/index.html')}`).href;const notebookUrl=new URL('mission-notebook.html',expected).href;if(url!==expected&&!url.startsWith(notebookUrl))event.preventDefault()})
   let closing=false
   win.on('close',event=>{
     if(preparingQuit&&!quitting){event.preventDefault();return}
@@ -177,13 +228,45 @@ app.whenReady().then(() => {
   if (HEADLESS || HIDDEN) void app.dock?.hide()
   else setExternalOpener(url=>shell.openExternal(url))
   if(REMOTE_WEB_URL){if(HEADLESS)throw Error('Remote Web desktop cannot be headless; use agents serve on the server');createWindow();return}
-  protocol.handle('agents-media',request=>{
+  protocol.handle('agents-media',async request=>{
     const initiator=(request as typeof request&Pick<Electron.ProtocolRequest,'initiatorOrigin'>).initiatorOrigin
     const url=new URL(request.url),window=mainWindow,expected=process.env.ELECTRON_RENDERER_URL?new URL(process.env.ELECTRON_RENDERER_URL).origin:null
-    if(!window||url.host!=='preview'||!/^\/[a-f0-9-]{36}$/.test(url.pathname)||initiator&&!(expected?initiator===expected:['null','file://'].includes(initiator)))return new Response(null,{status:403})
+    const validInitiator=!initiator||(expected?initiator===expected:['null','file://'].includes(initiator))
+    if(!validInitiator)return new Response(null,{status:403})
+    if(url.host==='notebook-print'){
+      if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'access-control-allow-origin':'*','access-control-allow-methods':'GET, OPTIONS'}})
+      const parts=url.pathname.replace(/^\/+/,'').split('/')
+      const id=decodeURIComponent(parts[0]||'')
+      const job=notebookPrintJobs.get(id)
+      if(!job)return new Response(null,{status:404})
+      if(parts[1]==='snapshot'&&parts.length===2){
+        return new Response(JSON.stringify({workspace:job.workspace,dataPath:job.dataDirectory,version:app.getVersion()}),{status:200,headers:{'content-type':'application/json','access-control-allow-origin':'*','x-content-type-options':'nosniff'}})
+      }
+      if(parts[1]==='asset'&&parts.length===3){
+        const filename=decodeURIComponent(parts[2]||'')
+        if(!filename||basename(filename)!==filename||filename==='.'||filename==='..')return new Response(null,{status:403})
+        const file=join(job.dataDirectory,'attachments',filename)
+        if(!existsSync(file))return new Response(null,{status:404})
+        return new Response(new Uint8Array(readFileSync(file)),{status:200,headers:{'content-type':missionNotebookMimeType(filename),'access-control-allow-origin':'*','x-content-type-options':'nosniff'}})
+      }
+      return new Response(null,{status:404})
+    }
+    if(url.host==='notebook'){
+      const rel=url.pathname.replace(/^\/+/,'')
+      if(!rel)return new Response(null,{status:404})
+      try{
+        const asset=await readMissionNotebookAsset(rel)
+        return new Response(new Uint8Array(asset.bytes),{status:200,headers:{'content-type':asset.mimeType,'x-content-type-options':'nosniff'}})
+      }catch{
+        return new Response(null,{status:404})
+      }
+    }
+    if(!window)return new Response(null,{status:403})
+    if(url.host!=='preview'||!/^\/[a-f0-9-]{36}$/.test(url.pathname))return new Response(null,{status:403})
     const id=url.pathname.slice(1),context={...operatorContext(),clientId:'desktop-media-'+window.webContents.id}
     return mediaResponse(request,id,(cmd,args)=>handleRequest({cmd,args},context),()=>!window.isDestroyed()&&mediaAvailable(id))
   })
+  setNotebookPdfRenderer(renderNotebookPdf)
   stop = startRuntime((channel, payload) => {
     if(mainWindow){if(channel==='store:changed'){const zoom=getPreferences().pageZoom;if(mainWindow.webContents.getZoomFactor()!==zoom)mainWindow.webContents.setZoomFactor(zoom)}mainWindow.webContents.send('api:event',{channel,payload})}
   })

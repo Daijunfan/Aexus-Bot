@@ -26,7 +26,6 @@ export type ScheduledAction = {
   employeeId: string
   engine: import('./types').Engine
   prompt: string
-  viewId?: string
   /** Explicit employee publishing destination; membership is checked again at execution. */
   channelId?: string
   model?: string

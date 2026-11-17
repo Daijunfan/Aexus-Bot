@@ -39,7 +39,10 @@ export function useDirectMessages(employeeId:string|undefined,enabled:boolean,ar
    if(token!==request.current||active.current!==id)return
    const replace=mode==='initial'||mode==='latest'
    const next=replace?history.items.slice(-MAX_ITEMS):merge(loaded.current,history.items,mode==='older')
-   loaded.current=next;before.current=next.length&&order(next[0])>1?order(next[0]):null;if(mode==='older')anchor.current=next[0]?.id
+   const truncated=next.length>0&&history.items.length>0&&next[0].id!==history.items[0].id&&mode!=='refresh'
+   loaded.current=next
+   before.current=!next.length?null:truncated?order(next[0]):next[0].id===history.items[0]?.id?history.nextBefore:before.current
+   if(mode==='older')anchor.current=next[0]?.id
    setOwner(id);setItems(next);setNextBefore(before.current);setLatestIncoming(history.latestIncoming);setReadSequence(history.readSequence);setReady(true);setError('')
   }catch(cause){if(token===request.current&&active.current===id)setError(reason(cause))}
   finally{if(mode==='older')older.current=false}
@@ -56,7 +59,7 @@ export function useDirectMessages(employeeId:string|undefined,enabled:boolean,ar
   const off=api.onEvent(event=>{
    const payload=event.payload as {employee?:string}|undefined
    if(event.channel!=='client:connected'&&(event.channel!=='direct:changed'||payload?.employee!==employeeId))return
-   clearTimeout(timer);timer=setTimeout(()=>{if(active.current===employeeId)void load('refresh')},120)
+   clearTimeout(timer);timer=setTimeout(()=>{if(active.current===employeeId)void load('refresh')},32)
   })
   return()=>{clearTimeout(timer);off();request.current++}
  },[employeeId,enabled,load])

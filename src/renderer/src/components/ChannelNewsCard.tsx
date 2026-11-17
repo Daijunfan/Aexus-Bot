@@ -33,12 +33,36 @@ function readSourceImage(avatar:NonNullable<ChannelView['avatar']>){
  const identity=avatar.channelId?'channel:'+avatar.channelId:avatar.sourceId
  return cachedImage('avatar:'+identity+':'+avatar.sha256,()=>api.call<{data:string;mimeType:string}>(avatar.channelId?'channel.avatar-image':'channel.source-image',avatar.channelId?{id:avatar.channelId}:{sourceId:avatar.sourceId}))
 }
+/** Strip redundant leading slash on Reddit handles/subreddits for cleaner author display. */
+export function formatChannelAuthor(plugin:ChannelPost['plugin'],value:string){
+ return plugin==='reddit'?value.trim().replace(/^\/(?=(?:u|r)\/)/i,''):value
+}
+/** Derive readable 1-2 character avatar monograms without falling back to platform prefixes or '/'. */
+export function avatarInitials(name:string){
+ const raw=name.trim();if(!raw)return 'T'
+ const cleaned=raw.replace(/^(?:\/?(?:r|u|user)\/+|@+)/i,'').replace(/^[^\p{L}\p{N}]+/u,'')||raw
+ const parts=cleaned.split(/[\s_./-]+/).map(token=>token.replace(/^[^\p{L}\p{N}]+/u,'')).filter(Boolean)
+ if(parts.length>=2)return (Array.from(parts[0])[0]??'')+(Array.from(parts[1])[0]??'')
+ if(parts.length===1){
+  const word=parts[0],humps=word.match(/[A-Z]+(?=[A-Z][a-z]|\d|$)|[A-Z]?[a-z]+/g)
+  if(humps&&humps.length>=2)return humps[0][0]+humps[1][0]
+  if(/^[A-Za-z\d]+$/.test(word))return word.slice(0,2)
+  return Array.from(word)[0]??'T'
+ }
+ return Array.from(raw.replace(/^[^\p{L}\p{N}]+/u,''))[0]??'T'
+}
+function avatarTone(kind:ChannelView['kind'],name:string){
+ const key=kind+':'+name.trim().replace(/^(?:\/?(?:r|u|user)\/+|@+)/i,'').toLowerCase()
+ let hash=2166136261
+ for(let i=0;i<key.length;i++){hash^=key.charCodeAt(i);hash=Math.imul(hash,16777619)}
+ return String((hash>>>0)%8)
+}
 export function ChannelAvatar({kind,avatar,name='',social=false}:{kind:ChannelView['kind'];avatar?:ChannelView['avatar'];name?:string;social?:boolean}){
  const box=useRef<HTMLSpanElement>(null)
- const custom=!!avatar?.channelId,brand=!social&&!avatar&&isChannelSocialPlugin(kind),identity=!!avatar||social,key=String(social)+':'+kind+':'+(avatar?(avatar.channelId??avatar.sourceId)+':'+avatar.sha256:''),[image,setImage]=useState({key:'',src:'',failed:false}),src=image.key===key?image.src:'',failed=image.key===key&&image.failed
+ const custom=!!avatar?.channelId,brand=!social&&!avatar&&isChannelSocialPlugin(kind),identity=!!avatar||social,placeholder=!brand&&!custom&&!avatar&&(social||kind==='employee'),key=String(social)+':'+kind+':'+(avatar?(avatar.channelId??avatar.sourceId)+':'+avatar.sha256:''),[image,setImage]=useState({key:'',src:'',failed:false}),src=image.key===key?image.src:'',failed=image.key===key&&image.failed
  useEffect(()=>{let active=true,visible=false,started=false;setImage({key,src:'',failed:false});if(!identity||!avatar)return;const observer=new IntersectionObserver(entries=>{visible=entries.some(entry=>entry.isIntersecting);if(!visible){started=false;setImage({key,src:'',failed:false});return}if(started)return;started=true;void readSourceImage(avatar).then(src=>{if(active&&visible)setImage({key,src,failed:false})}).catch(()=>{if(active&&visible)setImage({key,src:'',failed:true})})},{rootMargin:'160px'});if(box.current)observer.observe(box.current);return()=>{active=false;observer.disconnect()}},[key])
- const initials=name.trim().split(/\s+/).slice(0,2).map(part=>Array.from(part)[0]??'').join('')||'T'
- return <span ref={box} className="channel-avatar" data-platform={kind} data-avatar-kind={brand?'brand':custom?'custom':avatar?'photo':'placeholder'} data-avatar-state={identity?(src?'ready':avatar?(failed?'error':'loading'):'placeholder'):undefined} aria-hidden="true">{src?<img className="channel-identity-image" src={src} alt="" decoding="async" draggable={false} onError={()=>setImage({key,src:'',failed:true})}/>:identity&&avatar?<Icon name={failed?'error':'loading'}/>:brand?kind==='x'?<span className="channel-brand-icon channel-brand-x" style={{maskImage:`url("${xLogo}")`,WebkitMaskImage:`url("${xLogo}")`}}/>:<img className="channel-brand-icon" src={platformIcons[kind]} alt="" draggable={false}/>:social||kind==='employee'?<span className="channel-avatar-initials">{initials}</span>:<Icon name={kind==='process'?'server':'radio-tower'}/>}</span>
+ const initials=avatarInitials(name)
+ return <span ref={box} className="channel-avatar" data-platform={kind} data-avatar-kind={brand?'brand':custom?'custom':avatar?'photo':'placeholder'} data-avatar-tone={placeholder?avatarTone(kind,name):undefined} data-avatar-state={identity?(src?'ready':avatar?(failed?'error':'loading'):'placeholder'):undefined} aria-hidden="true">{src?<img className="channel-identity-image" src={src} alt="" decoding="async" draggable={false} onError={()=>setImage({key,src:'',failed:true})}/>:identity&&avatar?<Icon name={failed?'error':'loading'}/>:brand?kind==='x'?<span className="channel-brand-icon channel-brand-x" style={{maskImage:`url("${xLogo}")`,WebkitMaskImage:`url("${xLogo}")`}}/>:<img className="channel-brand-icon" src={platformIcons[kind]} alt="" draggable={false}/>:social||kind==='employee'?<span className="channel-avatar-initials">{initials}</span>:<Icon name={kind==='process'?'server':'radio-tower'}/>}</span>
 }
 export async function readChannelImage(channelId:string,postId:string,mediaId:string,maxEdge?:number){return cachedImage(channelId+':'+postId+':'+mediaId+':'+(maxEdge??0),()=>api.call<{data:string;mimeType:string}>('channel.image',{channelId,postId,mediaId,...(maxEdge?{maxEdge}:{})}))}
 /** Only published local media is read, and only as a card reaches the viewport. */
@@ -54,16 +78,16 @@ export function ChannelNewsCard({post,onAuthor,onChanged,onReveal,onReply,source
  const [error,setError]=useState(''),[expanded,setExpanded]=useMessageRowState('channel-expanded',false),[gallery,setGallery]=useState<{index:number;mediaIds:string}|null>(null),images=useRef(new Map<string,string>()),buttons=useRef(new Map<string,HTMLButtonElement>()),alive=useRef(true)
  useMessageOwner(!!gallery)
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
- const photos=post.media.filter(media=>media.id!==post.avatarMediaId&&!post.files?.some(file=>file.thumbnailMediaId===media.id)&&media.mimeType.startsWith('image/')),items:GalleryImage[]=photos.map(media=>({path:media.id+'/'+media.name,messageId:post.id,caption:post.title||post.body})),author=post.authorName||post.sourceName
+ const photos=post.media.filter(media=>media.id!==post.avatarMediaId&&!post.files?.some(file=>file.thumbnailMediaId===media.id)&&media.mimeType.startsWith('image/')),items:GalleryImage[]=photos.map(media=>({path:media.id+'/'+media.name,messageId:post.id,caption:post.title||post.body})),author=formatChannelAuthor(post.plugin,post.authorName||post.sourceName)
  const identity=post.sourceAvatar??sourceAvatar
- const age=Math.max(0,Math.floor((Date.now()-post.publishedAt)/60000)),relative=age<1?uiText('now'):age<60?age+'m':age<1440?Math.floor(age/60)+'h':new Date(post.publishedAt).toLocaleDateString(interfaceLocale(),{month:'short',day:'numeric'}),handle=post.authorUrl?.match(post.plugin==='youtube'?/youtube\.com\/@([^/?#]+)/:/(?:x\.com|twitter\.com)\/@?([^/?#]+)/)?.[1]
+ const age=Math.max(0,Math.floor((Date.now()-post.publishedAt)/60000)),relative=age<1?uiText('now'):age<60?age+'m':age<1440?Math.floor(age/60)+'h':new Date(post.publishedAt).toLocaleDateString(interfaceLocale(),{month:'short',day:'numeric'}),handle=post.authorUrl?.match(post.plugin==='youtube'?/youtube\.com\/@([^/?#]+)/:/(?:x\.com|twitter\.com)\/@?([^/?#]+)/)?.[1],community=post.plugin==='reddit'&&post.sourceName?formatChannelAuthor('reddit',post.sourceName):undefined,showCommunity=!!community&&community.toLowerCase()!==author.toLowerCase()
  const mediaIds=JSON.stringify(photos.map(media=>media.id)),galleryPhoto=gallery?.mediaIds===mediaIds?photos[gallery.index]:undefined
  // The viewer snapshots its album. Close it when refreshed news changes that album.
  useEffect(()=>{setGallery(current=>current&&current.mediaIds!==mediaIds?null:current)},[mediaIds])
  const expand=async()=>{if(expanded){setExpanded(false);return}if(!post.bodyTruncated){setExpanded(true);return}try{const value=await api.call<ChannelPost>('channel.post',{id:post.id});if(alive.current){onChanged(value);setExpanded(true);setError('')}}catch(cause){if(alive.current)setError((cause as Error).message)}}
  const photoGrid=!!photos.length&&<div className="channel-news-images" data-count={Math.min(photos.length,4)}>{(fullContent?photos:photos.slice(0,4)).map((media,index)=><button key={media.id} ref={element=>{if(element)buttons.current.set(media.id,element);else buttons.current.delete(media.id)}} aria-label={uiText('Preview {0}',[media.name])} onClick={()=>setGallery({index,mediaIds})}><ChannelImage channelId={post.channelId} postId={post.id} mediaId={media.id} alt={media.name} maxEdge={postMode&&post.plugin==='youtube'?960:1280} onReady={src=>images.current.set(media.id,src)} onRelease={()=>images.current.delete(media.id)}/>{!fullContent&&index===3&&photos.length>4&&<span className="channel-image-more">+{photos.length-4}</span>}</button>)}</div>
  return <article className={'channel-news-card'+(documents.length?' telegram-document-message':'')} data-platform={post.plugin} data-telegram-album={post.telegram?.groupId} data-news-id={post.id}>
-  <header><button className="channel-author" aria-label={uiText('Author information {0}',[author])} onClick={()=>onAuthor(post.sourceId)}><span className="channel-author-avatar">{post.plugin!=='telegram'&&post.avatarMediaId?<ChannelImage channelId={post.channelId} postId={post.id} mediaId={post.avatarMediaId} alt="" maxEdge={96}/>:<ChannelAvatar social kind={post.plugin} avatar={identity?.sourceId===post.sourceId?identity:undefined} name={author}/>}</span><span><strong>{author}</strong><small>{postMode&&handle?'@'+handle:channelPlatform(post.plugin)}<b>·</b><time dateTime={new Date(post.publishedAt).toISOString()} title={formatMessageDateTime(post.publishedAt,true)}>{postMode?relative:formatMessageDateTime(post.publishedAt)}</time></small></span></button></header>
+  <header><button className="channel-author" aria-label={uiText('Author information {0}',[author])} onClick={()=>onAuthor(post.sourceId)}><span className="channel-author-avatar">{post.plugin!=='telegram'&&post.avatarMediaId?<ChannelImage channelId={post.channelId} postId={post.id} mediaId={post.avatarMediaId} alt="" maxEdge={96}/>:<ChannelAvatar social kind={post.plugin} avatar={identity?.sourceId===post.sourceId?identity:undefined} name={author}/>}</span><span><strong>{author}</strong><small>{postMode?showCommunity?community:handle?'@'+handle:channelPlatform(post.plugin):<>{channelPlatform(post.plugin)}{showCommunity&&<><b>·</b>{community}</>}</>}<b>·</b><time dateTime={new Date(post.publishedAt).toISOString()} title={formatMessageDateTime(post.publishedAt,true)}>{postMode?relative:formatMessageDateTime(post.publishedAt)}</time></small></span></button></header>
   {fullContent&&photoGrid}
   {post.title&&!(post.files?.length===1&&post.files[0].name===post.title)&&<h2>{post.title}</h2>}
   {!!documents.length&&<div className="channel-news-documents">{documents.map(({post:owner,file})=><ChannelDocument key={owner.id+'/'+file.id} postId={owner.id} channelId={owner.channelId} file={file} preview={file.thumbnailMediaId?<ChannelImage channelId={owner.channelId} postId={owner.id} mediaId={file.thumbnailMediaId} alt=""/>:undefined} onSaved={()=>owner.id===post.id&&void api.call<ChannelPost>('channel.post',{id:post.id}).then(onChanged)}/>)}</div>}

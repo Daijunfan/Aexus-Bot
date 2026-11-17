@@ -11,8 +11,7 @@ let terminal
 try{
   const info=await rpc('system.info')
   assert.equal(info.os,process.platform==='darwin'?'macos':process.platform==='win32'?'windows':'linux')
-  await f.cli('group','add','Platform Team')
-  const employee=await f.create('Unicode 员工','Platform Team')
+  const employee=await f.create('Unicode 员工')
   assert.ok(fs.statSync(employee.cwd).isDirectory());pass('Core-host OS, IPC and Unicode workspace')
   const token=await f.token(employee.id)
   assert.equal((await f.call(token,'auth','whoami')).principal.employeeId,employee.id)
@@ -37,11 +36,13 @@ try{
   catch(error){throw Error((error.message??String(error))+'; terminal tail='+JSON.stringify(terminalOutput.slice(-2000)))}
   await rpc('terminal.close',{id:terminal.id});terminal=undefined;pass('real interactive terminal input, resize and cleanup')
   const plugins=await rpc('plugin.list')
-  for(const id of ['cloud-hosts','mininotion','margin-reader']){
-    assert.ok(plugins.some(p=>p.id===id),'Missing bundled plugin '+id)
-    const view=await rpc('plugin.open',{id});assert.ok(view.url);await rpc('plugin.dismiss',{id:view.id})
-  }
-  pass('all three bundled plugin runtimes open and close without a desktop')
+  for(const id of ['mininotion','cloud-hosts','margin-reader'])assert.ok(!plugins.some(p=>p.id===id),'retired bundled plugin must be removed: '+id)
+  const readerStatus=await rpc('reader.status');assert.ok(readerStatus.root)
+  const readerView=await rpc('reader.open');assert.ok(readerView.url);await rpc('reader.close',{id:readerView.id})
+  const ov=await rpc('library.overview');assert.equal(ov.domains.length,7);assert.ok(ov.reader.root)
+  assert.ok(Array.isArray(await rpc('host.list')))
+  assert.ok((await rpc('notebook.status')).root)
+  pass('built-in Library Study Reader, Cloud Hosts and Mission Notebook open cleanly without a desktop')
   await f.stop();await f.start()
   assert.equal((await rpc('workspace.read',{employee:employee.id,path:filename})).content,text)
   assert.ok(JSON.stringify(await f.cli('session','transcript','--employee',employee.id)).includes('VISIBLE_REPLY'))

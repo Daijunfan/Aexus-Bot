@@ -2,20 +2,20 @@ import {isSupervisor} from '../shared/roles'
 import {type CurrentTask,type ManagementActivity,type ManagementInteraction,type RequestContext} from '../shared/management'
 import {readStore} from './store'
 import {canControl,callerEmployee,isGlobal,requestContext,validateDelegation} from './authorization'
-import {connectorKey} from '../shared/connector'
+const edgeKey=(managerId:string,employeeId:string)=>`${managerId}>${employeeId}`
 
 const current=new Map<number,ManagementInteraction>()
 const tasks=new Map<string,{task:CurrentTask;interaction:ManagementInteraction}>()
 const communicationCommands=new Set(['session.send','session.enqueue','session.steer','session.interrupt','session.follow'])
 let revision=0,sequence=0,emit:(snapshot:ManagementActivity)=>void=()=>{}
-const snapshot=():ManagementActivity=>({revision,interactions:[...new Map([...current.values(),...Array.from(tasks.values(),value=>value.interaction)].map(value=>[connectorKey(value.managerId,value.employeeId),value])).values()].map(value=>({...value,highlighted:(highlights.get(connectorKey(value.managerId,value.employeeId))??0)>performance.now()}))})
+const snapshot=():ManagementActivity=>({revision,interactions:[...new Map([...current.values(),...Array.from(tasks.values(),value=>value.interaction)].map(value=>[edgeKey(value.managerId,value.employeeId),value])).values()].map(value=>({...value,highlighted:(highlights.get(edgeKey(value.managerId,value.employeeId))??0)>performance.now()}))})
 // A short communication highlight is independent of the real task/subscription lifetime.
 const HIGHLIGHT_MS=600,highlights=new Map<string,number>()
 let highlightTimer:ReturnType<typeof setTimeout>|undefined
-const highlight=(managerId:string,employeeId:string)=>highlights.set(connectorKey(managerId,employeeId),performance.now()+HIGHLIGHT_MS)
+const highlight=(managerId:string,employeeId:string)=>highlights.set(edgeKey(managerId,employeeId),performance.now()+HIGHLIGHT_MS)
 function changed(){
   clearTimeout(highlightTimer);highlightTimer=undefined
-  const active=new Set([...current.values(),...Array.from(tasks.values(),value=>value.interaction)].map(value=>connectorKey(value.managerId,value.employeeId))),now=performance.now()
+  const active=new Set([...current.values(),...Array.from(tasks.values(),value=>value.interaction)].map(value=>edgeKey(value.managerId,value.employeeId))),now=performance.now()
   for(const [key,until] of highlights)if(!active.has(key)||until<=now)highlights.delete(key)
   // One deadline timer, no per-frame polling or persistent state writes.
   if(highlights.size)highlightTimer=setTimeout(changed,Math.max(1,Math.min(...highlights.values())-now)).unref()
@@ -55,15 +55,13 @@ export function pruneManagementActivity(){
   }
   if(removed)changed()
 }
-export function managementActivity(team?:string):ManagementActivity{
+export function managementActivity():ManagementActivity{
   const context=requestContext(),global=isGlobal(context.principal),caller=callerEmployee(context.principal),store=readStore()
-  if(!global&&team&&team!==caller!.group)throw Error('Forbidden Team')
-  if(team&&!store.groups.includes(team))throw Error('Unknown Team')
   const cards=new Map(store.sessions.filter(card=>!card.deleting).map(card=>[card.id,card]))
   return {revision,interactions:snapshot().interactions.filter(value=>{
     const from=cards.get(value.managerId),to=cards.get(value.employeeId)
-    if(!from||!to||team&&(from.group!==team||to.group!==team))return false
-    return global||from.group===caller!.group&&to.group===caller!.group&&(isSupervisor(caller!.managementRole)||to.id===caller!.id)
+    if(!from||!to)return false
+    return global||isSupervisor(caller!.managementRole)&&canControl(context.principal,to.id)||to.id===caller!.id
   })}
 }
 

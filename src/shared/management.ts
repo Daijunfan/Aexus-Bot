@@ -8,7 +8,7 @@ export type ManagementRelation={id:string;managerId:string;employeeId:string;sta
 export type ManagementBinding=Omit<ManagementRelation,'state'|'approvedBy'|'origin'>&{enabled:boolean}
 /** Version 1 fields remain readable only for one-time migration; version 2 uses employee roles. */
 export type ManagementAccess={managerTeam?:string;version:1|2;revision:number;globalManagerIds:string[];globalGrants?:Record<string,string>;relations:ManagementRelation[];bindings?:ManagementBinding[]}
-export type ManagedIdentity={id:string;group:string;kind?:string;managementRole?:ManagementRole;deleting?:boolean}
+export type ManagedIdentity={id:string;group?:string;kind?:string;managementRole?:ManagementRole;deleting?:boolean}
 export const emptyAccess=():ManagementAccess=>({version:2,revision:0,globalManagerIds:[],relations:[]})
 
 /** Lines are provenance only. User-created employees have no line. */
@@ -16,7 +16,7 @@ export function creationRelations(cards:Array<ManagedIdentity&{createdBy?:Princi
   const byId=new Map(cards.map(card=>[card.id,card]))
   return cards.flatMap(employee=>{
     const source=employee.createdBy?.kind==='agent'?byId.get(employee.createdBy.employeeId):undefined
-    if(!source||source.deleting||employee.deleting||!rolePolicy(source.managementRole).creates.includes(employee.managementRole??'employee')||(source.group!==employee.group&&rolePolicy(source.managementRole).scope!=='global')||source.id===employee.id)return []
+    if(!source||source.deleting||employee.deleting||!rolePolicy(source.managementRole).creates.includes(employee.managementRole??'employee')||source.id===employee.id)return []
     return [{id:'created-'+employee.id,managerId:source.id,employeeId:employee.id,state:'active' as const,requestedBy:employee.createdBy!,createdAt:employee.createdAt,updatedAt:employee.createdAt}]
   })
 }
@@ -32,7 +32,7 @@ export function managementRelations(cards:Parameters<typeof creationRelations>[0
     const source=nodes.get(binding.managerId),target=nodes.get(binding.employeeId)
     if(!source||!target||source.deleting||target.deleting||source.id===target.id)continue
     const policy=rolePolicy(source.managementRole)
-    if(!policy.controls.includes(target.managementRole??'employee')||(policy.scope!=='global'&&source.group!==target.group))continue
+    if(!policy.controls.includes(target.managementRole??'employee'))continue
     // Rebinding an original creator keeps the historical edge ID and provenance.
     if(!edges.has(key))edges.set(key,{id:binding.id,managerId:source.id,employeeId:target.id,state:'active',requestedBy:binding.requestedBy,createdAt:binding.createdAt,updatedAt:binding.updatedAt,origin:'binding'})
   }
@@ -47,12 +47,9 @@ export function hasGlobalRole(_access:ManagementAccess|undefined,card:ManagedIde
   return !!card&&!card.deleting&&rolePolicy(card.managementRole).scope==='global'
 }
 
-export type CurrentTask={messageId:string;delegation:Delegation;startedAt:number;runId?:string;viewId?:string;sourceView?:import('./message-source').MessageSourceView;directMessageId?:string;chat?:import('./chat-groups').SharedTaskContext}
+export type CurrentTask={messageId:string;delegation:Delegation;startedAt:number;runId?:string;sourceView?:import('./message-source').MessageSourceView;directMessageId?:string;chat?:import('./chat-groups').SharedTaskContext}
 
 /** Live communication or a running task with authenticated delegation; never completed-call replay.
  * highlighted is a short visual cue, independent of this record's actual lifetime. */
 export type ManagementInteraction={managerId:string;employeeId:string;command:string;requestId:string;startedAt:number;kind?:'request'|'task';messageId?:string;highlighted?:boolean}
 export type ManagementActivity={revision:number;interactions:ManagementInteraction[]}
-
-/** Team permissions are computed from the complete roster, never a filtered list of employee nodes. */
-export type ManagementTeam={name:string;mode:'work'|'build'|'cloud';hostId?:string;hostName?:string;os:string;distribution?:string;directory?:string;isOwnTeam:boolean;employeeCount:number;governorIds:string[];allowedActions:Array<'delete'>;deleteBlockedReason:string|null}

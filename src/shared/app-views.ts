@@ -1,6 +1,6 @@
 /** Presentation modes share the same employees, histories, receipts and Core APIs. */
 export const APP_VIEWS = [
-  {id:'company', label:'Team', icon:'organization', kind:'home', defaultTeamView:'all'},
+  {id:'library', label:'Library', icon:'library', kind:'library'},
   {id:'messages', label:'Message', icon:'comment-discussion', kind:'messages'},
   {id:'plan', label:'Mission', icon:'calendar', kind:'plan'}
 ] as const

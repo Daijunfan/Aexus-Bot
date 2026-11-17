@@ -4,7 +4,7 @@ import {TeamOSIcon} from '../office/TeamOSIcon'
 import {EmployeePortrait} from './EmployeePortrait'
 import {Icon} from './Icon'
 import {translate as t} from '../i18n'
-export const assetOwnerLine=(node:AssetNode)=>[node.owner?.view?t(node.owner.view):undefined,node.owner?.conversationName??node.owner?.team,!(node.directory&&(node.kind==='member'||node.kind==='employee'))?node.owner?.employeeName:undefined,...(!node.owner?.team&&!node.owner?.conversationName&&!node.owner?.employeeName&&node.owner?.label?[t(node.owner.label)]:[])].filter((value,index,all)=>value&&all.indexOf(value)===index).join(' · ')
+export const assetOwnerLine=(node:AssetNode)=>[node.owner?.view?t(node.owner.view):undefined,node.owner?.conversationName,!(node.directory&&(node.kind==='member'||node.kind==='employee'))?node.owner?.employeeName:undefined,...(!node.owner?.conversationName&&!node.owner?.employeeName&&node.owner?.label?[t(node.owner.label)]:[])].filter((value,index,all)=>value&&all.indexOf(value)===index).join(' · ')
 export function AssetHostBadge({node}:{node:AssetNode}){
  if(!node.host&&!node.storage)return null
  const remote=node.storage==='remote'||node.storage==='cloud',label=remote?node.host?.name??t('Remote host'):t('Local'),os=node.host?.os

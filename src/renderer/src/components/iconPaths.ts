@@ -94,5 +94,9 @@ Object.assign(iconPaths,{
  'link-external':'M14 3h7v7M21 3 11 13M10 3H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-6',
  'device-desktop':'M3 3h18v13H3zM8 21h8M12 16v5',
  'loading':'M21 12a9 9 0 1 1-9-9',
- 'zoom-in':'M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0m-2 5 6 6M7 10h6M10 7v6'
+ 'zoom-in':'M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0m-2 5 6 6M7 10h6M10 7v6',
+ 'book':'M4 5a2 2 0 0 1 2-2h5v17H6a2 2 0 0 0-2 2V5Zm16 0a2 2 0 0 0-2-2h-5v17h5a2 2 0 0 1 2 2V5Z',
+ 'pie-chart':'M21.2 15.9A10 10 0 1 1 8.1 2.8M12 2v10h10a10 10 0 0 0-10-10Z',
+ 'server-environment':iconPaths.server,
+ 'agent-conversation':'M5 4.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-4 3v-3H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2M7.5 8.5l2.5 2-2.5 2M12.5 12.5h4'
 })

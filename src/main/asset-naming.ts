@@ -43,7 +43,7 @@ export async function assetNaming(args:{id?:string;apply?:boolean},close:(ids:st
  }
  const plan=plans.get(args.id??'');if(!plan)throw Error('Preview the directory migration first')
  if(plan.fingerprint!==fingerprint(mounts))throw Error('Workspace bindings changed; regenerate the migration preview')
- const initialStore=readStore(),cards=initialStore.sessions.filter(card=>plan.local.renames.some(item=>card.cwd===item.from||card.cwd.startsWith(item.from+path.sep)||item.from.startsWith(card.cwd+path.sep))||plan.remote.some(item=>item.plan.renames?.length&&card.group===item.mount.owner.team))
+ const initialStore=readStore(),cards=initialStore.sessions.filter(card=>plan.local.renames.some(item=>card.cwd===item.from||card.cwd.startsWith(item.from+path.sep)||item.from.startsWith(card.cwd+path.sep))||plan.remote.some(item=>item.plan.renames?.length&&item.mount.owner.employee===card.id))
  await close(cards.map(card=>card.id))
  if(plan.fingerprint!==fingerprint(assetCatalog().mounts))throw Error('Workspace bindings changed; regenerate the migration preview')
  const store=readStore()
@@ -65,9 +65,8 @@ export async function assetNaming(args:{id?:string;apply?:boolean},close:(ids:st
   if(rows.length){fs.mkdirSync(path.join(next,'.agents-company'),{recursive:true});atomicJson(path.join(next,'.agents-company/directory-renames.json'),{version:1,aliases:[...aliases,...rows]})}
  }
  for(const [id,{file,data}]of oldMetadata){const mount=plan.mounts.find(mount=>mount.id===id)!,next=migratedPath(mount.root,plan.local);data.folderName=path.basename(next);for(const member of Object.keys(data.members))data.members[member]=path.relative(next,migratedPath(path.join(mount.root,data.members[member]),plan.local));atomicJson(file,data)}
- for(const [team,root]of Object.entries(store.teamRoots??{}))store.teamRoots![team]=migratedPath(root,plan.local)
- for(const card of store.sessions){card.cwd=migratedPath(card.cwd,plan.local);if(card.localWorkspaceRoot)card.localWorkspaceRoot=migratedPath(card.localWorkspaceRoot,plan.local)}
- for(const result of remoteResults){const mount=plan.mounts.find(mount=>mount.id===result.id)!,team=mount.owner.team!;const settings=store.teamSettings?.[team];if(settings?.remote){const original=settings.remote.directory;settings.remote.directory=result.root;store.teamRoots![team]=result.root;for(const card of store.sessions.filter(card=>card.group===team&&card.workEnvironment!=='local')){for(const item of result.paths??[])if(card.cwd===item.fromPath||card.cwd.startsWith(item.fromPath+'/'))card.cwd=item.toPath+card.cwd.slice(item.fromPath.length);if(card.cwd.startsWith(original+'/'))card.cwd=result.root+card.cwd.slice(original.length)}}}
+ for(const card of store.sessions){card.cwd=migratedPath(card.cwd,plan.local)}
+ for(const result of remoteResults){const mount=plan.mounts.find(mount=>mount.id===result.id)!,employeeId=mount.owner.employee;const card=employeeId?store.sessions.find(c=>c.id===employeeId):undefined;if(card&&card.workspaceMode==='cloud'){const original=card.remoteRoot??card.cwd;card.remoteRoot=result.root;for(const item of result.paths??[])if(card.cwd===item.fromPath||card.cwd.startsWith(item.fromPath+'/'))card.cwd=item.toPath+card.cwd.slice(item.fromPath.length);if(card.cwd.startsWith(original+'/'))card.cwd=result.root+card.cwd.slice(original.length)}}
  writeStore(store);assetIndex.invalidate();plans.delete(plan.id)
  const report={id:plan.id,applied:true,local,remote:remoteResults,backup,identitiesPreserved:true,compatibilityLinks:true};atomicJson(path.join(backup,'result.json'),report);return report
  }catch(error){

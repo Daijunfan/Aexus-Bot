@@ -20,16 +20,34 @@
 
 /* Official artwork owns its silhouette; source photos keep the platform's native shape. */
 :root .channel-avatar{border:0;box-shadow:none;padding:0}
-:root .channel-avatar:is([data-avatar-kind=brand],[data-avatar-kind=custom]){border-radius:0;background:transparent;overflow:visible}
-:root .channel-avatar[data-avatar-kind=photo]{border-radius:50%;background:transparent}
-:root .channel-avatar[data-avatar-kind=photo][data-platform=linkedin]{border-radius:0}
+:root .channel-avatar.channel-avatar:is([data-avatar-kind=brand],[data-avatar-kind=custom]){border-radius:0;background:transparent;border:0;box-shadow:none;overflow:visible}
+:root .channel-avatar.channel-avatar[data-avatar-kind=placeholder]{border-radius:50%}
+:root .channel-avatar[data-avatar-kind=photo]{border-radius:50%;background:transparent;overflow:hidden}
+:root .channel-avatar[data-avatar-kind=photo][data-platform=linkedin]{border-radius:18%}
+:root .channel-avatar[data-avatar-kind=photo]>.channel-identity-image{object-fit:cover}
 :root .channel-avatar>.channel-brand-icon{pointer-events:none;object-fit:contain;max-width:none;max-height:none}
-:root .channel-avatar>.channel-brand-x{width:82%;height:82%;background:var(--fg);mask-size:contain;mask-repeat:no-repeat;mask-position:center}
+:root .channel-avatar[data-platform=linkedin]>.channel-brand-icon{border-radius:18%}
+:root .channel-avatar[data-platform=zhihu]>.channel-brand-icon{border-radius:22.4%}
+:root .channel-avatar>.channel-brand-x{width:78%;height:78%;background:var(--fg);mask-size:contain;mask-repeat:no-repeat;mask-position:center}
 .app .message-contact.selected .channel-brand-x{background:var(--button-ink,#fff)}
-:root .channel-avatar[data-platform=youtube]>.channel-brand-icon{width:145%;height:145%}
+:root .channel-avatar[data-platform=youtube]>.channel-brand-icon{width:100%;height:100%;box-sizing:border-box;border-radius:22.4%;background:#fff;border:1px solid rgba(15,23,42,.11);box-shadow:0 1px 3px rgba(15,23,42,.08)}
+.app .message-contact.selected .channel-avatar[data-platform=youtube]>.channel-brand-icon{border-color:rgba(255,255,255,.32);box-shadow:0 1px 4px rgba(15,23,42,.16)}
+:root .channel-avatar[data-avatar-kind=placeholder][data-avatar-tone]{color:#fff;text-shadow:0 1px 1px rgba(15,23,42,.16)}
+:root .channel-avatar[data-avatar-kind=placeholder][data-avatar-tone="0"]{background:linear-gradient(145deg,#ff6b3d,#ea4317)}
+:root .channel-avatar[data-avatar-kind=placeholder][data-avatar-tone="1"]{background:linear-gradient(145deg,#4f8ff7,#2563eb)}
+:root .channel-avatar[data-avatar-kind=placeholder][data-avatar-tone="2"]{background:linear-gradient(145deg,#2dd4bf,#0d9488)}
+:root .channel-avatar[data-avatar-kind=placeholder][data-avatar-tone="3"]{background:linear-gradient(145deg,#9f67ff,#7c3aed)}
+:root .channel-avatar[data-avatar-kind=placeholder][data-avatar-tone="4"]{background:linear-gradient(145deg,#f59e0b,#d97706)}
+:root .channel-avatar[data-avatar-kind=placeholder][data-avatar-tone="5"]{background:linear-gradient(145deg,#fb7185,#e11d48)}
+:root .channel-avatar[data-avatar-kind=placeholder][data-avatar-tone="6"]{background:linear-gradient(145deg,#38bdf8,#0284c7)}
+:root .channel-avatar[data-avatar-kind=placeholder][data-avatar-tone="7"]{background:linear-gradient(145deg,#34d399,#059669)}
+:root .channel-header-avatar:has(>.channel-avatar[data-avatar-kind=brand]){border-radius:0;overflow:visible}
 :root .channel-author-avatar{background:transparent;border:0;box-shadow:none;border-radius:50%}
 :root .channel-author-avatar>.channel-local-image{background:transparent;border-radius:inherit}
 :root .channel-author-avatar>.channel-local-image img{object-fit:contain}
-:root [data-platform=linkedin] .channel-author-avatar{border-radius:0}
+:root [data-platform=linkedin] .channel-author-avatar{border-radius:18%}
 :root :is(.channel-author-avatar,.channel-profile-avatar,.channel-profile-picture):has(>.channel-avatar){background:transparent;border:0;border-radius:0;box-shadow:none;overflow:visible}
 :root .channel-source-avatar:has(>.channel-avatar[data-avatar-kind=brand]){border-radius:0;overflow:visible}
+:root :is(.message-user-avatar,.message-former-avatar):not(:has(.employee-portrait)){border-radius:50%}
+.message-sidebar .message-list-heading>.message-profile-open{border:0;border-radius:50%;background:transparent}
+.group-avatar:not(.group-portrait-single):not(.group-portrait-grid):not(.bot-group-avatar){border-radius:50%}

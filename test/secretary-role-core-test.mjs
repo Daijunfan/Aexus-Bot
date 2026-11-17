@@ -30,8 +30,7 @@ const stop=()=>{if(closing)return;closing=true;void started.then(async app=>{con
  }else await build({entryPoints:[path.join(root,'src/main/daemon.ts')],outfile:entry,bundle:true,platform:'node',format:'cjs',target:'node22',packages:'external',define:{__AGENTS_PROJECT_ROOT__:JSON.stringify(root)},logLevel:'silent'})
  f=await fixtureCore(overrides,entry)
  const rpc=async(cmd,args={},auth=null)=>{const response=await f.request(auth,cmd,args);assert.ok(response.ok,response.error);return response.data},deny=async(auth,cmd,args={})=>{const response=await f.request(auth,cmd,args);assert.equal(response.ok,false,cmd+' must remain forbidden');return response.error}
- for(const name of ['A','B','Disposable'])await rpc('group.add',{name})
- const secretary=await f.create('Application helper','A','secretary'),worker=await f.create('Worker','A'),manager=await f.create('Manager','A','manager'),governor=await f.create('Governor','B','governor'),named=await f.create('Secretary','B','governor'),other=await f.create('Other worker','B')
+ const secretary=await f.create('Application helper','secretary'),worker=await f.create('Worker'),manager=await f.create('Manager','manager'),governor=await f.create('Governor','governor'),named=await f.create('Secretary','governor'),other=await f.create('Other worker')
  const token=await f.token(secretary.id),workerToken=await f.token(worker.id),managerToken=await f.token(manager.id),governorToken=await f.token(governor.id),namedToken=await f.token(named.id)
  const roles=await rpc('management.roles'),policy=roles.find(role=>role.value==='secretary'),who=await rpc('auth.whoami',{},token),read=JSON.parse(fs.readFileSync(path.join(f.control,secretary.id+'-read.json'),'utf8'))
  assert.deepEqual(roles.map(role=>role.value),['employee','manager','governor','secretary']);assert.equal(policy.appAdministrator,true);assert.equal(policy.requiresLocal,true);assert.equal(policy.userManaged,true)
@@ -62,16 +61,15 @@ const stop=()=>{if(closing)return;closing=true;void started.then(async app=>{con
   await deny(auth,'card.remove',{ids:[secretary.id]});await deny(auth,'session.send',{employee:secretary.id,text:'No upward delegation'})
   const ownGroup=await rpc('chat.create',{name:'Self-owned '+actor.id,members:[actor.id]},auth);assert.equal(ownGroup.ownerId,actor.id);await rpc('chat.delete',{id:ownGroup.id},auth);await deny(auth,'channel.create',{name:'Forbidden channel'})
  }
- for(const [cmd,args] of [['card.create',{title:'Peer secretary',group:'A',managementRole:'secretary'}],['card.management-role',{id:secretary.id,role:'employee'}],['card.remove',{ids:[secretary.id]}],['group.remove',{name:'A'}]])await deny(token,cmd,args)
- await deny(governorToken,'card.create',{title:'Peer Governor',group:'B',managementRole:'governor'});await deny(governorToken,'card.management-role',{id:named.id,role:'employee'});await deny(governorToken,'card.remove',{ids:[named.id]});await deny(managerToken,'card.remove',{ids:[other.id]})
+ for(const [cmd,args] of [['card.create',{title:'Peer secretary',engine:'codex',managementRole:'secretary'}],['card.management-role',{id:secretary.id,role:'employee'}],['card.remove',{ids:[secretary.id]}]])await deny(token,cmd,args)
+ await deny(governorToken,'card.create',{title:'Peer Governor',engine:'codex',managementRole:'governor'});await deny(governorToken,'card.management-role',{id:named.id,role:'employee'});await deny(governorToken,'card.remove',{ids:[named.id]});await deny(managerToken,'card.remove',{ids:[governor.id]})
  assert.deepEqual(await identity(),initial)
  checks.push('Real Secretary identity/initialization declares software administration; names confer no role; lower roles and Secretary itself cannot grant or remove the protected Secretary role, and prior Governor/Manager boundaries remain')
 
- const child=await rpc('card.create',{title:'Managed Governor',group:'Disposable',engine:'codex',model:'gpt-6-luna',managementRole:'governor'},token);await f.ready(child.id);assert.deepEqual(child.createdBy,{kind:'agent',employeeId:secretary.id})
+ const child=await rpc('card.create',{title:'Managed Governor',engine:'codex',model:'gpt-6-luna',managementRole:'governor'},token);await f.ready(child.id);assert.deepEqual(child.createdBy,{kind:'agent',employeeId:secretary.id})
  await rpc('card.management-role',{id:child.id,role:'manager'},token);assert.equal((await rpc('session.list')).sessions.find(card=>card.id===child.id).managementRole,'manager')
- await rpc('card.management-role',{id:child.id,role:'governor'},token);await rpc('card.remove',{ids:[child.id]},token);assert.ok(fs.existsSync(child.cwd));await rpc('group.remove',{name:'Disposable'},token)
- const view=await rpc('team-view.create',{name:'Only B',teams:['B']},token);await rpc('team-view.select',{id:view.id},token)
- assert.deepEqual((await rpc('management.topology',{},token)).teams.map(team=>team.name).sort(),['A','B'])
+ await rpc('card.management-role',{id:child.id,role:'governor'},token);await rpc('card.remove',{ids:[child.id]},token);assert.ok(fs.existsSync(child.cwd))
+ assert.equal((await rpc('management.topology',{},token)).nodes.length,initial.length)
  await rpc('session.send',{employee:secretary.id,text:'A bounded application administration request.'});await f.until(async()=>!(await f.status(secretary.id)).busy,'Secretary administration turn')
  const nativeWork=()=>JSON.parse(fs.readFileSync(path.join(f.control,secretary.id+'-work.json'),'utf8')).text,roleHeader=()=>{const value=nativeWork().split('[Aexus context update]\n')[1];if(!value)return;const {employeeId,managementRole}=JSON.parse(value.split('\n')[0]);return {employeeId,managementRole}}
  assert.equal((await f.status(secretary.id)).currentTask.viewId,undefined);assert.ok(!nativeWork().includes('[Aexus target view]'));assert.equal(roleHeader(),undefined);assert.ok(!nativeWork().includes('delivery contract'))
@@ -102,9 +100,9 @@ const stop=()=>{if(closing)return;closing=true;void started.then(async app=>{con
  await rpc('messenger.conversation',{conversations:['employee:'+worker.id],patch:{archived:true}},token);assert.equal((await rpc('messenger.state',{},token)).conversations['employee:'+worker.id].archived,true)
  checks.push('Secretary manages groups and channels without joining; reading grants are explicit for other employees; pure news feeds reject discussion writes and actual Agent authorship is retained')
 
- const pluginCall=(id,method,params={},auth=token)=>rpc('plugin.call',{id,method,params},auth)
- const page=await pluginCall('mininotion','page.create',{title:'Global Secretary note',color:'white'});await pluginCall('mininotion','page.write-markdown',{pageId:page.id,markdown:'# Verified administration\n\nWritten through the real plugin API.'});assert.match((await pluginCall('mininotion','page.read-markdown',{pageId:page.id})).markdown,/Written through the real plugin API/)
- assert.ok(await pluginCall('margin-reader','system.info'));assert.ok(Array.isArray(await pluginCall('cloud-hosts','hosts.list')))
+ const pluginCall=(id,method,params={},auth=token)=>rpc('plugin.call',{id,method,params},auth),notebookCall=(method,params={},auth=token)=>rpc('notebook.call',{method,params},auth)
+ const page=await notebookCall('page.create',{title:'Global Secretary note',color:'white'});await notebookCall('page.write-markdown',{pageId:page.id,markdown:'# Verified administration\n\nWritten through the real notebook API.'});assert.match((await notebookCall('page.read-markdown',{pageId:page.id})).markdown,/Written through the real notebook API/)
+ assert.ok(await rpc('reader.call',{method:'system.info'},token));assert.ok(Array.isArray(await rpc('host.list',{},token)));const ov=await rpc('library.overview',{},token);assert.equal(ov.domains.length,7);assert.ok(ov.reader.root)
  const direct=await pluginCall(pluginId,'identity');assert.deepEqual(direct.principal,{kind:'agent',employeeId:secretary.id})
  const through=await pluginCall(pluginId,'create-chat',{name:'Plugin administered chat',members:[secretary.id,worker.id]});assert.ok((await rpc('chat.list',{},token)).some(value=>value.id===through.id));await deny(token,'plugin.call',{id:pluginId,method:'human-token',params:{id:secretary.id}})
  const pluginView=await rpc('plugin.view',{id:pluginId},token),viewRpc=async(method,params={})=>{const response=await fetch(new URL('./rpc',pluginView.url),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:method,method,params})});return response.json()}
@@ -114,7 +112,7 @@ const stop=()=>{if(closing)return;closing=true;void started.then(async app=>{con
 
  await rpc('card.management-role',{id:secretary.id,role:'governor'})
  assert.equal((await rpc('auth.whoami',{},token)).appAdministrator,false);await rpc('chat.update',{id:through.id,name:'Owned group after Company downgrade'},token);assert.deepEqual(await rpc('channel.sources',{},token),[]);await deny(token,'channel.sources',{channelId:destination.id});await deny(token,'channel.source-update',{id:x.id,patch:{enabled:false}})
- assert.ok((await viewRpc('identity')).error,'a view without content grants must lose the automatic Secretary exception');assert.ok((await viewRpc('create-chat',{name:'No stale Secretary grant',members:[worker.id]})).error);await deny(token,'plugin.call',{id:'mininotion',method:'page.get',params:{pageId:page.id}})
+ assert.ok((await viewRpc('identity')).error,'a view without content grants must lose the automatic Secretary exception');assert.ok((await viewRpc('create-chat',{name:'No stale Secretary grant',members:[worker.id]})).error);await deny(token,'notebook.call',{method:'page.get',params:{pageId:page.id}})
  await rpc('session.send',{employee:secretary.id,text:'Check the current explicit role after a user-approved downgrade.'});await f.until(async()=>!(await f.status(secretary.id)).busy,'downgraded native turn');assert.deepEqual(roleHeader(),{employeeId:secretary.id,managementRole:'governor'})
  await rpc('card.management-role',{id:secretary.id,role:'secretary'});assert.equal((await rpc('auth.whoami',{},token)).appAdministrator,true)
  await rpc('session.send',{employee:secretary.id,text:'Check the restored application administrator identity.'});await f.until(async()=>!(await f.status(secretary.id)).busy,'restored Secretary native turn');assert.deepEqual(roleHeader(),{employeeId:secretary.id,managementRole:'secretary'})

@@ -29,7 +29,7 @@ machine-readable protocols do not change with the interface language.
 - `test/language-coverage-test.mjs`: nonempty catalog entries, interpolation consistency,
   known literal call sites and explicit values on translated select options.
 
-Plugin-owned application interiors (MiniNotion, Margin Reader and Cloud Hosts) have their
+Plugin-owned application interiors (Margin Reader and Cloud Hosts) and the Mission Notebook canvas have their
 own renderers. Their language propagation/localization has not been accepted as part of
 this pass. Host controls are localized; this document does not claim those independent
 interfaces or operating-system dialogs are fully bilingual. The continuing product audit

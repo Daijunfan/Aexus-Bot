@@ -26,7 +26,7 @@ export function cloudHostCredentials(id:string,includeFiles=true){
   if(includeFiles){result.files={};for(const field of ['identityFile','knownHosts','sshConfig'] as const)if(host[field])result.files[field]={path:host[field],content:fs.readFileSync(host[field],'utf8')}}
   return result
 }
-export function getCloudHost(id:string){const host=load().find(h=>h.id===id);if(!host)throw new Error('云主机不存在，请到 Cloud Hosts 插件选择或添加主机');return publicHost(host)}
+export function getCloudHost(id:string){const host=load().find(h=>h.id===id);if(!host)throw new Error('云主机不存在，请到 Library 云主机工作台选择或添加主机');return publicHost(host)}
 export function cloudHostPassword(id:string){const host=load().find(h=>h.id===id);if(!host)throw new Error('Unknown cloud host');if(!host.secret)return '';const data=Buffer.from(host.secret,'base64'),decipher=createDecipheriv('aes-256-gcm',key(),data.subarray(0,12));decipher.setAuthTag(data.subarray(12,28));return Buffer.concat([decipher.update(data.subarray(28)),decipher.final()]).toString('utf8')}
 function fields(value:Record<string,any>,previous?:RecordHost):RecordHost{
   const data={...previous,...value},name=String(data.name??'').trim()
@@ -35,7 +35,9 @@ function fields(value:Record<string,any>,previous?:RecordHost):RecordHost{
   const {directory:defaultDirectory,credentialId:_credential,...connection}=target
   let vm=value.vm===null?undefined:value.vm?{...previous?.vm,...value.vm}:data.vm
   if(vm){if(!vm.hypervisorId||!vm.name||!vm.projectDirectory||!['running','stopped','paused','unknown'].includes(vm.state)||!['ssh','serial','rdp','unconfigured'].includes(vm.access))throw new Error('VM 需要 hypervisorId/name/projectDirectory/state/access');if(vm.hypervisorId===previous?.id)throw new Error('VM 不能以自己为宿主机');const parent=getCloudHost(vm.hypervisorId);remoteTarget({...parent,directory:vm.projectDirectory});vm={hypervisorId:vm.hypervisorId,name:String(vm.name),projectDirectory:String(vm.projectDirectory),state:vm.state,access:vm.access,...(vm.notes?{notes:String(vm.notes)}:{})}}
-  return {...connection,...(vm?{vm}:{}),id:previous?.id??randomUUID(),name,defaultDirectory,hasPassword:false,createdAt:previous?.createdAt??Date.now(),updatedAt:Date.now(),...(value.password===undefined?{secret:previous?.secret}:value.password?{secret:encrypt(String(value.password))}:{})}
+  const tags=Array.isArray(data.tags)?[...new Set(data.tags.map((tag:unknown)=>String(tag).trim()).filter(Boolean))].slice(0,24):previous?.tags
+  const notes=data.notes!==undefined?String(data.notes).trim().slice(0,2000):previous?.notes
+  return {...connection,...(vm?{vm}:{}),...(tags?.length?{tags}:{}),...(notes?{notes}:{}),id:previous?.id??randomUUID(),name,defaultDirectory,hasPassword:false,createdAt:previous?.createdAt??Date.now(),updatedAt:Date.now(),...(value.password===undefined?{secret:previous?.secret}:value.password?{secret:encrypt(String(value.password))}:{})}
 }
 export function createCloudHost(value:Record<string,any>){const hosts=load(),host=fields(value);if(host.vm&&hosts.some(h=>h.vm?.hypervisorId===host.vm!.hypervisorId&&h.vm?.name===host.vm!.name&&h.vm?.projectDirectory===host.vm!.projectDirectory))throw new Error('此虚拟机已登记，请更新现有记录');hosts.push(host);save(hosts);return publicHost(host)}
 export function updateCloudHost(id:string,patch:Record<string,any>){const hosts=load(),at=hosts.findIndex(h=>h.id===id);if(at<0)throw new Error('Unknown cloud host');hosts[at]=fields(patch,hosts[at]);save(hosts);return publicHost(hosts[at])}

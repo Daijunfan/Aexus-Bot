@@ -6,8 +6,8 @@ import {codeConfig} from './engines/opencode-config'
 import {engineExecutable} from './engines/executable'
 import {engineEnvironment,processProvider} from './engines/configuration'
 import {loadClaudeSdk} from './engines/claude-sdk'
-import {readStore,getPreferences} from './store'
-import {teamSettings,type Engine,type EmployeeKind,type ModelInfo} from '../shared/types'
+import {cloudHostTarget} from './cloud-hosts'
+import {type Engine,type EmployeeKind,type ModelInfo} from '../shared/types'
 import {allCodexModels} from './codex'
 import {withCodexSessionApi} from './native-sessions'
 import {deepSeekProvider,deepSeekModels,deepSeekModel,claudeModelCatalog} from './claude-provider'
@@ -25,15 +25,14 @@ export function defaultEmployeeModel(engine:Engine,kind:EmployeeKind='worker'){
 }
 
 /** Discover models without creating an employee or sending an inference turn. */
-export async function engineModels(engine:Engine,kind:EmployeeKind='worker',team?:string,selectedModel?:string){
+export async function engineModels(engine:Engine,kind:EmployeeKind='worker',hostId?:string,selectedModel?:string){
   if(!isEngine(engine))throw Error('请选择有效的 Coding Agent')
   if(!['worker','cloud-native-worker'].includes(kind))throw Error('Unknown employee kind')
   if(isNativeAcp(engine)){if(kind!=='worker')throw Error('This ACP engine currently supports Core-local employees only');return discoverNativeAcp(engine,selectedModel)}
   if(selectedModel!==undefined)throw Error('Selected-model metadata discovery is available for native ACP engines only')
   if(engine==='cline'||engine==='pi'){if(kind==='cloud-native-worker')throw Error('Use kind:worker for Cline/Pi cloud workspaces through Tunnel; cloud-native execution is not supported');return {models:(await (engine==='cline'?discoverCline():discoverPi())).models,defaultModel:defaultEmployeeModel(engine)}}
-  const store=readStore(),config=team?teamSettings(store,team):undefined
-  if(kind==='cloud-native-worker'&&(!team||!store.groups.includes(team)||config?.mode!=='cloud'||!config.remote))throw Error('请先选择已绑定云主机的 Cloud Team')
-  const remote=kind==='cloud-native-worker'?config!.remote:undefined
+  if(kind==='cloud-native-worker'&&!hostId)throw Error('请先选择已注册的云主机')
+  const remote=kind==='cloud-native-worker'?cloudHostTarget(hostId!):undefined
   const provider=engine==='claude'&&!remote?deepSeekProvider():undefined
   let models:ModelInfo[]
   if(engine==='codex')models=await withCodexSessionApi(allCodexModels,remote?{nativeRemote:remote}:{})

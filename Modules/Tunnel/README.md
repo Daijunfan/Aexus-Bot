@@ -19,7 +19,7 @@ Team 分为 Work、本地 Build、cloud 三类。仅 **cloud Team** 保存 SSH �
 员工选择 Team 后自动继承主机，不能覆盖连接配置。可使用 `user@IP` 或已有 SSH Host 别名。
 创建 Team 时检查已有云端根目录。员工默认生成同名子目录，也可绑定团队根目录或其已有子目录；支持嵌套。
 
-Work 插件团队（包括 MiniNotion）和本地 Build Team 继续使用本机目录。SSH 使用现有密钥或 ssh-agent，严格检查 known_hosts。
+本地 Build 员工与内置工作流笔记本继续使用本机目录。SSH 使用现有密钥或 ssh-agent，严格检查 known_hosts。
 `session.snapshot.cwd` 和终端显示实际工作目录；`workspace.* --team NAME/--employee ID`
 自动选择对应本地或云端文件系统，调用方无需拼 SSH。连接参数仅在 Team 中保存。
 没有项目文件的本地镜像，也不会在远端连接失败后回退到本地操作。

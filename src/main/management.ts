@@ -1,18 +1,16 @@
-import {applyManagementLayout} from '../shared/management-layout'
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {join} from 'node:path'
 import {APP_HOME} from '../shared/protocol'
-import {assertManagementKind,hasGlobalRole,managementRelations,emptyAccess,type ManagementRole,type PrincipalRef,type ManagementTeam} from '../shared/management'
+import {assertManagementKind,hasGlobalRole,managementRelations,emptyAccess,type ManagementRole,type PrincipalRef} from '../shared/management'
 import {readStore,updateStore,writeStore} from './store'
-import {employeeSettings,teamSettings} from '../shared/types'
-import {getCloudHost} from './cloud-hosts'
+import {employeeSettings} from '../shared/types'
 import {authorize,callerEmployee,isGlobal,isAppAdministrator,publicEmployee,canControl,requestContext} from './authorization'
 import {isManagementRole,isSupervisor,rolePolicy} from '../shared/roles'
 import {ensureEmployeeBootstrap} from './plugins/documents'
 
 export function initializeManagement(){
   const previous=readStore(),legacy=previous.access?.version!==2
-  const legacyGlobal=(card:typeof previous.sessions[number])=>legacy&&(previous.access?.globalManagerIds?.includes(card.id)||!!previous.access?.managerTeam&&card.group===previous.access.managerTeam)
+  const legacyGlobal=(card:typeof previous.sessions[number])=>legacy&&!!previous.access?.globalManagerIds?.includes(card.id)
   const remote=(card:typeof previous.sessions[number])=>card.kind==='cloud-native-worker'||employeeSettings(previous,card).mode==='cloud'
   const invalid=previous.sessions.some(card=>remote(card)&&rolePolicy(card.managementRole).requiresLocal)
   const changedLines=JSON.stringify(previous.access?.relations??[])!==JSON.stringify(managementRelations(previous.sessions,previous.access?.bindings))
@@ -25,25 +23,14 @@ export function initializeManagement(){
     else if(!remote(card)&&legacyGlobal(card))card.managementRole='governor'
   }
   delete store.access.managerTeam;store.access.globalManagerIds=[]
-  writeStore(store,{reconcileOffice:false})
+  writeStore(store)
 }
 
-export function managementTopology(team?:string,creator?:string,teamsOnly=false){
+export function managementTopology(creator?:string){
   const store=readStore(),principal=requestContext().principal,global=isGlobal(principal),caller=callerEmployee(principal),access=store.access??emptyAccess()
-  if(!global&&team&&team!==caller!.group)throw Error('Forbidden Team')
   if(creator!==undefined&&(typeof creator!=='string'||!creator.trim()))throw Error('Creator must be self, others, operator, unknown or an employee ID')
-  if(typeof teamsOnly!=='boolean')throw Error('teamsOnly must be boolean')
-  const teams:ManagementTeam[]=store.groups.filter(name=>(!team||name===team)&&(global||name===caller!.group)).map(name=>{
-    const members=store.sessions.filter(card=>card.group===name)
-    const config=teamSettings(store,name),host=config.hostId?getCloudHost(config.hostId):undefined
-    let deleteBlockedReason:string|null=null
-    try{authorize('group.remove',{name})}catch(error){deleteBlockedReason=(error as Error).message}
-    return {name,mode:config.mode,hostId:host?.id,hostName:host?.name,os:host?.os??(process.platform==='darwin'?'macos':process.platform==='win32'?'windows':'linux'),distribution:host?.distribution,directory:store.teamRoots?.[name],isOwnTeam:name===caller?.group,employeeCount:members.length,governorIds:members.filter(card=>card.managementRole==='governor').map(card=>card.id),allowedActions:deleteBlockedReason?[]:['delete'],deleteBlockedReason}
-  })
-  const summary={teams:teams.length,employees:teams.reduce((sum,item)=>sum+item.employeeCount,0),deletableTeams:teams.filter(item=>item.allowedActions.includes('delete')).length,blockedTeams:teams.filter(item=>!item.allowedActions.includes('delete')).length}
-  if(teamsOnly)return {revision:access.revision,team,teams,summary}
   const actions={read:'session.info',message:'session.send',configure:'config.model',delete:'card.remove',role:'card.management-role'}
-  const nodes=store.sessions.filter(c=>!c.deleting&&(!team||c.group===team)&&(global||c.group===caller!.group)).map(card=>{const config=employeeSettings(store,card);return {
+  const nodes=store.sessions.filter(c=>!c.deleting&&(global||canControl(principal,c.id)||c.id===caller!.id)).map(card=>{const config=employeeSettings(store,card);return {
     ...publicEmployee(card),
     workspace:{location:config.mode==='cloud'?'cloud':'local',hostId:config.hostId,os:config.remote?.os??(process.platform==='darwin'?'macos':process.platform==='win32'?'windows':'linux'),distribution:config.remote?.distribution,directory:card.cwd},
     createdByMe:card.createdBy?card.createdBy.kind===principal.kind&&(card.createdBy.kind==='operator'||principal.kind==='agent'&&card.createdBy.employeeId===principal.employeeId):null,
@@ -58,7 +45,7 @@ export function managementTopology(team?:string,creator?:string,teamsOnly=false)
     return node.createdBy?.kind==='agent'&&node.createdBy.employeeId===creator
   })
   const ids=new Set(nodes.map(node=>node.id)),relations=managementRelations(store.sessions,store.access?.bindings).filter(r=>ids.has(r.managerId)&&ids.has(r.employeeId)&&(global||isSupervisor(caller!.managementRole)||r.employeeId===caller!.id))
-  return {revision:access.revision,managerTeam:null,team,creator,teams,summary,nodes,edges:relations.filter(r=>r.state==='active'),pending:relations.filter(r=>r.state==='pending')}
+  return {revision:access.revision,creator,summary:{employees:nodes.length},nodes,edges:relations.filter(r=>r.state==='active'),pending:relations.filter(r=>r.state==='pending')}
 }
 const immutableCreationLine=()=>{throw Error('创建来源记录不可改写；旧申请和审批已停用。使用 management.bind / management.unbind 修改常驻连线，操作权限保持不变')}
 export const requestManagement=(_employee:string,_manager?:string)=>immutableCreationLine()
@@ -79,16 +66,3 @@ export function setGlobalManager(id:string,enabled:boolean){
 }
 
 export function creationAuthority(principal:PrincipalRef){return {managementRole:'employee' as const,createdBy:principal}}
-
-export function relayoutManagement(team:string){
-  authorize('management.relayout',{team})
-  const store=updateStore(value=>{applyManagementLayout(value,team)})
-  return {team,bounds:store.rooms?.[team]?.bounds,revision:store.revision}
-}
-
-/** Legacy discovery only. Team and folder membership no longer grant authority. */
-export function setManagerTeam(team:string|null|undefined){
-  if(team!==undefined)throw Error('Team 不再授予管理权限；请使用 card.management-role ID governor 设置员工职位')
-  const store=readStore()
-  return {team:null,members:[],governors:store.sessions.filter(card=>hasGlobalRole(store.access,card)).map(card=>({id:card.id,title:card.title,group:card.group,managementRole:card.managementRole}))}
-}

@@ -20,7 +20,7 @@ export function nextDelivery(current:ChatDelivery,patch:Partial<ChatDelivery>,on
 type Input={text:string;images?:string[];files?:string[]}
 type Route={
   context:SharedTaskContext;recipients:ChatDelivery[];concurrency:number
-  scope:(target:ChatDelivery)=>{delegation:Delegation;viewId?:string}
+  scope:(target:ChatDelivery)=>{delegation:Delegation}
   validate:(id:string,delegation:Delegation)=>void
   input:()=>Input
   prepare?:(id:string)=>Promise<Input>
@@ -34,13 +34,13 @@ export async function routeRecipients(route:Route){
     while(cursor<route.recipients.length){
       const target=route.recipients[cursor++],id=target.employeeId
       try{
-        const {delegation,viewId}=route.scope(target),input=route.input()
+        const {delegation}=route.scope(target),input=route.input()
         route.update(id,{status:'routing'});route.validate(id,delegation)
         const opened=await startSession({cardId:id,delegation})
         route.validate(id,delegation)
         const prepared=route.prepare?await route.prepare(id):input
         route.validate(id,delegation)
-        const queued=enqueueMessage(opened.sessionId,prepared.text,prepared.images??[],delegation,viewId,route.context,undefined,undefined,undefined,prepared.files??[])
+        const queued=enqueueMessage(opened.sessionId,prepared.text,prepared.images??[],delegation,route.context,undefined,undefined,undefined,prepared.files??[])
         route.update(id,{status:'queued',sessionId:opened.sessionId,queueId:queued.id},true)
       }catch(error){route.update(id,{status:'failed',error:(error as Error).message})}
     }
