@@ -300,12 +300,20 @@
 .planner-run-status.run-timed_out { color: #c94444; }
 
 /* Task Composer Modal */
+.agent-task-composer-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: min(860px, calc(100dvh - 48px));
+}
+
 .planner-composer-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 18px 20px;
-  overflow: auto;
+  gap: 12px;
+  padding: 16px 20px 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .planner-loading {
@@ -510,12 +518,17 @@
 }
 
 .planner-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding-top: 10px;
+  margin: 4px -20px 0;
+  padding: 12px 20px 14px;
   border-top: 1px solid var(--line);
+  background: var(--bg);
   flex-wrap: wrap;
 }
 
@@ -642,6 +655,242 @@
   align-items: center;
   gap: 10px;
   padding: 36px 20px;
+}
+
+/* Database-View-Native Task Architecture UI */
+.planner-destination-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--blue) 28%, var(--line));
+  background: color-mix(in srgb, var(--blue) 4%, var(--sidebar));
+}
+
+.planner-destination-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.planner-destination-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.planner-destination-head .planner-segmented > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.planner-hub-import-banner {
+  margin: 0 20px 8px;
+  padding: 11px 14px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--blue) 28%, var(--line));
+  background: color-mix(in srgb, var(--blue) 6%, var(--sidebar));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.planner-hub-import-copy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  flex: 1 1 260px;
+}
+
+.planner-hub-import-copy svg {
+  color: var(--blue);
+  flex: none;
+}
+
+.planner-hub-import-copy strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 620;
+}
+
+.planner-hub-import-copy small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.planner-hub-import-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.planner-hub-import-controls input {
+  width: 220px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.task-record-control-bar {
+  margin: 10px 0 14px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--sidebar);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.task-record-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.task-record-bar-info svg {
+  color: var(--blue);
+}
+
+.task-record-bar-info small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.task-record-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.inline-db-header-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+.inline-database-title > button.inline-linked-db-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px !important;
+  font-weight: 620 !important;
+  color: var(--text);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.inline-database-title > button.inline-linked-db-heading:hover {
+  background: var(--hover);
+  color: var(--blue);
+}
+
+.inline-database .database-toolbar {
+  gap: 6px;
+  align-items: center;
+}
+
+.page-content.full-width .inline-database .view-tabs {
+  flex: 1 1 540px;
+  min-width: 0;
+}
+
+.inline-database .view-tabs > button[data-view-id] {
+  flex: none;
+  padding-inline: 7px;
+}
+
+.inline-database .view-tab-actions,
+.inline-database .view-tab-actions > button {
+  flex: none;
+  white-space: nowrap;
+}
+
+.inline-database .database-tools {
+  gap: 4px;
+}
+
+.inline-database .database-search input {
+  width: 72px;
+  transition: width 140ms ease;
+}
+
+.inline-database .database-search:focus-within input {
+  width: 144px;
+}
+
+.inline-db-header-actions > button.inline-db-action-pill,
+.inline-database-title > button.inline-db-action-pill,
+.inline-db-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--subtle);
+  font-size: 12px !important;
+  font-weight: 550 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap;
+  flex: none;
+}
+
+.inline-db-action-pill:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.inline-db-action-pill.is-accent {
+  border-color: color-mix(in srgb, var(--blue) 35%, var(--line));
+  background: color-mix(in srgb, var(--blue) 10%, var(--bg));
+  color: var(--blue);
+}
+
+.record-task-config-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--blue) 28%, var(--line));
+  background: color-mix(in srgb, var(--blue) 7%, transparent);
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 600;
+  flex: none;
+  opacity: 0.72;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+.database-row-title:hover + .record-task-config-btn,
+.record-title-tree:hover .record-task-config-btn,
+.record-task-config-btn:focus-visible,
+.record-task-config-btn:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--blue) 15%, transparent);
 }
 
 @media (max-width: 640px) {

@@ -3,7 +3,7 @@ import { coverPresentation } from '../presentation';
 import { blockSource } from '../content/blockCache';
 import { lazy, Suspense, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { LoadingSurface } from './LoadingSurface';
-import { ImagePlus, SmilePlus, Plus, LockKeyhole, Link2, ArrowUpRight, ListTodo } from 'lucide-react';
+import { ImagePlus, SmilePlus, Plus, LockKeyhole, Link2, ArrowUpRight, ListTodo, Database as DatabaseIcon } from 'lucide-react';
 import { loadEditor, loadedContent } from './loadContent';
 const DeferredEditor = lazy(loadEditor);
 import { CoverPicker, EmojiPicker } from './LazyPickers';
@@ -16,7 +16,8 @@ import { ancestors, isTemplatePage } from '../../../../shared/mission-notebook/m
 import { databaseTemplates } from '../../../../shared/mission-notebook/database/templatesModel';
 import { syncedReferences } from '../../../../shared/mission-notebook/content/references';
 import { pageAppearanceStyle, palette } from '../appearance';
-import { PageAgentPlanner } from '../planning/PageAgentPlanner';
+import { TaskRecordControlBar } from '../planning/TaskRecordControlBar';
+import { insertAdditionalTaskDatabaseOnPage } from '../planning/taskDatabase';
 
 export function PageView({
   page,
@@ -28,7 +29,7 @@ export function PageView({
   peek?: boolean;
 }) {
   const [Editor] = useState(() => loadedContent.Editor || DeferredEditor);
-  const { workspace, patch, navigate, create, setModal, command, notify, setPeekId } =
+  const { workspace, patch, update, navigate, create, setModal, command, notify, setPeekId } =
     useWorkspace();
   const [picker, setPicker] = useState<{ type: 'icon' | 'cover'; x: number; y: number } | null>(null);
   const [reposition, setReposition] = useState(false);
@@ -195,6 +196,18 @@ export function PageView({
                 <ListTodo size={14} />
                 布置 Agent 任务
               </button>
+              {!page.database && !parent?.database && (
+                <button
+                  data-page-add-task-db="true"
+                  onClick={() => {
+                    update((state) => insertAdditionalTaskDatabaseOnPage(state, page.id, 'multi').workspace);
+                    notify('已在本页嵌入多视图 Agent 任务数据库');
+                  }}
+                >
+                  <DatabaseIcon size={14} />
+                  插入任务数据库视图
+                </button>
+              )}
             </>
           )}
           {page.locked && (
@@ -227,7 +240,9 @@ export function PageView({
         </button>}
         {parent?.database && (
           <div className="page-properties">
-            {parent.database.columns.map((column) => (
+            {parent.database.columns
+              .filter((column) => column.id !== 'task_ref')
+              .map((column) => (
               <div className="page-property" key={column.id}>
                 <span className="page-property-label">
                   <PropertyIcon type={column.type} />
@@ -266,7 +281,7 @@ export function PageView({
             ))}
           </details>
         )}
-        {!window.native?.printMode && <PageAgentPlanner page={page} />}
+        {!window.native?.printMode && parent?.database && <TaskRecordControlBar page={page} />}
         {page.database && blankBody && !page.showDescription ? (
           <button
             className="add-database-description"

@@ -336,6 +336,7 @@ export function LibraryCloudHosts({
   createSignal = 0,
   onHostsChanged,
   onSelectHost,
+  onBackToShelf,
 }: {
   view: ViewState;
   embeddedHostMode?: boolean;
@@ -343,6 +344,7 @@ export function LibraryCloudHosts({
   createSignal?: number;
   onHostsChanged?: (hosts: CloudHost[]) => void;
   onSelectHost?: (hostId: string) => void;
+  onBackToShelf?: () => void;
 }) {
   useI18n();
   const [hosts, setHosts] = useState<CloudHost[]>([]);
@@ -728,17 +730,29 @@ export function LibraryCloudHosts({
         ) : (
           <>
             <header className="library-hosts-workbench-head">
-              <div>
-                <h2>{creatingNew ? uiText('Create Cloud Host') : selectedHost!.name}</h2>
-                {selectedHost && (
-                  <small>
-                    {selectedHost.host}
-                    {selectedHost.port ? `:${selectedHost.port}` : ''} · {selectedHost.defaultDirectory}
-                    {selectedHost.status?.checkedAt
-                      ? ` · ${new Date(selectedHost.status.checkedAt).toLocaleTimeString(interfaceLocale())}`
-                      : ''}
-                  </small>
+              <div className="library-hosts-head-left">
+                {onBackToShelf && (
+                  <button
+                    type="button"
+                    className="library-shelf-pill-btn"
+                    onClick={onBackToShelf}
+                  >
+                    <Icon name="arrow-left" />
+                    <span>{uiText('Back to Shelf')}</span>
+                  </button>
                 )}
+                <div>
+                  <h2>{creatingNew ? uiText('Create Cloud Host') : selectedHost!.name}</h2>
+                  {selectedHost && (
+                    <small>
+                      {selectedHost.host}
+                      {selectedHost.port ? `:${selectedHost.port}` : ''} · {selectedHost.defaultDirectory}
+                      {selectedHost.status?.checkedAt
+                        ? ` · ${new Date(selectedHost.status.checkedAt).toLocaleTimeString(interfaceLocale())}`
+                        : ''}
+                    </small>
+                  )}
+                </div>
               </div>
               {!creatingNew && selectedHost && (
                 <div className="library-host-tabs" role="tablist">

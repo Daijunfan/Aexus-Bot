@@ -130,7 +130,9 @@ export function PropertyValue({
       } catch (error) {
         notify(error instanceof Error ? error.message : String(error));
       }
-    } else patch(page.id, { values: { ...page.values, [column.id]: next } });
+    } else {
+      patch(page.id, { values: { ...page.values, [column.id]: next } });
+    }
   };
   if (column.type === 'person')
     return (

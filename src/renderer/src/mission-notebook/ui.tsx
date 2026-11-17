@@ -185,13 +185,14 @@ export function Modal({
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement;
-    const frame = requestAnimationFrame(() =>
+    const frame = requestAnimationFrame(() => {
+      if (ref.current?.contains(document.activeElement) && document.activeElement !== ref.current) return;
       (
         ref.current?.querySelector<HTMLElement>('input:not([type="hidden"]), textarea, select') ||
         ref.current?.querySelector<HTMLElement>('button') ||
         ref.current
-      )?.focus(),
-    );
+      )?.focus();
+    });
     return () => {
       cancelAnimationFrame(frame);
       previous?.focus?.({ preventScroll: true });

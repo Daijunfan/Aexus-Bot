@@ -51,6 +51,7 @@ import { GroupOptionEditor, groupEditorAnchor, type GroupEditorAnchor } from '..
 import { defaultTemplateId } from '../../../../shared/mission-notebook/database/templatesModel';
 import { StructureSettings } from '../database/StructureSettings';
 import type { ViewProps } from '../../../../shared/mission-notebook/database/views/types';
+import { isTaskDatabase, TASK_COL } from '../planning/taskDatabase';
 
 export function Database({
   page,
@@ -231,7 +232,24 @@ export function Database({
       setPeekId(id);
     }
   };
+  const isTaskDb = isTaskDatabase(db);
   const addRow = (values: Page['values'] = {}, templateId = defaultTemplateId(db, view)) => {
+    if (isTaskDb && !templateId && window.native?.hostCall) {
+      const parentDoc = page.parentId
+        ? workspace!.pages.find((p) => p.id === page.parentId && !p.trashedAt && !p.database)
+        : undefined;
+      const rawDate = values[TASK_COL.schedule];
+      const dateStr = typeof rawDate === 'string' ? rawDate : undefined;
+      const paused = values[TASK_COL.status] === '已暂停';
+      setModal({
+        type: 'page-task-composer',
+        pageId: parentDoc ? parentDoc.id : page.id,
+        databaseId: page.id,
+        ...(dateStr ? { initialOnceDate: dateStr } : {}),
+        ...(paused ? { initialEnabled: false } : {}),
+      });
+      return;
+    }
     const row = create({ parentId: page.id, values }, false, templateId);
     openRow(row.id);
   };

@@ -1,4 +1,4 @@
-// Unified Library UI tests (hidden Electron desktop or headless Web): single explorer sidebar, embedded Study Reader, in-place PDF opening, Super Search jump to Mission, passive Cloud Host creation, ACL dialogs & Message group round-trip.
+// Unified MarginNote-Style Library UI tests (hidden Electron desktop or headless Web): compact single-row shelf chrome, unified folder varieties (Study Sets, Study Library, Agent Workspaces, Chats, Mission/Shared, Cloud Hosts), embedded Study Reader round-trip, in-place PDF opening, Super Search jump to Mission, passive Cloud Host creation & ACL dialogs.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -68,34 +68,101 @@ try{
   await page.locator('.company-navigation').waitFor()
   const rpc=(cmd,args={})=>page.evaluate(async({cmd,args})=>{try{return await window.agents.call(cmd,args)}catch(error){throw Error(cmd+': '+(error?.message??JSON.stringify(error)))}},{cmd,args})
 
-  // 1. Open Library: unified explorer sidebar only (zero .library-rail), default Study Library bookshelf with embedded=1
+  // 1. Open Library: Unified MarginNote Folder Shelf with compact single-row topbar (<= 64px height!)
   await page.locator('.company-navigation .library-view-trigger').click()
   await expect(page.locator('aside.library-explorer-sidebar')).toBeVisible()
   await expect(page.locator('.library-rail')).toHaveCount(0)
 
+  const shelfTopbar=page.locator('[data-library-shelf-topbar="true"]')
+  await expect(shelfTopbar).toBeVisible()
+  const topbarBox=await shelfTopbar.boundingBox()
+  assert.ok(topbarBox&&topbarBox.height<=66,`Expected compact shelf topbar <= 66px, got ${topbarBox?.height}px`)
+  await expect(page.locator('.asset-gallery-grid [data-folder-kind="employee"]')).toHaveCount(1)
+  await expect(page.locator('.asset-gallery-grid [data-folder-kind="shared"]')).toHaveCount(1)
+  await expect(page.locator('.asset-gallery-grid [data-folder-kind="group"]')).toHaveCount(1)
+  await expect(page.locator('.asset-gallery-grid [data-folder-kind="reader"]')).toHaveCount(1)
+  pass('Library opens onto Unified MarginNote Folder Shelf with compact single-row chrome (<= 66px) and distinct folder varieties')
+
+  // 2. Create Study Set -> opens in embedded Study Reader -> return to Shelf -> Study Set appears as a Folder card on the Unified Shelf!
+  await page.locator('[data-library-create-study="true"]').click()
   const readerIframeEl=page.locator('iframe.library-reader-frame')
   await expect(readerIframeEl).toBeVisible()
   const readerFrame=page.frameLocator('iframe.library-reader-frame')
   await expect(readerFrame.locator('html')).toHaveAttribute('data-embedded','1',{timeout:15000})
   await expect(readerFrame.locator('.app-bar')).toBeHidden()
   await expect(readerFrame.locator('#workspace > .explorer')).toBeHidden()
-  pass('Library renders unified single sidebar without rail and embeds Study Reader without duplicate header/explorer')
-
-  // 2. Create Study Set from sidebar & open it
-  await page.locator('[data-library-create-study="true"]').click()
   await expect(readerFrame.locator('#dialog-fields')).toBeVisible()
   await readerFrame.locator('#dialog-fields input[name="title"]').fill('Unified UI Study Set')
   await readerFrame.locator('#dialog-submit').click()
   await expect(readerFrame.locator('#study-title')).toContainText('Unified UI Study Set')
   await expect(page.locator('[data-study-set-nav]')).toHaveCount(1)
-  pass('Study Set created and opened seamlessly inside embedded Study Reader')
 
-  // 3. Switch to Storage Overview via header meter pill (7 domains)
+  await page.getByRole('button',{name:'Back to Shelf',exact:true}).click()
+  const studyFolderCard=page.locator('.asset-gallery-grid [data-folder-kind="study-set"] .asset-entry[aria-label="Unified UI Study Set"]')
+  await expect(studyFolderCard).toBeVisible()
+  await studyFolderCard.dblclick()
+  await expect(readerIframeEl).toBeVisible()
+  await expect(readerFrame.locator('#study-title')).toContainText('Unified UI Study Set')
+  await page.getByRole('button',{name:'Back to Shelf',exact:true}).click()
+  pass('Study Set integrates as a native Folder variety on the Unified Shelf and opens directly in embedded MarginReader')
+
+  // 3. Add Cloud Host passively (0 SSH probes) -> return to Shelf -> Cloud Host appears as a Folder variety on the Unified Shelf!
+  await page.locator('[data-library-add-host="true"]').click()
+  await page.getByLabel('Host name',{exact:true}).fill('Staging VM')
+  await page.getByLabel('SSH target (user@host)',{exact:true}).fill('ubuntu@10.0.0.88')
+  await page.getByLabel('Default directory',{exact:true}).fill('/home/ubuntu')
+  await page.getByRole('button',{name:'Save changes',exact:true}).click()
+  await expect(page.locator('[data-library-host-nav]')).toHaveCount(1)
+  const hostsAfterAdd=await rpc('host.list')
+  assert.equal(hostsAfterAdd.length,1)
+  assert.equal(hostsAfterAdd[0].status,undefined,'Adding host must not auto-probe SSH')
+
+  await page.getByRole('button',{name:'Back to Shelf',exact:true}).click()
+  await expect(page.locator('.asset-gallery-grid [data-folder-kind="cloud-host"] .asset-entry[aria-label="Staging VM"]')).toBeVisible()
+
+  // Filter by Shelf variety pills & check single sidebar highlight + Study Reader Library folder round-trip + Agents back-button history
+  await expect(page.locator('aside.library-explorer-sidebar .library-nav-row.is-active')).toHaveCount(1)
+  await page.locator('[data-shelf-category="hosts"]').click()
+  await expect(page.locator('.asset-gallery-grid .asset-tile')).toHaveCount(1)
+  await page.locator('[data-shelf-category="all"]').click()
+  await page.screenshot({path:path.join(out,'library-shelf-all.png'),animations:'disabled'})
+
+  // Double-click Study Reader Library folder card -> opens embedded MarginReader -> Back to Shelf
+  await page.locator('.asset-gallery-grid [data-folder-kind="reader"] .asset-entry[aria-label="Study Reader Library"]').dblclick()
+  await expect(readerIframeEl).toBeVisible()
+  await page.getByRole('button',{name:'Back to Shelf',exact:true}).click()
+  await expect(shelfTopbar).toBeVisible()
+
+  // Verify Chinese + Dark Mode rendering on the Unified Shelf, then restore English + White
+  await rpc('settings.set',{language:'zh-CN',viewAppearance:{library:{theme:'black'}}})
+  await expect(page.locator('[data-library-shelf-home="true"]')).toContainText('全部资料夹')
+  await expect(page.locator('[data-shelf-category="agents"]')).toContainText('工作空间')
+  await page.screenshot({path:path.join(out,'library-shelf-zh-dark.png'),animations:'disabled'})
+  await rpc('settings.set',{language:'en',viewAppearance:{library:{theme:'white'}}})
+  await expect(page.locator('[data-library-shelf-home="true"]')).toContainText('All Folders')
+
+  const agentsTreeBtn=page.locator('aside.library-explorer-sidebar [role="tree"] .library-nav-btn',{hasText:'Agents'}).first()
+  await agentsTreeBtn.click()
+  await expect(shelfTopbar).toContainText('Agents')
+  const agentsBarBox=await shelfTopbar.boundingBox()
+  assert.ok(agentsBarBox&&agentsBarBox.height<=66,`Expected Agents folder topbar <= 66px, got ${agentsBarBox?.height}px`)
+  await page.screenshot({path:path.join(out,'library-agents-compact.png'),animations:'disabled'})
+
+  // Drill into Library Research Agent workspace folder and verify Previous folder back button preserves history!
+  await page.locator('.asset-gallery-grid .asset-entry[aria-label="Library Research Agent"]').dblclick()
+  await expect(shelfTopbar).toContainText('Library Research Agent')
+  const prevFolderBtn=page.getByRole('button',{name:'Previous folder',exact:true})
+  await expect(prevFolderBtn).toBeEnabled()
+  await prevFolderBtn.click()
+  await expect(shelfTopbar).toContainText('Agents')
+  pass('Cloud Host, Study Reader Library folder, Chinese Dark shelf, and multi-level folder Back history work seamlessly')
+
+  // 4. Switch to Storage Overview via header meter pill (7 domains)
   await page.locator('[data-library-overview-trigger="true"]').click()
   await expect(page.locator('.library-domains-grid [data-domain]')).toHaveCount(7)
   pass('Storage Overview displays all 7 domains')
 
-  // 4. Open Shared space and open InPlacePaper.pdf in place (0 duplicate PDF copies in APP_HOME/library-reader)
+  // 5. Open Shared space and open InPlacePaper.pdf in place (0 duplicate PDF copies in APP_HOME/library-reader)
   const sharedTreeBtn=page.locator('aside.library-explorer-sidebar [role="tree"] .library-nav-btn',{hasText:'Shared'}).first()
   await sharedTreeBtn.click()
   const pdfCard=page.locator('.asset-gallery-grid .asset-entry[aria-label="InPlacePaper.pdf"]')
@@ -107,7 +174,16 @@ try{
   assert.equal(readerDirFiles.length,0,'In-place PDF open must not duplicate file into APP_HOME/library-reader')
   pass('Software Space PDF opens in place inside Study Reader with zero duplicate copies')
 
-  // 5. Super Search -> Mission Notebook page deep-link jump
+  // 6. Authorized People modals
+  for(const trigger of ['[data-library-reader-access="true"]','[data-library-host-access="true"]']){
+    await page.locator(trigger).click()
+    await expect(page.locator('.library-access-dialog')).toBeVisible()
+    await page.locator('.library-access-dialog').getByRole('button',{name:'Cancel',exact:true}).click()
+    await expect(page.locator('.library-access-dialog')).toHaveCount(0)
+  }
+  pass('Reader and Cloud Host Authorized People modals open and close cleanly')
+
+  // 7. Super Search -> Mission Notebook page deep-link jump
   await page.locator('[data-library-quick-search="true"]').fill('Unified Search Target')
   const nbResult=page.locator('.library-search-item[data-domain="notebook"] .library-search-item-title',{hasText:'Unified Search Target'}).first()
   await expect(nbResult).toBeVisible({timeout:15000})
@@ -117,28 +193,7 @@ try{
   await expect(page.frameLocator('iframe.mission-notebook-frame').getByRole('textbox',{name:'页面标题',exact:true})).toHaveValue('Unified Search Target',{timeout:15000})
   pass('Super Search locates Mission Notebook page and jumps directly into Mission view')
 
-  // 6. Add Cloud Host passively (0 SSH probes) & test Authorized People dialogs
-  await page.locator('.company-navigation .library-view-trigger').click()
-  await page.locator('[data-library-add-host="true"]').click()
-  await page.getByLabel('Host name',{exact:true}).fill('Staging VM')
-  await page.getByLabel('SSH target (user@host)',{exact:true}).fill('ubuntu@10.0.0.88')
-  await page.getByLabel('Default directory',{exact:true}).fill('/home/ubuntu')
-  await page.getByRole('button',{name:'Save changes',exact:true}).click()
-  await expect(page.locator('[data-library-host-nav]')).toHaveCount(1)
-  const hostsAfterAdd=await rpc('host.list')
-  assert.equal(hostsAfterAdd.length,1)
-  assert.equal(hostsAfterAdd[0].status,undefined,'Adding host must not auto-probe SSH')
-  pass('Cloud Host saved passively from unified sidebar with zero SSH probes')
-
-  for(const trigger of ['[data-library-reader-access="true"]','[data-library-host-access="true"]']){
-    await page.locator(trigger).click()
-    await expect(page.locator('.library-access-dialog')).toBeVisible()
-    await page.locator('.library-access-dialog').getByRole('button',{name:'Cancel',exact:true}).click()
-    await expect(page.locator('.library-access-dialog')).toHaveCount(0)
-  }
-  pass('Reader and Cloud Host Authorized People modals open and close cleanly')
-
-  // 7. Message group PDF -> Library Study Reader -> Back to conversation round-trip
+  // 8. Message group PDF -> Library Study Reader -> Back to conversation round-trip
   await page.locator('.company-navigation .messages-view-trigger').click()
   const grpFiles=await rpc('conversation.files',{conversation:'group:'+group.id})
   const groupPdf=grpFiles.files.find(file=>file.name==='GroupBrief.pdf')

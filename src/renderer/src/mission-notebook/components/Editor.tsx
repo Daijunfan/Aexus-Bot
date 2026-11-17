@@ -81,6 +81,7 @@ import { useWorkspace } from '../store';
 import { PageIcon } from '../ui';
 import { plainText, defaultDatabase, isInternalPage } from '../../../../shared/mission-notebook/model';
 import { InlineDatabaseSpec } from '../database/InlineDatabase';
+import { createAgentTaskDatabase } from '../planning/taskDatabase';
 import type { Page, JsonBlock } from '../../../../shared/mission-notebook/types';
 import { EditorPageContext, syncedBlockSpec } from '../content/SyncedBlock';
 import { BlockMenu } from './BlockMenu';
@@ -810,6 +811,29 @@ export function Editor({
                     group: '高级块',
                     icon: <Link2 size={20} />,
                     onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: 'syncedBlock' }),
+                  },
+                  {
+                    title: 'Agent 任务数据库',
+                    subtext: '在当前页面创建多视图任务数据库（表格、看板、日历、时间线、日程）',
+                    aliases: ['task database', 'taskdb', 'agent db', '任务数据库', '定时任务表'],
+                    group: '数据库',
+                    icon: <ListTodo size={20} />,
+                    onItemClick: () => {
+                      const source = create(
+                        {
+                          parentId: page.id,
+                          title: `${page.title || '页面'} · Agent 任务库`,
+                          icon: '📋',
+                          database: createAgentTaskDatabase('table'),
+                          fullWidth: true,
+                        },
+                        false,
+                      );
+                      insertOrUpdateBlockForSlashMenu(editor, {
+                        type: 'databaseView',
+                        props: { databaseId: source.id, title: source.title },
+                      });
+                    },
                   },
                   {
                     title: '数据库 · 内联',

@@ -28,10 +28,11 @@ import { subItemDisplay } from '../../../../../shared/mission-notebook/database/
 import { SubitemPreview } from '../RecordTitle';
 import type { Page, DatabaseView } from '../../../../../shared/mission-notebook/types';
 import type { ViewProps } from '../../../../../shared/mission-notebook/database/views/types';
+import { isTaskDatabase } from '../../planning/taskDatabase';
 
 export function PlanView({ page, view, rows, updateView, openRow, addRow }: ViewProps) {
   const theme = useContext(AppearanceTheme);
-  const { workspace, patch, create } = useWorkspace();
+  const { workspace, patch, create, setModal } = useWorkspace();
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
@@ -68,6 +69,18 @@ export function PlanView({ page, view, rows, updateView, openRow, addRow }: View
   };
   const add = (date: string) => {
     if (readonlyDates) return;
+    if (isTaskDatabase(page.database) && window.native?.hostCall) {
+      const parentDoc = page.parentId
+        ? workspace!.pages.find((p) => p.id === page.parentId && !p.trashedAt && !p.database)
+        : undefined;
+      setModal({
+        type: 'page-task-composer',
+        pageId: parentDoc ? parentDoc.id : page.id,
+        databaseId: page.id,
+        ...(date ? { initialOnceDate: date } : {}),
+      });
+      return;
+    }
     const row = create(
       { parentId: page.id, values: plan.dateProperty ? { [plan.dateProperty.id]: date } : {} },
       false,

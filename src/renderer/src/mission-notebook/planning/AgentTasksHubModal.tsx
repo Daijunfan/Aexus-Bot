@@ -4,8 +4,9 @@ import {
   BellRing,
   CheckCircle2,
   Clock,
+  Database as DatabaseIcon,
+  FilePlus2,
   Pause,
-  Play,
   Plus,
   Repeat,
   Search,
@@ -26,6 +27,11 @@ import {
   scheduleStatusBadge,
   type TaskEmployee,
 } from './planningTypes';
+import {
+  findExistingHostForTask,
+  importExistingTasksToNewPageInWorkspace,
+  TASK_COL,
+} from './taskDatabase';
 
 type FilterKind = 'all' | 'current' | 'once' | 'repeat' | 'event' | 'mission' | 'paused';
 
@@ -36,14 +42,19 @@ export function AgentTasksHubModal({
   initialPageId?: string;
   onClose: () => void;
 }) {
-  const { workspace, navigate, setModal, notify } = useWorkspace();
+  const { workspace, update, navigate, setModal, notify } = useWorkspace();
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [employees, setEmployees] = useState<TaskEmployee[]>([]);
+  const [hostTimezone, setHostTimezone] = useState(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai',
+  );
   const [filter, setFilter] = useState<FilterKind>('all');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [importTitle, setImportTitle] = useState('Agent 定时与督办任务中心');
+  const [showImportBar, setShowImportBar] = useState(false);
 
   const loadAll = useCallback(async () => {
     const hostCall = window.native?.hostCall;
@@ -52,10 +63,11 @@ export function AgentTasksHubModal({
       return;
     }
     try {
-      const [jobList, missionList, sessionRes] = await Promise.all([
+      const [jobList, missionList, sessionRes, sysRes] = await Promise.all([
         hostCall('schedule.list').catch(() => []),
         hostCall('mission.list', { archived: 'active' }).catch(() => []),
         hostCall('session.list').catch(() => ({ sessions: [] })),
+        hostCall('system.info').catch(() => ({})),
       ]);
       setJobs(Array.isArray(jobList) ? jobList : []);
       setMissions(Array.isArray(missionList) ? missionList : []);
@@ -64,6 +76,9 @@ export function AgentTasksHubModal({
           ? sessionRes.sessions.filter((s: TaskEmployee) => !s.deleting)
           : [],
       );
+      if ((sysRes as { timezone?: string })?.timezone) {
+        setHostTimezone((sysRes as { timezone: string }).timezone);
+      }
     } finally {
       setLoading(false);
     }
@@ -86,12 +101,65 @@ export function AgentTasksHubModal({
     return () => off?.();
   }, [loadAll]);
 
-  const pageTitle = (id: string | null) => {
+  const backedRefs = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of workspace?.pages ?? []) {
+      const refVal = p.values?.[TASK_COL.ref];
+      if (!p.trashedAt && typeof refVal === 'string' && refVal) {
+        set.add(refVal);
+      }
+    }
+    return set;
+  }, [workspace?.pages]);
+
+  const unbackedCount = useMemo(() => {
+    let n = 0;
+    for (const j of jobs) if (!backedRefs.has(`schedule:${j.id}`)) n++;
+    for (const m of missions) if (!backedRefs.has(`mission:${m.id}`)) n++;
+    return n;
+  }, [jobs, missions, backedRefs]);
+
+  const resolveLinkedPage = (ref: string, fallbackPageId: string | null) => {
+    const hostLoc = findExistingHostForTask(workspace, ref);
+    const id = hostLoc?.hostPageId || fallbackPageId;
     if (!id) return null;
-    return workspace?.pages.find((p) => p.id === id && !p.trashedAt)?.title || 'Notion 页面';
+    const found = workspace?.pages.find((p) => p.id === id && !p.trashedAt);
+    return found ? { id: found.id, title: found.title || 'Notion 页面', inDb: Boolean(hostLoc) } : null;
   };
 
   const empName = (id: string) => employees.find((e) => e.id === id)?.title || '已移除员工';
+
+  const handleManualSaveToNewPage = () => {
+    if (!workspace || (!jobs.length && !missions.length)) return;
+    const jobsToSave =
+      unbackedCount > 0 && unbackedCount < totalCount
+        ? jobs.filter((j) => !backedRefs.has(`schedule:${j.id}`))
+        : jobs;
+    const missionsToSave =
+      unbackedCount > 0 && unbackedCount < totalCount
+        ? missions.filter((m) => !backedRefs.has(`mission:${m.id}`))
+        : missions;
+    let newPageId = '';
+    let importedCount = 0;
+    update((state) => {
+      const res = importExistingTasksToNewPageInWorkspace(state, {
+        jobs: jobsToSave,
+        missions: missionsToSave,
+        employees,
+        hostTimezone,
+        pageTitle: importTitle.trim() || 'Agent 定时与督办任务中心',
+        preset: 'multi',
+      });
+      newPageId = res.hostPageId;
+      importedCount = res.importedCount;
+      return res.workspace;
+    });
+    if (newPageId) {
+      navigate(newPageId);
+      notify(`已手动新建页面并保存 ${importedCount} 项任务到多数据库视图`);
+      onClose();
+    }
+  };
 
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -101,7 +169,8 @@ export function AgentTasksHubModal({
     > = [];
 
     for (const mission of missions) {
-      const boundPageId = extractBoundPageId(mission);
+      const loc = findExistingHostForTask(workspace, `mission:${mission.id}`);
+      const boundPageId = loc?.hostPageId || extractBoundPageId(mission);
       if (filter === 'current' && boundPageId !== initialPageId) continue;
       if (['once', 'repeat', 'event', 'paused'].includes(filter)) continue;
       if (q) {
@@ -112,7 +181,8 @@ export function AgentTasksHubModal({
     }
 
     for (const job of jobs) {
-      const boundPageId = extractBoundPageId(job);
+      const loc = findExistingHostForTask(workspace, `schedule:${job.id}`);
+      const boundPageId = loc?.hostPageId || extractBoundPageId(job);
       const cat = scheduleRuleCategory(job);
       if (filter === 'current' && boundPageId !== initialPageId) continue;
       if (filter === 'mission') continue;
@@ -125,7 +195,7 @@ export function AgentTasksHubModal({
       out.push({ kind: 'job', job, boundPageId, cat });
     }
     return out;
-  }, [missions, jobs, filter, query, initialPageId]);
+  }, [missions, jobs, filter, query, initialPageId, workspace]);
 
   const toggleJobPause = async (job: ScheduledJob) => {
     if (!window.native?.hostCall || busyId) return;
@@ -143,8 +213,10 @@ export function AgentTasksHubModal({
     }
   };
 
+  const totalCount = jobs.length + missions.length;
+
   return (
-    <Modal title="🎯 Agent 任务与督办总览" onClose={onClose} wide className="agent-tasks-hub-modal">
+    <Modal title="🎯 Agent 任务与数据库视图总览" onClose={onClose} wide className="agent-tasks-hub-modal">
       <div className="planner-hub-toolbar">
         <label className="planner-hub-search">
           <Search size={14} />
@@ -155,6 +227,17 @@ export function AgentTasksHubModal({
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
+        {totalCount > 0 && (
+          <button
+            type="button"
+            className="secondary-button"
+            data-save-tasks-to-page-toggle="true"
+            onClick={() => setShowImportBar((v) => !v)}
+          >
+            <FilePlus2 size={14} />
+            <span>手动保存现有任务到新页面</span>
+          </button>
+        )}
         <button
           type="button"
           className="primary-button"
@@ -166,10 +249,45 @@ export function AgentTasksHubModal({
         </button>
       </div>
 
+      {(showImportBar || unbackedCount > 0) && totalCount > 0 && (
+        <div className="planner-hub-import-banner" role="region" aria-label="手动保存现有任务到新页面">
+          <div className="planner-hub-import-copy">
+            <DatabaseIcon size={15} />
+            <div>
+              <strong>
+                {unbackedCount > 0
+                  ? `检测到 ${unbackedCount} 项已保存任务尚未放入页面数据库视图`
+                  : `可将全部 ${totalCount} 项现有任务手动汇总保存到一个新页面`}
+              </strong>
+              <small>将自动创建包含「任务总表 + 排期日历 + 状态看板」多数据库视图的 Notion 页面</small>
+            </div>
+          </div>
+          <div className="planner-hub-import-controls">
+            <input
+              aria-label="导入页面标题"
+              value={importTitle}
+              onChange={(e) => setImportTitle(e.target.value)}
+              placeholder="新页面标题…"
+            />
+            <button
+              type="button"
+              className="primary-button"
+              data-save-tasks-to-page="true"
+              onClick={handleManualSaveToNewPage}
+            >
+              <FilePlus2 size={14} />
+              <span>
+                新建页面并保存 ({unbackedCount > 0 ? unbackedCount : totalCount})
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="planner-hub-filters" role="tablist" aria-label="任务筛选">
         {(
           [
-            ['all', `全部 (${jobs.length + missions.length})`],
+            ['all', `全部 (${totalCount})`],
             ...(initialPageId ? ([['current', '当前页面']] as const) : []),
             ['once', '定时单次'],
             ['repeat', '重复周期'],
@@ -212,7 +330,7 @@ export function AgentTasksHubModal({
             if (entry.kind === 'mission') {
               const { mission, boundPageId } = entry;
               const badge = missionStatusBadge(mission);
-              const linkedTitle = pageTitle(boundPageId);
+              const linked = resolveLinkedPage(`mission:${mission.id}`, boundPageId);
               return (
                 <article
                   key={mission.id}
@@ -230,7 +348,7 @@ export function AgentTasksHubModal({
                         onClick={() =>
                           setModal({
                             type: 'page-task-composer',
-                            pageId: boundPageId || initialPageId,
+                            pageId: linked?.id || initialPageId,
                             missionId: mission.id,
                           })
                         }
@@ -244,16 +362,16 @@ export function AgentTasksHubModal({
                       <span>
                         负责：{mission.employeeIds.map((id) => empName(id)).join('、')}
                       </span>
-                      {linkedTitle && boundPageId && (
+                      {linked && (
                         <button
                           type="button"
                           className="planner-page-jump"
                           onClick={() => {
-                            navigate(boundPageId);
+                            navigate(linked.id);
                             onClose();
                           }}
                         >
-                          <span>📄 {linkedTitle}</span>
+                          <span>{linked.inDb ? '📋' : '📄'} {linked.title}</span>
                           <ArrowUpRight size={11} />
                         </button>
                       )}
@@ -266,7 +384,7 @@ export function AgentTasksHubModal({
                       onClick={() =>
                         setModal({
                           type: 'page-task-composer',
-                          pageId: boundPageId || initialPageId,
+                          pageId: linked?.id || initialPageId,
                           missionId: mission.id,
                         })
                       }
@@ -280,7 +398,7 @@ export function AgentTasksHubModal({
 
             const { job, boundPageId, cat } = entry;
             const badge = scheduleStatusBadge(job);
-            const linkedTitle = pageTitle(boundPageId);
+            const linked = resolveLinkedPage(`schedule:${job.id}`, boundPageId);
             const IconComp = cat === 'once' ? Clock : cat === 'repeat' ? Repeat : Zap;
             return (
               <article key={job.id} className="planner-hub-row" data-hub-item-id={job.id}>
@@ -296,7 +414,7 @@ export function AgentTasksHubModal({
                       onClick={() =>
                         setModal({
                           type: 'page-task-composer',
-                          pageId: boundPageId || initialPageId,
+                          pageId: linked?.id || initialPageId,
                           jobId: job.id,
                         })
                       }
@@ -314,16 +432,16 @@ export function AgentTasksHubModal({
                     <span>{formatScheduleRule(job)}</span>
                     <span>负责：{empName(job.action.employeeId)}</span>
                     {job.nextAt && <span>下次：{formatShortDate(job.nextAt)}</span>}
-                    {linkedTitle && boundPageId && (
+                    {linked && (
                       <button
                         type="button"
                         className="planner-page-jump"
                         onClick={() => {
-                          navigate(boundPageId);
+                          navigate(linked.id);
                           onClose();
                         }}
                       >
-                        <span>📄 {linkedTitle}</span>
+                        <span>{linked.inDb ? '📋' : '📄'} {linked.title}</span>
                         <ArrowUpRight size={11} />
                       </button>
                     )}
@@ -345,7 +463,7 @@ export function AgentTasksHubModal({
                     onClick={() =>
                       setModal({
                         type: 'page-task-composer',
-                        pageId: boundPageId || initialPageId,
+                        pageId: linked?.id || initialPageId,
                         jobId: job.id,
                       })
                     }

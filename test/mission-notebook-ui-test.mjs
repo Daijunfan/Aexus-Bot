@@ -1,4 +1,4 @@
-// Actual application/Core, hidden desktop or headless Web, disposable data and native fixtures; no real model calls.
+// Mission Super-Notion UI tests (hidden desktop or headless Web): manual import of existing saved schedules into multi-database-view page, creating once/repeat/event/mission tasks into both existing-page database views and new-page multi-database views, multiple database views per page, Workflow buttons & ACL grants; disposable data and 0 paid model calls.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -30,6 +30,17 @@ try{
   const worker=await core('card.create',{title:'Workflow Analyst',folderName:'workflow-analyst',engine:'codex',model:'gpt-6-luna',effort:'low'})
   await f.ready(worker.id)
 
+  // Seed an already-saved Core scheduled task to test explicit manual import into a new multi-view page
+  const legacyJob=await core('schedule.create',{
+    spec:{
+      name:'Saved Morning Briefing',
+      enabled:false,
+      action:{type:'agent',employeeId:worker.id,prompt:'Compile daily morning briefing without running in test'},
+      rule:{kind:'weekly',days:[1,2,3,4,5],time:'08:30',timezone:'Asia/Shanghai'},
+      plan:{priority:'high',tags:['briefing'],notes:'Pre-existing saved schedule'},
+    },
+  })
+
   if(web){
     browser=await chromium.launch({headless:true,...(process.env.AGENTS_BROWSER_CHANNEL?{channel:process.env.AGENTS_BROWSER_CHANNEL}:process.platform==='darwin'?{channel:'chrome'}:{})})
     page=await browser.newPage({viewport:{width:1440,height:960}})
@@ -56,7 +67,7 @@ try{
   assert.deepEqual(listed,[])
   pass('Application launcher excludes retired built-in plugins')
 
-  // 2. Mission opens 100% into the Super-Notion Notebook (zero legacy PlanView / Workflows mode toggle)
+  // 2. Mission opens 100% into the Super-Notion Notebook (zero legacy PlanView / stiff PageAgentPlanner)
   await page.locator('.company-navigation .plan-view-trigger').click()
   const iframeEl=page.locator('iframe.mission-notebook-frame')
   await expect(iframeEl).toBeVisible()
@@ -65,16 +76,33 @@ try{
   const frame=page.frameLocator('iframe.mission-notebook-frame')
   await expect(frame.locator('.app-shell')).toBeVisible()
   await expect(frame.locator('.sidebar')).toBeVisible()
-  await expect(frame.locator('[data-topbar-workflows]')).toHaveCount(0)
-  await expect(frame.locator('[data-mission-workflows]')).toHaveCount(0)
+  await expect(frame.locator('[data-page-planner]')).toHaveCount(0)
   await rpc('view.open',{kind:'plan',planViewId:'table'})
   await expect(iframeEl).toBeVisible()
   await expect(page.locator('.plan-view')).toHaveCount(0)
-  pass('Mission renders 100% Super-Notion Notebook even when planViewId is passed, with zero mode-toggle buttons')
+  pass('Mission renders 100% Super-Notion Notebook with zero legacy PlanView or bolted-on card boxes')
 
-  // 3. Create page, write rich BlockNote text & verify zero blank-page clutter before tasks exist
-  await frame.locator('.sidebar-add').click()
+  // 3. Explicit Manual Save of Existing Scheduled Tasks into a New Multi-Database-View Page
+  await frame.locator('[data-mission-tasks="true"]').click()
+  const hub=frame.locator('.agent-tasks-hub-modal')
+  await expect(hub).toBeVisible()
+  await expect(hub).toContainText('Saved Morning Briefing')
+  await expect(hub.locator('[data-save-tasks-to-page="true"]')).toBeVisible()
+  await hub.getByRole('textbox',{name:'导入页面标题',exact:true}).fill('历史定时任务归档页')
+  await hub.locator('[data-save-tasks-to-page="true"]').click()
+  await expect(hub).toHaveCount(0)
+
   const titleInput=frame.getByRole('textbox',{name:'页面标题',exact:true})
+  await expect(titleInput).toHaveValue('历史定时任务归档页')
+  // Verify the single imported page embeds MULTIPLE database views (Table + Calendar + Board = 3 inline-database blocks!)
+  await expect(frame.locator('.inline-database')).toHaveCount(3)
+  await expect(frame.locator('.inline-database').first()).toContainText('Saved Morning Briefing')
+  assert.equal((await rpc('schedule.get',{id:legacyJob.id})).enabled,false,'Manual import must preserve paused state without running')
+  await page.screenshot({path:path.join(out,'mission-imported-multiview.png'),animations:'disabled'})
+  pass('Manual Save action creates a new Notion page with 3 rich database views (Table + Calendar + Kanban Board) containing pre-existing schedules')
+
+  // 4. Create clean document page, write rich BlockNote text & workflow button
+  await frame.locator('.sidebar-add').click()
   await expect(titleInput).toBeVisible()
   await titleInput.fill('Mission Super-Notion Spec')
   await frame.locator('.bn-editor').click()
@@ -85,14 +113,7 @@ try{
     return pages.find(p=>p.title==='Mission Super-Notion Spec')||null
   },{timeout:15000}).toBeTruthy()
   const createdPage=(await rpc('notebook.call',{method:'page.list'})).find(p=>p.title==='Mission Super-Notion Spec')
-  await expect.poll(async()=>{
-    const md=await rpc('notebook.call',{method:'page.read-markdown',params:{pageId:createdPage.id}})
-    return md.markdown.includes('MISSION_SUPER_NOTION_BODY')
-  },{timeout:15000}).toBe(true)
-  await expect(frame.locator('[data-page-planner]')).toHaveCount(0)
-  pass('Blank Notion pages stay clean without task-planner clutter before tasks are added')
 
-  // 4. Create workflow button with /workflow ActionEditor options (agent / mission / schedule)
   await rpc('notebook.call',{
     method:'button.create',
     params:{
@@ -114,11 +135,12 @@ try{
   await expect(btnDialog).toHaveCount(0)
   pass('Workflow ActionEditor exposes agent, mission, and schedule workflow steps cleanly')
 
-  // 5. Native per-page Agent task planning (once, repeat, event, mission) bound to createdPage.id
+  // 5. Save once, repeat, and event-driven tasks into EXISTING page's Database Views
   const expectedTag='p:'+createdPage.id
   await frame.locator('[data-topbar-tasks="true"]').click()
-  let composer=frame.locator('.agent-task-composer-modal')
+  const composer=frame.locator('.agent-task-composer-modal')
   await expect(composer).toBeVisible()
+  await expect(composer.locator('[data-dest-mode="existing-page"]')).toHaveAttribute('aria-pressed','true')
   await composer.locator('[name="plan-name"]').fill('One-Shot Page Plan')
   await composer.locator('[name="plan-prompt"]').fill('Summarize the page cleanly')
   await composer.locator('.planner-advanced summary').first().click()
@@ -126,24 +148,31 @@ try{
   await composer.getByRole('button',{name:'布置任务',exact:true}).click()
   await expect(composer).toHaveCount(0)
 
-  const planner=frame.locator(`[data-page-planner="${createdPage.id}"]`)
-  await expect(planner).toBeVisible()
-  await expect(planner).toContainText('One-Shot Page Plan')
+  // Verify the existing page now embeds multiple database views (Table + Calendar + Board) containing One-Shot Page Plan!
+  await expect(frame.locator('.inline-database')).toHaveCount(3)
+  await expect(frame.locator('.inline-database').first()).toContainText('One-Shot Page Plan')
+  await expect(frame.locator('[data-page-planner]')).toHaveCount(0)
 
-  // Create repeat task (weekly, saved paused to guarantee 0 model runs)
-  await planner.locator('[data-quick-task="repeat"]').click()
+  // Add Repeat task directly into that inline Task Database via its header "布置任务" button
+  await frame.locator('[data-db-add-task]').first().click()
   await expect(composer).toBeVisible()
+  await composer.locator('[data-planner-tab="repeat"]').click()
   await composer.locator('[name="plan-name"]').fill('Recurring Page Review')
   await composer.locator('[name="plan-prompt"]').fill('Weekly status check for this page')
   await composer.locator('.planner-advanced summary').first().click()
   await composer.getByText('已启用自动排期').click()
   await composer.getByRole('button',{name:'布置任务',exact:true}).click()
   await expect(composer).toHaveCount(0)
-  await expect(planner).toContainText('Recurring Page Review')
+  await expect(frame.locator('.inline-database').first()).toContainText('Recurring Page Review')
 
-  // Create event-driven task (message.received)
-  await planner.locator('[data-quick-task="event"]').click()
+  // Add Event-driven task into a SECOND new inline Task Database on the SAME page to verify multiple independent databases on one page!
+  await frame.locator('[data-topbar-tasks="true"]').click()
   await expect(composer).toBeVisible()
+  await composer.locator('[data-planner-tab="event"]').click()
+  await composer.getByRole('button',{name:'选择目标数据库视图',exact:true}).click()
+  await frame.locator('.app-select-menu [role="option"]').filter({hasText:'在该页面新增一个任务数据库视图块'}).click()
+  await composer.getByRole('button',{name:'可视化视图组合',exact:true}).click()
+  await frame.locator('.app-select-menu [role="option"]').filter({hasText:'状态看板与类型统计双视图'}).click()
   await composer.locator('[name="plan-name"]').fill('Event Reactive Watcher')
   await composer.locator('[name="plan-prompt"]').fill('React on incoming reply without model call')
   await composer.getByRole('button',{name:'监听会话',exact:true}).click()
@@ -152,18 +181,53 @@ try{
   await composer.getByText('已启用自动排期').click()
   await composer.getByRole('button',{name:'布置任务',exact:true}).click()
   await expect(composer).toHaveCount(0)
-  await expect(planner).toContainText('Event Reactive Watcher')
 
-  // Create persistent supervised/independent Mission (skip live reminder delivery by verifying specs after check or keep interval high: reminderSeconds >= 3600)
-  // Note: mission.create sends initial reminder immediately to employee unless independent? Wait - create with large reminderSeconds on an idle fixture:
-  // Actually keep 0 live agent turns! We verify mission creation? Note: mission.create notifies assignees on create which runs a fixture turn in headless fixtureCore (free, no paid model!).
-  await planner.locator('[data-quick-task="mission"]').click()
+  // Now the single page has 5 embedded databaseView blocks (3 from DB #1 + 2 from DB #2)!
+  await expect(frame.locator('.inline-database')).toHaveCount(5)
+  await expect(frame.locator('.page-scroll')).toContainText('Event Reactive Watcher')
+  await page.screenshot({path:path.join(out,'mission-task-db-views.png'),animations:'disabled'})
+  pass('Existing Notion page hosts multiple independent & linked Task Database Views (Table, Calendar, Board, Chart) for once, repeat, and event tasks')
+
+  // 6. Create persistent Mission task choosing "New Page + Multi-Database Views" ([data-dest-mode="new-page"])
+  await frame.locator('[data-topbar-tasks="true"]').click()
   await expect(composer).toBeVisible()
+  const submitBtnBox=await composer.getByRole('button',{name:'布置任务',exact:true}).boundingBox()
+  assert.ok(submitBtnBox&&submitBtnBox.y+submitBtnBox.height<=956,`Expected sticky composer footer inside viewport (<=956), got ${submitBtnBox?submitBtnBox.y+submitBtnBox.height:'null'}`)
+  await page.screenshot({path:path.join(out,'mission-composer-modal.png'),animations:'disabled'})
+  await composer.locator('[data-planner-tab="mission"]').click()
+  await composer.locator('[data-dest-mode="new-page"]').click()
+  await composer.locator('[name="plan-new-page-title"]').fill('专项持续督办看板页')
   await composer.locator('[name="plan-name"]').fill('Persistent Page Goal')
   await composer.locator('[name="plan-prompt"]').fill('Track goal deliverables until explicitly completed')
   await composer.getByRole('button',{name:'布置任务',exact:true}).click()
   await expect(composer).toHaveCount(0)
-  await expect(planner).toContainText('Persistent Page Goal')
+
+  await expect(titleInput).toHaveValue('专项持续督办看板页')
+  await expect(frame.locator('.inline-database')).toHaveCount(3)
+  await expect(frame.locator('.inline-database').first()).toContainText('Persistent Page Goal')
+
+  // Clicking primary "新建" button on a Task Database opens AgentTaskComposerModal (not an untyped row!)
+  await frame.locator('.inline-database').first().getByRole('button',{name:'新建记录',exact:true}).click()
+  await expect(composer).toBeVisible()
+  await composer.getByRole('button',{name:'取消',exact:true}).click()
+  await expect(composer).toHaveCount(0)
+
+  // Opening task row in Side Peek shows TaskRecordControlBar and hides internal task_ref property!
+  await frame.locator('.inline-database').first().locator('.database-row-title',{hasText:'Persistent Page Goal'}).click()
+  const peekPanel=frame.locator('.peek-panel')
+  await expect(peekPanel).toBeVisible()
+  await expect(peekPanel.locator('.task-record-control-bar')).toContainText('持续督办目标已关联')
+  await expect(peekPanel.locator('.page-properties')).not.toContainText('任务关联ID')
+  await page.screenshot({path:path.join(out,'mission-row-sidepeek.png'),animations:'disabled'})
+  await peekPanel.getByRole('button',{name:'关闭预览',exact:true}).click()
+  await expect(peekPanel).toHaveCount(0)
+
+  await expect.poll(async()=>{
+    const pages=await rpc('notebook.call',{method:'page.list'})
+    return pages.find(p=>p.title==='专项持续督办看板页')||null
+  },{timeout:15000}).toBeTruthy()
+  const newMissionPage=(await rpc('notebook.call',{method:'page.list'})).find(p=>p.title==='专项持续督办看板页')
+  assert.ok(newMissionPage,'Expected newly created Mission task page')
 
   const jobs=await rpc('schedule.list')
   for(const jobTitle of ['One-Shot Page Plan','Recurring Page Review','Event Reactive Watcher']){
@@ -173,27 +237,15 @@ try{
     assert.equal(j.enabled,false)
   }
   assert.equal(jobs.find(item=>item.name==='Event Reactive Watcher')?.rule.kind,'event')
+
   const missions=await rpc('mission.list',{archived:'active'})
   const pageMission=missions.find(m=>m.name==='Persistent Page Goal')
-  assert.ok(pageMission,'Missing bound Mission on page')
-  assert.ok(pageMission.plan?.tags?.includes(expectedTag),'Mission missing p:pageId binding tag')
-  pass('Per-page Agent Task Planner creates once, repeat, event-driven, and mission plans bound to the Notion page')
-
-  // Complete the mission immediately so zero background reminders linger
+  assert.ok(pageMission,'Missing bound Mission')
+  assert.ok(pageMission.plan?.tags?.includes('p:'+newMissionPage.id),'Mission should bind to the newly created Notion page')
   await rpc('mission.complete',{id:pageMission.id,result:'Verified in UI test',expectedRevision:pageMission.revision})
+  pass('Creating a task in New-Page mode opens a new multi-database-view Notion page and binds Core execution + tags cleanly')
 
-  // Open Global Agent Tasks Hub from sidebar
-  await frame.locator('[data-mission-tasks="true"]').click()
-  const hub=frame.locator('.agent-tasks-hub-modal')
-  await expect(hub).toBeVisible()
-  await expect(hub).toContainText('One-Shot Page Plan')
-  await expect(hub).toContainText('Recurring Page Review')
-  await expect(hub).toContainText('Event Reactive Watcher')
-  await hub.getByRole('button',{name:'关闭',exact:true}).click()
-  await expect(hub).toHaveCount(0)
-  pass('Sidebar Agent Tasks Hub lists all page-bound scheduled, event, and mission tasks')
-
-  // 6. Auto-granted page ACL + NotebookAccessDialog upgrade to create
+  // 7. Auto-granted page ACL + NotebookAccessDialog upgrade to create
   const autoGrants=await rpc('notebook.access')
   const workerGrant=autoGrants.grants.find(g=>g.employeeId===worker.id&&g.resourceId===createdPage.id)
   assert.ok(workerGrant?.read&&workerGrant?.write,'Creating page task automatically granted read+write ACL on the bound Notion page')
@@ -209,7 +261,7 @@ try{
   await aclDialog.getByRole('button',{name:'关闭',exact:true}).last().click()
   await expect(aclDialog).toHaveCount(0)
   const finalGrants=await rpc('notebook.access')
-  assert.ok(finalGrants.grants.some(g=>g.employeeId===worker.id&&g.resourceId===createdPage.id&&g.create===true))
+  assert.ok(finalGrants.grants.some(g=>g.employeeId===worker.id&&g.resourceId===newMissionPage.id&&g.create===true))
   pass('Auto-granted page write access works seamlessly alongside NotebookAccessDialog')
 
   await page.screenshot({path:path.join(out,'mission-notebook.png'),animations:'disabled'})

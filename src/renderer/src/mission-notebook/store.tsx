@@ -13,6 +13,7 @@ import { createTemplateRecord } from '../../../shared/mission-notebook/database/
 import { applySystemValues } from '../../../shared/mission-notebook/database/relations';
 import { validateSyncedSources } from '../../../shared/mission-notebook/content/references';
 import { ancestors, descendants, duplicatePage, makePage, movePage, restorePage, trashPage } from '../../../shared/mission-notebook/model';
+import { TASK_COL, syncPatchedTaskRowToCore } from './planning/taskDatabase';
 
 export type ModalState = {
   type:
@@ -47,6 +48,9 @@ export type ModalState = {
   taskKind?: 'once' | 'repeat' | 'event' | 'mission';
   jobId?: string;
   missionId?: string;
+  databaseId?: string;
+  initialOnceDate?: string;
+  initialEnabled?: boolean;
 } | null;
 function useStore() {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
@@ -314,6 +318,7 @@ function useStore() {
   const patch = useCallback(
     (id: string, changes: Partial<Page>) => {
       try {
+        const prevPage = current.current?.pages.find((p) => p.id === id);
         update((state) => {
           const next = {
             ...state,
@@ -323,6 +328,9 @@ function useStore() {
           };
           return changes.values ? applySystemValues(next, id, changes.values) : next;
         });
+        if (prevPage && prevPage.values?.[TASK_COL.ref]) {
+          syncPatchedTaskRowToCore(prevPage, changes);
+        }
         return true;
       } catch (error) {
         notify(error instanceof Error ? error.message : String(error));
@@ -384,8 +392,20 @@ function useStore() {
   const duplicate = useCallback(
     (id: string) => {
       if (!current.current) return;
+      const sourcePage = current.current.pages.find((p) => p.id === id);
       const result = duplicatePage(current.current, id);
-      update(() => result.workspace);
+      const cleanedWorkspace =
+        sourcePage?.parentId && sourcePage.values?.[TASK_COL.ref]
+          ? {
+              ...result.workspace,
+              pages: result.workspace.pages.map((p) =>
+                p.id === result.id && p.values?.[TASK_COL.ref]
+                  ? { ...p, values: { ...p.values, [TASK_COL.ref]: '' } }
+                  : p,
+              ),
+            }
+          : result.workspace;
+      update(() => cleanedWorkspace);
       navigate(result.id);
       notify('已创建页面副本');
     },

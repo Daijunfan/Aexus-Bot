@@ -38,6 +38,7 @@ const FolderDocument = lazy(() => import('./components/FolderDocument').then(mod
 import { PageMenu } from './components/PageMenu';
 import { AppearanceTheme, appAppearanceStyle } from './appearance';
 import { FindBar } from './components/FindBar';
+import { useAgentTaskLiveSync } from './planning/TaskRecordControlBar';
 // Off-screen dialogs, automation editors and Agent tooling are not part of the
 // startup path. Load them when opened without delaying the document or sidebar.
 const Automations = lazy(() => import('./actions/Automations').then(m => ({ default: m.Automations })));
@@ -89,6 +90,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: s
 }
 
 export default function App() {
+  useAgentTaskLiveSync();
   const store = useWorkspace();
   const {
     workspace: ws,
@@ -121,8 +123,14 @@ export default function App() {
   const page = ws?.pages.find((p) => p.id === ws.activePageId && !p.trashedAt);
   const peekPage = ws?.pages.find((p) => p.id === peekId && !p.trashedAt);
   useEffect(() => {
-    if (page && !page.database && (!page.sourceFile || page.sourceFile.kind === 'directory')) preloadNativePage();
-  }, [page?.id]);
+    if (!ws) return;
+    if (page && !page.database && (!page.sourceFile || page.sourceFile.kind === 'directory')) {
+      preloadNativePage();
+      return;
+    }
+    const timer = window.setTimeout(() => preloadNativePage(), 80);
+    return () => window.clearTimeout(timer);
+  }, [!!ws, page?.id]);
   useLayoutEffect(() => {
     if (ws && !performance.getEntriesByName('mini:shell-committed').length)
       performance.mark('mini:shell-committed');
@@ -569,9 +577,12 @@ export default function App() {
       {modal?.type === 'page-task-composer' && (
         <AgentTaskComposerModal
           pageId={modal.pageId || page?.id}
+          databaseId={modal.databaseId}
           initialTab={modal.taskKind}
           jobId={modal.jobId}
           missionId={modal.missionId}
+          initialOnceDate={modal.initialOnceDate}
+          initialEnabled={modal.initialEnabled}
           onClose={() => setModal(null)}
         />
       )}

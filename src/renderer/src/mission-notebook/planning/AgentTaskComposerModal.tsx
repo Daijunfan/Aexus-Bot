@@ -5,7 +5,10 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
+  Database as DatabaseIcon,
+  FilePlus2,
   History,
+  LayoutGrid,
   Play,
   Repeat,
   ShieldCheck,
@@ -19,6 +22,7 @@ import type { Mission, MissionSpec } from '../../../../shared/missions';
 import type { ScheduledJob, ScheduleEvent, ScheduleRun } from '../../../../shared/scheduler';
 import type { ScriptMonitor } from '../../../../shared/script-monitors';
 import type { ModelInfo } from '../../../../shared/types';
+import { internalPageIds, trashPage } from '../../../../shared/mission-notebook/model';
 import { AppSelect } from '../components/AppSelect';
 import { useWorkspace } from '../store';
 import { Modal } from '../ui';
@@ -31,6 +35,15 @@ import {
   userVisibleTags,
   type TaskEmployee,
 } from './planningTypes';
+import {
+  findExistingHostForTask,
+  findPageTaskDatabases,
+  jobToTaskRecordData,
+  missionToTaskRecordData,
+  TASK_COL,
+  upsertTaskRecordInWorkspace,
+  type TaskPagePreset,
+} from './taskDatabase';
 
 const WEEKDAYS = [
   { day: 1, label: '周一' },
@@ -61,22 +74,52 @@ const toIsoInstant = (localValue: string, zone: string) => {
 
 export function AgentTaskComposerModal({
   pageId,
+  databaseId,
   initialTab,
   jobId,
   missionId,
+  initialOnceDate,
+  initialEnabled,
   onClose,
 }: {
   pageId?: string;
+  databaseId?: string;
   initialTab?: PlannerTab;
   jobId?: string;
   missionId?: string;
+  initialOnceDate?: string;
+  initialEnabled?: boolean;
   onClose: () => void;
 }) {
-  const { workspace, notify } = useWorkspace();
-  const pages = useMemo(
-    () => (workspace?.pages ?? []).filter((p) => !p.trashedAt),
-    [workspace?.pages],
-  );
+  const { workspace, update, navigate, notify, setModal } = useWorkspace();
+
+  // Selectable host pages: exclude trashed, internal/record rows, and inline-child DBs already embedded in a doc
+  const selectablePages = useMemo(() => {
+    if (!workspace) return [];
+    const internal = internalPageIds(workspace.pages);
+    const active = workspace.pages.filter(
+      (p) => !p.trashedAt && !internal.has(p.id) && (!p.sourceFile || p.sourceFile.kind === 'directory'),
+    );
+    return active.filter((p) => {
+      if (!p.database || !p.parentId) return true;
+      const parent = active.find((cand) => cand.id === p.parentId);
+      return !parent || Boolean(parent.database);
+    });
+  }, [workspace]);
+
+  const initialHostId = useMemo(() => {
+    if (pageId) {
+      const p = workspace?.pages.find((item) => item.id === pageId && !item.trashedAt);
+      if (p) {
+        if (p.database && p.parentId) {
+          const parentDoc = selectablePages.find((cand) => cand.id === p.parentId);
+          if (parentDoc) return parentDoc.id;
+        }
+        if (selectablePages.some((cand) => cand.id === p.id)) return p.id;
+      }
+    }
+    return selectablePages[0]?.id || '';
+  }, [pageId, workspace, selectablePages]);
 
   const [loading, setLoading] = useState(Boolean(jobId || missionId));
   const [editingJob, setEditingJob] = useState<ScheduledJob | null>(null);
@@ -91,28 +134,62 @@ export function AgentTaskComposerModal({
   const [history, setHistory] = useState<ScheduleRun[]>([]);
   const [nativeEfforts, setNativeEfforts] = useState<string[]>([]);
 
-  const [boundPageId, setBoundPageId] = useState(pageId || '');
+  // Destination in Notion Page & Database View
+  const [destMode, setDestMode] = useState<'existing-page' | 'new-page'>(() =>
+    initialHostId ? 'existing-page' : 'new-page',
+  );
+  const [targetPageId, setTargetPageId] = useState(initialHostId);
+  const [targetDbId, setTargetDbId] = useState<string>(databaseId || '__new_inline_db__');
+  const [newPageTitle, setNewPageTitle] = useState('');
+  const [newDbTitle, setNewDbTitle] = useState('');
+  const [viewPreset, setViewPreset] = useState<TaskPagePreset>('multi');
+
+  const pageDatabases = useMemo(
+    () => findPageTaskDatabases(workspace, targetPageId),
+    [workspace, targetPageId],
+  );
+
+  useEffect(() => {
+    if (destMode !== 'existing-page') return;
+    if (databaseId && pageDatabases.some((d) => d.databaseId === databaseId)) {
+      setTargetDbId(databaseId);
+      return;
+    }
+    if (pageDatabases.length > 0) {
+      setTargetDbId((prev) =>
+        pageDatabases.some((d) => d.databaseId === prev) ? prev : pageDatabases[0].databaseId,
+      );
+    } else {
+      setTargetDbId('__new_inline_db__');
+    }
+  }, [destMode, targetPageId, pageDatabases, databaseId]);
+
   const boundPage = useMemo(
-    () => pages.find((p) => p.id === boundPageId),
-    [pages, boundPageId],
+    () => selectablePages.find((p) => p.id === targetPageId),
+    [selectablePages, targetPageId],
   );
 
   const [tab, setTab] = useState<PlannerTab>(initialTab || 'once');
   const [name, setName] = useState('');
   const [prompt, setPrompt] = useState('');
-  const [includePageContext, setIncludePageContext] = useState(() => !jobId && !missionId && Boolean(pageId));
-  const [grantRight, setGrantRight] = useState<'write' | 'read' | 'create' | 'none'>(() =>
-    pageId ? 'write' : 'none',
-  );
+  const [includePageContext, setIncludePageContext] = useState(() => !jobId && !missionId);
+  const [grantRight, setGrantRight] = useState<'write' | 'read' | 'create' | 'none'>('write');
 
   // Schedule state
   const [employeeId, setEmployeeId] = useState('');
-  const [onceMode, setOnceMode] = useState<'after' | 'at'>('after');
+  const [onceMode, setOnceMode] = useState<'after' | 'at'>(() =>
+    initialOnceDate ? 'at' : 'after',
+  );
   const [afterAmount, setAfterAmount] = useState('30');
   const [afterUnit, setAfterUnit] = useState('60');
-  const [onceAt, setOnceAt] = useState(() =>
-    toLocalInput(new Date(Date.now() + 3600_000).toISOString(), hostTimezone),
-  );
+  const [onceAt, setOnceAt] = useState(() => {
+    if (initialOnceDate) {
+      return initialOnceDate.includes('T')
+        ? initialOnceDate.slice(0, 16)
+        : `${initialOnceDate.slice(0, 10)}T09:00`;
+    }
+    return toLocalInput(new Date(Date.now() + 3600_000).toISOString(), hostTimezone);
+  });
 
   const [repeatKind, setRepeatKind] = useState<'daily' | 'weekly' | 'monthly' | 'interval'>('daily');
   const [intervalAmount, setIntervalAmount] = useState('30');
@@ -131,7 +208,9 @@ export function AgentTaskComposerModal({
   const [cooldown, setCooldown] = useState('60');
 
   // Schedule options & limits
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(() =>
+    initialEnabled !== undefined ? initialEnabled : true,
+  );
   const [channelId, setChannelId] = useState('');
   const [windowStart, setWindowStart] = useState('');
   const [windowEnd, setWindowEnd] = useState('');
@@ -198,7 +277,9 @@ export function AgentTaskComposerModal({
         const secs = activeEmployees.filter((e) => e.managementRole === 'secretary');
         if (!jobId && !missionId) {
           setTimezone(zone);
-          setOnceAt(toLocalInput(new Date(Date.now() + 3600_000).toISOString(), zone));
+          if (!initialOnceDate) {
+            setOnceAt(toLocalInput(new Date(Date.now() + 3600_000).toISOString(), zone));
+          }
           if (activeEmployees[0]) {
             setEmployeeId(activeEmployees[0].id);
             setMissionEmployees([activeEmployees[0].id]);
@@ -223,8 +304,20 @@ export function AgentTaskComposerModal({
           if (!alive) return;
           setEditingJob(job);
           setHistory(Array.isArray(runs) ? runs : []);
-          const existingBound = extractBoundPageId(job);
-          if (existingBound) setBoundPageId(existingBound);
+          const existingRecordLoc = findExistingHostForTask(workspace, `schedule:${job.id}`);
+          const existingBound = existingRecordLoc?.hostPageId || extractBoundPageId(job);
+          if (existingBound && selectablePages.some((p) => p.id === existingBound)) {
+            setDestMode('existing-page');
+            setTargetPageId(existingBound);
+            if (existingRecordLoc?.databaseId) setTargetDbId(existingRecordLoc.databaseId);
+          } else if (selectablePages[0]) {
+            setDestMode('existing-page');
+            setTargetPageId(selectablePages[0].id);
+          } else {
+            setDestMode('new-page');
+          }
+          setGrantRight(existingBound ? 'write' : 'none');
+
           setName(job.name);
           setPrompt(job.action.prompt);
           setEmployeeId(job.action.employeeId);
@@ -293,8 +386,20 @@ export function AgentTaskComposerModal({
           const mission = (await hostCall('mission.get', { id: missionId })) as Mission;
           if (!alive) return;
           setEditingMission(mission);
-          const existingBound = extractBoundPageId(mission);
-          if (existingBound) setBoundPageId(existingBound);
+          const existingRecordLoc = findExistingHostForTask(workspace, `mission:${mission.id}`);
+          const existingBound = existingRecordLoc?.hostPageId || extractBoundPageId(mission);
+          if (existingBound && selectablePages.some((p) => p.id === existingBound)) {
+            setDestMode('existing-page');
+            setTargetPageId(existingBound);
+            if (existingRecordLoc?.databaseId) setTargetDbId(existingRecordLoc.databaseId);
+          } else if (selectablePages[0]) {
+            setDestMode('existing-page');
+            setTargetPageId(selectablePages[0].id);
+          } else {
+            setDestMode('new-page');
+          }
+          setGrantRight(existingBound ? 'write' : 'none');
+
           setTab('mission');
           setName(mission.name);
           setPrompt(mission.prompt);
@@ -320,7 +425,7 @@ export function AgentTaskComposerModal({
     return () => {
       alive = false;
     };
-  }, [jobId, missionId, pageId]);
+  }, [jobId, missionId]);
 
   const targetEmployee = employees.find((e) => e.id === employeeId);
   const secretaries = employees.filter((e) => e.managementRole === 'secretary');
@@ -355,13 +460,13 @@ export function AgentTaskComposerModal({
         : ['low', 'medium', 'high', 'xhigh', 'max'];
 
   const isEditing = Boolean(editingJob || editingMission);
-  const effectiveTags = mergeTagsWithPageBinding(tags, boundPageId || null);
 
-  const buildScheduleSpec = () => {
+  const buildScheduleSpec = (resolvedPageId: string, resolvedPageTitle: string) => {
     const cleanPrompt =
-      includePageContext && boundPageId
-        ? buildPageContextPrompt(prompt, boundPageId, boundPage?.title || '无标题')
+      includePageContext && resolvedPageId
+        ? buildPageContextPrompt(prompt, resolvedPageId, resolvedPageTitle || '无标题')
         : prompt.trim();
+    const effectiveTags = mergeTagsWithPageBinding(tags, resolvedPageId || null);
 
     let timing: Record<string, unknown>;
     if (tab === 'once') {
@@ -455,8 +560,8 @@ export function AgentTaskComposerModal({
           : null,
       ...(channelId
         ? { source: `channel:${channelId}` }
-        : boundPageId
-          ? { source: `notebook:${boundPageId}` }
+        : resolvedPageId
+          ? { source: `notebook:${resolvedPageId}` }
           : editingJob?.source
             ? { source: editingJob.source }
             : {}),
@@ -468,7 +573,7 @@ export function AgentTaskComposerModal({
     };
   };
 
-  const buildMissionSpec = () => {
+  const buildMissionSpec = (resolvedPageId: string, resolvedPageTitle: string) => {
     const sec = Math.round(Number(reminderAmount) * Number(reminderUnit));
     if (!Number.isSafeInteger(sec) || sec < 10 || sec > 31536000) {
       throw new Error('督办提醒间隔需在 10 秒到 365 天之间');
@@ -476,9 +581,10 @@ export function AgentTaskComposerModal({
     if (!missionEmployees.length) throw new Error('请至少指定一位执行员工');
     if (missionType === 'supervised' && !secretaryId) throw new Error('请选择督办秘书');
     const cleanPrompt =
-      includePageContext && boundPageId
-        ? buildPageContextPrompt(prompt, boundPageId, boundPage?.title || '无标题')
+      includePageContext && resolvedPageId
+        ? buildPageContextPrompt(prompt, resolvedPageId, resolvedPageTitle || '无标题')
         : prompt.trim();
+    const effectiveTags = mergeTagsWithPageBinding(tags, resolvedPageId || null);
 
     return {
       name: name.trim(),
@@ -500,7 +606,10 @@ export function AgentTaskComposerModal({
     setError('');
     setBusy(true);
     try {
-      const spec = buildScheduleSpec();
+      const spec = buildScheduleSpec(
+        destMode === 'existing-page' ? targetPageId : '',
+        boundPage?.title || newPageTitle || '任务规划',
+      );
       const res = await window.native.hostCall('schedule.preview', {
         ...(editingJob ? { id: editingJob.id, patch: spec } : { spec }),
         count: 5,
@@ -524,54 +633,162 @@ export function AgentTaskComposerModal({
       setError('请填写执行指令');
       return;
     }
+    if (destMode === 'existing-page' && !targetPageId) {
+      setError('请选择要保存任务的现有页面，或切换为“新建页面保存”');
+      return;
+    }
+
     setBusy(true);
     try {
       const hostCall = window.native.hostCall;
       let affectedEmployees: string[] = [];
 
+      // Step 1: If destMode === 'new-page', pre-allocate host page ID so prompt/tags bind cleanly
+      let finalHostPageId = destMode === 'existing-page' ? targetPageId : '';
+      let createdHostPageId = '';
+      let savedJob: ScheduledJob | null = null;
+      let savedMission: Mission | null = null;
+
+      // Determine pre-existing or new page title for context prompt
+      const targetTitle =
+        destMode === 'new-page'
+          ? newPageTitle.trim() || `🗓️ ${name.trim()}`
+          : boundPage?.title || '无标题';
+
+      // Create the new page + database view first if destMode === 'new-page', or upsert after Core call:
+      // Actually creating/updating in Core first ensures we never create orphan Notion rows if Core validation rejects!
       if (tab === 'mission') {
-        const spec = buildMissionSpec();
+        const spec = buildMissionSpec(finalHostPageId, targetTitle);
         const sig = JSON.stringify(['mission', spec]);
         if (sig !== lastSigRef.current) {
           reqKeyRef.current = crypto.randomUUID();
           lastSigRef.current = sig;
         }
         if (editingMission) {
-          await hostCall('mission.update', {
+          savedMission = (await hostCall('mission.update', {
             id: editingMission.id,
             patch: spec,
             expectedRevision: editingMission.revision,
-          });
+          })) as Mission;
         } else {
-          await hostCall('mission.create', { spec, clientRequestId: reqKeyRef.current });
+          savedMission = (await hostCall('mission.create', {
+            spec,
+            clientRequestId: reqKeyRef.current,
+          })) as Mission;
         }
         affectedEmployees = spec.employeeIds;
       } else {
         if (!employeeId) throw new Error('请选择执行 AI 员工');
-        const spec = buildScheduleSpec();
+        const spec = buildScheduleSpec(finalHostPageId, targetTitle);
         const sig = JSON.stringify(['schedule', spec]);
         if (sig !== lastSigRef.current) {
           reqKeyRef.current = crypto.randomUUID();
           lastSigRef.current = sig;
         }
         if (editingJob) {
-          await hostCall('schedule.update', {
+          savedJob = (await hostCall('schedule.update', {
             id: editingJob.id,
             patch: spec,
             expectedRevision: editingJob.revision ?? 1,
-          });
+          })) as ScheduledJob;
         } else {
-          await hostCall('schedule.create', { spec, clientRequestId: reqKeyRef.current });
+          savedJob = (await hostCall('schedule.create', {
+            spec,
+            clientRequestId: reqKeyRef.current,
+          })) as ScheduledJob;
         }
         affectedEmployees = [employeeId];
       }
 
-      let accessNote: string | null = null;
-      if (boundPageId && grantRight !== 'none') {
-        accessNote = await grantPageAccessForEmployees(boundPageId, affectedEmployees, grantRight);
+      // Step 2: Save/Upsert the structured Task Record into the Notion Page's Database View
+      if (workspace) {
+        const recordPayload = savedMission
+          ? missionToTaskRecordData(savedMission, employees, hostTimezone)
+          : jobToTaskRecordData(savedJob!, employees, hostTimezone);
+
+        update((state) => {
+          const out = upsertTaskRecordInWorkspace(
+            state,
+            destMode === 'new-page'
+              ? {
+                  mode: 'new-page',
+                  newPageTitle: newPageTitle.trim() || `${name.trim()} · 任务规划`,
+                  preset: viewPreset,
+                  parentId: null,
+                }
+              : {
+                  mode: 'existing-page',
+                  hostPageId: targetPageId,
+                  targetDatabaseId: targetDbId || '__new_inline_db__',
+                  newDbTitle: newDbTitle.trim() || undefined,
+                  preset: viewPreset,
+                },
+            {
+              ...recordPayload,
+              updateBlocksOnExisting: true,
+            },
+          );
+          finalHostPageId = out.hostPageId;
+          if (destMode === 'new-page') createdHostPageId = out.hostPageId;
+          return out.workspace;
+        });
+
+        // If a brand-new page was created, bind p:<createdHostPageId> back onto the Core schedule/mission cleanly
+        if (createdHostPageId) {
+          const boundTags = mergeTagsWithPageBinding(tags, createdHostPageId);
+          if (savedJob) {
+            await hostCall('schedule.update', {
+              id: savedJob.id,
+              patch: {
+                source: channelId ? `channel:${channelId}` : `notebook:${createdHostPageId}`,
+                plan: { priority, tags: boundTags, notes },
+                ...(includePageContext
+                  ? {
+                      action: {
+                        ...savedJob.action,
+                        prompt: buildPageContextPrompt(prompt, createdHostPageId, targetTitle),
+                      },
+                    }
+                  : {}),
+              },
+              expectedRevision: savedJob.revision ?? 1,
+            }).catch(() => {});
+          } else if (savedMission) {
+            await hostCall('mission.update', {
+              id: savedMission.id,
+              patch: {
+                plan: { priority, tags: boundTags, notes },
+                ...(includePageContext
+                  ? { prompt: buildPageContextPrompt(prompt, createdHostPageId, targetTitle) }
+                  : {}),
+              },
+              expectedRevision: savedMission.revision,
+            }).catch(() => {});
+          }
+        }
       }
 
-      notify(accessNote || (isEditing ? 'Agent 任务已更新并保存' : '已在当前页面布置 Agent 任务'));
+      let accessNote: string | null = null;
+      if (finalHostPageId && grantRight !== 'none') {
+        accessNote = await grantPageAccessForEmployees(
+          finalHostPageId,
+          affectedEmployees,
+          grantRight,
+        );
+      }
+
+      if (createdHostPageId) {
+        navigate(createdHostPageId);
+      }
+
+      notify(
+        accessNote ||
+          (isEditing
+            ? '任务配置与数据库视图记录已同步保存'
+            : destMode === 'new-page'
+              ? '已新建任务页面并存入多数据库视图'
+              : '已将任务存入当前页面的数据库视图'),
+      );
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -580,11 +797,24 @@ export function AgentTaskComposerModal({
     }
   };
 
-  const quickAction = async (fn: () => Promise<unknown>, successMsg: string, closeAfter = false) => {
+  const quickAction = async (
+    fn: () => Promise<unknown>,
+    successMsg: string,
+    closeAfter = false,
+    trashRef?: string,
+  ) => {
     setError('');
     setBusy(true);
     try {
       await fn();
+      if (trashRef) {
+        update((state) => {
+          const matchingIds = state.pages
+            .filter((p) => !p.trashedAt && p.values?.[TASK_COL.ref] === trashRef)
+            .map((p) => p.id);
+          return matchingIds.reduce((acc, id) => trashPage(acc, id), state);
+        });
+      }
       notify(successMsg);
       if (closeAfter) onClose();
     } catch (e) {
@@ -605,14 +835,14 @@ export function AgentTaskComposerModal({
     ? `编辑任务 · ${editingJob.name}`
     : editingMission
       ? `编辑督办 · ${editingMission.name}`
-      : boundPage
-        ? `布置页面 Agent 任务 · ${boundPage.title || '无标题'}`
-        : '新建 Agent 任务';
+      : boundPage && destMode === 'existing-page'
+        ? `布置任务到数据库视图 · ${boundPage.title || '无标题'}`
+        : '新建页面与数据库任务';
 
   return (
     <Modal title={modalTitle} onClose={onClose} wide className="agent-task-composer-modal">
       {loading ? (
-        <div className="planner-loading">正在加载 Agent 与调度规则…</div>
+        <div className="planner-loading">正在加载 Agent 与数据库视图配置…</div>
       ) : (
         <form
           className="planner-composer-form"
@@ -647,13 +877,146 @@ export function AgentTaskComposerModal({
             </div>
           )}
 
+          {/* Save Destination: Existing Page DB View vs New Page Multi-DB Views */}
+          <section className="planner-destination-box" aria-label="数据库视图保存位置">
+            <div className="planner-destination-head">
+              <span className="planner-destination-label">
+                <DatabaseIcon size={14} />
+                <span>保存位置（页面与数据库视图）</span>
+              </span>
+              <div className="planner-segmented">
+                <button
+                  type="button"
+                  data-dest-mode="existing-page"
+                  aria-pressed={destMode === 'existing-page'}
+                  disabled={!selectablePages.length}
+                  className={destMode === 'existing-page' ? 'active' : ''}
+                  onClick={() => {
+                    setDestMode('existing-page');
+                    if (!targetPageId && selectablePages[0]) {
+                      setTargetPageId(selectablePages[0].id);
+                    }
+                  }}
+                >
+                  <LayoutGrid size={13} />
+                  <span>存入现有页面的数据库视图</span>
+                </button>
+                <button
+                  type="button"
+                  data-dest-mode="new-page"
+                  aria-pressed={destMode === 'new-page'}
+                  className={destMode === 'new-page' ? 'active' : ''}
+                  onClick={() => setDestMode('new-page')}
+                >
+                  <FilePlus2 size={13} />
+                  <span>新开页面并存入数据库视图</span>
+                </button>
+              </div>
+            </div>
+
+            {destMode === 'existing-page' ? (
+              <div className="planner-form-grid">
+                <label className="planner-field">
+                  <span>选择现有页面 *</span>
+                  <AppSelect
+                    aria-label="选择目标页面"
+                    value={targetPageId}
+                    onChange={(e) => {
+                      setTargetPageId(e.target.value);
+                      if (e.target.value && grantRight === 'none') setGrantRight('write');
+                    }}
+                  >
+                    {selectablePages.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.icon ? `${p.icon} ` : ''}
+                        {p.title || '无标题页面'}
+                      </option>
+                    ))}
+                  </AppSelect>
+                </label>
+
+                <label className="planner-field">
+                  <span>选择或新建该页的数据库视图 *</span>
+                  <AppSelect
+                    aria-label="选择目标数据库视图"
+                    value={targetDbId}
+                    onChange={(e) => setTargetDbId(e.target.value)}
+                  >
+                    {pageDatabases.map((db) => (
+                      <option key={db.databaseId} value={db.databaseId}>
+                        {db.icon} {db.title}（{db.viewCount} 种视图）
+                      </option>
+                    ))}
+                    <option value="__new_inline_db__">
+                      ✨ 在该页面新增一个任务数据库视图块
+                    </option>
+                  </AppSelect>
+                </label>
+
+                {targetDbId === '__new_inline_db__' && (
+                  <>
+                    <label className="planner-field">
+                      <span>新数据库视图组标题（可选）</span>
+                      <input
+                        aria-label="新数据库视图组标题"
+                        placeholder="留空自动命名，同页可嵌入多个数据库视图"
+                        value={newDbTitle}
+                        onChange={(e) => setNewDbTitle(e.target.value)}
+                      />
+                    </label>
+                    <label className="planner-field">
+                      <span>可视化视图组合</span>
+                      <AppSelect
+                        aria-label="可视化视图组合"
+                        value={viewPreset}
+                        onChange={(e) => setViewPreset(e.target.value as TaskPagePreset)}
+                      >
+                        <option value="multi">丰富多视图块（主表 + 排期日历 + 状态看板）</option>
+                        <option value="calendar">日历与执行时间线双视图</option>
+                        <option value="board">状态看板与类型统计双视图</option>
+                        <option value="table">紧凑单数据库（含 6 种可切换视图标签）</option>
+                      </AppSelect>
+                    </label>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="planner-form-grid">
+                <label className="planner-field">
+                  <span>新页面标题</span>
+                  <input
+                    name="plan-new-page-title"
+                    aria-label="新建页面标题"
+                    placeholder="留空将按任务名称自动命名新页面"
+                    value={newPageTitle}
+                    onChange={(e) => setNewPageTitle(e.target.value)}
+                  />
+                </label>
+
+                <label className="planner-field">
+                  <span>页面数据库视图组合</span>
+                  <AppSelect
+                    aria-label="页面数据库视图组合"
+                    value={viewPreset}
+                    onChange={(e) => setViewPreset(e.target.value as TaskPagePreset)}
+                  >
+                    <option value="multi">丰富多视图页面（任务总表 + 排期日历 + 状态看板）</option>
+                    <option value="calendar">日历与时间线规划页（排期日历 + 时间线）</option>
+                    <option value="board">看板与图表分析页（状态看板 + 类型分布图）</option>
+                    <option value="table">标准单数据库页（含 6 种切换视图标签）</option>
+                  </AppSelect>
+                </label>
+              </div>
+            )}
+          </section>
+
           <div className="planner-form-grid">
             <label className="planner-field planner-wide">
               <span>任务名称 *</span>
               <input
                 name="plan-name"
                 aria-label="任务名称"
-                placeholder="例如：每日抓取行业动态并整理到本页"
+                placeholder="例如：每日抓取行业动态并汇总写入本页数据库"
                 maxLength={160}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -661,44 +1024,23 @@ export function AgentTaskComposerModal({
             </label>
 
             <label className="planner-field">
-              <span>绑定 Notion 页面</span>
+              <span>
+                <ShieldCheck size={13} style={{ verticalAlign: -2, marginRight: 4 }} />
+                自动页面授权
+              </span>
               <AppSelect
-                aria-label="绑定 Notion 页面"
-                value={boundPageId}
-                onChange={(e) => {
-                  setBoundPageId(e.target.value);
-                  if (e.target.value && grantRight === 'none') setGrantRight('write');
-                }}
+                aria-label="自动页面授权"
+                value={grantRight}
+                onChange={(e) =>
+                  setGrantRight(e.target.value as 'write' | 'read' | 'create' | 'none')
+                }
               >
-                <option value="">（不绑定特定页面 · 全局任务）</option>
-                {pages.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title || '无标题'}
-                  </option>
-                ))}
+                <option value="write">授予读 + 写权限 (推荐，Agent 可更新页面)</option>
+                <option value="read">仅授予阅读权限 (read)</option>
+                <option value="create">授予读 + 写 + 新建子页 (create)</option>
+                <option value="none">不修改现有页面授权</option>
               </AppSelect>
             </label>
-
-            {boundPageId && (
-              <label className="planner-field">
-                <span>
-                  <ShieldCheck size={13} style={{ verticalAlign: -2, marginRight: 4 }} />
-                  自动页面授权
-                </span>
-                <AppSelect
-                  aria-label="自动页面授权"
-                  value={grantRight}
-                  onChange={(e) =>
-                    setGrantRight(e.target.value as 'write' | 'read' | 'create' | 'none')
-                  }
-                >
-                  <option value="write">授予读 + 写权限 (推荐，Agent 可更新本页)</option>
-                  <option value="read">仅授予阅读权限 (read)</option>
-                  <option value="create">授予读 + 写 + 新建子页 (create)</option>
-                  <option value="none">不修改现有页面授权</option>
-                </AppSelect>
-              </label>
-            )}
 
             {tab !== 'mission' ? (
               <label className="planner-field">
@@ -798,9 +1140,12 @@ export function AgentTaskComposerModal({
               </div>
             )}
 
-            <label className="planner-field planner-wide">
-              <span>执行指令 / 任务目标 *</span>
+            <div className="planner-field planner-wide">
+              <label htmlFor="plan-prompt-textarea" style={{ fontWeight: 550 }}>
+                执行指令 / 任务目标 *
+              </label>
               <textarea
+                id="plan-prompt-textarea"
                 name="plan-prompt"
                 aria-label="执行指令"
                 rows={4}
@@ -808,17 +1153,17 @@ export function AgentTaskComposerModal({
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
               />
-              {boundPageId && !isEditing && (
+              {!isEditing && (
                 <label className="planner-inline-check">
                   <input
                     type="checkbox"
                     checked={includePageContext}
                     onChange={(e) => setIncludePageContext(e.target.checked)}
                   />
-                  <span>自动附加当前 Notion 页面标识与回写提示</span>
+                  <span>自动附加目标 Notion 页面标识与数据库回写提示</span>
                 </label>
               )}
-            </label>
+            </div>
           </div>
 
           {/* Trigger Rules Section */}
@@ -1213,7 +1558,7 @@ export function AgentTaskComposerModal({
             <details className="planner-advanced">
               <summary>高级选项（运行窗口、次数上限、超时与模型推理档位）</summary>
               <div className="planner-form-grid">
-                <label className="planner-field">
+                <div className="planner-field">
                   <span>执行状态</span>
                   <label className="planner-inline-check" style={{ marginTop: 6 }}>
                     <input
@@ -1223,7 +1568,7 @@ export function AgentTaskComposerModal({
                     />
                     <span>{enabled ? '已启用自动排期' : '仅保存为暂停草稿'}</span>
                   </label>
-                </label>
+                </div>
 
                 <label className="planner-field">
                   <span>最多触发次数</span>
@@ -1397,6 +1742,16 @@ export function AgentTaskComposerModal({
 
           <div className="planner-modal-footer">
             <div className="planner-footer-left">
+              {!isEditing && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={busy}
+                  onClick={() => setModal({ type: 'agent-tasks', pageId })}
+                >
+                  <DatabaseIcon size={14} /> 现有任务总览
+                </button>
+              )}
               {tab !== 'mission' && (
                 <button
                   type="button"
@@ -1437,6 +1792,7 @@ export function AgentTaskComposerModal({
                           }),
                         '任务已删除',
                         true,
+                        `schedule:${editingJob.id}`,
                       )
                     }
                   >
@@ -1445,7 +1801,7 @@ export function AgentTaskComposerModal({
                 </>
               )}
 
-              {editingMission && (
+              {editingMission && !editingMission.engineering && (
                 <>
                   {editingMission.status !== 'succeeded' ? (
                     <button
@@ -1489,6 +1845,7 @@ export function AgentTaskComposerModal({
                               }),
                             '已完成督办已删除',
                             true,
+                            `mission:${editingMission.id}`,
                           )
                         }
                       >

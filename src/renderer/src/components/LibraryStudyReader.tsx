@@ -52,6 +52,7 @@ export function LibraryStudyReader({
   readerCommand = null,
   onReaderState,
   onContentChanged,
+  onBackToShelf,
   onBackFromExternal,
   onOpenExternalAccess,
 }: {
@@ -62,6 +63,7 @@ export function LibraryStudyReader({
   readerCommand?: ReaderCommand | null;
   onReaderState?: (state: ReaderFrameState) => void;
   onContentChanged?: () => void;
+  onBackToShelf?: () => void;
   onBackFromExternal?: () => void;
   onOpenExternalAccess?: () => void;
 }) {
@@ -342,7 +344,7 @@ export function LibraryStudyReader({
     }
   }, [session?.url, embedded]);
 
-  const showBar = !embedded || Boolean(view.readerWorkspace);
+  const showBar = true;
   const backLabel =
     view.returnTo?.kind === 'plan'
       ? 'Back to Mission'
@@ -385,12 +387,16 @@ export function LibraryStudyReader({
               onClick={() => void act('view.close')}
             />
           )}
-          {!view.returnTo && view.readerWorkspace && onBackFromExternal && (
-            <BackButton
-              label={uiText('Back to files')}
-              ariaLabel={uiText('Back to files')}
-              onClick={onBackFromExternal}
-            />
+          {!view.returnTo && (view.readerWorkspace ? onBackFromExternal : onBackToShelf) && (
+            <button
+              type="button"
+              className="library-shelf-pill-btn"
+              aria-label={uiText(view.readerWorkspace ? 'Back to files' : 'Back to Shelf')}
+              onClick={(view.readerWorkspace ? onBackFromExternal : onBackToShelf)!}
+            >
+              <Icon name="arrow-left" />
+              <span>{uiText(view.readerWorkspace ? 'Back to files' : 'Back to Shelf')}</span>
+            </button>
           )}
           <div className="library-reader-title">
             <Icon name="book" />

@@ -1,11 +1,12 @@
 import { EventIndicators } from '../components/EventSummary';
 import { eventSignals } from '../../../../shared/mission-notebook/scheduling/presentation';
-import { ChevronRight, Plus, ArrowUpRight } from 'lucide-react';
+import { ChevronRight, Plus, ArrowUpRight, Zap } from 'lucide-react';
 import { useWorkspace } from '../store';
 import { IconButton, PageIcon } from '../ui';
 import type { DatabaseView, Page } from '../../../../shared/mission-notebook/types';
 import { subItemDisplay, type HierarchyRow } from '../../../../shared/mission-notebook/database/structure';
 import { subItemsFor } from '../../../../shared/mission-notebook/database/relations';
+import { getPageTaskRef } from '../planning/taskDatabase';
 
 export function RecordTitle({
   entry,
@@ -20,8 +21,9 @@ export function RecordTitle({
   onViewChange: (changes: Partial<DatabaseView>) => void;
   onOpen: (id: string) => void;
 }) {
-  const { command, notify, workspace } = useWorkspace();
+  const { command, notify, workspace, setModal } = useWorkspace();
   const row = entry.page;
+  const taskRef = getPageTaskRef(row);
   const signals = eventSignals(row, workspace!.pages);
   const nested = database.database?.subItems && subItemDisplay(view) === 'nested';
   const childCount = database.database?.subItems
@@ -53,6 +55,24 @@ export function RecordTitle({
         </span>
         <ArrowUpRight size={13} />
       </button>
+      {taskRef && (
+        <button
+          type="button"
+          className="record-task-config-btn"
+          data-edit-task-ref={`${taskRef.kind}:${taskRef.id}`}
+          title="编辑 Agent 调度规则"
+          onClick={(e) => {
+            e.stopPropagation();
+            setModal({
+              type: 'page-task-composer',
+              ...(taskRef.kind === 'schedule' ? { jobId: taskRef.id } : { missionId: taskRef.id }),
+            });
+          }}
+        >
+          <Zap size={11} />
+          <span>调度</span>
+        </button>
+      )}
       {!!childCount && <small className="subitem-count">{childCount}</small>}
       {database.database?.subItems && (
         <IconButton

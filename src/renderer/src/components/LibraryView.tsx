@@ -100,12 +100,19 @@ export function LibraryView({
   act: Action;
 }) {
   useI18n();
-  const activeSection: LibrarySection = view.librarySection ?? 'reader';
+  const activeSection: LibrarySection =
+    view.librarySection ??
+    (view.readerDocumentId || view.readerWorkspace ? 'reader' : 'files');
 
-  // Keep MarginReader alive once visited so switching across sections stays instantaneous.
+  // Keep MarginReader warmed up so switching between the unified shelf and any book/study set is instantaneous.
   const [readerMounted, setReaderMounted] = useState(activeSection === 'reader');
   useEffect(() => {
-    if (activeSection === 'reader') setReaderMounted(true);
+    if (activeSection === 'reader') {
+      setReaderMounted(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setReaderMounted(true), 120);
+    return () => window.clearTimeout(timer);
   }, [activeSection]);
 
   const [sidebarWidth, setSidebarWidth] = useState(readSavedSidebarWidth);
@@ -124,7 +131,7 @@ export function LibraryView({
     seq: 0,
   });
   const quickSearchRef = useRef<HTMLInputElement>(null);
-  const beforeSearchSection = useRef<LibrarySection>('reader');
+  const beforeSearchSection = useRef<LibrarySection>('files');
 
   // Overview summary strip data
   const [overview, setOverview] = useState<OverviewData | null>(null);
@@ -147,7 +154,7 @@ export function LibraryView({
   const [assetsTree, setAssetsTree] = useState<AssetTree | null>(null);
   const [assetBranches, setAssetBranches] = useState<Record<string, AssetNode[]>>({});
   const [spaceExpanded, setSpaceExpanded] = useState<Set<string>>(() => new Set(['agents']));
-  const [activeSpaceNodeId, setActiveSpaceNodeId] = useState<string>('agents');
+  const [activeSpaceNodeId, setActiveSpaceNodeId] = useState<string>('root');
   const [filesScope, setFilesScope] = useState<AssetView | ''>('');
 
   // Cloud hosts tree state
@@ -320,7 +327,8 @@ export function LibraryView({
           const info = await api.call<{ physicalPath?: string }>('assets.info', { id: opts.assetId });
           physicalPath = info.physicalPath;
         }
-        const shouldImport = Boolean(physicalPath && !opts.inPlace);
+        const isInsideReaderRoot = Boolean(opts.assetId?.startsWith('reader:library'));
+        const shouldImport = Boolean(physicalPath && !opts.inPlace && !isInsideReaderRoot);
         const opened = await api.call<{ workspace?: string; document?: { id: string; path: string } }>(
           'reader.open',
           {
@@ -329,7 +337,7 @@ export function LibraryView({
             ...(opts.studySetId ? { studySetId: opts.studySetId } : {}),
           },
         );
-        const isDefaultWorkspace = !opts.inPlace || !physicalPath;
+        const isDefaultWorkspace = !opts.inPlace || !physicalPath || isInsideReaderRoot;
         setReaderMounted(true);
         await act('view.open', {
           kind: 'library',
@@ -571,7 +579,7 @@ export function LibraryView({
                     navigate('search');
                   }
                 } else if (activeSection === 'search') {
-                  navigate(beforeSearchSection.current || 'reader');
+                  navigate(beforeSearchSection.current || 'files');
                 }
               }}
             />
@@ -590,7 +598,11 @@ export function LibraryView({
                 <strong>{overview ? assetSize(overview.totalBytes) : '—'}</strong>
               </span>
               <small>
-                {overview ? uiText('{0} items · 7 domains', [overview.totalFiles]) : uiText('Storage Overview')}
+                {overview
+                  ? overview.totalFiles === 1
+                    ? uiText('1 item · 7 domains')
+                    : uiText('{0} items · 7 domains', [overview.totalFiles])
+                  : uiText('Storage Overview')}
               </small>
             </div>
             <div className="library-overview-mini-bar" aria-hidden="true">
@@ -610,6 +622,26 @@ export function LibraryView({
         </div>
 
         <div className="library-explorer-tree">
+          <div className="library-tree-section library-shelf-home-section">
+            <button
+              type="button"
+              data-library-shelf-home="true"
+              className={`library-nav-row library-nav-leaf library-shelf-home-btn${
+                activeSection === 'files' && activeSpaceNodeId === 'root' && !filesScope
+                  ? ' is-active'
+                  : ''
+              }`}
+              onClick={() => {
+                setActiveSpaceNodeId('root');
+                setFilesScope('');
+                navigate('files');
+              }}
+            >
+              <Icon name="folder-library" />
+              <span className="library-nav-label">{uiText('All Folders')}</span>
+            </button>
+          </div>
+
           {/* Section 1: Study Sets & Infinite Mindmap */}
           <div className="library-tree-section">
             <div className="library-section-heading">
@@ -809,20 +841,6 @@ export function LibraryView({
 
             {sectionOpen.spaces && (
               <div className="library-section-items" role="tree" aria-label={uiText('Software Spaces')}>
-                <button
-                  type="button"
-                  className={`library-nav-row library-nav-leaf${
-                    activeSection === 'files' && activeSpaceNodeId === 'root' ? ' is-active' : ''
-                  }`}
-                  onClick={() => {
-                    setActiveSpaceNodeId('root');
-                    setFilesScope('');
-                    navigate('files');
-                  }}
-                >
-                  <Icon name="files" />
-                  <span className="library-nav-label">{uiText('All files')}</span>
-                </button>
                 {renderSpaceTree(spaceNodes, 0)}
               </div>
             )}
@@ -1003,8 +1021,21 @@ export function LibraryView({
             initialViewScope={filesScope}
             controlledRootId={activeSpaceNodeId}
             hideInternalTree
+            studySets={studySets}
+            cloudHosts={hosts}
+            onRootChange={(nextRoot) => setActiveSpaceNodeId(nextRoot)}
             onOpenInReader={(opts) => void openInReader(opts)}
-            onOpenHost={(hostId) => navigate('hosts', { libraryHostId: hostId })}
+            onOpenStudySet={(setId) => sendReaderCommand('open-study', { setId })}
+            onOpenStudyLibrary={() => sendReaderCommand('open-folder', { folder: '.' })}
+            onOpenHost={(hostId) => {
+              setHostCreateSignal(0);
+              navigate('hosts', { libraryHostId: hostId });
+            }}
+            onCreateStudySet={() => sendReaderCommand('create-study')}
+            onCreateHost={() => {
+              setHostCreateSignal((s) => s + 1);
+              navigate('hosts');
+            }}
           />
         )}
 
@@ -1030,7 +1061,7 @@ export function LibraryView({
             }}
             onClearToLibrary={() => {
               setQuickQuery('');
-              navigate(beforeSearchSection.current || 'reader');
+              navigate(beforeSearchSection.current || 'files');
             }}
           />
         )}
@@ -1048,8 +1079,12 @@ export function LibraryView({
                 void refreshReaderSidebar();
                 void refreshOverview();
               }}
+              onBackToShelf={() => {
+                setActiveSpaceNodeId(activeSpaceNodeId || 'root');
+                navigate('files');
+              }}
               onBackFromExternal={() => {
-                setActiveSpaceNodeId(activeSpaceNodeId || 'agents');
+                setActiveSpaceNodeId(activeSpaceNodeId || 'root');
                 navigate('files');
               }}
               onOpenExternalAccess={() => setAccessModal('reader')}
@@ -1065,6 +1100,10 @@ export function LibraryView({
             createSignal={hostCreateSignal}
             onHostsChanged={setHosts}
             onSelectHost={(hostId) => navigate('hosts', { libraryHostId: hostId })}
+            onBackToShelf={() => {
+              setActiveSpaceNodeId('root');
+              navigate('files');
+            }}
           />
         )}
       </div>

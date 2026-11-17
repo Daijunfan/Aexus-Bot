@@ -1,7 +1,14 @@
 /* Derived file art and presentation. No styles escape the file workbench. */
 .asset-identity{--folder-back:#5c85cd;--folder-light:#a9c6f3;--folder-front:#719cdd;--folder-edge:#6188c044;--folder-paper:#f2f7ff;position:relative;display:inline-grid;place-items:center;width:34px;height:34px;flex:none}
-.asset-identity[data-view=Messages]{--folder-back:#518f8b;--folder-light:#b2ded8;--folder-front:#7db6ac;--folder-edge:#44897d55}
-.asset-identity[data-view=Plan]{--folder-back:#c8943f;--folder-light:#f4deb2;--folder-front:#ddba75;--folder-edge:#a8813455}
+.asset-identity[data-view=Messages]{--folder-back:#468d88;--folder-light:#b2ded8;--folder-front:#72b3a9;--folder-edge:#44897d55;--folder-paper:#f1fbf9}
+.asset-identity[data-kind=channel]{--folder-back:#3c82b4;--folder-light:#a9d7f5;--folder-front:#65aad9;--folder-edge:#3678a655;--folder-paper:#f1f9ff}
+.asset-identity[data-kind=published],.asset-identity[data-kind=direct]{--folder-back:#7c63b8;--folder-light:#d2c3f5;--folder-front:#9f85d9;--folder-edge:#6c52a855;--folder-paper:#f7f4ff}
+.asset-identity[data-view=Plan]{--folder-back:#c8943f;--folder-light:#f4deb2;--folder-front:#ddba75;--folder-edge:#a8813455;--folder-paper:#fffaf0}
+.asset-identity[data-view=Reader],.asset-identity[data-kind=reader]{--folder-back:#5d65c8;--folder-light:#c0c6f7;--folder-front:#828ae3;--folder-edge:#4d55b555;--folder-paper:#f4f5ff}
+.asset-identity[data-kind=study-set]{--folder-back:#2e8d6c;--folder-light:#a6e3cb;--folder-front:#53b491;--folder-edge:#277a5d55;--folder-paper:#effbf6}
+.asset-identity[data-view=Hosts],.asset-identity[data-kind=cloud-host]{--folder-back:#4c617d;--folder-light:#b3c4da;--folder-front:#6e85a3;--folder-edge:#3e516b55;--folder-paper:#f2f6fa}
+.asset-identity[data-kind=shared]{--folder-back:#447bd4;--folder-light:#acd0ff;--folder-front:#6aa1f0;--folder-edge:#3b6ec255;--folder-paper:#f2f8ff}
+.asset-folder-emblem.is-kind-emblem{color:#1c354db8}.asset-identity.large .asset-folder-emblem.is-kind-emblem .codicon{font-size:21px}
 .asset-folder-art{display:block;width:100%;height:100%;filter:drop-shadow(0 2px 2px #20344712)}
 .asset-owner-portrait{position:absolute;inset:11px 9px 7px;display:grid;place-items:center;pointer-events:none}
 .asset-owner-portrait .message-avatar{width:100%;height:100%;min-width:0;background:transparent!important;border-radius:0;border:0;box-shadow:none}

@@ -25,6 +25,7 @@ import { SubitemPreview } from '../database/RecordTitle';
 import { useWorkspace } from '../store';
 import { IconButton, PageIcon, Popover } from '../ui';
 import type { Page, DatabaseView } from '../../../../shared/mission-notebook/types';
+import { isTaskDatabase } from '../planning/taskDatabase';
 
 export { dateKey } from '../../../../shared/mission-notebook/database/dates';
 export function CalendarView({
@@ -40,7 +41,7 @@ export function CalendarView({
   onViewChange?: (changes: Partial<DatabaseView>) => void;
   openRow?: (id: string) => void;
 }) {
-  const { patch, create, setPeekId, workspace } = useWorkspace();
+  const { patch, create, setPeekId, setModal, workspace } = useWorkspace();
   const theme = useContext(AppearanceTheme);
   const [localView, setLocalView] = useState<DatabaseView>({
     id: 'calendar',
@@ -95,6 +96,18 @@ export function CalendarView({
   }, [page.id, currentView.id]);
   const add = (date = '') => {
     if (readonlyDates) return;
+    if (isTaskDatabase(db) && window.native?.hostCall) {
+      const parentDoc = page.parentId
+        ? workspace!.pages.find((p) => p.id === page.parentId && !p.trashedAt && !p.database)
+        : undefined;
+      setModal({
+        type: 'page-task-composer',
+        pageId: parentDoc ? parentDoc.id : page.id,
+        databaseId: page.id,
+        ...(date ? { initialOnceDate: date } : {}),
+      });
+      return;
+    }
     const row = create(
       { parentId: page.id, values: dateProperty ? { [dateProperty.id]: date } : {} },
       false,

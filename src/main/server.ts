@@ -530,7 +530,7 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
           return setView(saved)
         }catch{return setView({kind:'messages'})}
       }
-      if(mode.id==='library')return setView({kind:'library',librarySection:current.librarySection??'reader'})
+      if(mode.id==='library')return setView({kind:'library',librarySection:current.librarySection??'files'})
       return setView({kind:mode.kind,...(mode.id==='plan'?{missionTab:nextMissionTab}:{} )})
     }
     case 'view.get': return getView()
@@ -554,12 +554,12 @@ async function dispatchRequest(req: Request,privateSend?:PrivateSendAttempt): Pr
       if(kind==='plugin'){await openPluginWindow(s(pluginId),pluginWorkspace({id:pluginId}));return setView({kind:'plugin',pluginId})}
       const previous=getView()
       const returnTo=!['library','messages','plugin','plan'].includes(kind)?(previous.kind==='library'?{kind:'library' as const,librarySection:previous.librarySection}:previous.kind==='plan'?{kind:'plan' as const,planViewId:previous.planViewId,missionTab:previous.missionTab}:previous.kind==='messages'?{kind:'messages' as const,employee:previous.employee,...(previous.chatId?{chatId:previous.chatId}:{}),...(previous.channelId?{channelId:previous.channelId,...(previous.sourceId?{sourceId:previous.sourceId}:{})}:{})}:previous.returnTo):undefined
-      return setView({kind,...(kind==='library'?{librarySection:a.librarySection??previous.librarySection??'reader',...(a.readerWorkspace!==undefined?{readerWorkspace:a.readerWorkspace}:{}),...(a.readerDocumentId!==undefined?{readerDocumentId:a.readerDocumentId}:{}),...(a.libraryHostId!==undefined?{libraryHostId:a.libraryHostId}:{}),...(a.libraryQuery!==undefined?{libraryQuery:a.libraryQuery}:{})}:{}),name:a.name,employee:a.employee,chatId:a.chatId,channelId:a.channelId,sourceId:a.sourceId,...(a.planViewId!==undefined?{planViewId:a.planViewId}:{}),...(kind==='plan'?{missionTab:a.planViewId?'plan':a.missionTab??previous.missionTab??'plan'}:{}),settings:a.settings,pluginId,details:!!a.details,shared:previous.shared,returnTo})
+      return setView({kind,...(kind==='library'?{librarySection:a.librarySection??(a.readerDocumentId||a.readerWorkspace?'reader':previous.librarySection??'files'),...(a.readerWorkspace!==undefined?{readerWorkspace:a.readerWorkspace}:{}),...(a.readerDocumentId!==undefined?{readerDocumentId:a.readerDocumentId}:{}),...(a.libraryHostId!==undefined?{libraryHostId:a.libraryHostId}:{}),...(a.libraryQuery!==undefined?{libraryQuery:a.libraryQuery}:{})}:{}),name:a.name,employee:a.employee,chatId:a.chatId,channelId:a.channelId,sourceId:a.sourceId,...(a.planViewId!==undefined?{planViewId:a.planViewId}:{}),...(kind==='plan'?{missionTab:a.planViewId?'plan':a.missionTab??previous.missionTab??'plan'}:{}),settings:a.settings,pluginId,details:!!a.details,shared:previous.shared,returnTo})
     }
     case 'view.close': {
       await beforeViewChange()
       const view=getView(),back=view.returnTo
-      if(back?.kind==='library')return setView({kind:'library',librarySection:back.librarySection??'reader'})
+      if(back?.kind==='library')return setView({kind:'library',librarySection:back.librarySection??'files'})
       if(back?.kind==='plan')return setView({kind:'plan',planViewId:back.planViewId,missionTab:back.missionTab??'plan'})
       if(back){let channelId:string|undefined;if(back.channelId){try{channelId=getChannel(back.channelId).id}catch{}};return setView({kind:'messages',employee:readStore().sessions.some(card=>card.id===back.employee&&!card.deleting)?back.employee:undefined,...(back.chatId&&listChatGroups().some(group=>group.id===back.chatId)?{chatId:back.chatId}:{}),...(channelId?{channelId,...(back.sourceId&&!['youtube','x','telegram'].includes(getChannel(channelId).kind)?{sourceId:back.sourceId}:{})}:{})})}
       return setView({kind:'messages',...(view.pluginId?{pluginId:view.pluginId}:{})})
